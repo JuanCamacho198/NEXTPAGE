@@ -310,9 +310,9 @@ export class SupabaseBookCatalogSync {
   }
 
   /**
-    * Subscribe to realtime changes on user_books for this user.
-    * Returns an unsubscribe function.
-    */
+   * Subscribe to realtime changes on user_books for this user.
+   * Returns an unsubscribe function.
+   */
   subscribeToCatalog(callback: CatalogChangeCallback): () => void {
     if (
       this.catalogChannel &&
@@ -369,8 +369,8 @@ export class SupabaseBookCatalogSync {
   }
 
   /**
-    * Clean up realtime subscription. Removes the channel from the client as well.
-    */
+   * Clean up realtime subscription. Removes the channel from the client as well.
+   */
   destroy(): void {
     try {
       this.unsubscribeRealtime?.();

@@ -92,7 +92,9 @@ const resolveMessage = (locale: UiLocale, key: MessageKey): string => {
   return key;
 };
 
-const createI18nStore = (deps: { settingsPort?: SettingsPort } = {}): {
+const createI18nStore = (
+  deps: { settingsPort?: SettingsPort } = {},
+): {
   locale: import('svelte/store').Writable<UiLocale>;
   setLocale: (nextLocale: string | UiLocale) => Promise<void>;
   initializeLocale: () => Promise<UiLocale>;

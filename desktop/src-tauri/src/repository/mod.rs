@@ -1280,6 +1280,9 @@ mod tests {
         connection
             .execute_batch(include_str!("../../migrations/0015_dictionary_sync.sql"))
             .unwrap();
+            connection
+                .execute_batch(include_str!("../../migrations/0017_addon_registry.sql"))
+                .unwrap();
     }
 
     pub(crate) fn new_repository() -> LibraryRepository {

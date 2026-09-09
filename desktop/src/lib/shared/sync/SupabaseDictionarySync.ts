@@ -1,6 +1,10 @@
 import { getSessionClient, hasLiveSession } from '$lib/services/supabase';
 import { authState } from '$lib/shared/stores/AuthState.svelte';
-import type { SupabaseClient, RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import type {
+  SupabaseClient,
+  RealtimeChannel,
+  RealtimePostgresChangesPayload,
+} from '@supabase/supabase-js';
 
 export interface SupabaseDictionaryRow {
   id: string;
@@ -107,7 +111,8 @@ export class SupabaseDictionarySync {
         const all = client.getChannels();
         existing =
           all.find((c) => {
-            const topic = (c as unknown as { topic?: string; channelName?: string }).topic ??
+            const topic =
+              (c as unknown as { topic?: string; channelName?: string }).topic ??
               (c as unknown as { channelName?: string }).channelName ??
               '';
             return topic.includes(channelName);

@@ -66,7 +66,10 @@ export function createStorageState() {
     }
   }
 
-  async function clearCache(kind: 'covers' | 'temp' | 'all', deep = false): Promise<{ freedBytes: number }> {
+  async function clearCache(
+    kind: 'covers' | 'temp' | 'all',
+    deep = false,
+  ): Promise<{ freedBytes: number }> {
     isClearing = true;
     clearProgress = 0;
     error = null;

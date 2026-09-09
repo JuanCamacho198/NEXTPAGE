@@ -3,7 +3,11 @@
  * Extracts zoom clamping, wheel RAF coalescing, theme palette and
  * visual-filter derived state from PdfViewer. Mirrors `useEpubZoomTheme`.
  */
-import { clamp, resolveThemePalette, type ReaderThemePalette } from '$lib/features/reader/viewer-pdf/pdfState.svelte';
+import {
+  clamp,
+  resolveThemePalette,
+  type ReaderThemePalette,
+} from '$lib/features/reader/viewer-pdf/pdfState.svelte';
 import {
   adjustPdfScaleForWheel,
   clampPdfScale as navClampPdfScale,
@@ -55,7 +59,10 @@ export function createPdfZoomThemeState(deps: PdfZoomThemeDeps) {
   }
 
   function handleKeyZoom(event: KeyboardEvent): boolean {
-    if ((event.ctrlKey || event.metaKey) && (event.key === '=' || event.key === '+' || event.key === '-')) {
+    if (
+      (event.ctrlKey || event.metaKey) &&
+      (event.key === '=' || event.key === '+' || event.key === '-')
+    ) {
       event.preventDefault();
       const step = event.key === '-' ? -PDF_SCALE_STEP : PDF_SCALE_STEP;
       void deps.setScale(deps.getScale() + step);

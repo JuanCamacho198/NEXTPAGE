@@ -1,56 +1,51 @@
 <script lang="ts">
-  import type { DeviceViewModel } from '$lib/services/devices'
-  import type { MessageKey } from '$lib/shared/i18n'
+  import type { DeviceViewModel } from '$lib/services/devices';
+  import type { MessageKey } from '$lib/shared/i18n';
 
   type Props = {
-    devices: DeviceViewModel[]
-    error: string | null
-    isLoading: boolean
-    onremove: (id: string) => void
-    t: (key: MessageKey, params?: Record<string, string | number>) => string
-  }
+    devices: DeviceViewModel[];
+    error: string | null;
+    isLoading: boolean;
+    onremove: (id: string) => void;
+    t: (key: MessageKey, params?: Record<string, string | number>) => string;
+  };
 
-  let {
-    devices,
-    error,
-    isLoading,
-    onremove,
-    t,
-  }: Props = $props()
+  let { devices, error, isLoading, onremove, t }: Props = $props();
 
   /** Devices that are NOT the current one */
-  let otherDevices = $derived(devices.filter((d) => !d.isCurrent))
+  let otherDevices = $derived(devices.filter((d) => !d.isCurrent));
 
   /** The current device (null if not found) */
-  let currentDevice = $derived(devices.find((d) => d.isCurrent) ?? null)
+  let currentDevice = $derived(devices.find((d) => d.isCurrent) ?? null);
 
-  function formatRelative(
-    lastActive: { value: number; unit: 'now' | 'min' | 'hour' | 'day' },
-  ): string {
+  function formatRelative(lastActive: {
+    value: number;
+    unit: 'now' | 'min' | 'hour' | 'day';
+  }): string {
     if (lastActive.unit === 'now') {
-      return t('settings.connectedDevices.justNow')
+      return t('settings.connectedDevices.justNow');
     }
     if (lastActive.unit === 'min') {
-      return t('settings.connectedDevices.minAgo', { count: lastActive.value })
+      return t('settings.connectedDevices.minAgo', { count: lastActive.value });
     }
     if (lastActive.unit === 'hour') {
-      return t('settings.connectedDevices.hourAgo', { count: lastActive.value })
+      return t('settings.connectedDevices.hourAgo', { count: lastActive.value });
     }
-    return t('settings.connectedDevices.dayAgo', { count: lastActive.value })
+    return t('settings.connectedDevices.dayAgo', { count: lastActive.value });
   }
 
   function handleRemove(device: DeviceViewModel): void {
     if (confirm(t('settings.connectedDevices.removeConfirm', { name: device.name }))) {
-      onremove(device.id)
+      onremove(device.id);
     }
   }
 
   function deviceSubtitle(device: DeviceViewModel): string {
-    const base = device.os
+    const base = device.os;
     if (device.isCurrent) {
-      return `${base} · ${t('settings.connectedDevices.lastActive')}: ${formatRelative(device.lastActive)}`
+      return `${base} · ${t('settings.connectedDevices.lastActive')}: ${formatRelative(device.lastActive)}`;
     }
-    return `${base} · ${formatRelative(device.lastActive)}`
+    return `${base} · ${formatRelative(device.lastActive)}`;
   }
 </script>
 
@@ -119,12 +114,18 @@
   {/if}
 </div>
 
-{#snippet DeviceCard({ device, subtitle, isCurrent, t, onremove }: {
-  device: DeviceViewModel
-  subtitle: string
-  isCurrent: boolean
-  t: (key: MessageKey, params?: Record<string, string | number>) => string
-  onremove?: () => void
+{#snippet DeviceCard({
+  device,
+  subtitle,
+  isCurrent,
+  t,
+  onremove,
+}: {
+  device: DeviceViewModel;
+  subtitle: string;
+  isCurrent: boolean;
+  t: (key: MessageKey, params?: Record<string, string | number>) => string;
+  onremove?: () => void;
 })}
   <div
     class="flex items-center gap-3 rounded-lg border border-(--color-border) bg-(--color-surface) px-3 py-2.5"

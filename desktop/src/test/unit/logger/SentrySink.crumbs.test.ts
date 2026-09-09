@@ -80,7 +80,10 @@ describe('SentrySink breadcrumb flush', () => {
       level: 'info',
       data: { bookId: 'book-1', highlightId: 'hl-1', pageNumber: 2, textLength: 42 },
     });
-    expect(byCategory['chapter_change']).toMatchObject({ message: 'chapter_change', level: 'info' });
+    expect(byCategory['chapter_change']).toMatchObject({
+      message: 'chapter_change',
+      level: 'info',
+    });
   });
 
   it('sends only the error crumb itself when the buffer is empty', () => {

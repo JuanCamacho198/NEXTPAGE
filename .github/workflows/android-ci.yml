@@ -24,28 +24,25 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # fetch-depth: 0 keeps history for release-mapping / version checks.
           fetch-depth: 0
 
       - name: Setup Java (Temurin 17)
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Cache Gradle
-        uses: actions/cache@v4
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
         with:
-          path: |
-            ~/.gradle/caches
-            android/.gradle
-          # Cache invalidation keys: wrapper bump + root + app build files.
-          # Touching any of them forces a fresh dependency cache.
-          key: ${{ runner.os }}-gradle-${{ hashFiles('android/build.gradle.kts', 'android/gradle/wrapper/gradle-wrapper.properties', 'android/app/build.gradle.kts') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+          # Remote build cache + config cache reuse cut the cold JVM/config
+          # tax; the gradle User Home cache makes dependency + Robolectric
+          # jars survive between runs.
+          cache-read-only: false
+          add-job-summary: 'on-failure'
 
       - name: Make gradlew executable
         # No-op on the Linux runner, but defensive: if a contributor ever
@@ -56,17 +53,31 @@ jobs:
 
       - name: Run focused tests + detekt
         working-directory: android
-        # AGENTS.md gradle deadlock prescription: `--no-daemon` +
-        # `-Dorg.gradle.vfs.watch=false` avoids the pwsh/Gradle VFS
-        # interaction observed locally. Recovery if a runner still hangs:
-        # `./gradlew --stop` then `taskkill /F /IM java.exe` (Windows only).
+        # Linux runner: the daemon is fine (the --no-daemon prescription was
+        # for the local Windows pwsh/Gradle VFS hang; an ephemeral runner just
+        # pays a cold JVM start for nothing). Configuration cache + build
+        # cache remove the remaining per-run reconfiguration/rebuild tax.
         #
         # Focused test scope: `com.nextpage.debug.*` + `ReleaseFormatTest`
         # only (per orchestrator preflight). Full suite stays a verify-phase
         # concern to keep CI fast.
         run: |
-          ./gradlew --no-daemon -Dorg.gradle.vfs.watch=false \
+          ./gradlew \
+            --configuration-cache \
+            --build-cache \
+            -Dorg.gradle.vfs.watch=false \
             :app:testDebugUnitTest \
             --tests "com.nextpage.debug.*" \
             --tests "com.nextpage.ReleaseFormatTest" \
             detekt
+
+      - name: Print failed test reports
+        if: failure()
+        working-directory: android
+        # The Gradle console only shows the failing test name; the XML report
+        # carries the expected/actual message needed to diagnose without SSH.
+        run: |
+          grep -rl "<failure\|<error" app/build/test-results/testDebugUnitTest/*.xml 2>/dev/null | while read -r f; do
+            echo "===== $f ====="
+            grep -A5 '<failure\|<error' "$f" | head -40
+          done

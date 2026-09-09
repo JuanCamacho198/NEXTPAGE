@@ -11,4 +11,8 @@
  */
 
 export { fromCfi, derivePage, parseSpineIndex } from '../sync/LocatorCodec';
-export type { CanonicalLocator, LocatorLocations, LocatorChapterMetric } from '../sync/LocatorCodec';
+export type {
+  CanonicalLocator,
+  LocatorLocations,
+  LocatorChapterMetric,
+} from '../sync/LocatorCodec';

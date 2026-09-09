@@ -292,7 +292,9 @@
             tabindex="0"
             data-menu-item="true"
             class="w-full px-4 py-2 text-left text-sm text-(--color-primary) hover:bg-(--color-surface-hover)"
-            onclick={() => { handleAction(onViewDetails); }}
+            onclick={() => {
+              handleAction(onViewDetails);
+            }}
           >
             {viewDetailsLabel}
           </button>

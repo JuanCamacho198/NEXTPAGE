@@ -9,7 +9,9 @@
   let locale = $state(i18n?.DEFAULT_LOCALE ?? 'es');
   $effect(() => {
     if (!i18n?.locale) return;
-    const unsub = i18n.locale.subscribe((l) => { locale = l; });
+    const unsub = i18n.locale.subscribe((l) => {
+      locale = l;
+    });
     return () => unsub();
   });
   const tFn = (key: MessageKey): string => i18n?.t?.(locale, key) ?? key;

@@ -50,7 +50,14 @@
 <div class="space-y-6">
   <HomeHero actions={navbarActions} {t} />
 
-  <HomeStatsGrid {stats} isLoading={isLoadingStats} disabledReason={statsUnavailableReason} {streakDays} {isLoadingStreak} {t} />
+  <HomeStatsGrid
+    {stats}
+    isLoading={isLoadingStats}
+    disabledReason={statsUnavailableReason}
+    {streakDays}
+    {isLoadingStreak}
+    {t}
+  />
 
   <HomeMainContent {t} {continueSection} {shelfSection} />
 </div>

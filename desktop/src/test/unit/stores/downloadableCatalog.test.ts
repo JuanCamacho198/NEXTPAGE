@@ -103,12 +103,7 @@ describe('downloadableCatalog — loadAvailableFromDrive (REQ-01)', () => {
   });
 
   it('drops unparseable names (sync state, no dot, trailing dot)', async () => {
-    mockGDriveList.mockResolvedValue([
-      'book-1.epub',
-      'catalog_state.json',
-      'noext',
-      'trailing.',
-    ]);
+    mockGDriveList.mockResolvedValue(['book-1.epub', 'catalog_state.json', 'noext', 'trailing.']);
     mockListLibraryBooks.mockResolvedValue([]);
 
     await loadAvailableFromDrive();

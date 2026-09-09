@@ -56,8 +56,9 @@ export function normalizeLocatorJson(json: string | null | undefined): string | 
     return json;
   } catch {
     if (json.includes('\\')) {
-      return json.replace(/"href"\s*:\s*"([^"]*)"/g, (_m: string, href: string) =>
-        `"href":"${href.replace(/\\/g, '/')}"`,
+      return json.replace(
+        /"href"\s*:\s*"([^"]*)"/g,
+        (_m: string, href: string) => `"href":"${href.replace(/\\/g, '/')}"`,
       );
     }
     return json;

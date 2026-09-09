@@ -55,17 +55,45 @@
 </script>
 
 {#snippet settingsRow(label: string, value: string, onclick: () => void)}
-  <div class="flex cursor-pointer items-center justify-between" {onclick} role="button" tabindex="0" onkeydown={(e) => e.key === 'Enter' && onclick()}>
+  <div
+    class="flex cursor-pointer items-center justify-between"
+    {onclick}
+    role="button"
+    tabindex="0"
+    onkeydown={(e) => e.key === 'Enter' && onclick()}
+  >
     <span class="text-sm text-(--color-text-muted)">{label}: {value}</span>
-    <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-blue)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="11"
+      height="11"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="var(--color-accent-blue)"
+      stroke-width="3"
+      stroke-linecap="round"
+      stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg
+    >
   </div>
 {/snippet}
 
 {#snippet toggleRow(label: string, checked: boolean, onclick: () => void, ariaLabel: string)}
   <div class="flex items-center justify-between">
     <span class="text-sm text-(--color-text-muted)">{label}</span>
-    <button type="button" class="relative flex h-5 w-10 cursor-pointer items-center rounded-full transition-colors" style="background-color: {checked ? 'var(--color-accent-blue)' : 'rgba(148, 173, 206, 0.2)'};" {onclick} role="switch" aria-checked={checked} aria-label={ariaLabel}>
-      <span class="h-4 w-4 rounded-full bg-white shadow transition-transform" class:translate-x-[22px]={checked} class:translate-x-[2px]={!checked}></span>
+    <button
+      type="button"
+      class="relative flex h-5 w-10 cursor-pointer items-center rounded-full transition-colors"
+      style="background-color: {checked ? 'var(--color-accent-blue)' : 'rgba(148, 173, 206, 0.2)'};"
+      {onclick}
+      role="switch"
+      aria-checked={checked}
+      aria-label={ariaLabel}
+    >
+      <span
+        class="h-4 w-4 rounded-full bg-white shadow transition-transform"
+        class:translate-x-[22px]={checked}
+        class:translate-x-[2px]={!checked}
+      ></span>
     </button>
   </div>
 {/snippet}

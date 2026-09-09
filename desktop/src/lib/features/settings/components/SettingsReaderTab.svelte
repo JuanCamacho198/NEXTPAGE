@@ -84,7 +84,12 @@
   }
 </script>
 
-<div role="tabpanel" id="tabpanel-reader" aria-labelledby="tab-reader" class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+<div
+  role="tabpanel"
+  id="tabpanel-reader"
+  aria-labelledby="tab-reader"
+  class="flex-1 overflow-y-auto p-4 flex flex-col gap-4"
+>
   <section class="rounded-xl border border-(--color-border) bg-(--color-surface) overflow-hidden">
     <div class="p-4 space-y-4">
       <h3 class="mt-0 mb-2 text-sm font-semibold text-(--color-primary)">

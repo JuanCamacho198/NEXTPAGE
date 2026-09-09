@@ -10,17 +10,23 @@
 export const PAGE_TTL_S = 86_400;
 export const DETAIL_TTL_S = 604_800;
 
-const PAGE_KEY_PREFIX = 'p:composite:';
-const DETAIL_KEY_PREFIX = 'd:composite:';
+/**
+ * Discover cache format version (design A7): prefixed into every key.
+ * v2 — keys carry the full source id; v1 rows age out unread.
+ */
+export const DISCOVER_CACHE_VERSION = 'v2';
 
-/** Page cache key: `p:{provider}:{query}:{page}` (24h). Query is normalized. */
-export function pageCacheKey(query: string, page: number): string {
-  return `${PAGE_KEY_PREFIX}${query.trim().toLowerCase()}:${page}`;
+const PAGE_KEY_PREFIX = `p:${DISCOVER_CACHE_VERSION}:`;
+const DETAIL_KEY_PREFIX = `d:${DISCOVER_CACHE_VERSION}:`;
+
+/** Page cache key: `p:v2:{sourceId}:{query}:{page}` (24h). Query is normalized. */
+export function pageCacheKey(sourceId: string, query: string, page: number): string {
+  return `${PAGE_KEY_PREFIX}${sourceId}:${query.trim().toLowerCase()}:${page}`;
 }
 
-/** Detail cache key: `d:{provider}:{id}` (7d). */
-export function detailCacheKey(id: string): string {
-  return `${DETAIL_KEY_PREFIX}${id}`;
+/** Detail cache key: `d:v2:{sourceId}:{id}` (7d). */
+export function detailCacheKey(sourceId: string, id: string): string {
+  return `${DETAIL_KEY_PREFIX}${sourceId}:${id}`;
 }
 
 export interface DiscoverCacheStore {

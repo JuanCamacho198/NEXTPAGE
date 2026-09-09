@@ -91,7 +91,7 @@ class CrashLogStore(
                 ?: return
             val mutable = files.toMutableList()
             while (mutable.size > maxFiles) {
-                mutable.removeFirst().delete()
+                mutable.removeAt(0).delete()
             }
         }
     }

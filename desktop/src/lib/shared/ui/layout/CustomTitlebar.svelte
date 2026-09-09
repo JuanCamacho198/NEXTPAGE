@@ -11,10 +11,12 @@
   });
 </script>
 
-<div class="flex h-9 items-center pl-4 select-none" class:hidden={hidden}>
+<div class="flex h-9 items-center pl-4 select-none" class:hidden>
   <!-- Left: branding -->
   <span class="font-bold text-sm text-(--color-accent-blue) leading-none">NP</span>
-  <span class="ml-2 text-sm font-medium text-(--color-primary) leading-none tracking-tight">NextPage</span>
+  <span class="ml-2 text-sm font-medium text-(--color-primary) leading-none tracking-tight"
+    >NextPage</span
+  >
 
   <!-- Center: drag region -->
   <div class="flex-1 h-full" data-tauri-drag-region></div>

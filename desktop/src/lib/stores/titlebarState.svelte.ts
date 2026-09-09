@@ -51,9 +51,15 @@ export function createTitlebarState(): TitlebarState {
   }
 
   return {
-    get isMaximized() { return isMaximized; },
-    get isCustomTitlebar() { return isCustomTitlebar; },
-    set isCustomTitlebar(value: boolean) { isCustomTitlebar = value; },
+    get isMaximized() {
+      return isMaximized;
+    },
+    get isCustomTitlebar() {
+      return isCustomTitlebar;
+    },
+    set isCustomTitlebar(value: boolean) {
+      isCustomTitlebar = value;
+    },
     init,
     destroy,
     handleMinimize,

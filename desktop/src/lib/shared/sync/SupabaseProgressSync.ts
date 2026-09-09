@@ -170,12 +170,15 @@ export class SupabaseProgressSync {
 
   async fetchBookState(bookId: string): Promise<SupabaseBookState> {
     if (this.isGated()) {
-      console.warn('[SupabaseProgressSync] fetchBookState gated: no live session or user mismatch', {
-        userId: this.userId,
-        bookId: bookId.slice(0, 4),
-        hasLiveSession: hasLiveSession(),
-        authUserId: authState.userId?.slice(0, 4) ?? null,
-      });
+      console.warn(
+        '[SupabaseProgressSync] fetchBookState gated: no live session or user mismatch',
+        {
+          userId: this.userId,
+          bookId: bookId.slice(0, 4),
+          hasLiveSession: hasLiveSession(),
+          authUserId: authState.userId?.slice(0, 4) ?? null,
+        },
+      );
       return { progress: null, bookmarks: [], highlights: [] };
     }
     const [progress, bookmarks, highlights] = await Promise.all([
@@ -199,11 +202,11 @@ export class SupabaseProgressSync {
   }
 
   /**
-    * Subscribe to realtime changes on reading_progress for this user.
-    * Returns an unsubscribe function. Includes defensive removeChannel()
-    * so re-subscribe after subscribe() never throws
-    * "cannot add postgres_changes callbacks after subscribe()".
-    */
+   * Subscribe to realtime changes on reading_progress for this user.
+   * Returns an unsubscribe function. Includes defensive removeChannel()
+   * so re-subscribe after subscribe() never throws
+   * "cannot add postgres_changes callbacks after subscribe()".
+   */
   subscribeToProgress(callback: ProgressChangeCallback): () => void {
     if (
       this.progressChannel &&
@@ -326,9 +329,9 @@ export class SupabaseProgressSync {
   }
 
   /**
-    * Subscribe to realtime changes on bookmarks for this user.
-    * Returns an unsubscribe function.
-    */
+   * Subscribe to realtime changes on bookmarks for this user.
+   * Returns an unsubscribe function.
+   */
   subscribeToBookmarks(callback: BookmarkChangeCallback): () => void {
     if (
       this.bookmarksChannel &&
@@ -441,12 +444,15 @@ export class SupabaseProgressSync {
    */
   async fetchHighlights(bookId?: string): Promise<SupabaseHighlightRow[]> {
     if (this.isGated()) {
-      console.warn('[SupabaseProgressSync] fetchHighlights gated: no live session or user mismatch', {
-        userId: this.userId,
-        bookId: bookId?.slice(0, 4) ?? 'all',
-        hasLiveSession: hasLiveSession(),
-        authUserId: authState.userId?.slice(0, 4) ?? null,
-      });
+      console.warn(
+        '[SupabaseProgressSync] fetchHighlights gated: no live session or user mismatch',
+        {
+          userId: this.userId,
+          bookId: bookId?.slice(0, 4) ?? 'all',
+          hasLiveSession: hasLiveSession(),
+          authUserId: authState.userId?.slice(0, 4) ?? null,
+        },
+      );
       return [];
     }
     let query = this.supabase.from('highlights').select('*').eq('user_id', this.userId);
@@ -471,11 +477,14 @@ export class SupabaseProgressSync {
    */
   async fetchAllHighlightsForPull(): Promise<RemoteHighlightRow[]> {
     if (this.isGated()) {
-      console.warn('[SupabaseProgressSync] fetchAllHighlightsForPull gated: no live session or user mismatch', {
-        userId: this.userId,
-        hasLiveSession: hasLiveSession(),
-        authUserId: authState.userId?.slice(0, 4) ?? null,
-      });
+      console.warn(
+        '[SupabaseProgressSync] fetchAllHighlightsForPull gated: no live session or user mismatch',
+        {
+          userId: this.userId,
+          hasLiveSession: hasLiveSession(),
+          authUserId: authState.userId?.slice(0, 4) ?? null,
+        },
+      );
       return [];
     }
     const { data, error } = await this.supabase
@@ -530,12 +539,12 @@ export class SupabaseProgressSync {
   }
 
   /**
-    * Subscribe to realtime changes on reading_sessions for this user.
-    * Handles Insert/Update only — Delete and Select are no-ops (Android
-    * parity: the local table is the merged source of truth; remote deletes
-    * never un-merge local rows).
-    * Returns an unsubscribe function.
-    */
+   * Subscribe to realtime changes on reading_sessions for this user.
+   * Handles Insert/Update only — Delete and Select are no-ops (Android
+   * parity: the local table is the merged source of truth; remote deletes
+   * never un-merge local rows).
+   * Returns an unsubscribe function.
+   */
   subscribeToReadingSessions(callback: ReadingSessionChangeCallback): () => void {
     if (
       this.readingSessionsChannel &&
@@ -616,9 +625,9 @@ export class SupabaseProgressSync {
   }
 
   /**
-    * Subscribe to realtime changes on highlights for this user.
-    * Returns an unsubscribe function.
-    */
+   * Subscribe to realtime changes on highlights for this user.
+   * Returns an unsubscribe function.
+   */
   subscribeToHighlights(callback: HighlightChangeCallback): () => void {
     if (
       this.highlightsChannel &&
@@ -842,10 +851,10 @@ export class SupabaseProgressSync {
   }
 
   /**
-    * Clean up all realtime subscriptions — single supervisor teardown on logout.
-    * Each unsubscribe now also calls `removeChannel` to drop the channel from
-    * `client.channels` and avoid orphaned subscriptions.
-    */
+   * Clean up all realtime subscriptions — single supervisor teardown on logout.
+   * Each unsubscribe now also calls `removeChannel` to drop the channel from
+   * `client.channels` and avoid orphaned subscriptions.
+   */
   destroy(): void {
     try {
       this.unsubscribeRealtime?.();

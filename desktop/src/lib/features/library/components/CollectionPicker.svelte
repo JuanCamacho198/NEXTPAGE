@@ -11,7 +11,13 @@
     libraryPort?: LibraryPort;
   };
 
-  let { bookId, collectionIds, collections, onUpdate, libraryPort: libraryPortProp }: Props = $props();
+  let {
+    bookId,
+    collectionIds,
+    collections,
+    onUpdate,
+    libraryPort: libraryPortProp,
+  }: Props = $props();
 
   // svelte-ignore state_referenced_locally
   const libraryPort: LibraryPort = libraryPortProp ?? new TauriLibraryAdapter();

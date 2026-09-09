@@ -121,7 +121,7 @@ export function clearFeedbackQueue(): void {
 
 /** Attempt to flush the queue using the provided transport. Stops on first failure. */
 export async function flushFeedbackQueue(
-  transport: FlushTransport = defaultTransport
+  transport: FlushTransport = defaultTransport,
 ): Promise<{ sent: number; failed: QueuedFeedback[] }> {
   const queue = readFeedbackQueue();
   if (queue.length === 0) return { sent: 0, failed: [] };

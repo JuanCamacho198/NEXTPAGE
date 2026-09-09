@@ -30,9 +30,17 @@ import com.nextpage.data.remote.catalog.ANDROID_USER_AGENT
 import com.nextpage.data.remote.catalog.CatalogHttpTransport
 import com.nextpage.data.remote.catalog.CatalogProvider
 import com.nextpage.data.remote.catalog.CompositeCatalogProvider
+import com.nextpage.data.remote.catalog.GutendexCatalogProvider
 import com.nextpage.data.remote.catalog.GutendexDataSource
 import com.nextpage.data.remote.catalog.KtorCatalogHttpTransport
+import com.nextpage.data.remote.catalog.OpenLibraryCatalogProvider
 import com.nextpage.data.remote.catalog.OpenLibraryDataSource
+import com.nextpage.data.remote.addons.CuratedCatalogProvider
+import com.nextpage.data.remote.addons.AddonRegistry
+import com.nextpage.data.remote.addons.KtorAddonHttpTransport
+import com.nextpage.data.remote.addons.catalogProvidersWithAddons
+import com.nextpage.data.remote.catalog.LiveCatalogProvider
+import com.nextpage.data.remote.catalog.RebuildingCatalogProvider
 import com.nextpage.data.remote.catalog.RoomDiscoverCache
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
@@ -207,11 +215,39 @@ class NetworkModule(
         OpenLibraryDataSource(catalogTransport)
     }
 
-    val catalogProvider: CatalogProvider by lazy {
-        CompositeCatalogProvider(
-            gutendexDataSource,
-            openLibraryDataSource,
-            cache = RoomDiscoverCache(databaseModule.discoverCacheDao)
+    val addonRegistry: AddonRegistry by lazy {
+        AddonRegistry(
+            databaseModule.installedAddonDao,
+            KtorAddonHttpTransport(catalogHttpClient)
         )
     }
+
+    // ── addon-registry PR4: live composite ─────────────────────────────
+    // The composite rebuilds from installed addon rows whenever the registry
+    // mutates (install/enable/disable/uninstall), so addon sources stop or
+    // start contributing immediately; rows are re-read after restart (A1/A4).
+    val addonTransport: KtorAddonHttpTransport by lazy {
+        KtorAddonHttpTransport(catalogHttpClient)
+    }
+
+    val rebuildingCatalogProvider: RebuildingCatalogProvider by lazy {
+        val provider = RebuildingCatalogProvider {
+            CompositeCatalogProvider(
+                catalogProvidersWithAddons(
+                    builtIns = listOf(
+                        GutendexCatalogProvider(gutendexDataSource),
+                        OpenLibraryCatalogProvider(openLibraryDataSource)
+                    ),
+                    curated = CuratedCatalogProvider(context),
+                    installedAddons = addonRegistry.listInstalled(),
+                    addonTransport = addonTransport
+                ),
+                cache = RoomDiscoverCache(databaseModule.discoverCacheDao)
+            )
+        }
+        addonRegistry.addOnChangedListener { provider.invalidate() }
+        provider
+    }
+
+    val catalogProvider: CatalogProvider by lazy { LiveCatalogProvider(rebuildingCatalogProvider) }
 }

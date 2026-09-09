@@ -266,9 +266,7 @@ export class GDriveProvider implements StorageProvider {
       );
       if (!searchResponse.ok) throw await this.driveError('GDrive search failed', searchResponse);
       const searchData = await searchResponse.json();
-      const file = (searchData.files ?? []).find(
-        (f: { trashed?: boolean }) => !f.trashed,
-      );
+      const file = (searchData.files ?? []).find((f: { trashed?: boolean }) => !f.trashed);
       if (!file) return; // nothing to trash — idempotent no-op
       fileId = file.id;
     }

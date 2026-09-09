@@ -47,14 +47,17 @@ import {
   FEEDBACK_PILLS,
 } from '$lib/shared/feedback/feedbackDesign';
 
-function renderDialog(overrides: {
-  open?: boolean;
-  eventId?: string | null;
-  onDismiss?: (eventId: string | null) => void;
-} = {}): ReturnType<typeof render<typeof FeedbackDialog>> {
+function renderDialog(
+  overrides: {
+    open?: boolean;
+    eventId?: string | null;
+    onDismiss?: (eventId: string | null) => void;
+  } = {},
+): ReturnType<typeof render<typeof FeedbackDialog>> {
   const onDismiss: (eventId: string | null) => void = overrides.onDismiss ?? vi.fn();
   // Distinguish `eventId` not passed (use default) from explicit `null`.
-  const eventId: string | null = 'eventId' in overrides ? overrides.eventId ?? null : 'evt-test-001';
+  const eventId: string | null =
+    'eventId' in overrides ? (overrides.eventId ?? null) : 'evt-test-001';
   return render(FeedbackDialog, {
     open: overrides.open ?? true,
     eventId,
@@ -187,7 +190,10 @@ describe('FeedbackDialog (sdd/sentry-observability-v2 PR3)', () => {
       const btn = screen.getByRole('button', { name: FEEDBACK_SEND_LABEL });
       await fireEvent.click(btn);
       await waitFor(() => expect(captureFeedback).toHaveBeenCalledTimes(1));
-      const call = captureFeedback.mock.calls[0]?.[0] as { message: string; associatedEventId?: string };
+      const call = captureFeedback.mock.calls[0]?.[0] as {
+        message: string;
+        associatedEventId?: string;
+      };
       expect(call.message).toBe('estaba leyendo');
       expect(call.associatedEventId).toBe('evt-abc-001');
     });

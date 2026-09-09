@@ -121,7 +121,12 @@ export class ReaderSyncState {
         );
         this.applyRemoteProgressInternal(remote.progress);
       } else if (remote.progress) {
-        console.warn('[continue] remote progress ignored (older than local)', bookId, 'epoch', epoch);
+        console.warn(
+          '[continue] remote progress ignored (older than local)',
+          bookId,
+          'epoch',
+          epoch,
+        );
       }
       for (const bookmark of remote.bookmarks) {
         this.appliedRemote.set(
@@ -265,15 +270,17 @@ export class ReaderSyncState {
             console.error('Failed to apply remote bookmark delete locally:', e);
           });
         } else {
-          this.viewerPort.saveBookmark({
-            id: id ?? crypto.randomUUID(),
-            bookId: bookId,
-            pageNumber: 1,
-            title: titleSnippet ?? undefined,
-            createdAt: updatedAt,
-          }).catch((e) => {
-            console.error('Failed to apply remote bookmark locally:', e);
-          });
+          this.viewerPort
+            .saveBookmark({
+              id: id ?? crypto.randomUUID(),
+              bookId: bookId,
+              pageNumber: 1,
+              title: titleSnippet ?? undefined,
+              createdAt: updatedAt,
+            })
+            .catch((e) => {
+              console.error('Failed to apply remote bookmark locally:', e);
+            });
         }
       });
     } catch (e) {
@@ -299,7 +306,8 @@ export class ReaderSyncState {
             const chunkSize = 500;
             for (let i = 0; i < rows.length; i += chunkSize) {
               const chunk = rows.slice(i, i + chunkSize);
-              void this.viewerPort.upsertRemoteHighlights(chunk)
+              void this.viewerPort
+                .upsertRemoteHighlights(chunk)
                 .then(() => {
                   for (const h of chunk) {
                     const iso = new Date(h.updatedAtEpochMillis).toISOString();
@@ -308,7 +316,9 @@ export class ReaderSyncState {
                   if (chunk.length > 0) {
                     this.highlightsVersion++;
                     if (typeof window !== 'undefined') {
-                      window.dispatchEvent(new CustomEvent('highlights:changed', { detail: { source: 'pull' } }));
+                      window.dispatchEvent(
+                        new CustomEvent('highlights:changed', { detail: { source: 'pull' } }),
+                      );
                     }
                   }
                 })
@@ -334,7 +344,8 @@ export class ReaderSyncState {
           }
         };
         if (deletedAt) {
-          this.viewerPort.deleteHighlight(id ?? '')
+          this.viewerPort
+            .deleteHighlight(id ?? '')
             .then(bump)
             .catch((e) => {
               console.error('Failed to apply remote highlight delete locally:', e);
@@ -342,19 +353,20 @@ export class ReaderSyncState {
         } else {
           const pageNumber =
             typeof page === 'number' && Number.isInteger(page) && page > 0 ? page : 1;
-          this.viewerPort.saveHighlight({
-            id: id ?? crypto.randomUUID(),
-            bookId: bookId,
-            text: textContent,
-            color: color,
-            pageNumber,
-            rectLeft: 0,
-            rectRight: 0,
-            rectTop: 0,
-            rectBottom: 0,
-            cfi: cfiRange || null,
-            note: note,
-          })
+          this.viewerPort
+            .saveHighlight({
+              id: id ?? crypto.randomUUID(),
+              bookId: bookId,
+              text: textContent,
+              color: color,
+              pageNumber,
+              rectLeft: 0,
+              rectRight: 0,
+              rectTop: 0,
+              rectBottom: 0,
+              cfi: cfiRange || null,
+              note: note,
+            })
             .then(bump)
             .catch((e) => {
               console.error('Failed to apply remote highlight locally:', e);
@@ -388,9 +400,12 @@ export class ReaderSyncState {
           console.error('Failed to fetch remote reading sessions:', e);
         });
       this.unsubscribeRemoteSessions = this.supabaseSync.subscribeToReadingSessions((row) => {
-        void this.viewerPort.upsertRemoteReadingSessions([row])
+        void this.viewerPort
+          .upsertRemoteReadingSessions([row])
           .then(() => {
-            const cb = this.onStatsRefreshNeeded as unknown as ((bookId: string) => Promise<void>) | null;
+            const cb = this.onStatsRefreshNeeded as unknown as
+              | ((bookId: string) => Promise<void>)
+              | null;
             void cb?.(row.bookId);
           })
           .catch((e) => {

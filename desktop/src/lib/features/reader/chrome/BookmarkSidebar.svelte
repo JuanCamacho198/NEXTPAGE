@@ -17,7 +17,9 @@
 
   let { bookmarksPanel, activeReadingBook, currentPage, currentChapter, t }: Props = $props();
 
-  const epubActive = $derived(activeReadingBook?.format ? String(activeReadingBook.format).toLowerCase() === 'epub' : false);
+  const epubActive = $derived(
+    activeReadingBook?.format ? String(activeReadingBook.format).toLowerCase() === 'epub' : false,
+  );
 
   // Load bookmarks when panel opens
   $effect(() => {
@@ -120,14 +122,17 @@
                     bookmarksPanel.showBookmarks = false;
                   }}
                 >
-                  <span class="text-sm font-medium text-(--color-primary)">Page {bookmark.pageNumber}</span>
+                  <span class="text-sm font-medium text-(--color-primary)"
+                    >Page {bookmark.pageNumber}</span
+                  >
                   {#if bookmark.title}
                     <span class="text-xs text-(--color-text-muted)/60">{bookmark.title}</span>
                   {/if}
                 </button>
                 <button
                   type="button"
-                  onclick={() => bookmarksPanel.bookmarksState.removeBookmark(bookmark.id, activeReadingBook.id)}
+                  onclick={() =>
+                    bookmarksPanel.bookmarksState.removeBookmark(bookmark.id, activeReadingBook.id)}
                   class="flex h-6 w-6 cursor-pointer items-center justify-center rounded text-sm text-(--color-text-muted) transition-colors hover:bg-red-500/20 hover:text-red-400"
                   title={t('settings.deleteBookmark')}
                 >
@@ -143,7 +148,9 @@
                     stroke-linejoin="round"
                   >
                     <polyline points="3 6 5 6 21 6"></polyline>
-                    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+                    <path
+                      d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"
+                    ></path>
                   </svg>
                 </button>
               </li>
@@ -156,7 +163,9 @@
 {/if}
 
 {#if bookmarksPanel.showBookmarkRibbon}
-  <div class="pointer-events-none fixed top-20 right-8 z-50 animate-[bookmarkRibbon_2200ms_ease-out] flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-900 shadow-lg">
+  <div
+    class="pointer-events-none fixed top-20 right-8 z-50 animate-[bookmarkRibbon_2200ms_ease-out] flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-900 shadow-lg"
+  >
     <span class="text-amber-600">🔖</span>
     {t('reader.bookmarkAdded')}
   </div>
@@ -164,9 +173,21 @@
 
 <style>
   @keyframes bookmarkRibbon {
-    0% { opacity: 0; transform: translateY(-12px) scale(0.9); }
-    15% { opacity: 1; transform: translateY(0) scale(1); }
-    85% { opacity: 1; transform: translateY(0) scale(1); }
-    100% { opacity: 0; transform: translateY(-12px) scale(0.9); }
+    0% {
+      opacity: 0;
+      transform: translateY(-12px) scale(0.9);
+    }
+    15% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    85% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-12px) scale(0.9);
+    }
   }
 </style>

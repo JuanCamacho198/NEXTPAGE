@@ -7,6 +7,10 @@ import {
   detailCacheKey,
   pageCacheKey,
 } from '$lib/shared/services/catalog/DiscoverCache';
+import {
+  GutendexCatalogProvider,
+  OpenLibraryCatalogProvider,
+} from '$lib/shared/services/catalog/BuiltInCatalogProviders';
 import { GutendexDataSource } from '$lib/shared/services/catalog/GutendexDataSource';
 import { OpenLibraryDataSource } from '$lib/shared/services/catalog/OpenLibraryDataSource';
 import gutendexFixture from '$lib/shared/services/catalog/fixtures/gutendex-search.json';
@@ -39,13 +43,15 @@ function stubbedSources(calls: { g: number; o: number }): {
 }
 
 describe('DiscoverCache keys and TTL', () => {
-  it('uses p:{provider}:{query}:{page} page keys with 24h TTL', () => {
-    expect(pageCacheKey('Pride ', 1)).toBe('p:composite:pride:1');
+  it('uses p:v2:{sourceId}:{query}:{page} page keys with 24h TTL', () => {
+    expect(pageCacheKey('builtin:gutendex', 'Pride ', 1)).toBe('p:v2:builtin:gutendex:pride:1');
     expect(PAGE_TTL_S).toBe(86_400);
   });
 
-  it('uses d:{provider}:{id} detail keys with 7d TTL', () => {
-    expect(detailCacheKey('gutendex:1342')).toBe('d:composite:gutendex:1342');
+  it('uses d:v2:{sourceId}:{id} detail keys with 7d TTL', () => {
+    expect(detailCacheKey('builtin:gutendex', 'gutendex:1342')).toBe(
+      'd:v2:builtin:gutendex:gutendex:1342',
+    );
     expect(DETAIL_TTL_S).toBe(604_800);
   });
 
@@ -76,11 +82,14 @@ describe('CompositeCatalogProvider cache read-through', () => {
     const calls = { g: 0, o: 0 };
     const { g, o } = stubbedSources(calls);
     const cache = new InMemoryDiscoverCache();
-    const provider = new CompositeCatalogProvider(g, o, {
-      debounceMs: 0,
-      cache,
-      nowEpochSecs: () => 1_000,
-    });
+    const provider = new CompositeCatalogProvider(
+      [new GutendexCatalogProvider(g), new OpenLibraryCatalogProvider(o)],
+      {
+        debounceMs: 0,
+        cache,
+        nowEpochSecs: () => 1_000,
+      },
+    );
     const first = await provider.search('pride', 1);
     expect(calls).toEqual({ g: 1, o: 1 });
     const second = await provider.search('pride', 1);
@@ -93,11 +102,14 @@ describe('CompositeCatalogProvider cache read-through', () => {
     const { g, o } = stubbedSources(calls);
     const cache = new InMemoryDiscoverCache();
     let now = 1_000;
-    const provider = new CompositeCatalogProvider(g, o, {
-      debounceMs: 0,
-      cache,
-      nowEpochSecs: () => now,
-    });
+    const provider = new CompositeCatalogProvider(
+      [new GutendexCatalogProvider(g), new OpenLibraryCatalogProvider(o)],
+      {
+        debounceMs: 0,
+        cache,
+        nowEpochSecs: () => now,
+      },
+    );
     await provider.search('pride', 1);
     now += PAGE_TTL_S + 1;
     await provider.search('pride', 1);
@@ -118,8 +130,10 @@ describe('CompositeCatalogProvider cache read-through', () => {
     const cache = new InMemoryDiscoverCache();
     let now = 5_000;
     const provider = new CompositeCatalogProvider(
-      new GutendexDataSource(counting),
-      stubbedSources(calls).o,
+      [
+        new GutendexCatalogProvider(new GutendexDataSource(counting)),
+        new OpenLibraryCatalogProvider(stubbedSources(calls).o),
+      ],
       {
         debounceMs: 0,
         cache,
@@ -141,11 +155,14 @@ describe('CompositeCatalogProvider cache read-through', () => {
   it('merges cover fallback identically on cache miss and hit', async () => {
     const calls = { g: 0, o: 0 };
     const { g, o } = stubbedSources(calls);
-    const provider = new CompositeCatalogProvider(g, o, {
-      debounceMs: 0,
-      cache: new InMemoryDiscoverCache(),
-      nowEpochSecs: () => 1_000,
-    });
+    const provider = new CompositeCatalogProvider(
+      [new GutendexCatalogProvider(g), new OpenLibraryCatalogProvider(o)],
+      {
+        debounceMs: 0,
+        cache: new InMemoryDiscoverCache(),
+        nowEpochSecs: () => 1_000,
+      },
+    );
     const miss = await provider.search('pride', 1);
     const hit = await provider.search('pride', 1);
     const prideMiss = miss.results.find((b) => b.id === 'gutendex:1342');

@@ -59,7 +59,10 @@ export function createSyncHealthState() {
     return scopes[scope] !== false;
   }
 
-  async function resolveConflict(conflictId: string, resolution: 'keep_local' | 'keep_remote'): Promise<void> {
+  async function resolveConflict(
+    conflictId: string,
+    resolution: 'keep_local' | 'keep_remote',
+  ): Promise<void> {
     const conflict = conflicts.find((c) => c.id === conflictId);
     if (!conflict) throw new Error('conflict.not_found');
     if (resolution === 'keep_local') {
@@ -67,20 +70,30 @@ export function createSyncHealthState() {
       const now = new Date(Date.now() + 1).toISOString();
       try {
         await invoke('updateDictionaryWord', {
-          payload: { id: conflict.id, word: conflict.localWord ?? conflict.word ?? '', updatedAt: now },
+          payload: {
+            id: conflict.id,
+            word: conflict.localWord ?? conflict.word ?? '',
+            updatedAt: now,
+          },
         });
         // Enqueue outbox with bumped clock
         await invoke('addCoalescedSyncOutboxItem', {
           entityType: 'DICTIONARY_WORD',
           entityId: conflict.id,
           operation: 'UPSERT',
-          payloadJson: JSON.stringify({ word: conflict.localWord ?? conflict.word, updatedAt: now }),
+          payloadJson: JSON.stringify({
+            word: conflict.localWord ?? conflict.word,
+            updatedAt: now,
+          }),
         });
       } catch (e) {
         // Fallback: update local state directly and queue via SyncService path
         // Use dictionaryState update if invoke fails
         const found = dictionaryState.words.find((w) => w.id === conflictId);
-        if (found) await dictionaryState.update(conflictId, { word: found.word ?? conflict.localWord ?? '' });
+        if (found)
+          await dictionaryState.update(conflictId, {
+            word: found.word ?? conflict.localWord ?? '',
+          });
       }
     }
     // remove conflict from list

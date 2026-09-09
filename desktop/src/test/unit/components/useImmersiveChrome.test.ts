@@ -24,9 +24,11 @@ describe('useImmersiveChrome', () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
-    rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb: FrameRequestCallback) => {
-      return setTimeout(() => cb(0), 16) as unknown as number;
-    });
+    rafSpy = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((cb: FrameRequestCallback) => {
+        return setTimeout(() => cb(0), 16) as unknown as number;
+      });
     cancelSpy = vi.spyOn(window, 'cancelAnimationFrame').mockImplementation((id: number) => {
       clearTimeout(id as unknown as NodeJS.Timeout);
     });

@@ -5,7 +5,7 @@ import type {
   BookCollectionInput,
   LibraryBookDto,
   UpsertBookCoverInput,
-  ScanFolderResult
+  ScanFolderResult,
 } from '$lib/shared/types';
 
 export type PerBookSize = {
@@ -46,7 +46,11 @@ export interface LibraryPort {
   extractEpubCover(bookId: string, filePath: string): Promise<boolean>;
   getPerBookSizes(): Promise<PerBookSize[]>;
   getFileBytes(filePath: string): Promise<number[]>;
-  saveBookFile(id: string, data: number[], meta?: { title?: string; author?: string; format?: string }): Promise<void>;
+  saveBookFile(
+    id: string,
+    data: number[],
+    meta?: { title?: string; author?: string; format?: string },
+  ): Promise<void>;
   fileExists(path: string): Promise<boolean>;
   getFileSize(filePath: string): Promise<number>;
   updateBookProgress(bookId: string, currentPage: number): Promise<void>;

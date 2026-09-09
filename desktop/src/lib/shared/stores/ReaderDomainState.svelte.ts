@@ -4,7 +4,10 @@ import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
 import { SupabaseProgressSync } from '$lib/shared/sync/SupabaseProgressSync';
 import type { SupabaseProgressRow } from '$lib/shared/sync/SupabaseProgressSync';
 import { readerSyncState } from './ReaderSyncState.svelte';
-import { isValidSessionProgressEvent, MIN_SESSION_DURATION_SECONDS } from './readingSessionValidator';
+import {
+  isValidSessionProgressEvent,
+  MIN_SESSION_DURATION_SECONDS,
+} from './readingSessionValidator';
 import type { ViewerPort } from '$lib/shared/ports/ViewerPort';
 import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
 import { TauriViewerAdapter } from '$lib/shared/ports/adapters/tauri/TauriViewerAdapter';
@@ -90,7 +93,12 @@ class ReaderDomainState {
       try {
         const progress = await this.viewerPort.getProgress(book.id);
         if (epoch !== this.openEpoch) {
-          console.warn('[continue] startReading local progress stale epoch', epoch, 'current', this.openEpoch);
+          console.warn(
+            '[continue] startReading local progress stale epoch',
+            epoch,
+            'current',
+            this.openEpoch,
+          );
           return;
         }
         console.warn(
@@ -109,12 +117,18 @@ class ReaderDomainState {
           console.warn('[continue] startReading local progress error stale epoch', epoch);
           return;
         }
-        console.warn('[continue] startReading book', book.id, 'local progress error, fallback to empty epoch', epoch);
+        console.warn(
+          '[continue] startReading book',
+          book.id,
+          'local progress error, fallback to empty epoch',
+          epoch,
+        );
         this.cfiLocation = '';
         this.percentage = 0;
       }
       if (authState.userId) {
-        const sync = readerSyncState.getSupabaseSync() ?? new SupabaseProgressSync(authState.userId);
+        const sync =
+          readerSyncState.getSupabaseSync() ?? new SupabaseProgressSync(authState.userId);
         if (!readerSyncState.getSupabaseSync()) readerSyncState.setSupabaseSync(sync);
         const localUpdatedAt = await this.viewerPort
           .getProgress(book.id)
@@ -128,13 +142,26 @@ class ReaderDomainState {
           'localUpdatedAt',
           localUpdatedAt,
         );
-        void readerSyncState.fetchAndApplyBookState(sync, book.id, epoch, localUpdatedAt, () => epoch !== this.openEpoch || this.activeReadingBookId !== book.id);
+        void readerSyncState.fetchAndApplyBookState(
+          sync,
+          book.id,
+          epoch,
+          localUpdatedAt,
+          () => epoch !== this.openEpoch || this.activeReadingBookId !== book.id,
+        );
       }
     }
   }
 
   private applyRemoteProgress(progress: SupabaseProgressRow): void {
-    console.warn('[continue] applyRemoteProgress book', progress.bookId, 'cfi', progress.cfiLocation.slice(0, 60), 'pct', progress.percentage);
+    console.warn(
+      '[continue] applyRemoteProgress book',
+      progress.bookId,
+      'cfi',
+      progress.cfiLocation.slice(0, 60),
+      'pct',
+      progress.percentage,
+    );
     this.cfiLocation = progress.cfiLocation;
     this.percentage = progress.percentage;
     this.locatorJson = progress.locatorJson ?? null;
@@ -149,13 +176,24 @@ class ReaderDomainState {
   }
 
   // ─── Progress ───
-  async handleEpubLocationChange(bookId: string, nextLocation: string, nextPercentage: number): Promise<void> {
+  async handleEpubLocationChange(
+    bookId: string,
+    nextLocation: string,
+    nextPercentage: number,
+  ): Promise<void> {
     this.cfiLocation = nextLocation;
     this.percentage = Math.max(0, Math.min(100, nextPercentage));
-    const payload: SaveProgressInput = { bookId, cfiLocation: nextLocation, percentage: this.percentage };
+    const payload: SaveProgressInput = {
+      bookId,
+      cfiLocation: nextLocation,
+      percentage: this.percentage,
+    };
     try {
       await this.viewerPort.saveProgress(payload);
-      await this.libraryPort.setReadingStatus(bookId, this.percentage >= 100 ? 'completed' : 'reading');
+      await this.libraryPort.setReadingStatus(
+        bookId,
+        this.percentage >= 100 ? 'completed' : 'reading',
+      );
       if (authState.userId) {
         const outboxPayload = {
           userId: authState.userId,
@@ -165,7 +203,12 @@ class ReaderDomainState {
           locatorJson: this.locatorJson,
           updatedAt: new Date().toISOString(),
         };
-        void outboxDao.addCoalesced('READING_PROGRESS', bookId, 'UPSERT', JSON.stringify(outboxPayload));
+        void outboxDao.addCoalesced(
+          'READING_PROGRESS',
+          bookId,
+          'UPSERT',
+          JSON.stringify(outboxPayload),
+        );
       }
     } catch {}
     void this.onStatsRefreshNeeded?.(bookId);
@@ -181,7 +224,13 @@ class ReaderDomainState {
 
   async handlePdfSessionProgress(
     bookId: string,
-    event: { startedAt: string; endedAt?: string; durationSeconds: number; startPercentage?: number; endPercentage?: number },
+    event: {
+      startedAt: string;
+      endedAt?: string;
+      durationSeconds: number;
+      startPercentage?: number;
+      endPercentage?: number;
+    },
   ): Promise<void> {
     if (event.durationSeconds < MIN_SESSION_DURATION_SECONDS) return;
     if (!this.isValidSessionProgressEvent(event)) return;
@@ -224,24 +273,52 @@ class ReaderDomainState {
   }
 
   // ─── Sync delegation (thin) ───
-  subscribeToRemoteProgress(): void { readerSyncState.subscribeToRemoteProgress(); }
-  subscribeToRemoteBookmarks(): void { readerSyncState.subscribeToRemoteBookmarks(); }
-  subscribeToRemoteHighlights(): void { readerSyncState.subscribeToRemoteHighlights(); }
-  subscribeToRemoteSessions(): void { readerSyncState.subscribeToRemoteSessions(); }
-  unsubscribeFromRemoteProgress(): void { readerSyncState.unsubscribeFromRemoteProgress(); }
-  unsubscribeFromRemoteBookmarks(): void { readerSyncState.unsubscribeFromRemoteBookmarks(); }
-  unsubscribeFromRemoteHighlights(): void { readerSyncState.unsubscribeFromRemoteHighlights(); }
-  unsubscribeFromRemoteSessions(): void { readerSyncState.unsubscribeFromRemoteSessions(); }
-  refreshRemoteProgressSubscription(): void { readerSyncState.refreshRemoteProgressSubscription(); }
-  subscribeToAllRemoteChanges(): void { readerSyncState.subscribeToAllRemoteChanges(); }
-  unsubscribeFromAllRemoteChanges(): void { readerSyncState.unsubscribeFromAllRemoteChanges(); }
+  subscribeToRemoteProgress(): void {
+    readerSyncState.subscribeToRemoteProgress();
+  }
+  subscribeToRemoteBookmarks(): void {
+    readerSyncState.subscribeToRemoteBookmarks();
+  }
+  subscribeToRemoteHighlights(): void {
+    readerSyncState.subscribeToRemoteHighlights();
+  }
+  subscribeToRemoteSessions(): void {
+    readerSyncState.subscribeToRemoteSessions();
+  }
+  unsubscribeFromRemoteProgress(): void {
+    readerSyncState.unsubscribeFromRemoteProgress();
+  }
+  unsubscribeFromRemoteBookmarks(): void {
+    readerSyncState.unsubscribeFromRemoteBookmarks();
+  }
+  unsubscribeFromRemoteHighlights(): void {
+    readerSyncState.unsubscribeFromRemoteHighlights();
+  }
+  unsubscribeFromRemoteSessions(): void {
+    readerSyncState.unsubscribeFromRemoteSessions();
+  }
+  refreshRemoteProgressSubscription(): void {
+    readerSyncState.refreshRemoteProgressSubscription();
+  }
+  subscribeToAllRemoteChanges(): void {
+    readerSyncState.subscribeToAllRemoteChanges();
+  }
+  unsubscribeFromAllRemoteChanges(): void {
+    readerSyncState.unsubscribeFromAllRemoteChanges();
+  }
 
   // For tests / compat: expose sync internals
-  get _sync(): typeof readerSyncState { return readerSyncState; }
+  get _sync(): typeof readerSyncState {
+    return readerSyncState;
+  }
 
   // highlightPullInFlight proxy
-  get highlightPullInFlight(): boolean { return readerSyncState.highlightPullInFlight; }
-  set highlightPullInFlight(v: boolean) { readerSyncState.highlightPullInFlight = v; }
+  get highlightPullInFlight(): boolean {
+    return readerSyncState.highlightPullInFlight;
+  }
+  set highlightPullInFlight(v: boolean) {
+    readerSyncState.highlightPullInFlight = v;
+  }
 
   resetReader(): void {
     this.openEpoch += 1;

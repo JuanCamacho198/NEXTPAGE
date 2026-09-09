@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createSettingsRouter, SETTINGS_TABS } from '$lib/features/settings/useSettingsRouter.svelte';
+import {
+  createSettingsRouter,
+  SETTINGS_TABS,
+} from '$lib/features/settings/useSettingsRouter.svelte';
 
 describe('useSettingsRouter', () => {
   beforeEach(() => {
@@ -38,7 +41,9 @@ describe('useSettingsRouter', () => {
 
   function mockFocus() {
     const focus = vi.fn();
-    const spy = vi.spyOn(document, 'getElementById').mockReturnValue({ focus } as unknown as HTMLElement);
+    const spy = vi
+      .spyOn(document, 'getElementById')
+      .mockReturnValue({ focus } as unknown as HTMLElement);
     return { focus, spy };
   }
 

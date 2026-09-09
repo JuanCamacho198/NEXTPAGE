@@ -36,7 +36,8 @@ type MaybeCommandError = Error & { commandError?: CommandErrorDto };
 const mapCommandErrorMessage = (error: unknown): { message: string; recoverable: boolean } => {
   const err = error as MaybeCommandError;
   const fallback = error instanceof Error ? error.message : 'Settings command failed.';
-  if (err.commandError) return { message: err.commandError.message, recoverable: err.commandError.recoverable };
+  if (err.commandError)
+    return { message: err.commandError.message, recoverable: err.commandError.recoverable };
   return { message: fallback, recoverable: false };
 };
 
@@ -58,10 +59,13 @@ export function createSettingsAppearance(deps: AppearanceDeps = {}): {
 } {
   const settingsPort: SettingsPort = deps.settingsPort ?? new TauriSettingsAdapter();
   const getSettingsFn = deps.getSettings ?? (() => settingsPort.getAppSettings());
-  const upsertSettingsFn = deps.upsertSettings ?? ((s: AppSettingDto[]) => settingsPort.upsertAppSettings(s));
+  const upsertSettingsFn =
+    deps.upsertSettings ?? ((s: AppSettingDto[]) => settingsPort.upsertAppSettings(s));
   const getLocaleSettingFn = deps.getLocaleSetting ?? (() => settingsPort.getLocale());
-  const setLocaleFn = deps.setLocale ?? ((locale: UiLocale): Promise<void> => i18n.setLocale(locale));
-  const toSupportedLocaleFn = deps.toSupportedLocale ?? ((v: string | null): UiLocale | null => i18n.toSupportedLocale(v));
+  const setLocaleFn =
+    deps.setLocale ?? ((locale: UiLocale): Promise<void> => i18n.setLocale(locale));
+  const toSupportedLocaleFn =
+    deps.toSupportedLocale ?? ((v: string | null): UiLocale | null => i18n.toSupportedLocale(v));
 
   let preferredTheme = $state('light');
   let preferredFontScale = $state(100);
@@ -143,8 +147,16 @@ export function createSettingsAppearance(deps: AppearanceDeps = {}): {
     settingsUnavailable = null;
     try {
       await upsertSettingsFn([
-        { key: SETTINGS_KEY.THEME, valueJson: JSON.stringify(preferredTheme), updatedAt: new Date().toISOString() },
-        { key: SETTINGS_KEY.FONT_SCALE, valueJson: JSON.stringify(preferredFontScale), updatedAt: new Date().toISOString() },
+        {
+          key: SETTINGS_KEY.THEME,
+          valueJson: JSON.stringify(preferredTheme),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          key: SETTINGS_KEY.FONT_SCALE,
+          valueJson: JSON.stringify(preferredFontScale),
+          updatedAt: new Date().toISOString(),
+        },
       ]);
       initialTheme = preferredTheme;
       initialFontScale = preferredFontScale;
@@ -164,20 +176,48 @@ export function createSettingsAppearance(deps: AppearanceDeps = {}): {
   }
 
   return {
-    get preferredTheme() { return preferredTheme; },
-    set preferredTheme(v: string) { preferredTheme = v; },
-    get preferredFontScale() { return preferredFontScale; },
-    set preferredFontScale(v: number) { preferredFontScale = clampInteger(v, 80, 140); },
-    get locale() { return locale; },
-    set locale(v: UiLocale) { locale = v; },
-    get settingsError() { return settingsError; },
-    set settingsError(v: string | null) { settingsError = v; },
-    get settingsUnavailable() { return settingsUnavailable; },
-    set settingsUnavailable(v: string | null) { settingsUnavailable = v; },
-    get isSavingSettings() { return isSavingSettings; },
-    set isSavingSettings(v: boolean) { isSavingSettings = v; },
-    get isDirty() { return isDirty; },
-    get isSaving() { return isSaving; },
+    get preferredTheme() {
+      return preferredTheme;
+    },
+    set preferredTheme(v: string) {
+      preferredTheme = v;
+    },
+    get preferredFontScale() {
+      return preferredFontScale;
+    },
+    set preferredFontScale(v: number) {
+      preferredFontScale = clampInteger(v, 80, 140);
+    },
+    get locale() {
+      return locale;
+    },
+    set locale(v: UiLocale) {
+      locale = v;
+    },
+    get settingsError() {
+      return settingsError;
+    },
+    set settingsError(v: string | null) {
+      settingsError = v;
+    },
+    get settingsUnavailable() {
+      return settingsUnavailable;
+    },
+    set settingsUnavailable(v: string | null) {
+      settingsUnavailable = v;
+    },
+    get isSavingSettings() {
+      return isSavingSettings;
+    },
+    set isSavingSettings(v: boolean) {
+      isSavingSettings = v;
+    },
+    get isDirty() {
+      return isDirty;
+    },
+    get isSaving() {
+      return isSaving;
+    },
     handlePreferredThemeChange,
     handlePreferredFontScaleChange,
     handleLocaleSelect,

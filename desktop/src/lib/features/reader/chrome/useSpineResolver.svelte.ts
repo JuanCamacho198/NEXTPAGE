@@ -2,10 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { normalizeHref } from '$lib/shared/sync/LocatorCodec';
 import { stripFragment } from '$lib/features/reader/viewer-epub/epubViewerHelpers';
 
-export type ParseEpubFn = (
-  filePath: string,
-  bookId: string,
-) => Promise<{ spineHrefs: string[] }>;
+export type ParseEpubFn = (filePath: string, bookId: string) => Promise<{ spineHrefs: string[] }>;
 
 const defaultParseEpub: ParseEpubFn = async (filePath, bookId) => {
   const meta = await invoke<{
@@ -41,7 +38,9 @@ export function createSpineResolver(deps: { parseEpub?: ParseEpubFn } = {}) {
     const fileName = norm.split('/').pop() ?? '';
     if (fileName) {
       idx = spine.findIndex(
-        (h) => normalizeHref(h).endsWith('/' + fileName) || normalizeHref(h).split('/').pop() === fileName,
+        (h) =>
+          normalizeHref(h).endsWith('/' + fileName) ||
+          normalizeHref(h).split('/').pop() === fileName,
       );
       if (idx !== -1) return idx;
     }

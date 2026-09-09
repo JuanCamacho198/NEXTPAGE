@@ -16,9 +16,7 @@ export interface ConflictResolver<T> {
  * reading_sessions, user_books. Clock skew risk mitigated by server `now()`
  * + `version` on the write path.
  */
-export class LastWriteWinsResolver<T extends VersionedSyncRecord>
-  implements ConflictResolver<T>
-{
+export class LastWriteWinsResolver<T extends VersionedSyncRecord> implements ConflictResolver<T> {
   resolve(local: T | null | undefined, remote: T): T {
     if (!local) return remote;
 

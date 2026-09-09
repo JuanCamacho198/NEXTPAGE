@@ -4,7 +4,8 @@ const mockUpdateHeartbeat = vi.fn();
 const mockGetSessionClient = vi.fn();
 
 vi.mock('$lib/services/devices', async () => {
-  const actual = await vi.importActual<typeof import('$lib/services/devices')>('$lib/services/devices');
+  const actual =
+    await vi.importActual<typeof import('$lib/services/devices')>('$lib/services/devices');
   return { ...actual, updateHeartbeat: (...args: unknown[]) => mockUpdateHeartbeat(...args) };
 });
 vi.mock('$lib/services/supabase', () => ({

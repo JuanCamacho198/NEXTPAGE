@@ -35,7 +35,12 @@ describe('clampPdfScale (usePdfZoomTheme re-export)', () => {
 describe('flattenOutline', () => {
   it('flattens nested outline with depth', () => {
     const outline = [
-      { id: 'a', title: 'A', dest: null, items: [{ id: 'a-0', title: 'A1', dest: null, items: [] }] },
+      {
+        id: 'a',
+        title: 'A',
+        dest: null,
+        items: [{ id: 'a-0', title: 'A1', dest: null, items: [] }],
+      },
       { id: 'b', title: 'B', dest: null, items: [] },
     ];
     const flat = flattenOutline(outline as unknown as Parameters<typeof flattenOutline>[0]);

@@ -69,20 +69,38 @@ class CrashLogStoreTest {
         val (store, _) = createStore()
         val crashDir = tempFolder.newFolder("crashes")
 
-        // Create 11 crash files with staggered timestamps
-        repeat(11) { i ->
-            val file = File(crashDir, "crash_$i.txt")
-            file.createNewFile()
-            file.setLastModified(1000L + i * 1000) // oldest first
-        }
+            // Create 11 crash files with staggered timestamps (recent past,
+            // distinct minutes - ancient epoch values are unreliable on some
+            // Linux filesystems and made this test flaky on CI).
+            val now = System.currentTimeMillis()
+            repeat(11) { i ->
+                val file = File(crashDir, "crash_$i.txt")
+                check(file.createNewFile()) { "failed to create ${file.name}" }
+                check(file.setLastModified(now - (11 - i) * 60_000L)) {
+                    "failed to set mtime on ${file.name}"
+                }
+            }
 
-        store.cleanup(crashDir, maxFiles = 10)
+            val before = crashDir.listFiles()
+                ?.filter { it.name.startsWith("crash_") }
+                ?: error("crash dir not listable")
+            check(before.size == 11) { "expected 11 seed files, got ${before.size}" }
+            val oldestName = before.minBy { it.lastModified() }.name
 
-        val remaining = crashDir.listFiles()
-            ?.filter { it.name.startsWith("crash_") }
-            ?: emptyList()
-        assertEquals("Should have 10 crash files remaining", 10, remaining.size)
-        assertFalse("Oldest crash file should be deleted", File(crashDir, "crash_0.txt").exists())
+            store.cleanup(crashDir, maxFiles = 10)
+
+            val remaining = crashDir.listFiles()
+                ?.filter { it.name.startsWith("crash_") }
+                ?: error("crash dir not listable after cleanup")
+            check(remaining.size == 10) {
+                "Should have 10 crash files remaining, got ${remaining.size}: " +
+                    remaining.joinToString(", ") { "${it.name}@${it.lastModified()}" } +
+                    " (seed: " + before.joinToString(", ") { "${it.name}@${it.lastModified()}" } + ")"
+            }
+            val deleted = before.map { it.name } - remaining.map { it.name }.toSet()
+            check(deleted == listOf(oldestName)) {
+                "Oldest ($oldestName) should be deleted; deleted=$deleted"
+            }
     }
 
     @Test

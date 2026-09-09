@@ -35,7 +35,13 @@
 
 <section aria-labelledby="discover-heading" class="flex h-full flex-col gap-3 overflow-hidden">
   <h1 id="discover-heading" class="m-0 text-xl font-semibold">{t('sidebar.discover')}</h1>
-  <form class="flex gap-2" onsubmit={(e) => { e.preventDefault(); submitSearch(); }}>
+  <form
+    class="flex gap-2"
+    onsubmit={(e) => {
+      e.preventDefault();
+      submitSearch();
+    }}
+  >
     <input
       type="search"
       bind:value={searchInput}

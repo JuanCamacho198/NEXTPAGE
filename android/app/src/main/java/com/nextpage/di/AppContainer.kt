@@ -87,6 +87,7 @@ class AppContainer(context: Context) {
     val supabaseBookCatalogDataSource: SupabaseBookCatalogDataSource by lazy { networkModule.supabaseBookCatalogDataSource }
     val supabaseBookCatalogSync: SupabaseBookCatalogSync by lazy { networkModule.supabaseBookCatalogSync }
     val catalogProvider: CatalogProvider by lazy { networkModule.catalogProvider }
+    val addonRegistry: com.nextpage.data.remote.addons.AddonRegistry by lazy { networkModule.addonRegistry }
     val driveColdBackupService: DriveColdBackupService by lazy { networkModule.driveColdBackupService }
 
     // ── sync-layer-split PR-1 foundations ────────────────────────────────

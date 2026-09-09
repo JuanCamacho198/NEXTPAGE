@@ -18,22 +18,37 @@ export function createReaderZoom(deps: ReaderZoomDeps) {
   const persist = deps.persist ?? ((s: ReaderSettings) => settingsPort.upsertReaderSettings(s));
   const resolveViewer = (): ViewerHandle => {
     if (deps.getViewer) return deps.getViewer();
-    const refs = (deps.getRefs?.() ?? { pdf: null, epub: null }) as { pdf: { setScale?: (v: number) => void } | null; epub: { setZoom?: (v: number) => void } | null };
+    const refs = (deps.getRefs?.() ?? { pdf: null, epub: null }) as {
+      pdf: { setScale?: (v: number) => void } | null;
+      epub: { setZoom?: (v: number) => void } | null;
+    };
     const book = deps.getActiveBook?.() as { format?: unknown } | null;
     const fmtRaw = book?.format;
     const fmt = typeof fmtRaw === 'string' ? String(fmtRaw).toLowerCase() : '';
     const kind = fmt === 'epub' ? 'epub' : 'pdf';
     return {
-      get kind() { return kind as ViewerHandle['kind']; },
-      navigatePrev() { return false; },
-      navigateNext() { return false; },
-      goToPage() { return Promise.resolve(false); },
+      get kind() {
+        return kind as ViewerHandle['kind'];
+      },
+      navigatePrev() {
+        return false;
+      },
+      navigateNext() {
+        return false;
+      },
+      goToPage() {
+        return Promise.resolve(false);
+      },
       setScaleOrZoom(pct: number) {
         if (kind === 'pdf') refs.pdf?.setScale?.(pct / 100);
         else refs.epub?.setZoom?.(pct);
       },
-      getCurrentPage() { return 1; },
-      getTotalForHeader() { return 0; },
+      getCurrentPage() {
+        return 1;
+      },
+      getTotalForHeader() {
+        return 0;
+      },
     } as ViewerHandle;
   };
 
@@ -111,7 +126,10 @@ export function createReaderZoom(deps: ReaderZoomDeps) {
   }
 
   function handleGlobalKeydown(e: KeyboardEvent): void {
-    if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+' || e.key === '-' || e.key === '_')) {
+    if (
+      (e.ctrlKey || e.metaKey) &&
+      (e.key === '=' || e.key === '+' || e.key === '-' || e.key === '_')
+    ) {
       if (hasEditableContext(e.target as Element | null)) return;
       e.preventDefault();
       const step = e.key === '-' || e.key === '_' ? -10 : 10;

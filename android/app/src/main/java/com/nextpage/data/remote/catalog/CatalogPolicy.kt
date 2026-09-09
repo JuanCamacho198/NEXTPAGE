@@ -27,6 +27,14 @@ const val OL_MIN_GAP_MS = 1000L
 const val MAX_DELAYED_RETRIES = 1
 const val RETRY_BASE_DELAY_MS = 800L
 
+/** HTTP status bands shared by transports, registry and providers. */
+const val HTTP_OK_MIN = 200
+const val HTTP_OK_MAX = 299
+const val HTTP_NOT_FOUND = 404
+const val HTTP_TOO_MANY_REQUESTS = 429
+const val HTTP_SERVER_ERROR_MIN = 500
+const val HTTP_SERVER_ERROR_MAX = 599
+
 const val ANDROID_USER_AGENT = "NextPage/Android (contact: TBD)"
 
 fun buildUserAgent(platform: String): String = "NextPage/$platform (contact: TBD)"
@@ -41,7 +49,11 @@ fun clampPageSize(requested: Double): Int {
     return requested.toInt().coerceIn(MIN_PAGE_SIZE, MAX_PAGE_SIZE)
 }
 
-fun shouldRetryStatus(status: Int): Boolean = status == 429 || status >= 500
+fun shouldRetryStatus(status: Int): Boolean =
+    status == HTTP_TOO_MANY_REQUESTS || status >= HTTP_SERVER_ERROR_MIN
+
+/** True for HTTP 2xx responses. */
+fun Int.isHttpSuccess(): Boolean = this in HTTP_OK_MIN..HTTP_OK_MAX
 
 /** Exponential backoff delay for the single delayed retry. */
 fun backoffDelayMs(attempt: Int): Long = RETRY_BASE_DELAY_MS * (1L shl attempt.coerceAtLeast(0))

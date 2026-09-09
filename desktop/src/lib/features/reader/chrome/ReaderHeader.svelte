@@ -167,13 +167,14 @@
       >
         <Icon name={isFullscreen ? 'fullscreen-exit' : 'fullscreen-enter'} size="sm" />
       </button>
-
     </div>
   </div>
 
   {#if showReadingControls}
     <!-- Bottom row: reading controls (unified immersive bar) -->
-    <div class="flex h-12 shrink-0 items-center justify-center gap-3 border-t border-(--color-surface-strong)/20 px-4 bg-(--color-bg-deep)">
+    <div
+      class="flex h-12 shrink-0 items-center justify-center gap-3 border-t border-(--color-surface-strong)/20 px-4 bg-(--color-bg-deep)"
+    >
       <button
         type="button"
         onclick={onPrev}
@@ -186,7 +187,9 @@
       <button
         type="button"
         onclick={onNext}
-        disabled={totalPages !== undefined && currentPage !== undefined && currentPage >= totalPages}
+        disabled={totalPages !== undefined &&
+          currentPage !== undefined &&
+          currentPage >= totalPages}
         class="inline-flex items-center justify-center px-2.5 py-1.5 border border-(--color-surface-strong) rounded bg-transparent text-(--color-text-auxiliary) hover:text-(--color-text-inverse) hover:bg-(--color-surface-strong)/20 cursor-pointer text-xs min-w-8 min-h-8 disabled:opacity-50 disabled:cursor-not-allowed"
         aria-label={t('reader.next_page')}
       >
@@ -205,7 +208,9 @@
         <span class="text-xs text-(--color-text-auxiliary) opacity-70">/ {totalPages}</span>
       </span>
       {#if currentPercentage !== undefined}
-        <span class="text-xs text-(--color-text-auxiliary) min-w-10 text-center">{Math.round(currentPercentage)}%</span>
+        <span class="text-xs text-(--color-text-auxiliary) min-w-10 text-center"
+          >{Math.round(currentPercentage)}%</span
+        >
       {/if}
       {#if fontSizePercent !== undefined && onFontSizeChange}
         <ZoomDropdown value={fontSizePercent} onSelect={onFontSizeChange} />

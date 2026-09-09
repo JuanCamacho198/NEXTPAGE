@@ -12,7 +12,7 @@ import type {
   TagDto,
   RemoteHighlightRow,
   RemoteReadingSessionRow,
-  UpsertRemoteSummary
+  UpsertRemoteSummary,
 } from '$lib/shared/types';
 
 export type UpdateHighlightInput = {
@@ -38,15 +38,31 @@ export interface ViewerPort {
   getProgress(bookId: string): Promise<ReadingProgressDto | null>;
   saveProgress(payload: SaveProgressInput): Promise<void>;
   upsertProgress(progress: ReadingProgressDto): Promise<void>;
-  saveReadingSession(payload: import('$lib/shared/types').ReadingSessionInput): Promise<import('$lib/shared/types').ReadingSessionSavedDto>;
+  saveReadingSession(
+    payload: import('$lib/shared/types').ReadingSessionInput,
+  ): Promise<import('$lib/shared/types').ReadingSessionSavedDto>;
   searchBookText(payload: SearchBookTextInput): Promise<SearchBookTextResponse>;
   upsertRemoteHighlights(rows: RemoteHighlightRow[]): Promise<UpsertRemoteSummary>;
   upsertRemoteReadingSessions(rows: RemoteReadingSessionRow[]): Promise<number>;
   getReadingStats(bookId?: string): Promise<ReadingStatsSummaryDto>;
-  getReadingStatsForRange(from: string, to: string, bookId?: string): Promise<ReadingStatsSummaryDto>;
-  getReadingActivity(period: string, granularity: string, bookId?: string): Promise<ActivityPoint[]>;
+  getReadingStatsForRange(
+    from: string,
+    to: string,
+    bookId?: string,
+  ): Promise<ReadingStatsSummaryDto>;
+  getReadingActivity(
+    period: string,
+    granularity: string,
+    bookId?: string,
+  ): Promise<ActivityPoint[]>;
   getReadingStreak(bookId?: string, userId?: string): Promise<number>;
-  addDictionaryWord(payload: { word: string; tags?: string[]; isFavorite?: boolean; srsStage?: number; userId?: string }): Promise<import('$lib/shared/types').DictionaryWordDto>;
+  addDictionaryWord(payload: {
+    word: string;
+    tags?: string[];
+    isFavorite?: boolean;
+    srsStage?: number;
+    userId?: string;
+  }): Promise<import('$lib/shared/types').DictionaryWordDto>;
   getLogs(): Promise<string[]>;
   diagnose(): Promise<import('$lib/shared/types').DiagnoseResult>;
 }

@@ -19,6 +19,10 @@ import {
 import { GutendexDataSource } from '$lib/shared/services/catalog/GutendexDataSource';
 import { OpenLibraryDataSource } from '$lib/shared/services/catalog/OpenLibraryDataSource';
 import { CompositeCatalogProvider } from '$lib/shared/services/catalog/CompositeCatalogProvider';
+import {
+  GutendexCatalogProvider,
+  OpenLibraryCatalogProvider,
+} from '$lib/shared/services/catalog/BuiltInCatalogProviders';
 import gutendexFixture from '$lib/shared/services/catalog/fixtures/gutendex-search.json';
 import openLibraryFixture from '$lib/shared/services/catalog/fixtures/openlibrary-search.json';
 import type { GutendexRecord, OpenLibraryDoc } from '$lib/shared/services/catalog/mappers';
@@ -101,7 +105,7 @@ describe('merge and pagination', () => {
     const oBooks = olDocs.map(mapOpenLibraryDoc).filter((b) => b !== null);
     const merged = mergeResults(gBooks, oBooks);
     const pride = merged.find((b) => b.id === 'gutendex:1342');
-    expect(pride?.provider).toBe('gutendex');
+    expect(pride?.provider).toBe('builtin:gutendex');
     expect(pride?.coverUrl).toBe('https://covers.openlibrary.org/b/id/6794977-M.jpg');
     // Borrowable OL doc dropped by the mapper, so it never reaches the merge.
     expect(merged.some((b) => b.title === 'Borrow Restricted Title')).toBe(false);
@@ -207,7 +211,13 @@ describe('CompositeCatalogProvider', () => {
         return { status: 200, body: openLibraryFixture };
       }),
     );
-    return { provider: new CompositeCatalogProvider(g, o, { debounceMs: 0 }), calls };
+    return {
+      provider: new CompositeCatalogProvider(
+        [new GutendexCatalogProvider(g), new OpenLibraryCatalogProvider(o)],
+        { debounceMs: 0 },
+      ),
+      calls,
+    };
   }
 
   it('rejects page < 1 before any I/O', async () => {
@@ -233,7 +243,9 @@ describe('CompositeCatalogProvider', () => {
         ? { status: 200, body: gutendexFixture.results[0] }
         : { status: 404, body: {} },
     );
-    const provider = new CompositeCatalogProvider(new GutendexDataSource(fetchFn));
+    const provider = new CompositeCatalogProvider([
+      new GutendexCatalogProvider(new GutendexDataSource(fetchFn)),
+    ]);
     await expect(provider.getDetails('gutendex:1342')).resolves.toMatchObject({
       id: 'gutendex:1342',
     });

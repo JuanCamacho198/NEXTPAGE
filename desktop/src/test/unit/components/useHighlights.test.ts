@@ -62,7 +62,11 @@ describe('useHighlights', () => {
 
     const spine = createSpineResolver({ parseEpub: vi.fn().mockResolvedValue({ spineHrefs: [] }) });
     const outbox = new SyncOutboxDao();
-    const book = { id: 'book-1', filePath: 'C:/book.epub', format: 'epub' } as unknown as ReturnType<typeof createHighlights> extends never ? never : any;
+    const book = {
+      id: 'book-1',
+      filePath: 'C:/book.epub',
+      format: 'epub',
+    } as unknown as ReturnType<typeof createHighlights> extends never ? never : any;
     const getBook = vi.fn().mockReturnValue(book);
     const h = createHighlights({ getBook: () => book, spine, outbox });
 
@@ -147,7 +151,9 @@ describe('useHighlights', () => {
         updatedAt: '',
       } as never,
     ]);
-    const parseMock = vi.fn().mockResolvedValue({ spineHrefs: ['OEBPS/Text/cap1.xhtml', 'OEBPS/Text/cap2.xhtml'] });
+    const parseMock = vi
+      .fn()
+      .mockResolvedValue({ spineHrefs: ['OEBPS/Text/cap1.xhtml', 'OEBPS/Text/cap2.xhtml'] });
     const spine = createSpineResolver({ parseEpub: parseMock });
     const outbox = new SyncOutboxDao();
     const book = { id: 'book-1', filePath: 'C:/book.epub', format: 'epub' } as unknown as never;
@@ -172,7 +178,17 @@ describe('useHighlights', () => {
   it('optimistic merge preserves not-yet-in-DB highlights', async () => {
     const listMock = vi.mocked(listHighlights);
     listMock.mockResolvedValue([
-      { id: 'h-db', bookId: 'b1', text: 'db', color: '#facc15', pageNumber: 1, note: null, createdAt: '', updatedAt: '', cfi: null } as never,
+      {
+        id: 'h-db',
+        bookId: 'b1',
+        text: 'db',
+        color: '#facc15',
+        pageNumber: 1,
+        note: null,
+        createdAt: '',
+        updatedAt: '',
+        cfi: null,
+      } as never,
     ]);
     const spine = createSpineResolver({ parseEpub: vi.fn().mockResolvedValue({ spineHrefs: [] }) });
     const outbox = new SyncOutboxDao();
@@ -180,7 +196,15 @@ describe('useHighlights', () => {
     const h = createHighlights({ getBook: () => book as any, spine, outbox });
     // optimistic highlight already in memory not yet in DB
     h.persistedHighlights = [
-      { id: 'h-opt', color: '#facc15', pageNumber: 2, rects: [], cfi: null, text: 'opt', note: null },
+      {
+        id: 'h-opt',
+        color: '#facc15',
+        pageNumber: 2,
+        rects: [],
+        cfi: null,
+        text: 'opt',
+        note: null,
+      },
     ];
     h.reloadHighlights();
     vi.advanceTimersByTime(32);

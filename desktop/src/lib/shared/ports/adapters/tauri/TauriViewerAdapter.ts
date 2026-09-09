@@ -11,7 +11,7 @@ import type {
   TagDto,
   RemoteHighlightRow,
   RemoteReadingSessionRow,
-  UpsertRemoteSummary
+  UpsertRemoteSummary,
 } from '$lib/shared/types';
 import * as tauriClient from '$lib/shared/api/tauriClient';
 
@@ -72,7 +72,9 @@ export class TauriViewerAdapter implements ViewerPort {
     return tauriClient.upsertProgress(progress);
   }
 
-  saveReadingSession(payload: import('$lib/shared/types').ReadingSessionInput): Promise<import('$lib/shared/types').ReadingSessionSavedDto> {
+  saveReadingSession(
+    payload: import('$lib/shared/types').ReadingSessionInput,
+  ): Promise<import('$lib/shared/types').ReadingSessionSavedDto> {
     return tauriClient.saveReadingSession(payload);
   }
 
@@ -92,11 +94,19 @@ export class TauriViewerAdapter implements ViewerPort {
     return tauriClient.getReadingStats(bookId);
   }
 
-  getReadingStatsForRange(from: string, to: string, bookId?: string): Promise<import('$lib/shared/types').ReadingStatsSummaryDto> {
+  getReadingStatsForRange(
+    from: string,
+    to: string,
+    bookId?: string,
+  ): Promise<import('$lib/shared/types').ReadingStatsSummaryDto> {
     return tauriClient.getReadingStatsForRange(from, to, bookId);
   }
 
-  getReadingActivity(period: string, granularity: string, bookId?: string): Promise<import('$lib/shared/types').ActivityPoint[]> {
+  getReadingActivity(
+    period: string,
+    granularity: string,
+    bookId?: string,
+  ): Promise<import('$lib/shared/types').ActivityPoint[]> {
     return tauriClient.getReadingActivity(period, granularity, bookId);
   }
 
@@ -104,7 +114,13 @@ export class TauriViewerAdapter implements ViewerPort {
     return tauriClient.getReadingStreak(bookId, userId);
   }
 
-  addDictionaryWord(payload: { word: string; tags?: string[]; isFavorite?: boolean; srsStage?: number; userId?: string }): Promise<import('$lib/shared/types').DictionaryWordDto> {
+  addDictionaryWord(payload: {
+    word: string;
+    tags?: string[];
+    isFavorite?: boolean;
+    srsStage?: number;
+    userId?: string;
+  }): Promise<import('$lib/shared/types').DictionaryWordDto> {
     return tauriClient.addDictionaryWord(payload);
   }
 

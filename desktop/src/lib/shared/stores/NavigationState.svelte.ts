@@ -24,15 +24,35 @@ export type NavCallbacks = {
 export function getNavItems(callbacks: NavCallbacks): NavItem[] {
   const items: NavItem[] = [
     { id: 'home', messageKey: 'sidebar.home', icon: 'home', action: callbacks.onNavigateHome },
-    { id: 'library', messageKey: 'sidebar.library', icon: 'library', action: callbacks.onNavigateLibrary },
+    {
+      id: 'library',
+      messageKey: 'sidebar.library',
+      icon: 'library',
+      action: callbacks.onNavigateLibrary,
+    },
   ];
   if (callbacks.onNavigateDiscover) {
-    items.push({ id: 'discover', messageKey: 'sidebar.discover', icon: 'search', action: callbacks.onNavigateDiscover });
+    items.push({
+      id: 'discover',
+      messageKey: 'sidebar.discover',
+      icon: 'search',
+      action: callbacks.onNavigateDiscover,
+    });
   }
   items.push(
     { id: 'stats', messageKey: 'sidebar.stats', icon: 'stats', action: callbacks.onNavigateStats },
-    { id: 'highlights', messageKey: 'sidebar.highlights', icon: 'highlights', action: callbacks.onNavigateHighlights },
-    { id: 'settings', messageKey: 'sidebar.settings', icon: 'settings', action: callbacks.onNavigateSettings },
+    {
+      id: 'highlights',
+      messageKey: 'sidebar.highlights',
+      icon: 'highlights',
+      action: callbacks.onNavigateHighlights,
+    },
+    {
+      id: 'settings',
+      messageKey: 'sidebar.settings',
+      icon: 'settings',
+      action: callbacks.onNavigateSettings,
+    },
   );
   return items;
 }
@@ -40,7 +60,12 @@ export function getNavItems(callbacks: NavCallbacks): NavItem[] {
 export function getDataNavItems(callbacks: NavCallbacks): NavItem[] {
   const items: NavItem[] = [];
   if (callbacks.onNavigateDictionary) {
-    items.push({ id: 'dictionary', messageKey: 'sidebar.dictionary', icon: 'book', action: callbacks.onNavigateDictionary });
+    items.push({
+      id: 'dictionary',
+      messageKey: 'sidebar.dictionary',
+      icon: 'book',
+      action: callbacks.onNavigateDictionary,
+    });
   }
   return items;
 }

@@ -57,7 +57,11 @@ describe('LocatorCodec golden cross-language', () => {
   });
 
   it('locatorToJson normalizes href backslashes before serialization', () => {
-    const loc = locatorFromCfi(['OEBPS\\Text\\chap1.xhtml', 'b.html'], 'epubcfi(/6/1!/4/2,/1:0,/1:5)', null)!;
+    const loc = locatorFromCfi(
+      ['OEBPS\\Text\\chap1.xhtml', 'b.html'],
+      'epubcfi(/6/1!/4/2,/1:0,/1:5)',
+      null,
+    )!;
     const json = locatorToJson(loc);
     const parsed = JSON.parse(json) as { href: string };
     expect(parsed.href).toBe('OEBPS/Text/chap1.xhtml');

@@ -28,11 +28,13 @@ vi.mock('@sentry/browser', () => ({
   browserSessionIntegration: (opts?: unknown) => browserSessionIntegration(opts),
   replayIntegration: (opts?: unknown) => replayIntegration(opts),
   withScope: (cb: (scope: unknown) => void) =>
-    withScope(cb({
-      setLevel: (...args: unknown[]) => setLevel(...args),
-      setExtra: (...args: unknown[]) => setExtra(...args),
-      addBreadcrumb: (...args: unknown[]) => addBreadcrumb(...args),
-    })),
+    withScope(
+      cb({
+        setLevel: (...args: unknown[]) => setLevel(...args),
+        setExtra: (...args: unknown[]) => setExtra(...args),
+        addBreadcrumb: (...args: unknown[]) => addBreadcrumb(...args),
+      }),
+    ),
   captureException: (...args: unknown[]) => captureException(...args),
   captureMessage: (...args: unknown[]) => captureMessage(...args),
 }));

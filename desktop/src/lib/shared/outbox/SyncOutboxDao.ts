@@ -72,14 +72,22 @@ export class SyncOutboxDao {
   }
 
   /** HIGHLIGHT per id — atomic enqueue, never coalesced across ids. */
-  async enqueueHighlight(id: string, payload: Record<string, unknown>, operation: 'UPSERT' | 'DELETE' = 'UPSERT'): Promise<string> {
+  async enqueueHighlight(
+    id: string,
+    payload: Record<string, unknown>,
+    operation: 'UPSERT' | 'DELETE' = 'UPSERT',
+  ): Promise<string> {
     const json = JSON.stringify(payload);
     ensureValidJson(json);
     return this.add('HIGHLIGHT', id, operation, json);
   }
 
   /** BOOKMARK per id — atomic enqueue, never coalesced across ids. */
-  async enqueueBookmark(id: string, payload: Record<string, unknown>, operation: 'UPSERT' | 'DELETE' = 'UPSERT'): Promise<string> {
+  async enqueueBookmark(
+    id: string,
+    payload: Record<string, unknown>,
+    operation: 'UPSERT' | 'DELETE' = 'UPSERT',
+  ): Promise<string> {
     const json = JSON.stringify(payload);
     ensureValidJson(json);
     return this.add('BOOKMARK', id, operation, json);
@@ -129,12 +137,15 @@ export class SyncOutboxDao {
 }
 
 function ensureValidJson(json: string): void {
-  if (typeof json !== 'string' || json.length === 0) throw new Error('payloadJson must be non-empty valid JSON');
+  if (typeof json !== 'string' || json.length === 0)
+    throw new Error('payloadJson must be non-empty valid JSON');
   try {
     const v = JSON.parse(json);
     if (v === null || typeof v !== 'object') throw new Error('payloadJson must be JSON object');
   } catch (e) {
-    throw new Error(`payloadJson must be valid JSON: ${e instanceof Error ? e.message : String(e)}`);
+    throw new Error(
+      `payloadJson must be valid JSON: ${e instanceof Error ? e.message : String(e)}`,
+    );
   }
 }
 

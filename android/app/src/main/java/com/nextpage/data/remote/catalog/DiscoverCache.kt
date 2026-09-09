@@ -11,15 +11,18 @@ const val PAGE_TTL_S = 86_400L
 /** Detail TTL: 7d. */
 const val DETAIL_TTL_S = 604_800L
 
-private const val PAGE_KEY_PREFIX = "p:composite:"
-private const val DETAIL_KEY_PREFIX = "d:composite:"
+/** Discover cache format version (design A7): prefixed into every key. */
+const val DISCOVER_CACHE_VERSION = "v2"
 
-/** Page cache key: `p:{provider}:{query}:{page}` (24h). Query is normalized. */
-fun pageCacheKey(query: String, page: Int): String =
-    "$PAGE_KEY_PREFIX${query.trim().lowercase()}:$page"
+private const val PAGE_KEY_PREFIX = "p:$DISCOVER_CACHE_VERSION:"
+private const val DETAIL_KEY_PREFIX = "d:$DISCOVER_CACHE_VERSION:"
 
-/** Detail cache key: `d:{provider}:{id}` (7d). */
-fun detailCacheKey(id: String): String = "$DETAIL_KEY_PREFIX$id"
+/** Page cache key: `p:v2:{sourceId}:{query}:{page}` (24h). Query is normalized. */
+fun pageCacheKey(sourceId: String, query: String, page: Int): String =
+    "$PAGE_KEY_PREFIX$sourceId:${query.trim().lowercase()}:$page"
+
+/** Detail cache key: `d:v2:{sourceId}:{id}` (7d). */
+fun detailCacheKey(sourceId: String, id: String): String = "$DETAIL_KEY_PREFIX$sourceId:$id"
 
 /**
  * TTL cache store for catalog pages/details.

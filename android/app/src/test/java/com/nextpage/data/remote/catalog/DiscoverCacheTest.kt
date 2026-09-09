@@ -89,29 +89,35 @@ class DiscoverCacheTest {
         scope: CoroutineScope,
         cache: DiscoverCacheStore,
         now: () -> Long
-    ) = CompositeCatalogProvider(g, o, debounceMs = 0L, scope = scope, cache = cache, nowEpochSecs = now)
+        ) = CompositeCatalogProvider(
+            listOf(GutendexCatalogProvider(g), OpenLibraryCatalogProvider(o)),
+            debounceMs = 0L,
+            scope = scope,
+            cache = cache,
+            nowEpochSecs = now
+        )
 
-    @Test fun keys_useProviderScopedPrefixesAndTtls() {
-        assertEquals("p:composite:pride:1", pageCacheKey("Pride ", 1))
-        assertEquals("d:composite:gutendex:1342", detailCacheKey("gutendex:1342"))
+        @Test fun keys_useSourceScopedV2PrefixesAndTtls() {
+            assertEquals("p:v2:builtin:gutendex:pride:1", pageCacheKey(BUILTIN_GUTENDEX, "Pride ", 1))
+            assertEquals("d:v2:builtin:gutendex:gutendex:1342", detailCacheKey(BUILTIN_GUTENDEX, "gutendex:1342"))
         assertEquals(86_400L, PAGE_TTL_S)
         assertEquals(604_800L, DETAIL_TTL_S)
     }
 
     @Test fun memoryCache_hitWithinTtlAndEvictsExpiredRows() = runTest {
         val cache = InMemoryDiscoverCache()
-        cache.put("p:composite:pride:1", "{\"n\":1}", 1_000L, PAGE_TTL_S)
-        assertEquals("{\"n\":1}", cache.get("p:composite:pride:1", 1_000L + 3_600L))
-        assertNull(cache.get("p:composite:pride:1", 1_000L + PAGE_TTL_S + 1L))
+        cache.put("p:v2:builtin:gutendex:pride:1", "{\"n\":1}", 1_000L, PAGE_TTL_S)
+        assertEquals("{\"n\":1}", cache.get("p:v2:builtin:gutendex:pride:1", 1_000L + 3_600L))
+        assertNull(cache.get("p:v2:builtin:gutendex:pride:1", 1_000L + PAGE_TTL_S + 1L))
         assertEquals(0, cache.size())
     }
 
     @Test fun memoryCache_missAndOverwrite() = runTest {
         val cache = InMemoryDiscoverCache()
-        assertNull(cache.get("p:composite:missing:1", 1_000L))
-        cache.put("p:composite:pride:1", "{\"n\":1}", 1_000L, PAGE_TTL_S)
-        cache.put("p:composite:pride:1", "{\"n\":2}", 2_000L, PAGE_TTL_S)
-        assertEquals("{\"n\":2}", cache.get("p:composite:pride:1", 2_001L))
+        assertNull(cache.get("p:v2:builtin:gutendex:missing:1", 1_000L))
+        cache.put("p:v2:builtin:gutendex:pride:1", "{\"n\":1}", 1_000L, PAGE_TTL_S)
+        cache.put("p:v2:builtin:gutendex:pride:1", "{\"n\":2}", 2_000L, PAGE_TTL_S)
+        assertEquals("{\"n\":2}", cache.get("p:v2:builtin:gutendex:pride:1", 2_001L))
     }
 
     @Test fun search_servesRepeatedQueryFromCacheWithoutIo() = runTest {
@@ -172,13 +178,13 @@ class DiscoverCacheTest {
     @Test fun roomStore_passThroughWithTtlExpiryAndCacheOnlyKeys() = runTest {
         val dao = FakeDiscoverCacheDao()
         val store = RoomDiscoverCache(dao)
-        store.put("p:composite:pride:1", "{\"n\":1}", 1_000L, PAGE_TTL_S)
-        assertEquals("{\"n\":1}", store.get("p:composite:pride:1", 2_000L))
-        assertNull(store.get("p:composite:pride:1", 1_000L + PAGE_TTL_S + 1L))
+        store.put("p:v2:builtin:gutendex:pride:1", "{\"n\":1}", 1_000L, PAGE_TTL_S)
+        assertEquals("{\"n\":1}", store.get("p:v2:builtin:gutendex:pride:1", 2_000L))
+        assertNull(store.get("p:v2:builtin:gutendex:pride:1", 1_000L + PAGE_TTL_S + 1L))
         assertEquals(0, dao.count())
         // Isolation: every key is cache-scoped; the DAO interface exposes
         // discover_cache SQL only — no user_books/outbox method exists to call.
-        assertTrue(dao.calls.all { it.contains("p:composite:") || it == "count" })
-        assertTrue(dao.calls.any { it.startsWith("delete:p:composite:") })
+        assertTrue(dao.calls.all { it.contains("p:v2:") || it == "count" })
+        assertTrue(dao.calls.any { it.startsWith("delete:p:v2:") })
     }
 }

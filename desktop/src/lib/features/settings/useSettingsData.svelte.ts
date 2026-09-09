@@ -42,7 +42,9 @@ export function createSettingsData(deps: DataDeps = {}): {
   let isExportingColdBackup = $state(false);
   let isImportingColdBackup = $state(false);
 
-  const isSaving = $derived(isClearingCache || isExportingHighlights || isExportingColdBackup || isImportingColdBackup);
+  const isSaving = $derived(
+    isClearingCache || isExportingHighlights || isExportingColdBackup || isImportingColdBackup,
+  );
   const isDirty = $derived(selectedExportBook !== 'all' || selectedExportFormat !== 'json');
 
   async function handleClearCache(): Promise<void> {
@@ -115,22 +117,54 @@ export function createSettingsData(deps: DataDeps = {}): {
   }
 
   return {
-    get isClearingCache() { return isClearingCache; },
-    set isClearingCache(v: boolean) { isClearingCache = v; },
-    get cacheCleared() { return cacheCleared; },
-    set cacheCleared(v: boolean) { cacheCleared = v; },
-    get selectedExportBook() { return selectedExportBook; },
-    set selectedExportBook(v: string) { selectedExportBook = v; },
-    get selectedExportFormat() { return selectedExportFormat; },
-    set selectedExportFormat(v: 'json' | 'markdown') { selectedExportFormat = v; },
-    get isExportingHighlights() { return isExportingHighlights; },
-    set isExportingHighlights(v: boolean) { isExportingHighlights = v; },
-    get isExportingColdBackup() { return isExportingColdBackup; },
-    set isExportingColdBackup(v: boolean) { isExportingColdBackup = v; },
-    get isImportingColdBackup() { return isImportingColdBackup; },
-    set isImportingColdBackup(v: boolean) { isImportingColdBackup = v; },
-    get isSaving() { return isSaving; },
-    get isDirty() { return isDirty; },
+    get isClearingCache() {
+      return isClearingCache;
+    },
+    set isClearingCache(v: boolean) {
+      isClearingCache = v;
+    },
+    get cacheCleared() {
+      return cacheCleared;
+    },
+    set cacheCleared(v: boolean) {
+      cacheCleared = v;
+    },
+    get selectedExportBook() {
+      return selectedExportBook;
+    },
+    set selectedExportBook(v: string) {
+      selectedExportBook = v;
+    },
+    get selectedExportFormat() {
+      return selectedExportFormat;
+    },
+    set selectedExportFormat(v: 'json' | 'markdown') {
+      selectedExportFormat = v;
+    },
+    get isExportingHighlights() {
+      return isExportingHighlights;
+    },
+    set isExportingHighlights(v: boolean) {
+      isExportingHighlights = v;
+    },
+    get isExportingColdBackup() {
+      return isExportingColdBackup;
+    },
+    set isExportingColdBackup(v: boolean) {
+      isExportingColdBackup = v;
+    },
+    get isImportingColdBackup() {
+      return isImportingColdBackup;
+    },
+    set isImportingColdBackup(v: boolean) {
+      isImportingColdBackup = v;
+    },
+    get isSaving() {
+      return isSaving;
+    },
+    get isDirty() {
+      return isDirty;
+    },
     handleClearCache,
     handleExportHighlights,
     handleExportColdBackup,

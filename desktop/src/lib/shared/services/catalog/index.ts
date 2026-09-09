@@ -1,10 +1,29 @@
-export type { CatalogBook, CatalogProvider, CatalogSource, PagedResult } from './CatalogProvider';
+export {
+  BUILTIN_GUTENDEX,
+  BUILTIN_OPENLIBRARY,
+  addonSource,
+  addonSourceIdOf,
+  parseCatalogSource,
+} from './CatalogProvider';
+export type {
+  CatalogBook,
+  CatalogProvider,
+  CatalogSource,
+  CatalogSourceInfo,
+  CatalogSourceKind,
+  PagedResult,
+} from './CatalogProvider';
 export { CatalogError, catalogError, isCatalogError, mapHttpStatusToCode } from './errors';
 export type { CatalogErrorCode } from './errors';
 export { GutendexDataSource, GUTENDEX_BASE_URL } from './GutendexDataSource';
 export { OpenLibraryDataSource, OPEN_LIBRARY_BASE_URL } from './OpenLibraryDataSource';
-export { CompositeCatalogProvider } from './CompositeCatalogProvider';
-export type { CompositeOptions } from './CompositeCatalogProvider';
+export {
+  CompositeCatalogProvider,
+  createRebuildingCatalogProvider,
+  defaultCatalogProviders,
+} from './CompositeCatalogProvider';
+export type { CatalogProviderSupplier, CompositeOptions } from './CompositeCatalogProvider';
+export { liveCatalogProvider } from './liveComposite';
 export {
   DETAIL_TTL_S,
   InMemoryDiscoverCache,

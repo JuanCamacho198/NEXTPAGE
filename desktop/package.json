@@ -51,6 +51,7 @@
     "@testing-library/jest-dom": "^6.10.0",
     "@testing-library/svelte": "^5.2.9",
     "@testing-library/user-event": "^14.6.1",
+    "@types/jsdom": "^30.0.0",
     "@typescript-eslint/eslint-plugin": "^8.59.4",
     "@typescript-eslint/parser": "^8.59.4",
     "bun-plugin-svelte": "^0.0.6",

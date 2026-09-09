@@ -64,7 +64,10 @@ describe('deepCloneWithNewUUIDs', () => {
     all.add('child1');
     all.add('child2');
     all.add('grand1');
-    const clone = deepCloneWithNewUUIDs(node as unknown as Parameters<typeof deepCloneWithNewUUIDs>[0], all) as unknown as { id: string; children: { id: string; children?: { id: string }[] }[] };
+    const clone = deepCloneWithNewUUIDs(
+      node as unknown as Parameters<typeof deepCloneWithNewUUIDs>[0],
+      all,
+    ) as unknown as { id: string; children: { id: string; children?: { id: string }[] }[] };
     expect(clone.id).not.toBe('orig1');
     expect(clone.children[0].id).not.toBe('child1');
     expect(clone.children[1].children![0].id).not.toBe('grand1');

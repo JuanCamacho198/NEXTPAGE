@@ -55,8 +55,7 @@ fixtures/
 !src/lib/shared/services/catalog/fixtures/
 !src/lib/shared/services/catalog/fixtures/**
 
-# ESlint local rules
-/eslint-local-rules/
+# ESlint local rules (tracked: lint gate needs the rule on CI)
 
 
 # Docs (ENGINEERING-STANDARDS.md is tracked — see AGENTS.md)
@@ -66,3 +65,6 @@ fixtures/
 # Pen sync backup
 design/nextpage-desktop.pen.bak
 design/*.tmp
+# Addon parity fixtures (committed - addon-registry-v1 PR2)
+!src/test/unit/services/addons/fixtures/
+!src/test/unit/services/addons/fixtures/**

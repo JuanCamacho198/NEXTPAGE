@@ -50,9 +50,12 @@ function singleSource(provider: CatalogProvider): CatalogSourceInfo | null {
   return sources.length === 1 ? sources[0] : null;
 }
 
-/** Default provider list: built-ins first (curated joins via the addons slice). */
+import { CuratedCatalogProvider } from '../addons/CuratedCatalogProvider';
+
+/** Default provider list: built-ins first, then the curated bundle (addons
+ * join in PR4 via the registry). */
 export function defaultCatalogProviders(): CatalogProvider[] {
-  return [new GutendexCatalogProvider(), new OpenLibraryCatalogProvider()];
+  return [new GutendexCatalogProvider(), new OpenLibraryCatalogProvider(), new CuratedCatalogProvider()];
 }
 
 interface RoutedDetails {

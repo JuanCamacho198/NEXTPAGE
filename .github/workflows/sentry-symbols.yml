@@ -37,6 +37,11 @@ jobs:
         with:
           toolchain: stable
 
+
+      - name: Setup Bun
+        # Tauri beforeBuildCommand runs `bun run build`; without this the
+        # build fails with `sh: 1: bun: not found`.
+        uses: oven-sh/setup-bun@v2
       - name: Cache cargo registry and target
         uses: actions/cache@v6
         with:

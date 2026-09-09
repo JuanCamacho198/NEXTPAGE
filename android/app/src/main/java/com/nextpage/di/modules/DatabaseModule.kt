@@ -6,6 +6,7 @@ import androidx.room.Room
 import com.nextpage.BuildConfig
 import com.nextpage.data.local.AppDatabase
 import com.nextpage.data.local.AppDatabaseMigrations
+import com.nextpage.data.local.dao.AddonDao
 import com.nextpage.data.local.dao.BookDao
 import com.nextpage.data.local.dao.BookmarkDao
 import com.nextpage.data.local.dao.DictionaryWordDao
@@ -52,6 +53,7 @@ class DatabaseModule(context: Context) {
     val syncFileMappingDao: SyncFileMappingDao get() = appDatabase.syncFileMappingDao()
     val dictionaryWordDao: DictionaryWordDao get() = appDatabase.dictionaryWordDao()
     val discoverCacheDao: DiscoverCacheDao get() = appDatabase.discoverCacheDao()
+    val installedAddonDao: AddonDao get() = appDatabase.addonDao()
 
     fun clearAllTables() {
         appDatabase.clearAllTables()

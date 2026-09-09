@@ -139,8 +139,32 @@ android {
         }
     }
 
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
+
+    // Robolectric reads schemas from the merged debug assets dir (AGP does not
+    // merge test-sourceSet assets into it, and the Sentry asset-injection task
+    // owns that directory). Copy Room schema exports there before unit tests.
+    val copySchemasForUnitTest by tasks.registering(Copy::class) {
+        from("$projectDir/schemas")
+        into(layout.buildDirectory.dir("intermediates/assets/debug/injectSentryDebugMetaPropertiesIntoAssetsDebug"))
+        mustRunAfter("injectSentryDebugMetaPropertiesIntoAssetsDebug")
+    }
+
+    tasks.matching { it.name == "packageDebugUnitTestForUnitTest" }.configureEach {
+        dependsOn(copySchemasForUnitTest)
+    }
+
+    tasks.withType(Test::class).configureEach {
+        dependsOn(copySchemasForUnitTest)
+    }
+
     sourceSets {
         getByName("androidTest").assets.srcDirs("$projectDir/schemas")
+        getByName("test").assets.srcDirs("$projectDir/schemas")
     }
 }
 
@@ -203,6 +227,7 @@ dependencies {
     implementation("androidx.room:room-paging:2.8.4")
     ksp("androidx.room:room-compiler:2.8.4")
     androidTestImplementation("androidx.room:room-testing:2.8.4")
+    testImplementation("androidx.room:room-testing:2.8.4")
 
     // Paging 3
     implementation("androidx.paging:paging-runtime-ktx:3.3.6")

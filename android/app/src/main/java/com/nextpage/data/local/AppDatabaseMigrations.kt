@@ -371,6 +371,29 @@ object AppDatabaseMigrations {
      * query+page+provider (24h pages) and id+provider (7d details).
      * Additive only — user_books/outbox untouched.
      */
+    /**
+     * Addon registry (PR1): isolated installed_addons table keyed by
+     * sha256(url)[0..16]. Mirrors desktop migration 0017. Additive only.
+     */
+    val MIGRATION_26_27 = object : Migration(26, 27) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS installed_addons (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    url TEXT NOT NULL,
+                    manifest_json TEXT NOT NULL,
+                    enabled INTEGER NOT NULL DEFAULT 1,
+                    added_at INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                "CREATE UNIQUE INDEX IF NOT EXISTS index_installed_addons_url ON installed_addons(url)"
+            )
+        }
+    }
+
     val MIGRATION_25_26 = object : Migration(25, 26) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL(
@@ -412,6 +435,7 @@ object AppDatabaseMigrations {
         MIGRATION_22_23,
         MIGRATION_23_24,
         MIGRATION_24_25,
-        MIGRATION_25_26
+        MIGRATION_25_26,
+        MIGRATION_26_27
     )
 }

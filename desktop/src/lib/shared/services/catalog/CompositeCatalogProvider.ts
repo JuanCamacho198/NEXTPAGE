@@ -51,11 +51,21 @@ function singleSource(provider: CatalogProvider): CatalogSourceInfo | null {
 }
 
 import { CuratedCatalogProvider } from '../addons/CuratedCatalogProvider';
+import { AddonCatalogProvider } from '../addons/AddonCatalogProvider';
+import type { InstalledAddonRow } from '../addons/AddonRegistry';
 
-/** Default provider list: built-ins first, then the curated bundle (addons
- * join in PR4 via the registry). */
-export function defaultCatalogProviders(): CatalogProvider[] {
-  return [new GutendexCatalogProvider(), new OpenLibraryCatalogProvider(), new CuratedCatalogProvider()];
+/** Default provider list: built-ins first, then the curated bundle, then
+ * enabled addons in install order (disabled rows are excluded). */
+export function defaultCatalogProviders(installedAddons: InstalledAddonRow[] = []): CatalogProvider[] {
+  const addonProviders = installedAddons
+    .filter((row) => row.enabled)
+    .map((row) => new AddonCatalogProvider(row.manifest, row.id));
+  return [
+    new GutendexCatalogProvider(),
+    new OpenLibraryCatalogProvider(),
+    new CuratedCatalogProvider(),
+    ...addonProviders,
+  ];
 }
 
 interface RoutedDetails {

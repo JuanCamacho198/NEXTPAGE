@@ -41,7 +41,8 @@
     "epubjs": "^0.3.93",
     "pdfjs-dist": "6.2.108",
     "std-env": "4.2.0",
-    "svelte": "5.56.10"
+    "svelte": "5.56.10",
+    "@nextpage/manifest-validator": "workspace:*"
   },
   "devDependencies": {
     "@sentry/vite-plugin": "^5.0.0",

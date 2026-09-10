@@ -1,0 +1,27 @@
+/* Self-hosted fonts via @fontsource: no third-party font requests (no
+   tracking, offline-capable, static-output friendly for Cloudflare Pages). */
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/source-serif-4/600.css';
+@import '@fontsource/source-serif-4/700.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import 'tailwindcss';
+
+/* Single token source: the 10 color tokens and 3 font families from the
+   design are defined here and nowhere else. */
+@theme {
+  --color-surface-0: #121218;
+  --color-surface-1: #18181F;
+  --color-surface-2: #1E1E26;
+  --color-border-subtle: #2A2A34;
+  --color-text-primary: #F2F0E9;
+  --color-text-secondary: #B8B6C2;
+  --color-text-muted: #8B8998;
+  --color-accent: #FF8A4C;
+  --color-accent-soft: #FFB36B;
+  --color-accent-ink: #2E2118;
+
+  --font-serif: 'Source Serif 4', serif;
+  --font-sans: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}

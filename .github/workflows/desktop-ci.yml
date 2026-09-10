@@ -42,12 +42,13 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('desktop/bun.lock') }}
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
           restore-keys: |
             ${{ runner.os }}-bun-
 
       - name: Install dependencies (frozen lockfile)
-        working-directory: desktop
+        # Root workspace: a single bun.lock at the repo root serves desktop,
+        # web, and packages/*; the install runs at the repo root.
         run: bun install --frozen-lockfile
 
       - name: Run check + format:check + lint + focused vitest

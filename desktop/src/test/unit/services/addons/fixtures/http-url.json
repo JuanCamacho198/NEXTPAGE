@@ -1,5 +1,0 @@
-{
-  "expect": "reject",
-  "expectedCode": "ADDON_FETCH_HTTPS_REQUIRED",
-  "url": "http://example.com/manifest.json"
-}

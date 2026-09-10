@@ -1,0 +1,10 @@
+---
+import { getLocaleFromUrl, t } from '../i18n';
+
+const locale = getLocaleFromUrl(Astro.url);
+---
+<footer class="border-t border-border-subtle bg-surface-1" aria-label={t(locale, 'footer.aria')}>
+  <div class="mx-auto max-w-6xl px-4 py-6 text-center">
+    <p class="text-sm text-text-secondary">{t(locale, 'footer.tagline')}</p>
+  </div>
+</footer>

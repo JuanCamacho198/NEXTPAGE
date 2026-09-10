@@ -1,0 +1,19 @@
+{
+  "name": "nextpage",
+  "private": true,
+  "workspaces": [
+    "desktop",
+    "web",
+    "packages/*"
+  ],
+  "packageManager": "bun@1.3.12",
+  "engines": {
+    "bun": ">=1.3.0"
+  },
+  "scripts": {
+    "install:all": "bun install",
+    "test:desktop": "bun run --cwd desktop test",
+    "test:validator": "bun run --cwd packages/manifest-validator test",
+    "build:web": "bun run --cwd web build"
+  }
+}

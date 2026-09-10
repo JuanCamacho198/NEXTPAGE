@@ -21,6 +21,11 @@ android.exe
 
 # environment variables
 .env
+.dev.vars
+
+# Web (Astro / Cloudflare local state)
+.astro/
+.wrangler/
 
 # Tooling
 .codedb/

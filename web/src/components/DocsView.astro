@@ -1,0 +1,144 @@
+---
+import { t, type UiLocale } from '../i18n';
+
+export interface Props {
+  locale: UiLocale;
+}
+
+const { locale } = Astro.props;
+
+const yes = t(locale, 'docs.requiredYes');
+const no = t(locale, 'docs.requiredNo');
+
+const fields = [
+  { name: 'id', type: 'string', required: yes, desc: t(locale, 'docs.fieldDesc.id') },
+  { name: 'name', type: 'string', required: yes, desc: t(locale, 'docs.fieldDesc.name') },
+  { name: 'version', type: 'string', required: yes, desc: t(locale, 'docs.fieldDesc.version') },
+  {
+    name: 'catalogs',
+    type: 'AddonCatalogEntry[]',
+    required: yes,
+    desc: t(locale, 'docs.fieldDesc.catalogs'),
+  },
+  { name: 'resources', type: 'string[]', required: yes, desc: t(locale, 'docs.fieldDesc.resources') },
+  { name: 'searchUrl', type: 'string?', required: no, desc: t(locale, 'docs.fieldDesc.searchUrl') },
+  {
+    name: 'detailsUrl',
+    type: 'string?',
+    required: no,
+    desc: t(locale, 'docs.fieldDesc.detailsUrl'),
+  },
+];
+
+const rules = [
+  { title: t(locale, 'docs.ruleSizeTitle'), sub: t(locale, 'docs.ruleSizeSub') },
+  { title: t(locale, 'docs.ruleContentTypeTitle'), sub: t(locale, 'docs.ruleContentTypeSub') },
+  { title: t(locale, 'docs.ruleParseTitle'), sub: t(locale, 'docs.ruleParseSub') },
+  { title: t(locale, 'docs.ruleShapeTitle'), sub: t(locale, 'docs.ruleShapeSub') },
+  { title: t(locale, 'docs.ruleOrderTitle'), sub: t(locale, 'docs.ruleOrderSub') },
+  { title: t(locale, 'docs.ruleUnknownTitle'), sub: t(locale, 'docs.ruleUnknownSub') },
+  { title: t(locale, 'docs.ruleCodesTitle'), sub: t(locale, 'docs.ruleCodesSub') },
+];
+
+const checklist = [
+  t(locale, 'docs.check1'),
+  t(locale, 'docs.check2'),
+  t(locale, 'docs.check3'),
+  t(locale, 'docs.check4'),
+  t(locale, 'docs.check5'),
+  t(locale, 'docs.check6'),
+];
+---
+<div class="mx-auto flex max-w-6xl flex-col gap-16 px-4 py-12">
+  <section class="flex flex-col items-center gap-6 py-8 text-center">
+    <span
+      class="inline-flex items-center rounded-full border border-border-subtle bg-surface-1 px-4 py-1.5 font-sans text-xs font-semibold uppercase tracking-widest text-text-secondary"
+    >
+      {t(locale, 'docs.badge')}
+    </span>
+    <h1 class="max-w-3xl font-serif text-5xl font-bold text-text-primary">{t(locale, 'docs.title')}</h1>
+    <p class="max-w-2xl text-lg text-text-secondary">{t(locale, 'docs.subtitle')}</p>
+  </section>
+
+  <div class="grid grid-cols-1 gap-8 lg:grid-cols-3">
+    <div class="flex flex-col gap-12 lg:col-span-2">
+      <section class="flex flex-col gap-4">
+        <h2 class="font-serif text-3xl font-bold text-text-primary">{t(locale, 'docs.tableTitle')}</h2>
+        <div class="overflow-x-auto rounded-xl border border-border-subtle bg-surface-1">
+          <table class="w-full min-w-[560px] border-collapse text-left text-sm">
+            <thead>
+              <tr class="border-b border-border-subtle">
+                <th class="px-4 py-3 font-sans text-xs font-semibold uppercase tracking-wide text-text-muted">
+                  {t(locale, 'docs.colField')}
+                </th>
+                <th class="px-4 py-3 font-sans text-xs font-semibold uppercase tracking-wide text-text-muted">
+                  {t(locale, 'docs.colType')}
+                </th>
+                <th class="px-4 py-3 font-sans text-xs font-semibold uppercase tracking-wide text-text-muted">
+                  {t(locale, 'docs.colRequired')}
+                </th>
+                <th class="px-4 py-3 font-sans text-xs font-semibold uppercase tracking-wide text-text-muted">
+                  {t(locale, 'docs.colDesc')}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {
+                fields.map((f) => (
+                  <tr class="border-b border-border-subtle last:border-0">
+                    <td class="px-4 py-3 font-mono text-xs text-accent">{f.name}</td>
+                    <td class="px-4 py-3 font-mono text-xs text-text-primary">{f.type}</td>
+                    <td class="px-4 py-3 text-sm text-text-secondary">{f.required}</td>
+                    <td class="px-4 py-3 text-sm text-text-secondary">{f.desc}</td>
+                  </tr>
+                ))
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="flex flex-col gap-4">
+        <h2 class="font-serif text-3xl font-bold text-text-primary">{t(locale, 'docs.checklistTitle')}</h2>
+        <ul class="flex flex-col gap-3">
+          {
+            checklist.map((item) => (
+              <li class="flex items-start gap-3 rounded-xl border border-border-subtle bg-surface-1 px-4 py-3">
+                <svg
+                  class="mt-0.5 h-5 w-5 shrink-0 text-emerald-400"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  aria-hidden="true"
+                >
+                  <path d="M4 12.5l5 5L20 6.5" />
+                </svg>
+                <span class="text-sm text-text-secondary">{item}</span>
+              </li>
+            ))
+          }
+        </ul>
+      </section>
+    </div>
+
+    <aside
+      aria-label={t(locale, 'docs.rulesTitle')}
+      class="h-fit rounded-xl border border-border-subtle bg-surface-1 p-5 lg:sticky lg:top-4"
+    >
+      <h2 class="mb-4 font-sans text-sm font-semibold uppercase tracking-wide text-text-muted">
+        {t(locale, 'docs.rulesTitle')}
+      </h2>
+      <ul class="flex flex-col gap-4">
+        {
+          rules.map((r) => (
+            <li class="flex flex-col gap-1">
+              <p class="font-sans text-sm font-semibold text-text-primary">{r.title}</p>
+              <p class="text-sm text-text-secondary">{r.sub}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </aside>
+  </div>
+</div>

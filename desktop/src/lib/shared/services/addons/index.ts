@@ -4,11 +4,11 @@ export {
   AddonFetchError,
   assertHttpsInstallUrl,
   validateManifest,
-} from './validateManifest';
+} from '@nextpage/manifest-validator';
 export type {
   AddonManifest,
   AddonCatalogEntry,
   AddonFetchErrorCode as AddonFetchErrorCodeValue,
-} from './validateManifest';
+} from '@nextpage/manifest-validator';
 export { addonIdFromUrl } from './addonId';
 export { CuratedCatalogProvider } from './CuratedCatalogProvider';

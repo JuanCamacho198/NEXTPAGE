@@ -9,7 +9,7 @@ import { createInstallDeepLink } from '$lib/features/settings/useInstallDeepLink
 import {
   AddonFetchErrorCode,
   type AddonManifest,
-} from '$lib/shared/services/addons/validateManifest';
+} from '@nextpage/manifest-validator';
 import type { AddonFetchResult } from '$lib/shared/services/addons/AddonRegistry';
 
 const MANIFEST: AddonManifest = {

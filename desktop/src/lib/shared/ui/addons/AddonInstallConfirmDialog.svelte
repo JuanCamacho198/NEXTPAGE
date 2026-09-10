@@ -7,7 +7,7 @@
 <script lang="ts">
   import Button from '../forms/Button.svelte';
   import Modal from '../layout/Modal.svelte';
-  import type { AddonManifest } from '$lib/shared/services/addons/validateManifest';
+  import type { AddonManifest } from '@nextpage/manifest-validator';
   import {
     ADDON_INSTALL_CONFIRM_TITLE,
     ADDON_INSTALL_CONFIRM_INSTALL_LABEL,

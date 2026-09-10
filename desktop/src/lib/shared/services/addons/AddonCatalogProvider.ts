@@ -18,7 +18,7 @@ import type {
 } from '../catalog/CatalogProvider';
 import { addonSource } from '../catalog/CatalogProvider';
 import { computeNextPage, resolveDownloadUrl } from '../catalog/mappers';
-import { MAX_MANIFEST_BYTES, type AddonManifest } from './validateManifest';
+import { MAX_MANIFEST_BYTES, type AddonManifest } from '@nextpage/manifest-validator';
 import { defaultAddonTransport, type AddonTransport } from './AddonRegistry';
 
 const EMPTY_PAGE: PagedResult = { results: [], nextPage: null, totalCount: 0 };

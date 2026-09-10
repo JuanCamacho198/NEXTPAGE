@@ -1,0 +1,4 @@
+# Hoisted linker: the isolated store layout breaks @testing-library/jest-dom's
+# vitest type augmentation (its 'vitest' import cannot resolve from the store),
+# which fails `svelte-check` matcher types across the desktop test suite.
+install.linker = "hoisted"

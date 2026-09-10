@@ -29,6 +29,7 @@ import com.nextpage.debug.FeedbackEvent
 import com.nextpage.debug.FeedbackPersistence
 import com.nextpage.di.AppContainer
 import com.nextpage.domain.model.ThemeMode
+import com.nextpage.presentation.navigation.InstallDeepLinkParser
 import com.nextpage.presentation.navigation.NextPageNavHost
 import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.presentation.viewmodel.AuthViewModel
@@ -47,11 +48,20 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         appContainer = AppContainer(context = this)
 
-        // Email-confirmation / OAuth deep links (nextpage://auth/...).
-        // supabase-kt parses the fragment and imports the signup session
-        // synchronously; must run BEFORE the AuthViewModel restores the
-        // session so the confirmed account is picked up on cold start.
-        runCatching { SupabaseClientProvider.client.handleDeeplinks(intent) }
+        // Addon install deep links (nextpage://install?url=...) are checked
+        // FIRST: install URIs are never auth URIs, so supabase handleDeeplinks
+        // is skipped for them entirely (spec REQ routing order). Invalid
+        // install links (missing/non-https url) also route here so the
+        // controller can surface the https-required error dialog (verify D1).
+        if (InstallDeepLinkParser.isInstallUri(intent?.data)) {
+            appContainer.installDeepLinkController.onInstallUri(intent?.data)
+        } else {
+            // Email-confirmation / OAuth deep links (nextpage://auth/...).
+            // supabase-kt parses the fragment and imports the signup session
+            // synchronously; must run BEFORE the AuthViewModel restores the
+            // session so the confirmed account is picked up on cold start.
+            runCatching { SupabaseClientProvider.client.handleDeeplinks(intent) }
+        }
 
         // Native splash (Android 12+ via core-splashscreen): the NextPage logo
         // renders instantly at launch. Keep it on screen until the auth session
@@ -121,10 +131,16 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        // Install host check FIRST (spec REQ warm-start routing order):
+        // install URIs go to the controller and never reach handleDeeplinks.
+        val uri = intent.data
+        if (InstallDeepLinkParser.isInstallUri(uri)) {
+            appContainer.installDeepLinkController.onInstallUri(uri)
+            return
+        }
         // Warm-start email confirmation: import the session so the next launch
         // restores it (cold-start restore is the documented auth flow).
         runCatching { SupabaseClientProvider.client.handleDeeplinks(intent) }
-        val uri = intent.data
         val driveRedirectScheme = "com.googleusercontent.apps.${
             BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID.removeSuffix(".apps.googleusercontent.com")
         }"

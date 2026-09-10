@@ -12,6 +12,10 @@
   import ErrorFallback from '$lib/shared/ui/feedback/ErrorFallback.svelte';
   import ToastHost from '$lib/shared/ui/feedback/ToastHost.svelte';
   import FeedbackDialog from '$lib/shared/ui/feedback/FeedbackDialog.svelte';
+import AddonInstallConfirmDialog from '$lib/shared/ui/addons/AddonInstallConfirmDialog.svelte';
+import { getAddonRegistry } from '$lib/shared/services/addons/AddonRegistry';
+import { createInstallDeepLink } from '$lib/features/settings/useInstallDeepLink.svelte';
+import { setInstallDeepLinkHandler } from '$lib/features/addons/installDeepLink';
   import {
     isDismissed,
     readLastEventId,
@@ -93,6 +97,12 @@
     void flushFeedbackQueue(transport);
     return () => handle();
   });
+
+  // sdd/addon-deeplink-v1: single shared registry + deep-link install flow.
+  // setInstallDeepLinkHandler routes parsed install URLs from main.ts's
+  // handleDeepLinkUrls (cold onOpenUrl + warm single-instance event) here.
+  const installDeepLink = createInstallDeepLink({ registry: getAddonRegistry() });
+  setInstallDeepLinkHandler((url) => void installDeepLink.handleInstallUrl(url));
 </script>
 
 <EditMetadataModal
@@ -152,6 +162,17 @@
     libraryState.pendingRemoveBook = null;
   }}
   t={appState.t}
+/>
+
+<!-- sdd/addon-deeplink-v1: confirm-install flow (cold + warm deep link). -->
+<AddonInstallConfirmDialog
+  open={installDeepLink.dialogOpen}
+  manifest={installDeepLink.manifest}
+  busy={installDeepLink.state === 'installing'}
+  error={installDeepLink.errorCode}
+  alreadyInstalled={installDeepLink.alreadyInstalled}
+  onconfirm={() => void installDeepLink.confirm()}
+  oncancel={() => installDeepLink.cancel()}
 />
 
 <ToastHost />

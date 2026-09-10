@@ -1,0 +1,18 @@
+# Binary files — never normalize line endings (protects encrypted .pen designs and assets)
+*.pen binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.avif binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.eot binary
+*.keystore binary
+*.jks binary
+*.apk binary
+*.pdf binary

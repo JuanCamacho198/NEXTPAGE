@@ -2,9 +2,97 @@
 import { getLocaleFromUrl, t } from '../i18n';
 
 const locale = getLocaleFromUrl(Astro.url);
+
+const catalogHref = locale === 'es' ? '/catalogo' : '/en/catalog';
+const submitHref = locale === 'es' ? '/enviar' : '/en/submit';
+const docsHref = locale === 'es' ? '/docs' : '/en/docs';
+
+const GITHUB_URL = 'https://github.com/JuanCamacho198/NEXTPAGE';
+const SITE_URL = 'https://nextpage.dev';
 ---
 <footer class="border-t border-border-subtle bg-surface-1" aria-label={t(locale, 'footer.aria')}>
-  <div class="mx-auto max-w-6xl px-4 py-6 text-center">
-    <p class="text-sm text-text-secondary">{t(locale, 'footer.tagline')}</p>
+  <div class="mx-auto max-w-6xl px-4 py-10">
+    <div class="grid gap-8 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
+      <div>
+        <p class="font-serif text-lg font-bold text-text-primary">
+          Next<span class="text-accent">Page</span> Addons
+        </p>
+        <p class="mt-2 max-w-xs text-sm text-text-secondary">
+          {t(locale, 'home.footerTagline')}
+        </p>
+      </div>
+      <nav aria-label={t(locale, 'home.footerProduct')}>
+        <h2 class="text-xs font-semibold tracking-widest text-text-muted uppercase">
+          {t(locale, 'home.footerProduct')}
+        </h2>
+        <ul class="mt-3 space-y-2 text-sm">
+          <li>
+            <a href={catalogHref} class="text-text-secondary transition hover:text-accent">
+              {t(locale, 'home.footerCatalog')}
+            </a>
+          </li>
+          <li>
+            <a href={submitHref} class="text-text-secondary transition hover:text-accent">
+              {t(locale, 'home.footerSubmit')}
+            </a>
+          </li>
+          <li>
+            <a href={docsHref} class="text-text-secondary transition hover:text-accent">
+              {t(locale, 'home.footerDocs')}
+            </a>
+          </li>
+        </ul>
+      </nav>
+      <nav aria-label={t(locale, 'home.footerResources')}>
+        <h2 class="text-xs font-semibold tracking-widest text-text-muted uppercase">
+          {t(locale, 'home.footerResources')}
+        </h2>
+        <ul class="mt-3 space-y-2 text-sm">
+          <li>
+            <a href={docsHref} class="text-text-secondary transition hover:text-accent">
+              {t(locale, 'home.footerSpec')}
+            </a>
+          </li>
+          <li>
+            <a href={GITHUB_URL} class="text-text-secondary transition hover:text-accent">
+              {t(locale, 'home.footerGithub')}
+            </a>
+          </li>
+          <li>
+            <a href={submitHref} class="text-text-secondary transition hover:text-accent">
+              {t(locale, 'home.footerReport')}
+            </a>
+          </li>
+        </ul>
+      </nav>
+      <nav aria-label={t(locale, 'home.footerNextpage')}>
+        <h2 class="text-xs font-semibold tracking-widest text-text-muted uppercase">
+          {t(locale, 'home.footerNextpage')}
+        </h2>
+        <ul class="mt-3 space-y-2 text-sm">
+          <li>
+            <a href={SITE_URL} class="text-text-secondary transition hover:text-accent">
+              {t(locale, 'home.footerDownload')}
+            </a>
+          </li>
+          <li>
+            <a href={SITE_URL} class="text-text-secondary transition hover:text-accent">
+              {t(locale, 'home.footerWebsite')}
+            </a>
+          </li>
+          <li>
+            <a href={GITHUB_URL} class="text-text-secondary transition hover:text-accent">
+              {t(locale, 'home.footerCommunity')}
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+    <div
+      class="mt-8 flex flex-col gap-2 border-t border-border-subtle pt-6 text-sm text-text-muted sm:flex-row sm:items-center sm:justify-between"
+    >
+      <p>{t(locale, 'home.footerCopy')}</p>
+      <p>{t(locale, 'home.footerPrivacy')}</p>
+    </div>
   </div>
 </footer>

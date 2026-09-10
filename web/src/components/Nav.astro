@@ -1,32 +1,93 @@
 ---
-import { getLocaleFromUrl, t } from '../i18n';
+import { getLocaleFromUrl, t, type UiLocale } from '../i18n';
+import type { UiKey } from '../i18n/ui.en';
 
-const locale = getLocaleFromUrl(Astro.url);
+const locale: UiLocale = getLocaleFromUrl(Astro.url);
+const pathname = Astro.url.pathname;
+
+interface NavLink {
+  href: string;
+  key: UiKey;
+}
+
+const links: NavLink[] =
+  locale === 'es'
+    ? [
+        { href: '/', key: 'nav.home' },
+        { href: '/catalogo', key: 'nav.catalog' },
+        { href: '/enviar', key: 'nav.submit' },
+        { href: '/docs', key: 'nav.docs' },
+      ]
+    : [
+        { href: '/en/', key: 'nav.home' },
+        { href: '/en/catalog', key: 'nav.catalog' },
+        { href: '/en/submit', key: 'nav.submit' },
+        { href: '/en/docs', key: 'nav.docs' },
+      ];
+
+const brandHref = locale === 'es' ? '/' : '/en/';
+
+function isActive(href: string): boolean {
+  if (href === '/' || href === '/en/') {
+    return pathname === '/' || pathname === '/en' || pathname === '/en/';
+  }
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+const esToEn: Record<string, string> = {
+  '/': '/en/',
+  '/catalogo': '/en/catalog',
+  '/enviar': '/en/submit',
+  '/docs': '/en/docs',
+};
+
+function samePageHref(): string {
+  if (locale === 'es') {
+    if (esToEn[pathname] !== undefined) return esToEn[pathname];
+    const detail = pathname.match(/^\/catalogo\/(.+)$/);
+    if (detail) return `/en/catalog/${detail[1]}`;
+    return '/en/';
+  }
+  if (pathname === '/en' || pathname === '/en/') return '/';
+  const enDetail = pathname.match(/^\/en\/catalog\/(.+)$/);
+  if (enDetail) return `/catalogo/${enDetail[1]}`;
+  for (const [es, en] of Object.entries(esToEn)) {
+    if (pathname === en) return es;
+  }
+  return '/';
+}
+
 const other = locale === 'es' ? 'en' : 'es';
-const otherHref = locale === 'es' ? '/en/' : '/';
+const otherHref = samePageHref();
 ---
 <nav
   class="border-b border-border-subtle bg-surface-1"
   aria-label={t(locale, 'nav.aria')}
 >
   <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-    <a href="/" class="font-serif text-lg font-bold text-text-primary">
+    <a href={brandHref} class="font-serif text-lg font-bold text-text-primary">
       Next<span class="text-accent">Page</span>
     </a>
     <div class="flex items-center gap-6">
       <div class="hidden items-center gap-6 sm:flex">
-        <a href="/" class="text-text-secondary transition hover:text-accent">
-          {t(locale, 'nav.home')}
-        </a>
-        <a href="/catalogo" class="text-text-secondary transition hover:text-accent">
-          {t(locale, 'nav.catalog')}
-        </a>
-        <a href="/enviar" class="text-text-secondary transition hover:text-accent">
-          {t(locale, 'nav.submit')}
-        </a>
-  <a href="/docs" class="text-text-secondary transition hover:text-accent">
-          {t(locale, 'nav.docs')}
-        </a>
+        {
+          links.map((link) => {
+            const active = isActive(link.href);
+            return (
+              <a
+                href={link.href}
+                aria-current={active ? 'page' : undefined}
+                class={
+                  active
+                    ? 'font-medium text-accent transition hover:text-accent'
+                    : 'text-text-secondary transition hover:text-accent'
+                }
+              >
+                {t(locale, link.key)}
+              </a>
+            );
+          })
+        }
       </div>
       <a
         href={otherHref}

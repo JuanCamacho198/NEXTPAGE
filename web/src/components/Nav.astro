@@ -1,0 +1,40 @@
+---
+import { getLocaleFromUrl, t } from '../i18n';
+
+const locale = getLocaleFromUrl(Astro.url);
+const other = locale === 'es' ? 'en' : 'es';
+const otherHref = locale === 'es' ? '/en/' : '/';
+---
+<nav
+  class="border-b border-border-subtle bg-surface-1"
+  aria-label={t(locale, 'nav.aria')}
+>
+  <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+    <a href="/" class="font-serif text-lg font-bold text-text-primary">
+      Next<span class="text-accent">Page</span>
+    </a>
+    <div class="flex items-center gap-6">
+      <div class="hidden items-center gap-6 sm:flex">
+        <a href="/" class="text-text-secondary transition hover:text-accent">
+          {t(locale, 'nav.home')}
+        </a>
+        <a href="/catalogo" class="text-text-secondary transition hover:text-accent">
+          {t(locale, 'nav.catalog')}
+        </a>
+        <a href="/enviar" class="text-text-secondary transition hover:text-accent">
+          {t(locale, 'nav.submit')}
+        </a>
+  <a href="/docs" class="text-text-secondary transition hover:text-accent">
+          {t(locale, 'nav.docs')}
+        </a>
+      </div>
+      <a
+        href={otherHref}
+        class="rounded-md border border-border-subtle px-2 py-1 text-sm text-text-muted transition hover:border-accent hover:text-accent"
+        aria-label={t(locale, 'nav.langToggleAria')}
+      >
+        {other.toUpperCase()}
+      </a>
+    </div>
+  </div>
+</nav>

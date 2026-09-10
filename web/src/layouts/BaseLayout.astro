@@ -1,0 +1,32 @@
+---
+import '../styles/global.css';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import { getLocaleFromUrl } from '../i18n';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const { title = 'NextPage', description = 'Lee a tu manera: libros y addons sin salir de la app.' } =
+  Astro.props;
+const locale = getLocaleFromUrl(Astro.url);
+---
+<!doctype html>
+<html lang={locale}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="description" content={description} />
+    <title>{title}</title>
+  </head>
+  <body class="min-h-screen bg-surface-0 font-sans text-text-primary">
+    <Nav />
+    <main>
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>

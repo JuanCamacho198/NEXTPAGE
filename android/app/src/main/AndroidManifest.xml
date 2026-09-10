@@ -50,6 +50,13 @@
                     android:scheme="nextpage"
                     android:host="auth"
                     android:pathPrefix="/confirm" />
+
+            <!-- Addon install deep link (addon-deeplink-v1): routed by
+                 MainActivity BEFORE supabase handleDeeplinks. Custom scheme -
+                 no assetlinks.json needed. -->
+            <data
+                android:scheme="nextpage"
+                android:host="install" />
             </intent-filter>
 
             <!-- Google Drive OAuth redirect (authorization-code + PKCE).

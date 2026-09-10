@@ -21,6 +21,66 @@ fn build_state(app: &AppHandle) -> Result<AppState, String> {
     Ok(AppState::new(repository, queue_repository, app_data_dir, db_path))
 }
 
+/// Pure helper: first nextpage:// or nextpage-desktop:// argument in argv.
+fn extract_install_url(argv: &[String]) -> Option<String> {
+    argv.iter().skip(1).find_map(|arg| {
+        let lower = arg.to_ascii_lowercase();
+        if lower.starts_with("nextpage://") || lower.starts_with("nextpage-desktop://") {
+            Some(arg.clone())
+        } else {
+            None
+        }
+    })
+}
+
+/// Pure helper: host component of a scheme://host/... URL.
+fn deep_link_host(url: &str) -> String {
+    let rest = match url.split_once("://") {
+        Some((_, rest)) => rest,
+        None => return String::new(),
+    };
+    rest.split(['/', '?']).next().unwrap_or_default().to_string()
+}
+
+#[cfg(test)]
+mod deep_link_tests {
+    use super::*;
+
+    #[test]
+    fn extract_install_url_finds_first_nextpage_arg() {
+        let argv = vec![
+            "nextpage-desktop.exe".to_string(),
+            "nextpage://install?url=https://example.com/manifest.json".to_string(),
+        ];
+        assert_eq!(
+            extract_install_url(&argv).as_deref(),
+            Some("nextpage://install?url=https://example.com/manifest.json")
+        );
+    }
+
+    #[test]
+    fn extract_install_url_accepts_legacy_scheme() {
+        let argv = vec![
+            "app.exe".to_string(),
+            "nextpage-desktop://install?url=https://example.com/m.json".to_string(),
+        ];
+        assert!(extract_install_url(&argv).is_some());
+    }
+
+    #[test]
+    fn extract_install_url_ignores_plain_args() {
+        let argv = vec!["app.exe".to_string(), "--flag".to_string()];
+        assert_eq!(extract_install_url(&argv), None);
+    }
+
+    #[test]
+    fn deep_link_host_parses_install_host() {
+        assert_eq!(deep_link_host("nextpage://install?url=https://x"), "install");
+        assert_eq!(deep_link_host("nextpage://auth/callback"), "auth");
+        assert_eq!(deep_link_host("not a url"), "");
+    }
+}
+
 fn main() {
     // Initialize Sentry BEFORE the Tauri Builder. Init failures are logged
     // and swallowed; the app boots regardless of Sentry availability.
@@ -31,6 +91,24 @@ fn main() {
     }
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            // sdd/addon-deeplink-v1: warm-start forwarding. Must be the FIRST
+            // plugin (Tauri docs). Scan argv for a nextpage:// deep link; only
+            // install URLs are emitted, everything else is logged for QA.
+            if let Some(url) = extract_install_url(&argv) {
+                if deep_link_host(&url) == "install" {
+                    use tauri::Emitter;
+                    let _ = app.emit("deep-link-install", url);
+                } else {
+                    eprintln!("[nextpage] unhandled deep-link argv: {argv:?}");
+                }
+            } else if argv.iter().skip(1).any(|arg| arg.contains("://")) {
+                eprintln!("[nextpage] unhandled deep-link argv: {argv:?}");
+            }
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_oauth::init())
         .plugin(tauri_plugin_opener::init())
@@ -43,6 +121,8 @@ fn main() {
 
             #[cfg(desktop)]
             app.deep_link().register("nextpage-desktop")?;
+            #[cfg(desktop)]
+            app.deep_link().register("nextpage")?;
 
             Ok(())
         })
@@ -126,11 +206,11 @@ fn main() {
             commands::getDailyGoalMinutes,
             commands::saveDailyGoalMinutes,
             commands::getTodayMinutes,
-                commands::fetchAddonResource,
-                commands::listInstalledAddons,
-                commands::upsertInstalledAddon,
-                commands::setAddonEnabled,
-                commands::deleteInstalledAddon
+            commands::fetchAddonResource,
+            commands::listInstalledAddons,
+            commands::upsertInstalledAddon,
+            commands::setAddonEnabled,
+            commands::deleteInstalledAddon
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

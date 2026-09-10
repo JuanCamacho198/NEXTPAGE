@@ -2,6 +2,7 @@
 	"name": "nextpage-addons",
 	"compatibility_date": "2025-01-01",
 	"assets": {
-		"directory": "./web/dist"
+		"directory": "./web/dist",
+		"not_found_handling": "404-page"
 	}
 }

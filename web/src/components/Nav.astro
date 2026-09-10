@@ -59,6 +59,8 @@ function samePageHref(): string {
 
 const other = locale === 'es' ? 'en' : 'es';
 const otherHref = samePageHref();
+const menuOpenLabel = t(locale, 'nav.menuOpen');
+const menuCloseLabel = t(locale, 'nav.menuClose');
 ---
 <nav
   class="border-b border-border-subtle bg-surface-1"
@@ -69,6 +71,29 @@ const otherHref = samePageHref();
       Next<span class="text-accent">Page</span>
     </a>
     <div class="flex items-center gap-6">
+      <button
+        type="button"
+        data-nav-toggle
+        class="rounded-md border border-border-subtle p-2 text-text-secondary transition hover:border-accent hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:hidden"
+        aria-expanded="false"
+        aria-controls="mobile-nav"
+        aria-label={menuOpenLabel}
+      >
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 20 20"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <line x1="3" y1="5" x2="17" y2="5"></line>
+          <line x1="3" y1="10" x2="17" y2="10"></line>
+          <line x1="3" y1="15" x2="17" y2="15"></line>
+        </svg>
+      </button>
       <div class="hidden items-center gap-6 sm:flex">
         {
           links.map((link) => {
@@ -98,4 +123,53 @@ const otherHref = samePageHref();
       </a>
     </div>
   </div>
+  <div id="mobile-nav" data-nav-panel hidden class="border-b border-border-subtle bg-surface-1 sm:hidden">
+    <div class="flex flex-col gap-1 px-4 pb-3">
+      {
+        links.map((link) => {
+          const active = isActive(link.href);
+          return (
+            <a
+              href={link.href}
+              aria-current={active ? 'page' : undefined}
+              class={
+                active
+                  ? 'rounded-md px-2 py-2 font-medium text-accent transition hover:text-accent'
+                  : 'rounded-md px-2 py-2 text-text-secondary transition hover:text-accent'
+              }
+            >
+              {t(locale, link.key)}
+            </a>
+          );
+        })
+      }
+      <a
+        href={otherHref}
+        class="mt-1 rounded-md border border-border-subtle px-2 py-2 text-sm text-text-muted transition hover:border-accent hover:text-accent"
+        aria-label={t(locale, 'nav.langToggleAria')}
+      >
+        {other.toUpperCase()}
+      </a>
+    </div>
+  </div>
+  <script define:vars={{ menuOpenLabel, menuCloseLabel }}>
+    const nav = document.currentScript.closest('nav');
+  const btn = nav.querySelector('[data-nav-toggle]');
+  const panel = nav.querySelector('[data-nav-panel]');
+  function setOpen(open) {
+    btn.setAttribute('aria-expanded', String(open));
+    btn.setAttribute('aria-label', open ? menuCloseLabel : menuOpenLabel);
+    panel.hidden = !open;
+  }
+  btn.addEventListener('click', () => setOpen(panel.hidden));
+  panel.addEventListener('click', (e) => {
+    if (e.target.closest('a')) setOpen(false);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !panel.hidden) {
+      setOpen(false);
+      btn.focus();
+    }
+  });
+  </script>
 </nav>

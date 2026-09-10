@@ -5,6 +5,12 @@ import { t } from '../../i18n';
 
 const locale = 'en' as const;
 ---
-<BaseLayout title={`${t(locale, 'docs.title')} — NextPage`}>
+<BaseLayout
+  title={`${t(locale, 'docs.title')} — NextPage`}
+  description={t(locale, 'docs.subtitle')}
+  canonicalPath="/en/docs"
+  alternateEs="/docs"
+  alternateEn="/en/docs"
+>
   <DocsView locale={locale} />
 </BaseLayout>

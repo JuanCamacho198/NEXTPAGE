@@ -4,7 +4,22 @@ import HomeView from '../../components/HomeView.astro';
 import { t } from '../../i18n';
 
 const locale = 'en' as const;
+const site = (Astro.site?.href ?? '').replace(/\/$/, '');
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'NextPage Addons',
+  url: site ? `${site}/en/` : '/en/',
+  inLanguage: 'en',
+};
 ---
-<BaseLayout title={`${t(locale, 'home.title')} — NextPage`}>
+<BaseLayout
+  title={`${t(locale, 'home.title')} — NextPage`}
+  description={t(locale, 'home.subtitle')}
+  canonicalPath="/en/"
+  alternateEs="/"
+  alternateEn="/en/"
+  jsonLd={jsonLd}
+>
   <HomeView locale={locale} />
 </BaseLayout>

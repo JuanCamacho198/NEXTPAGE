@@ -1,7 +1,31 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import CatalogView from '../../components/CatalogView.astro';
+import { ADDONS, addonDetailHref } from '../../data/addons';
+import { t } from '../../i18n';
+
+const locale = 'en' as const;
+const site = (Astro.site?.href ?? '').replace(/\/$/, '');
+const abs = (p: string): string => (site ? `${site}${p}` : p);
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: t(locale, 'catalog.title'),
+  itemListElement: ADDONS.map((addon, index) => ({
+    '@type': 'ListItem',
+    position: index + 1,
+    name: addon.name,
+    url: abs(addonDetailHref(locale, addon.id)),
+  })),
+};
 ---
-<BaseLayout title="Addon catalog — NextPage">
+<BaseLayout
+  title="Addon catalog — NextPage"
+  description={t(locale, 'catalog.subtitle')}
+  canonicalPath="/en/catalog"
+  alternateEs="/catalogo"
+  alternateEn="/en/catalog"
+  jsonLd={jsonLd}
+>
   <CatalogView locale="en" />
 </BaseLayout>

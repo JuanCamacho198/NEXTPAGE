@@ -7,11 +7,42 @@ import { getLocaleFromUrl } from '../i18n';
 interface Props {
   title?: string;
   description?: string;
+  canonicalPath?: string;
+  alternateEs?: string;
+  alternateEn?: string;
+  locale?: 'es' | 'en';
+  ogType?: 'website' | 'article';
+  ogImage?: string;
+  jsonLd?: Record<string, unknown> | Array<Record<string, unknown>>;
+  noindex?: boolean;
 }
 
-const { title = 'NextPage', description = 'Lee a tu manera: libros y addons sin salir de la app.' } =
-  Astro.props;
-const locale = getLocaleFromUrl(Astro.url);
+const {
+  title = 'NextPage',
+  description = 'Lee a tu manera: libros y addons sin salir de la app.',
+  canonicalPath,
+  alternateEs,
+  alternateEn,
+  ogType = 'website',
+  ogImage = '/og-default.svg',
+  jsonLd,
+  noindex = false,
+} = Astro.props;
+
+const locale = Astro.props.locale ?? getLocaleFromUrl(Astro.url);
+const site = (Astro.site?.href ?? '').replace(/\/$/, '');
+const abs = (p: string): string => {
+  const path = p.startsWith('/') ? p : `/${p}`;
+  return site ? `${site}${path}` : path;
+};
+const canonicalPathResolved = canonicalPath ?? Astro.url.pathname;
+const esPath = alternateEs ?? canonicalPathResolved;
+const enPath = alternateEn ?? canonicalPathResolved;
+const canonical = abs(canonicalPathResolved);
+const ogLocale = locale === 'es' ? 'es_ES' : 'en_US';
+const ogLocaleAlternate = locale === 'es' ? 'en_US' : 'es_ES';
+const ogImageAbs =
+  ogImage.startsWith('http://') || ogImage.startsWith('https://') ? ogImage : abs(ogImage);
 ---
 <!doctype html>
 <html lang={locale}>
@@ -19,8 +50,28 @@ const locale = getLocaleFromUrl(Astro.url);
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
-    <meta name="description" content={description} />
+    <meta name="theme-color" content="#121218" />
     <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="alternate" hreflang="es" href={abs(esPath)} />
+    <link rel="alternate" hreflang="en" href={abs(enPath)} />
+    <link rel="alternate" hreflang="x-default" href={abs(esPath)} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content={ogLocale} />
+    <meta property="og:locale:alternate" content={ogLocaleAlternate} />
+    <meta property="og:image" content={ogImageAbs} />
+    <meta property="og:site_name" content="NextPage Addons" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageAbs} />
+    {jsonLd && <script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
+    {noindex && <meta name="robots" content="noindex" />}
   </head>
   <body class="min-h-screen bg-surface-0 font-sans text-text-primary">
     <Nav />

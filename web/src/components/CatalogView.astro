@@ -3,6 +3,7 @@ import { ADDONS } from '../data/addons';
 import type { AddonCategory } from '../data/addons';
 import { t, type UiLocale } from '../i18n';
 import AddonCard from './AddonCard.astro';
+import FilterSidebar from './FilterSidebar.astro';
 
 export interface Props {
   locale: UiLocale;
@@ -21,8 +22,57 @@ const categories: AddonCategory[] = [
   'independientes',
 ];
 
-const countFor = (fn: (typeof ADDONS)[number] extends never ? never : (a: (typeof ADDONS)[number]) => boolean) =>
-  ADDONS.filter(fn).length;
+const facetCategories = categories.map((c) => ({
+  value: c,
+  label: t(locale, `catalog.cat.${c}`),
+  count: ADDONS.filter((a) => a.category === c).length,
+}));
+
+const facetLangs = [
+  {
+    value: 'es',
+    label: t(locale, 'catalog.langEs'),
+    count: ADDONS.filter((a) => a.languages.includes('es') || a.languages.includes('multi')).length,
+  },
+  {
+    value: 'en',
+    label: t(locale, 'catalog.langEn'),
+    count: ADDONS.filter((a) => a.languages.includes('en') || a.languages.includes('multi')).length,
+  },
+  {
+    value: 'multi',
+    label: t(locale, 'catalog.langMulti'),
+    count: ADDONS.filter((a) => a.languages.includes('multi')).length,
+  },
+];
+
+const facetCaps = [
+  {
+    value: 'search',
+    label: t(locale, 'catalog.filter.capSearch'),
+    count: ADDONS.filter((a) => a.resources.includes('search')).length,
+  },
+  {
+    value: 'book-details',
+    label: t(locale, 'catalog.filter.capDetails'),
+    count: ADDONS.filter((a) => a.resources.includes('book-details')).length,
+  },
+];
+
+const now = Date.now();
+const DAY = 86400000;
+const facetUpdated = [
+  {
+    value: '30',
+    label: t(locale, 'catalog.filter.updated30'),
+    count: ADDONS.filter((a) => now - new Date(a.updatedAt).getTime() <= 30 * DAY).length,
+  },
+  {
+    value: '90',
+    label: t(locale, 'catalog.filter.updated90'),
+    count: ADDONS.filter((a) => now - new Date(a.updatedAt).getTime() <= 90 * DAY).length,
+  },
+];
 ---
 <div class="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-12" data-catalog-root>
   <header class="flex flex-col gap-2">
@@ -30,60 +80,97 @@ const countFor = (fn: (typeof ADDONS)[number] extends never ? never : (a: (typeo
     <p class="max-w-2xl text-text-secondary">{t(locale, 'catalog.subtitle')}</p>
   </header>
 
-  <div class="flex flex-col gap-3 sm:flex-row">
-    <label class="relative flex-1">
-      <span class="sr-only">{t(locale, 'catalog.searchAria')}</span>
-      <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path>
-      </svg>
-      <input
-        data-search-input
-        type="search"
-        placeholder={t(locale, 'catalog.searchPlaceholder')}
-        aria-label={t(locale, 'catalog.searchAria')}
-        class="w-full rounded-lg border border-border-subtle bg-surface-1 py-2.5 pl-10 pr-12 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"
+  <button
+    type="button"
+    data-drawer-trigger
+    aria-expanded="false"
+    aria-controls="filter-drawer"
+    class="lg:hidden self-start rounded-lg border border-border-subtle px-4 py-2 text-sm text-text-secondary transition hover:border-accent hover:text-accent"
+  >
+    {t(locale, 'catalog.filter.openFilters')}
+  </button>
+
+  <div class="lg:flex lg:items-start lg:gap-8">
+    <aside class="hidden w-64 shrink-0 lg:block lg:sticky lg:top-4">
+      <div class="rounded-xl border border-border-subtle bg-surface-1 p-4">
+        <FilterSidebar
+          locale={locale}
+          categories={facetCategories}
+          langs={facetLangs}
+          caps={facetCaps}
+          updated={facetUpdated}
+        />
+      </div>
+    </aside>
+
+    <div class="min-w-0 flex-1">
+      <div class="flex flex-col gap-3 sm:flex-row">
+        <label class="relative flex-1">
+          <span class="sr-only">{t(locale, 'catalog.searchAria')}</span>
+          <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path>
+          </svg>
+          <input
+            data-search-input
+            type="search"
+            placeholder={t(locale, 'catalog.searchPlaceholder')}
+            aria-label={t(locale, 'catalog.searchAria')}
+            class="w-full rounded-lg border border-border-subtle bg-surface-1 py-2.5 pl-10 pr-12 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"
+          />
+          <kbd class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border-subtle px-1.5 py-0.5 font-sans text-xs text-text-muted">/</kbd>
+        </label>
+        <label class="flex items-center gap-2 text-sm text-text-secondary">
+          <span>{t(locale, 'catalog.sortLabel')}</span>
+          <select
+            data-sort-select
+            class="rounded-lg border border-border-subtle bg-surface-1 px-3 py-2.5 text-sm text-text-primary focus:border-accent focus:outline-none"
+          >
+            <option value="relevance">{t(locale, 'catalog.sortRelevance')}</option>
+            <option value="name">{t(locale, 'catalog.sortName')}</option>
+            <option value="updated">{t(locale, 'catalog.sortUpdated')}</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="mt-2 flex justify-end">
+        <span data-count class="text-sm text-text-muted">{t(locale, 'catalog.count', { n: ADDONS.length })}</span>
+      </div>
+
+      <div data-grid class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {ADDONS.map((addon) => <AddonCard addon={addon} locale={locale} />)}
+      </div>
+    </div>
+  </div>
+
+  <div
+    id="filter-drawer"
+    hidden
+    class="fixed inset-0 z-50 lg:hidden"
+    role="dialog"
+    aria-modal="true"
+    aria-label={t(locale, 'catalog.filter.title')}
+  >
+    <div data-drawer-backdrop class="absolute inset-0 bg-black/40"></div>
+    <div class="absolute inset-x-0 bottom-0 max-h-[80vh] overflow-y-auto rounded-t-2xl border border-border-subtle bg-surface-1 p-4">
+      <div class="mb-2 flex items-center justify-between">
+        <p class="font-sans text-sm font-semibold text-text-primary">{t(locale, 'catalog.filter.title')}</p>
+        <button
+          type="button"
+          data-drawer-close
+          aria-label={t(locale, 'catalog.filter.closeFilters')}
+          class="rounded-lg border border-border-subtle px-3 py-1.5 text-sm text-text-secondary transition hover:border-accent hover:text-accent"
+        >
+          ×
+        </button>
+      </div>
+      <FilterSidebar
+        locale={locale}
+        categories={facetCategories}
+        langs={facetLangs}
+        caps={facetCaps}
+        updated={facetUpdated}
       />
-      <kbd class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border-subtle px-1.5 py-0.5 font-sans text-xs text-text-muted">/</kbd>
-    </label>
-    <label class="flex items-center gap-2 text-sm text-text-secondary">
-      <span>{t(locale, 'catalog.sortLabel')}</span>
-      <select
-        data-sort-select
-        class="rounded-lg border border-border-subtle bg-surface-1 px-3 py-2.5 text-sm text-text-primary focus:border-accent focus:outline-none"
-      >
-        <option value="relevance">{t(locale, 'catalog.sortRelevance')}</option>
-        <option value="name">{t(locale, 'catalog.sortName')}</option>
-        <option value="updated">{t(locale, 'catalog.sortUpdated')}</option>
-      </select>
-    </label>
-  </div>
-
-  <div class="flex flex-col gap-2" role="group" aria-label="filters">
-    <div class="flex flex-wrap gap-2" data-kind-row>
-      <button data-kind="all" data-active="true">{t(locale, 'catalog.kindAll')}</button>
-      <button data-kind="builtin">{t(locale, 'catalog.kindBuiltin')} ({countFor((a) => a.kind === 'builtin')})</button>
-      <button data-kind="curated">{t(locale, 'catalog.kindCurated')} (0)</button>
-      <button data-kind="community">{t(locale, 'catalog.kindCommunity')} (0)</button>
-      <span class="mx-1 hidden w-px self-stretch bg-border-subtle sm:block" aria-hidden="true"></span>
-      <button data-lang="all" data-active="true">{t(locale, 'catalog.langAll')}</button>
-      <button data-lang="es">{t(locale, 'catalog.langEs')}</button>
-      <button data-lang="en">{t(locale, 'catalog.langEn')}</button>
-      <button data-lang="multi">{t(locale, 'catalog.langMulti')}</button>
     </div>
-    <div class="flex flex-wrap items-center gap-2" data-cat-row>
-      {
-        categories.map((c) => (
-          <button data-cat={c}>
-            {t(locale, `catalog.cat.${c}`)}
-          </button>
-        ))
-      }
-      <span data-count class="ml-auto text-sm text-text-muted">{t(locale, 'catalog.count', { n: ADDONS.length })}</span>
-    </div>
-  </div>
-
-  <div data-grid class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-    {ADDONS.map((addon) => <AddonCard addon={addon} locale={locale} />)}
   </div>
 
   <div data-empty hidden class="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border-subtle px-4 py-16 text-center">
@@ -105,29 +192,6 @@ const countFor = (fn: (typeof ADDONS)[number] extends never ? never : (a: (typeo
   </div>
 </div>
 
-<style>
-  [data-kind-row] button,
-  [data-cat-row] button {
-    border: 1px solid var(--color-border-subtle);
-    border-radius: 9999px;
-    padding: 0.375rem 0.875rem;
-    font-size: 0.8125rem;
-    color: var(--color-text-secondary);
-    transition: border-color 0.15s, color 0.15s;
-  }
-  [data-kind-row] button:hover,
-  [data-cat-row] button:hover {
-    border-color: var(--color-accent);
-    color: var(--color-accent);
-  }
-  [data-kind-row] button[data-active='true'],
-  [data-cat-row] button[data-active='true'] {
-    border-color: var(--color-accent);
-    color: var(--color-accent);
-    background: color-mix(in srgb, var(--color-accent) 12%, transparent);
-  }
-</style>
-
 <script define:vars={{ countTemplate: t(locale, 'catalog.count'), countOne: t(locale, 'catalog.countOne') }}>
   const root = document.querySelector('[data-catalog-root]');
   const search = root.querySelector('[data-search-input]');
@@ -136,23 +200,52 @@ const countFor = (fn: (typeof ADDONS)[number] extends never ? never : (a: (typeo
   const empty = root.querySelector('[data-empty]');
   const countEl = root.querySelector('[data-count]');
   const cards = [...grid.querySelectorAll('[data-card]')];
-  const state = { q: '', kind: 'all', lang: 'all', cat: null, sort: 'relevance' };
+  const trigger = root.querySelector('[data-drawer-trigger]');
+  const drawer = root.querySelector('#filter-drawer');
+  const closeBtn = root.querySelector('[data-drawer-close]');
+  const backdrop = root.querySelector('[data-drawer-backdrop]');
 
-  function matchLang(cardLangs, f) {
-    if (f === 'all') return true;
+  function allInputs(facet) {
+    return [...root.querySelectorAll(`input[data-facet="${facet}"]`)];
+  }
+  function selSet(facet) {
+    return new Set(allInputs(facet).filter((i) => i.checked).map((i) => i.value));
+  }
+  function matchLangAny(cardLangs, sel) {
+    if (sel.size === 0) return true;
     const langs = cardLangs.split(',');
-    if (f === 'multi') return langs.includes('multi');
-    return langs.includes(f) || langs.includes('multi');
+    for (const f of sel) {
+      if (f === 'multi' ? langs.includes('multi') : langs.includes(f) || langs.includes('multi')) return true;
+    }
+    return false;
+  }
+  function daysSince(card) {
+    return Math.max(0, (Date.now() - new Date(card.dataset.updated).getTime()) / 86400000);
+  }
+  function readState() {
+    const updInput = root.querySelector('input[data-facet="upd"]:checked');
+    return {
+      q: search.value.trim().toLowerCase(),
+      cats: selSet('cat'),
+      langs: selSet('lang'),
+      caps: selSet('cap'),
+      upd: updInput ? updInput.value : 'all',
+      sort: sort.value,
+    };
   }
 
   function apply() {
+    const state = readState();
     const visible = [];
     for (const c of cards) {
+      const resources = (c.dataset.resources || '').split(',');
+      const capsOk = state.caps.size === 0 || [...state.caps].every((r) => resources.includes(r));
       const ok =
         (!state.q || c.dataset.search.includes(state.q)) &&
-        (state.kind === 'all' || c.dataset.kind === state.kind) &&
-        matchLang(c.dataset.langs, state.lang) &&
-        (!state.cat || c.dataset.cat === state.cat);
+        (state.cats.size === 0 || state.cats.has(c.dataset.cat)) &&
+        matchLangAny(c.dataset.langs, state.langs) &&
+        capsOk &&
+        (state.upd === 'all' || daysSince(c) <= Number(state.upd));
       c.style.display = ok ? '' : 'none';
       if (ok) visible.push(c);
     }
@@ -164,60 +257,97 @@ const countFor = (fn: (typeof ADDONS)[number] extends never ? never : (a: (typeo
     for (const c of visible) grid.appendChild(c);
     empty.hidden = visible.length > 0;
     countEl.textContent = visible.length === 1 ? countOne : countTemplate.replace('{{n}}', String(visible.length));
+
+    const params = new URLSearchParams();
+    if (state.q) params.set('q', state.q);
+    if (state.cats.size) params.set('cat', [...state.cats].join(','));
+    if (state.langs.size) params.set('lang', [...state.langs].join(','));
+    if (state.caps.size) params.set('cap', [...state.caps].join(','));
+    if (state.upd !== 'all') params.set('upd', state.upd);
+    if (state.sort !== 'relevance') params.set('sort', state.sort);
+    const qs = params.toString();
+    history.replaceState(null, '', location.pathname + (qs ? '?' + qs : ''));
   }
 
-  // kind + lang rows share one container: scope by dataset key presence
-  const kindRow = root.querySelector('[data-kind-row]');
-  kindRow.addEventListener('click', (e) => {
-    const btn = e.target.closest('button');
-    if (!btn) return;
-    if (btn.dataset.kind !== undefined) {
-      state.kind = btn.dataset.kind;
-      kindRow.querySelectorAll('[data-kind]').forEach((b) =>
-        b === btn ? b.setAttribute('data-active', 'true') : b.removeAttribute('data-active'),
-      );
-    } else if (btn.dataset.lang !== undefined) {
-      state.lang = btn.dataset.lang;
-      kindRow.querySelectorAll('[data-lang]').forEach((b) =>
-        b === btn ? b.setAttribute('data-active', 'true') : b.removeAttribute('data-active'),
-      );
-    }
-    apply();
-  });
+  function syncTwins(input) {
+    allInputs(input.dataset.facet).forEach((i) => {
+      if (i.value === input.value && i.type === input.type) i.checked = input.checked;
+    });
+  }
 
-  const catRow = root.querySelector('[data-cat-row]');
-  catRow.addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-cat]');
-    if (!btn) return;
-    const was = state.cat === btn.dataset.cat;
-    state.cat = was ? null : btn.dataset.cat;
-    catRow.querySelectorAll('[data-cat]').forEach((b) => b.removeAttribute('data-active'));
-    if (!was) btn.setAttribute('data-active', 'true');
+  root.addEventListener('change', (e) => {
+    const input = e.target.closest('input[data-facet]');
+    if (!input) return;
+    if (input.dataset.facet === 'upd' && input.checked) {
+      allInputs('upd').forEach((i) => {
+        if (i.value !== input.value) i.checked = false;
+      });
+    }
+    syncTwins(input);
     apply();
   });
 
   search.addEventListener('input', () => {
-    state.q = search.value.trim().toLowerCase();
     apply();
   });
   sort.addEventListener('change', () => {
-    state.sort = sort.value;
     apply();
   });
-  root.querySelector('[data-clear]').addEventListener('click', () => {
-    Object.assign(state, { q: '', kind: 'all', lang: 'all', cat: null, sort: 'relevance' });
+
+  function clearAll() {
     search.value = '';
     sort.value = 'relevance';
-    root.querySelectorAll('[data-active]').forEach((b) => b.removeAttribute('data-active'));
-    root.querySelector('[data-kind="all"]').setAttribute('data-active', 'true');
-    root.querySelector('[data-lang="all"]').setAttribute('data-active', 'true');
+    root.querySelectorAll('input[data-facet]').forEach((i) => {
+      i.checked = i.dataset.facet === 'upd' && i.value === 'all';
+    });
     apply();
-  });
+  }
+  root.querySelector('[data-clear]').addEventListener('click', clearAll);
+  root.querySelectorAll('[data-facet-clear]').forEach((b) => b.addEventListener('click', clearAll));
+
+  function openDrawer(open) {
+    drawer.hidden = !open;
+    trigger.setAttribute('aria-expanded', String(open));
+    if (open) {
+      const first = drawer.querySelector('input, button');
+      if (first) first.focus();
+    } else {
+      trigger.focus();
+    }
+  }
+  trigger.addEventListener('click', () => openDrawer(drawer.hidden));
+  closeBtn.addEventListener('click', () => openDrawer(false));
+  backdrop.addEventListener('click', () => openDrawer(false));
   document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !drawer.hidden) {
+      openDrawer(false);
+      return;
+    }
     if (e.key === '/' && document.activeElement !== search && !e.metaKey && !e.ctrlKey) {
       e.preventDefault();
       search.focus();
     }
   });
+
+  // Load-time URL parse (?kind= is parsed and ignored for back-compat)
+  const params = new URLSearchParams(location.search);
+  for (const facet of ['cat', 'lang', 'cap']) {
+    const tokens = (params.get(facet) || '').split(',').filter(Boolean);
+    for (const tk of tokens) {
+      allInputs(facet).forEach((i) => {
+        if (i.value === tk) i.checked = true;
+      });
+    }
+  }
+  const updParam = params.get('upd');
+  if (updParam === '30' || updParam === '90') {
+    allInputs('upd').forEach((i) => {
+      i.checked = i.value === updParam;
+    });
+  }
+  const qParam = params.get('q');
+  if (qParam) search.value = qParam;
+  const sortParam = params.get('sort');
+  if (sortParam === 'name' || sortParam === 'updated' || sortParam === 'relevance') sort.value = sortParam;
   apply();
 </script>

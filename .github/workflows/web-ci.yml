@@ -1,0 +1,62 @@
+name: Web CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'packages/**'
+      - '.github/workflows/web-ci.yml'
+
+permissions:
+  contents: read
+
+# Concurrency: cancel superseded runs on the same PR/branch so we don't
+# burn runner time on stale pushes (matches the Desktop CI pattern).
+concurrency:
+  group: web-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web-checks:
+    name: Web checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          # fetch-depth: 0 keeps the full git history, matching the other
+          # workflows in this repo.
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          # Pinned to match the root `packageManager` field (`bun@1.3.12`).
+          # Bump together with the `packageManager` field.
+          bun-version: '1.3.12'
+
+      - name: Cache Bun install
+        uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies (frozen lockfile)
+        # Root workspace: a single bun.lock at the repo root serves desktop,
+        # web, and packages/*; the install runs at the repo root.
+        run: bun install --frozen-lockfile
+
+      - name: Astro check
+        run: bun run --cwd web check
+
+      - name: Astro build
+        run: bun run --cwd web build
+
+      - name: Validate manifests
+        run: bun run --cwd packages/manifest-validator test

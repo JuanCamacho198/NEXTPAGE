@@ -3,6 +3,7 @@ import App from './App.svelte';
 import { mount } from 'svelte';
 import { onOpenUrl } from '@tauri-apps/plugin-deep-link';
 import { registerSupabaseCallbackHandler } from './lib/shared/services';
+import { handleDeepLinkUrls, registerDeepLinkListener } from './lib/features/addons/installDeepLink';
 import { logger } from './lib/shared/logger/Logger';
 import { consoleSink } from './lib/shared/logger/ConsoleSink';
 import { tauriSink } from './lib/shared/logger/TauriSink';
@@ -91,10 +92,14 @@ const registerGlobalHandlers = async (): Promise<void> => {
 };
 
 onOpenUrl((urls) => {
-  console.log('Deep links received:', urls);
-  // REQ-7: deep-link is reserved for non-OAuth URLs. OAuth uses loopback.
-  // Future: route specific URL patterns to book-opening handlers.
+  // sdd/addon-deeplink-v1: cold-start routing. handleDeepLinkUrls is the
+  // single entry point shared with the warm-start single-instance event —
+  // non-install URLs stay ignored (REQ-7: deep-link reserved, OAuth loopback).
+  void handleDeepLinkUrls(urls);
 });
+
+// Warm start: single-instance plugin forwards nextpage:// argv via this event.
+void registerDeepLinkListener();
 
 // Supabase OAuth wiring: listen for OAuth callback on loopback URL.
 registerSupabaseCallbackHandler();

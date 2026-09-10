@@ -118,6 +118,11 @@ export class AddonRegistry {
       );
     }
     const manifest = validateManifest(fetched.body, fetched.contentType);
+    return this.installManifest(url, manifest);
+  }
+
+  /** Install with a manifest already fetched + validated (deep-link preview flow). */
+  async installManifest(url: string, manifest: AddonManifest): Promise<AddonManifest> {
     if (
       BUILTIN_SOURCE_NAMES.has(manifest.id) ||
       manifest.id.includes(':') ||
@@ -203,4 +208,11 @@ export class AddonRegistry {
       }
     }
   }
+}
+
+/** Shared singleton so onChanged listeners stay consistent across consumers */
+let sharedRegistry: AddonRegistry | null = null;
+export function getAddonRegistry(): AddonRegistry {
+  sharedRegistry ??= new AddonRegistry();
+  return sharedRegistry;
 }

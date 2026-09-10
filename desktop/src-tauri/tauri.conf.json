@@ -36,7 +36,8 @@
       "mobile": [],
       "desktop": {
         "schemes": [
-          "nextpage-desktop"
+          "nextpage-desktop",
+          "nextpage"
         ]
       }
     },

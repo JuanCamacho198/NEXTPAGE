@@ -285,6 +285,11 @@ class SupabaseProgressSync(
         _state.value = State.Running
         val pendingItems = outboxDao.getPendingItems()
 
+        // A4 - sync flush duration: timestamps around the drain loop only
+        // (background path; the session-gate backoff loop above is excluded).
+        // runCatching keeps JVM unit tests (unmocked SystemClock) green.
+        val drainStart = runCatching { android.os.SystemClock.elapsedRealtime() }.getOrDefault(0L)
+
         for (item in pendingItems) {
             when (item.entityType) {
                 SyncEntityType.READING_PROGRESS.name -> processProgressItem(item, authSession.userId)
@@ -295,6 +300,18 @@ class SupabaseProgressSync(
         }
 
         _state.value = State.Idle
+
+        runCatching {
+            val drainElapsed = android.os.SystemClock.elapsedRealtime() - drainStart
+            com.nextpage.debug.SentryMetrics.distribution(
+                "sync_flush",
+                com.nextpage.debug.SentryMetrics.bucketDurationMs(drainElapsed),
+                mapOf(
+                    "source" to "sync",
+                    "platform" to "android"
+                )
+            )
+        }
     }
 
     private suspend fun processProgressItem(

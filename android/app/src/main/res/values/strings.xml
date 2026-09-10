@@ -847,4 +847,13 @@
     <string name="settings_addons_enable" tools:ignore="UnusedResources">Enable</string>
     <string name="settings_addons_disable" tools:ignore="UnusedResources">Disable</string>
     <string name="settings_addons_uninstall" tools:ignore="UnusedResources">Uninstall</string>
+    <string name="performance_no_data">No data yet</string>
+    <string name="performance_no_data_hint">This flow has no instrument yet — data appears after you use it in this session.</string>
+    <string name="settings_privacy_title">Privacy &amp; telemetry</string>
+    <string name="settings_privacy_summary">What we collect and what we never collect</string>
+    <string name="settings_privacy_collected">We collect: crash reports, bucketed performance timings, and app version/platform info (via Sentry).</string>
+    <string name="settings_privacy_never">We never collect: book content, titles, highlights, or your searches.</string>
+    <string name="settings_privacy_toggle_label">Send telemetry</string>
+    <string name="settings_privacy_toggle_hint_off">This stops SENDING telemetry immediately (data is never collected offline).</string>
+    <string name="settings_privacy_toggle_hint_on">Telemetry is being sent. Turn off to stop sending immediately.</string>
 </resources>

@@ -109,4 +109,15 @@ class DebugDualBreadcrumbTest {
 
         assertTrue(DebugLog.events.value.any { it.message.contains("progress.emit") })
     }
+
+    @Test
+    fun `PR6 - perf crumbs from P0 instrumentation are forwarded and allowlisted`() {
+        DebugDual.addPerfCrumb("app_cold_start", mapOf("platform" to "android"))
+        DebugDual.addPerfCrumb("reader_open", mapOf("format" to "epub"))
+
+        val captured = capturedCrumbs().filter { it.category != "Logcat" }
+        val perf = captured.filter { it.category == "perf" }
+        assertEquals(2, perf.size)
+        assertTrue(perf.all { it.message?.startsWith("metric.") == true })
+    }
 }

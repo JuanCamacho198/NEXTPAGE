@@ -62,6 +62,10 @@ class SyncOrchestratorImpl(
     private var stopped: Boolean = false
     private var pendingCountJob: Job? = null
 
+    /** A5: last emitted outbox-depth bucket (emit only on bucket change). */
+    @Volatile
+    private var lastEmittedDepthBucket: Long = -1L
+
     /**
      * Subscribe to per-domain state flows + the gate. These subscriptions live
      * on the orchestrator-owned scope; cancelling that scope in [stop]
@@ -134,7 +138,23 @@ class SyncOrchestratorImpl(
         pendingCountJob?.cancel()
         pendingCountJob = outboxDao.observePendingCount()
             .distinctUntilChanged()
-            .onEach { _pendingCount.value = it }
+            .onEach { count ->
+                _pendingCount.value = count
+                // A5 - outbox depth gauge: bucketed, emitted only on bucket change.
+                val bucket = com.nextpage.debug.SentryMetrics.bucketDepth(count)
+                if (bucket != lastEmittedDepthBucket) {
+                    lastEmittedDepthBucket = bucket
+                    com.nextpage.debug.SentryMetrics.notePendingCount(count)
+                    com.nextpage.debug.SentryMetrics.gauge(
+                        "outbox_depth",
+                        bucket,
+                        mapOf(
+                            "source" to "sync",
+                            "platform" to "android"
+                        )
+                    )
+                }
+            }
             .launchIn(orchestratorScope)
     }
 

@@ -11,8 +11,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.nextpage.R
 import com.nextpage.presentation.viewmodel.PerformanceTiming
 
 @Composable
@@ -29,15 +31,31 @@ fun TimingRow(timing: PerformanceTiming) {
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.weight(1f)
             )
-            Sparkline(samples = timing.samples, modifier = Modifier.width(72.dp).height(24.dp))
+            if (timing.samples.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.performance_no_data),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                Sparkline(samples = timing.samples, modifier = Modifier.width(72.dp).height(24.dp))
+            }
         }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            MetricChip(label = "avg", value = "${timing.avgMs} ms")
-            MetricChip(label = "p95", value = "${timing.p95Ms} ms")
-            MetricChip(label = "max", value = "${timing.maxMs} ms")
+        if (timing.samples.isEmpty()) {
+            Text(
+                text = stringResource(R.string.performance_no_data_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                MetricChip(label = "avg", value = "${timing.avgMs} ms")
+                MetricChip(label = "p95", value = "${timing.p95Ms} ms")
+                MetricChip(label = "max", value = "${timing.maxMs} ms")
+            }
         }
     }
 }

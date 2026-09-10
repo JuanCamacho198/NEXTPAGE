@@ -11,7 +11,6 @@ import java.util.Date
 import java.util.Locale
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
-import kotlin.random.Random
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -98,8 +97,7 @@ data class PerformanceUiState(
 
 class PerformanceViewModel(
     application: Application,
-    private val fakeDataSource: PerformanceFakeDataSource = FakePerformanceDataSource(
-        random = Random.Default,
+    private val dataSource: PerformanceDataSource = RealPerformanceDataSource(
         appContext = application.applicationContext
     )
 ) : AndroidViewModel(application) {
@@ -171,15 +169,15 @@ class PerformanceViewModel(
         }
     }
 
-    // ── Delegated to fake stub — isolates Random, no real wiring ──────
+    // ── Delegated to the real data source (measured in-session aggregates) ──
 
-    private fun generateTimings(): List<PerformanceTiming> = fakeDataSource.generateTimings()
+    private fun generateTimings(): List<PerformanceTiming> = dataSource.generateTimings()
 
-    private suspend fun loadResources(): PerformanceResources = fakeDataSource.loadResources()
+    private suspend fun loadResources(): PerformanceResources = dataSource.loadResources()
 
-    private fun loadSyncStatus(): PerformanceSyncStatus = fakeDataSource.loadSyncStatus()
+    private fun loadSyncStatus(): PerformanceSyncStatus = dataSource.loadSyncStatus()
 
-    private fun loadDiagnostics(): PerformanceDiagnostics = fakeDataSource.loadDiagnostics()
+    private fun loadDiagnostics(): PerformanceDiagnostics = dataSource.loadDiagnostics()
 
     private fun clearEpubCacheInternal(): Boolean = runCatching {
         val dirs = listOf(

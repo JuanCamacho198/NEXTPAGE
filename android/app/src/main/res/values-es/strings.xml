@@ -791,4 +791,13 @@
     <string name="settings_addons_enable" tools:ignore="UnusedResources">Activar</string>
     <string name="settings_addons_disable" tools:ignore="UnusedResources">Desactivar</string>
     <string name="settings_addons_uninstall" tools:ignore="UnusedResources">Desinstalar</string>
+    <string name="performance_no_data">Sin datos aún</string>
+    <string name="performance_no_data_hint">Este flujo aún no tiene instrumento: los datos aparecen al usarlo en esta sesión.</string>
+    <string name="settings_privacy_title">Privacidad y telemetría</string>
+    <string name="settings_privacy_summary">Qué recopilamos y qué nunca recopilamos</string>
+    <string name="settings_privacy_collected">Recopilamos: informes de fallos, tiempos de rendimiento agrupados y versión/plataforma de la app (vía Sentry).</string>
+    <string name="settings_privacy_never">Nunca recopilamos: contenido de libros, títulos, resaltados ni tus búsquedas.</string>
+    <string name="settings_privacy_toggle_label">Enviar telemetría</string>
+    <string name="settings_privacy_toggle_hint_off">Esto detiene el ENVÍO de telemetría de inmediato (los datos nunca se recopilan sin conexión).</string>
+    <string name="settings_privacy_toggle_hint_on">Se está enviando telemetría. Desactívalo para dejar de enviar de inmediato.</string>
 </resources>

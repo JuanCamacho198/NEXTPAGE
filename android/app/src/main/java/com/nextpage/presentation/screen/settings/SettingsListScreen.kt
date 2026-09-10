@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -175,13 +176,18 @@ fun SettingsListScreen(
                     labelRes = R.string.settings_dictionary_label,
                     icon = NextPageIcons.LibraryBooks,
                     onClick = onNavigateToDictionary
-                ),
-                SettingsRow(
-                    labelRes = R.string.settings_performance_title,
-                    icon = NextPageIcons.Performance,
-                    onClick = onNavigateToPerformance
                 )
-            )
+            ) + if (BuildConfig.DEBUG) {
+                listOf(
+                    SettingsRow(
+                        labelRes = R.string.settings_performance_title,
+                        icon = NextPageIcons.Performance,
+                        onClick = onNavigateToPerformance
+                    )
+                )
+            } else {
+                emptyList()
+            }
         ),
         SettingsGroup(
             titleRes = R.string.settings_info_section,
@@ -225,6 +231,10 @@ fun SettingsListScreen(
             groups.forEach { group ->
                 SettingsGroupBlock(group = group)
             }
+
+            // PP-3: privacy notice + telemetry opt-out (stops SENDING; the
+            // Android DSN is compile-time, so this vetoes at the SDK hooks).
+            PrivacyTelemetrySection(context = context)
 
             DebugModeSection(context = context)
 
@@ -413,5 +423,63 @@ private fun SettingsListScreenLightPreview() {
             onNavigateToNotifications = {},
             onNavigateToAbout = {}
         )
+    }
+}
+
+@Composable
+private fun PrivacyTelemetrySection(context: android.content.Context) {
+    var enabled by remember { mutableStateOf(com.nextpage.debug.SentryPrivacyPrefs.isEnabled(context)) }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.settings_privacy_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = stringResource(R.string.settings_privacy_collected),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text(
+                text = stringResource(R.string.settings_privacy_never),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_privacy_toggle_label),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                Switch(
+                    checked = enabled,
+                    onCheckedChange = { checked ->
+                        enabled = checked
+                        com.nextpage.debug.SentryPrivacyPrefs.setEnabled(context, checked)
+                    }
+                )
+            }
+            Text(
+                text = if (enabled) {
+                    stringResource(R.string.settings_privacy_toggle_hint_on)
+                } else {
+                    stringResource(R.string.settings_privacy_toggle_hint_off)
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }

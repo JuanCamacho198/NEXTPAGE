@@ -116,6 +116,36 @@ class MainActivity : AppCompatActivity() {
                     }
                 )
             }
+
+            // A1 - cold start end boundary: one-shot first-frame report
+            // (reportFullyDrawn()-style). The listener unregisters itself on
+            // the first draw; async warm-up started in onCreate is excluded
+            // because the window ends here at the first frame.
+            val startElapsed = NextPageApplication.appStartElapsedRealtime
+            if (startElapsed > 0L) {
+                window.decorView.viewTreeObserver.addOnPreDrawListener(
+                    object : android.view.ViewTreeObserver.OnPreDrawListener {
+                        private var reported = false
+                        override fun onPreDraw(): Boolean {
+                            window.decorView.viewTreeObserver.removeOnPreDrawListener(this)
+                            if (!reported) {
+                                reported = true
+                                val elapsed = android.os.SystemClock.elapsedRealtime() - startElapsed
+                                com.nextpage.debug.SentryMetrics.distribution(
+                                    "app_cold_start",
+                                    com.nextpage.debug.SentryMetrics.bucketDurationMs(elapsed),
+                                    mapOf(
+                                        "platform" to "android",
+                                        "source" to "app_shell"
+                                    )
+                                )
+                                runCatching { reportFullyDrawn() }
+                            }
+                            return true
+                        }
+                    }
+                )
+            }
         }
     }
 

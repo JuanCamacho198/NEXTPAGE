@@ -140,6 +140,17 @@ class EpubBookLoader(
                 )
 
                 val loadTime = System.currentTimeMillis() - startTime
+
+                // A2/A3 - reader open + native TTFP (loadBook -> publication-ready).
+                val bucketedLoad = com.nextpage.debug.SentryMetrics.bucketDurationMs(loadTime)
+                val readerTags = mapOf(
+                    "source" to "reader",
+                    "engine" to "readium",
+                    "format" to "epub",
+                    "platform" to "android"
+                )
+                com.nextpage.debug.SentryMetrics.distribution("reader_open", bucketedLoad, readerTags)
+                com.nextpage.debug.SentryMetrics.distribution("reader_ttfp_native", bucketedLoad, readerTags)
                 Log.d(TAG, "Readium loaded EPUB in ${loadTime}ms")
 
                 val chapters = TocBuilder.buildChaptersFromPublication(publication)

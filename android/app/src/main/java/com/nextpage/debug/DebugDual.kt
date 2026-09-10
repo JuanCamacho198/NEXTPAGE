@@ -149,6 +149,15 @@ object DebugDual {
         }
     }
 
+    /**
+     * PR6: P0 instrumentation breadcrumb. Category `perf`, message
+     * `metric.<name>` — both allowlisted by SentryPiiScrubber. Data must be
+     * ids/enums only; the scrubber still applies the denylist.
+     */
+    fun addPerfCrumb(name: String, data: Map<String, String>) {
+        addCrumb(category = "perf", message = "metric.$name", data = data)
+    }
+
     // ---- Typed event entry point ----
 
     fun log(event: DebugEvent) {

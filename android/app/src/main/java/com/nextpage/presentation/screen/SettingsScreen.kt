@@ -21,6 +21,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.nextpage.BuildConfig
 import com.nextpage.data.remote.drive.GoogleDriveAuthHelper
 import com.nextpage.data.session.ReadingGoalPreferences
 import com.nextpage.domain.model.AuthSession
@@ -329,10 +330,13 @@ private fun SettingsScreenContent(
                 }
             }
 
-            composable(route = NextPageDestination.SettingsPerformance.route) {
-                PerformanceScreen(
-                    onBack = { nestedNavController.popBackStack() }
-                )
+            // PP-1: destination registered only in debug builds.
+            if (BuildConfig.DEBUG) {
+                composable(route = NextPageDestination.SettingsPerformance.route) {
+                    PerformanceScreen(
+                        onBack = { nestedNavController.popBackStack() }
+                    )
+                }
             }
         }
     }

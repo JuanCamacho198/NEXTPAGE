@@ -6,6 +6,9 @@ import coil.ImageLoader
 import coil.ImageLoaderFactory
 import com.nextpage.data.remote.supabase.SupabaseClientProvider
 import com.nextpage.debug.CrashLogStore
+import com.nextpage.debug.SentryPiiScrubber
+import com.nextpage.debug.SentryMetrics
+import com.nextpage.debug.SentryPrivacyPrefs
 import com.nextpage.debug.DebugLog
 import com.nextpage.debug.FeedbackPersistence
 import com.nextpage.presentation.theme.CoilModule
@@ -40,6 +43,11 @@ class NextPageApplication : Application(), ImageLoaderFactory {
         const val PREFS_NAME = "nextpage_debug_crash"
         const val KEY_LAST_CRASH = "last_crash"
 
+        /** A1 - cold start origin: first line of Application.onCreate. */
+        @Volatile
+        var appStartElapsedRealtime: Long = 0L
+            private set
+
         // Sentry capture rates (named constants to keep detekt's MagicNumber rule quiet).
         // - TRACES_SAMPLE_RATE: 10% of transactions are sampled for performance traces.
         // - ON_ERROR_REPLAY_RATE: 10% of errors get a 30s session replay attached
@@ -57,6 +65,7 @@ class NextPageApplication : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
+        appStartElapsedRealtime = android.os.SystemClock.elapsedRealtime()
         crashDir = File(cacheDir, "crashes").also { it.mkdirs() }
         val logDir = File(cacheDir, "logs").also { it.mkdirs() }
         debugLogScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -89,11 +98,28 @@ class NextPageApplication : Application(), ImageLoaderFactory {
             // Replay only on error, with strict PII masking defaults from the SDK.
             options.sessionReplay.sessionSampleRate = 0.0
             options.sessionReplay.onErrorSampleRate = ON_ERROR_REPLAY_RATE
-            // Filter out DEBUG-level events to keep event volume down.
+            // PII redaction layer (rule-5 gate) + PP-3 opt-out, THEN the
+            // DEBUG-level drop: scrubber runs first, level filter second.
             options.beforeSend = SentryOptions.BeforeSendCallback { event, _ ->
-                if (event.level == SentryLevel.DEBUG) null else event
+                if (!SentryPrivacyPrefs.isEnabled(this@NextPageApplication)) {
+                    return@BeforeSendCallback null
+                }
+                val scrubbed = SentryPiiScrubber.scrubEvent(event)
+                if (scrubbed.level == SentryLevel.DEBUG) null else scrubbed
+            }
+            options.beforeBreadcrumb = SentryOptions.BeforeBreadcrumbCallback { crumb, _ ->
+                if (!SentryPrivacyPrefs.isEnabled(this@NextPageApplication)) {
+                    return@BeforeBreadcrumbCallback null
+                }
+                SentryPiiScrubber.filterBreadcrumb(crumb)
             }
         }
+
+        // PP-3 opt-out must also cover metrics: Sentry metric envelope items bypass
+        // beforeSend/beforeBreadcrumb, so the veto above never sees them. Send the
+        // real supplier to the emitter so the settings switch stops metric egress
+        // immediately, mid-session.
+        SentryMetrics.install { SentryPrivacyPrefs.isEnabled(this@NextPageApplication) }
 
         installCrashHandler()
 

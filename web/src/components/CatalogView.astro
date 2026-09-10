@@ -128,7 +128,7 @@ const countFor = (fn: (typeof ADDONS)[number] extends never ? never : (a: (typeo
   }
 </style>
 
-<script define:vars={{ countTemplate: t(locale, 'catalog.count') }}>
+<script define:vars={{ countTemplate: t(locale, 'catalog.count'), countOne: t(locale, 'catalog.countOne') }}>
   const root = document.querySelector('[data-catalog-root]');
   const search = root.querySelector('[data-search-input]');
   const sort = root.querySelector('[data-sort-select]');
@@ -163,7 +163,7 @@ const countFor = (fn: (typeof ADDONS)[number] extends never ? never : (a: (typeo
     });
     for (const c of visible) grid.appendChild(c);
     empty.hidden = visible.length > 0;
-    countEl.textContent = countTemplate.replace('{{n}}', String(visible.length));
+    countEl.textContent = visible.length === 1 ? countOne : countTemplate.replace('{{n}}', String(visible.length));
   }
 
   // kind + lang rows share one container: scope by dataset key presence

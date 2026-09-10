@@ -161,9 +161,4 @@ export const messagesEs: Record<UiKey, string> = {
   'notFound.subtitle': 'La ruta que buscás no existe o se movió.',
   'notFound.homeLink': 'Volver al inicio',
   'notFound.catalogLink': 'Ir al catálogo',
-  'footer.tagline': 'Lee a tu manera: libros y addons sin salir de la app.',
-  'index.heroTitle': 'Lee tus libros, extiende tu lector',
-  'index.heroSubtitle':
-    'NextPage reúne tu biblioteca, tus estadísticas de lectura y un catálogo de addons que crece, todo en un solo lugar. El catálogo web llega pronto.',
-  'index.heroCta': 'Próximamente',
 };

@@ -1,0 +1,29 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getLocaleFromUrl, t } from '../i18n';
+
+const locale = getLocaleFromUrl(Astro.url);
+const homeHref = locale === 'es' ? '/' : '/en/';
+const catalogHref = locale === 'es' ? '/catalogo' : '/en/catalog';
+---
+<BaseLayout title={`${t(locale, 'notFound.title')} — NextPage`}>
+  <section class="mx-auto flex max-w-6xl flex-col items-center gap-6 px-4 py-20 text-center">
+    <p class="font-mono text-6xl font-bold text-accent">404</p>
+    <h1 class="font-serif text-4xl font-bold text-text-primary">{t(locale, 'notFound.title')}</h1>
+    <p class="max-w-xl text-lg text-text-secondary">{t(locale, 'notFound.subtitle')}</p>
+    <div class="flex flex-col gap-3 sm:flex-row">
+      <a
+        href={homeHref}
+        class="rounded-lg bg-accent px-6 py-2.5 font-sans text-sm font-semibold text-accent-ink transition hover:brightness-110"
+      >
+        {t(locale, 'notFound.homeLink')}
+      </a>
+      <a
+        href={catalogHref}
+        class="rounded-lg border border-border-subtle px-6 py-2.5 font-sans text-sm font-semibold text-text-primary transition hover:border-accent hover:text-accent"
+      >
+        {t(locale, 'notFound.catalogLink')}
+      </a>
+    </div>
+  </section>
+</BaseLayout>

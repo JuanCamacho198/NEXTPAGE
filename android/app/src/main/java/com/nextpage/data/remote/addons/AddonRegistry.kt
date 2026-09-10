@@ -21,10 +21,17 @@ data class InstalledAddonRow(
 
 /**
  * Minimal install-by-URL seam contract (settings ViewModel + rebuild callers).
+ *
+ * Additive addon-deeplink-v1 surface: [fetchManifest] exposes fetch+validate
+ * (preview, no persistence) and [installManifest] persists an already-fetched
+ * manifest - the confirm-install split. `install()` keeps its atomic
+ * fetch+validate+persist behavior.
  */
 interface AddonRegistryLike {
     suspend fun listInstalled(): List<InstalledAddonRow>
     suspend fun install(url: String): AddonManifest
+    suspend fun fetchManifest(url: String): AddonManifest
+    suspend fun installManifest(url: String, manifest: AddonManifest): AddonManifest
     suspend fun setEnabled(id: String, enabled: Boolean)
     suspend fun uninstall(id: String)
 }
@@ -58,12 +65,28 @@ class AddonRegistry(
 
     /** install(url): HTTPS check → fetch → validate → addonId → upsert preserving enabled. */
     override suspend fun install(url: String): AddonManifest {
+        val manifest = fetchManifest(url)
+        return installManifest(url, manifest)
+    }
+
+    /**
+     * Fetch + validate only (no persistence) - the deep-link preview step.
+     * HTTPS is enforced here so a preview can never trigger non-https I/O.
+     */
+    override suspend fun fetchManifest(url: String): AddonManifest {
         ManifestValidator.assertHttpsInstallUrl(url)
         val fetched = transport.fetch(url)
         if (!fetched.status.isHttpSuccess()) {
             throw AddonFetchException(AddonFetchErrorCode.NETWORK, "addon fetch status ${fetched.status}")
         }
-        val manifest = ManifestValidator.validate(fetched.body, fetched.contentType)
+        return ManifestValidator.validate(fetched.body, fetched.contentType)
+    }
+
+    /**
+     * Persist an already-fetched manifest (sha256 addonId → upsert preserving
+     * enabled/addedAt → notifyChanged). No fetch; built-in id collision guard.
+     */
+    override suspend fun installManifest(url: String, manifest: AddonManifest): AddonManifest {
         if (
             manifest.id in BUILTIN_SOURCE_NAMES ||
             manifest.id.contains(':') ||

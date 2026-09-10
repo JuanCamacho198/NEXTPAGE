@@ -196,6 +196,79 @@ class AddonRegistryTest {
     }
 
     @Test
+    fun `installManifest persists without refetching - single transport call`() = runTest {
+        val dao = FakeAddonDao()
+        val url = "https://example.com/manifest.json"
+        val transport = ScriptedAddonTransport(resource())
+        val reg = AddonRegistry(dao, transport)
+        val manifest = ManifestValidator.validate(
+            manifestJson().toByteArray(Charsets.UTF_8),
+            "application/json"
+        )
+        reg.installManifest(url, manifest)
+        assertEquals(0, transport.calls)
+        assertEquals(1, dao.rows.size)
+        assertEquals(AddonId.fromUrl(url), dao.rows[0].id)
+        assertTrue(dao.rows[0].enabled)
+    }
+
+    @Test
+    fun `installManifest preserves enabled and addedAt on reinstall like install`() = runTest {
+        val dao = FakeAddonDao()
+        val url = "https://example.com/manifest.json"
+        val reg = registry(dao, resource())
+        reg.install(url)
+        val id = dao.rows[0].id
+        val addedAt = dao.rows[0].addedAt
+        reg.setEnabled(id, false)
+        val updated = ManifestValidator.validate(
+            manifestJson(version = "2.0.0").toByteArray(Charsets.UTF_8),
+            "application/json"
+        )
+        reg.installManifest(url, updated)
+        assertEquals(1, dao.rows.size)
+        assertFalse(dao.rows[0].enabled)
+        assertEquals(addedAt, dao.rows[0].addedAt)
+        assertEquals("2.0.0", JSONObject(dao.rows[0].manifestJson).getString("version"))
+    }
+
+    @Test
+    fun `installManifest rejects builtin id collision before dao write`() = runTest {
+        val dao = FakeAddonDao()
+        val reg = registry(dao, resource())
+        val colliding = ManifestValidator.validate(
+            manifestJson(id = "gutendex").toByteArray(Charsets.UTF_8),
+            "application/json"
+        )
+        try {
+            reg.installManifest("https://example.com/manifest.json", colliding)
+            fail("expected INVALID_MANIFEST")
+        } catch (err: AddonFetchException) {
+            assertEquals(AddonFetchErrorCode.INVALID_MANIFEST, err.code)
+        }
+        assertEquals(0, dao.rows.size)
+    }
+
+    @Test
+    fun `install delegates to fetchManifest plus installManifest with exactly one fetch`() = runTest {
+        val dao = FakeAddonDao()
+        val transport = ScriptedAddonTransport(resource())
+        val reg = AddonRegistry(dao, transport)
+        reg.install("https://example.com/manifest.json")
+        assertEquals(1, transport.calls)
+        assertEquals(1, dao.rows.size)
+    }
+
+    @Test
+    fun `fetchManifest returns validated manifest without dao write`() = runTest {
+        val dao = FakeAddonDao()
+        val reg = registry(dao, resource(name = "Preview Addon"))
+        val manifest = reg.fetchManifest("https://example.com/manifest.json")
+        assertEquals("Preview Addon", manifest.name)
+        assertEquals(0, dao.rows.size)
+    }
+
+    @Test
     fun `uninstall removes the row - other rows unaffected`() = runTest {
         val dao = FakeAddonDao()
         val reg = registry(dao, resource(name = "One"), resource(name = "Two"))

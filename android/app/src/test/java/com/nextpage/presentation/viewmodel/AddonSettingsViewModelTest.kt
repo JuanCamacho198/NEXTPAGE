@@ -34,6 +34,12 @@ class AddonSettingsViewModelTest {
         var installError: Exception? = null
 
         override suspend fun listInstalled(): List<InstalledAddonRow> = rows.toList()
+            override suspend fun fetchManifest(url: String): AddonManifest = manifest
+            override suspend fun installManifest(url: String, manifest: AddonManifest): AddonManifest {
+                installedUrls.add(url)
+                rows.add(InstalledAddonRow("id-${rows.size + 1}", url, manifest, true, rows.size.toLong()))
+                return manifest
+            }
         override suspend fun install(url: String): AddonManifest {
             installError?.let { throw it }
             installedUrls.add(url)

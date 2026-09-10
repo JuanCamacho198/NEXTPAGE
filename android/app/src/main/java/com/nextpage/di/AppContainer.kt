@@ -88,6 +88,16 @@ class AppContainer(context: Context) {
     val supabaseBookCatalogSync: SupabaseBookCatalogSync by lazy { networkModule.supabaseBookCatalogSync }
     val catalogProvider: CatalogProvider by lazy { networkModule.catalogProvider }
     val addonRegistry: com.nextpage.data.remote.addons.AddonRegistry by lazy { networkModule.addonRegistry }
+
+    // ── addon-deeplink-v1: pending install deep links (B2/B3) ──────────
+    // Main-scoped: onInstallUri/confirm mutate StateFlow read by the Compose
+    // dialog host in NextPageNavHost root.
+    val installDeepLinkController: com.nextpage.presentation.navigation.InstallDeepLinkController by lazy {
+        com.nextpage.presentation.navigation.InstallDeepLinkController(
+            registry = addonRegistry,
+            mainDispatcher = kotlinx.coroutines.Dispatchers.Main
+        )
+    }
     val driveColdBackupService: DriveColdBackupService by lazy { networkModule.driveColdBackupService }
 
     // ── sync-layer-split PR-1 foundations ────────────────────────────────

@@ -237,6 +237,9 @@ fun NextPageNavHost(
         syncService = appContainer.syncService
     )
 
+    // ── Addon install deep-link dialog (nextpage://install) ─────────────
+    AddonInstallDialogHost(controller = appContainer.installDeepLinkController)
+
     // ── Supabase OAuth deep-link handling ────────────────────────────
     // NOTE: Google sign-in now uses native Credential Manager (no browser OAuth).
     // This deep-link handler is kept for backward compatibility with any

@@ -1,0 +1,179 @@
+---
+import type { AddonSeed } from '../data/addons';
+import { catalogHref } from '../data/addons';
+import { t, type UiLocale } from '../i18n';
+import AddonIcon from './AddonIcon.astro';
+
+export interface Props {
+  addon: AddonSeed;
+  locale: UiLocale;
+}
+
+const { addon, locale } = Astro.props;
+
+const homeHref = locale === 'es' ? '/' : '/en/';
+const docsHref = locale === 'es' ? '/docs' : '/en/docs';
+const submitHref = locale === 'es' ? '/enviar' : '/en/submit';
+
+const days = Math.max(0, Math.round((Date.now() - new Date(addon.updatedAt).getTime()) / 86400000));
+const ago = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(-days, 'day');
+
+const langLabel =
+  addon.languages.length > 1 || addon.languages.includes('multi')
+    ? t(locale, 'catalog.langMulti')
+    : t(locale, addon.languages[0] === 'es' ? 'catalog.langEs' : 'catalog.langEn');
+
+const manifestJson = JSON.stringify(
+  {
+    id: addon.id,
+    name: addon.name,
+    version: addon.version,
+    catalogs: addon.catalogs,
+    resources: addon.resources,
+  },
+  null,
+  2,
+);
+---
+<div class="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-12" data-detail-root>
+  <nav aria-label="breadcrumb" class="flex items-center gap-2 text-sm text-text-muted">
+    <a href={homeHref} class="transition hover:text-accent">{t(locale, 'detail.breadcrumbHome')}</a>
+    <span aria-hidden="true">/</span>
+    <a href={catalogHref(locale)} class="transition hover:text-accent">{t(locale, 'detail.breadcrumbCatalog')}</a>
+    <span aria-hidden="true">/</span>
+    <span class="text-text-secondary">{addon.name}</span>
+  </nav>
+
+  <header class="flex flex-col gap-6 sm:flex-row sm:items-start">
+    <span class="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-accent-soft/15 text-accent">
+      <AddonIcon icon={addon.icon} class="h-10 w-10" />
+    </span>
+    <div class="flex min-w-0 flex-1 flex-col gap-3">
+      <div class="flex flex-wrap items-center gap-3">
+        <h1 class="font-serif text-3xl font-bold text-text-primary">{addon.name}</h1>
+        <span class="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-medium text-emerald-400">
+          <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true">
+            <path d="M4 12.5l5 5L20 6.5"></path>
+          </svg>
+          {t(locale, 'detail.validated')}
+        </span>
+      </div>
+      <ul class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-muted">
+        <li>{addon.author}</li>
+        <li>{addon.license}</li>
+        <li>{langLabel}</li>
+        <li>{t(locale, 'detail.updatedAgo', { x: ago })}</li>
+        <li>v{addon.version}</li>
+      </ul>
+      <p class="max-w-2xl text-text-secondary">{addon.description[locale]}</p>
+    </div>
+    <div class="flex shrink-0 flex-col gap-2 sm:items-end">
+      {
+        addon.installUrl ? (
+          <>
+            <button
+              data-copy={addon.installUrl}
+              class="inline-flex items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-accent-ink transition hover:brightness-110"
+            >
+              {t(locale, 'detail.copyUrl')}
+            </button>
+            <span data-copied hidden class="text-xs text-emerald-400">
+              {t(locale, 'detail.copied')}
+            </span>
+          </>
+        ) : (
+          <span class="inline-flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-5 py-2.5 text-sm font-medium text-emerald-400">
+            {t(locale, 'detail.includedTitle')}
+          </span>
+        )
+      }
+    </div>
+  </header>
+
+  <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+    <div class="flex flex-col gap-4 lg:col-span-2">
+      <section class="rounded-xl border border-border-subtle bg-surface-1 p-5">
+        <h2 class="mb-3 font-sans text-sm font-semibold uppercase tracking-wide text-text-muted">
+          {t(locale, 'detail.sourcesTitle')}
+        </h2>
+        <ul class="flex flex-col gap-2">
+          {
+            addon.catalogs.map((c) => (
+              <li class="flex items-center gap-3 rounded-lg bg-surface-2 px-4 py-3">
+                <span class="rounded-full bg-accent/15 px-2.5 py-0.5 text-xs font-medium text-accent">{c.type}</span>
+                <span class="font-mono text-sm text-text-primary">{c.id}</span>
+                <span class="truncate text-sm text-text-secondary">{c.name}</span>
+              </li>
+            ))
+          }
+        </ul>
+      </section>
+
+      <section class="rounded-xl border border-border-subtle bg-surface-1 p-5">
+        <h2 class="mb-3 font-sans text-sm font-semibold uppercase tracking-wide text-text-muted">
+          {t(locale, 'detail.manifestTitle')}
+        </h2>
+        <pre class="overflow-x-auto rounded-lg bg-surface-0 p-4 font-mono text-xs leading-relaxed text-text-secondary">{manifestJson}</pre>
+        <a href={docsHref} class="mt-3 inline-block text-sm text-accent transition hover:brightness-110">
+          {t(locale, 'detail.viewSchema')}
+        </a>
+      </section>
+
+      <p class="text-sm text-text-muted">
+        <a href={submitHref} class="transition hover:text-accent">{t(locale, 'detail.report')}</a>
+      </p>
+    </div>
+
+    <aside class="h-fit rounded-xl border border-border-subtle bg-surface-1 p-5 lg:sticky lg:top-4">
+      <h2 class="mb-3 font-sans text-sm font-semibold uppercase tracking-wide text-text-muted">
+        {t(locale, 'detail.installTitle')}
+      </h2>
+      {
+        addon.installUrl ? (
+          <button
+            data-copy={addon.installUrl}
+            class="mb-4 w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink transition hover:brightness-110"
+          >
+            {t(locale, 'detail.copyUrl')}
+          </button>
+        ) : (
+          <p class="mb-4 rounded-lg bg-emerald-500/10 px-4 py-3 text-sm text-emerald-400">
+            {t(locale, 'detail.includedSub')}
+          </p>
+        )
+      }
+      <ol class="flex list-decimal flex-col gap-2 pl-5 text-sm text-text-secondary">
+        <li>{t(locale, 'detail.step1')}</li>
+        <li>{t(locale, 'detail.step2')}</li>
+        <li>{t(locale, 'detail.step3')}</li>
+      </ol>
+      <p class="mt-4 font-mono text-xs text-text-muted">v{addon.version}</p>
+    </aside>
+  </div>
+</div>
+
+<script>
+  const root = document.querySelector('[data-detail-root]');
+  if (root) {
+    const done = root.querySelector('[data-copied]') as HTMLElement | null;
+    root.querySelectorAll('[data-copy]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const text = btn.getAttribute('data-copy') ?? '';
+        try {
+          await navigator.clipboard.writeText(text);
+        } catch {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          ta.remove();
+        }
+        if (done) {
+          done.hidden = false;
+          setTimeout(() => (done.hidden = true), 2000);
+        }
+      });
+    });
+  }
+</script>

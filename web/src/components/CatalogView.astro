@@ -1,0 +1,223 @@
+---
+import { ADDONS } from '../data/addons';
+import type { AddonCategory } from '../data/addons';
+import { t, type UiLocale } from '../i18n';
+import AddonCard from './AddonCard.astro';
+
+export interface Props {
+  locale: UiLocale;
+}
+
+const { locale } = Astro.props;
+
+const submitHref = locale === 'es' ? '/enviar' : '/en/submit';
+
+const categories: AddonCategory[] = [
+  'dominio-publico',
+  'bibliotecas',
+  'audiolibros',
+  'wikis',
+  'prensa',
+  'independientes',
+];
+
+const countFor = (fn: (typeof ADDONS)[number] extends never ? never : (a: (typeof ADDONS)[number]) => boolean) =>
+  ADDONS.filter(fn).length;
+---
+<div class="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-12" data-catalog-root>
+  <header class="flex flex-col gap-2">
+    <h1 class="font-serif text-4xl font-bold text-text-primary">{t(locale, 'catalog.title')}</h1>
+    <p class="max-w-2xl text-text-secondary">{t(locale, 'catalog.subtitle')}</p>
+  </header>
+
+  <div class="flex flex-col gap-3 sm:flex-row">
+    <label class="relative flex-1">
+      <span class="sr-only">{t(locale, 'catalog.searchAria')}</span>
+      <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path>
+      </svg>
+      <input
+        data-search-input
+        type="search"
+        placeholder={t(locale, 'catalog.searchPlaceholder')}
+        aria-label={t(locale, 'catalog.searchAria')}
+        class="w-full rounded-lg border border-border-subtle bg-surface-1 py-2.5 pl-10 pr-12 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"
+      />
+      <kbd class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border-subtle px-1.5 py-0.5 font-sans text-xs text-text-muted">/</kbd>
+    </label>
+    <label class="flex items-center gap-2 text-sm text-text-secondary">
+      <span>{t(locale, 'catalog.sortLabel')}</span>
+      <select
+        data-sort-select
+        class="rounded-lg border border-border-subtle bg-surface-1 px-3 py-2.5 text-sm text-text-primary focus:border-accent focus:outline-none"
+      >
+        <option value="relevance">{t(locale, 'catalog.sortRelevance')}</option>
+        <option value="name">{t(locale, 'catalog.sortName')}</option>
+        <option value="updated">{t(locale, 'catalog.sortUpdated')}</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="flex flex-col gap-2" role="group" aria-label="filters">
+    <div class="flex flex-wrap gap-2" data-kind-row>
+      <button data-kind="all" data-active="true">{t(locale, 'catalog.kindAll')}</button>
+      <button data-kind="builtin">{t(locale, 'catalog.kindBuiltin')} ({countFor((a) => a.kind === 'builtin')})</button>
+      <button data-kind="curated">{t(locale, 'catalog.kindCurated')} (0)</button>
+      <button data-kind="community">{t(locale, 'catalog.kindCommunity')} (0)</button>
+      <span class="mx-1 hidden w-px self-stretch bg-border-subtle sm:block" aria-hidden="true"></span>
+      <button data-lang="all" data-active="true">{t(locale, 'catalog.langAll')}</button>
+      <button data-lang="es">{t(locale, 'catalog.langEs')}</button>
+      <button data-lang="en">{t(locale, 'catalog.langEn')}</button>
+      <button data-lang="multi">{t(locale, 'catalog.langMulti')}</button>
+    </div>
+    <div class="flex flex-wrap items-center gap-2" data-cat-row>
+      {
+        categories.map((c) => (
+          <button data-cat={c}>
+            {t(locale, `catalog.cat.${c}`)}
+          </button>
+        ))
+      }
+      <span data-count class="ml-auto text-sm text-text-muted">{t(locale, 'catalog.count', { n: ADDONS.length })}</span>
+    </div>
+  </div>
+
+  <div data-grid class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    {ADDONS.map((addon) => <AddonCard addon={addon} locale={locale} />)}
+  </div>
+
+  <div data-empty hidden class="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border-subtle px-4 py-16 text-center">
+    <span class="flex h-12 w-12 items-center justify-center rounded-full bg-surface-2 text-text-muted">
+      <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+        <circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path>
+      </svg>
+    </span>
+    <p class="font-sans text-lg font-semibold text-text-primary">{t(locale, 'catalog.emptyTitle')}</p>
+    <p class="text-sm text-text-secondary">{t(locale, 'catalog.emptySub')}</p>
+    <div class="flex gap-2 pt-1">
+      <button data-clear class="rounded-lg border border-border-subtle px-4 py-2 text-sm text-text-secondary transition hover:border-accent hover:text-accent">
+        {t(locale, 'catalog.clearFilters')}
+      </button>
+      <a href={submitHref} class="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-ink transition hover:brightness-110">
+        {t(locale, 'catalog.submitAddon')}
+      </a>
+    </div>
+  </div>
+</div>
+
+<style>
+  [data-kind-row] button,
+  [data-cat-row] button {
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 9999px;
+    padding: 0.375rem 0.875rem;
+    font-size: 0.8125rem;
+    color: var(--color-text-secondary);
+    transition: border-color 0.15s, color 0.15s;
+  }
+  [data-kind-row] button:hover,
+  [data-cat-row] button:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+  [data-kind-row] button[data-active='true'],
+  [data-cat-row] button[data-active='true'] {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+    background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  }
+</style>
+
+<script define:vars={{ countTemplate: t(locale, 'catalog.count') }}>
+  const root = document.querySelector('[data-catalog-root]');
+  const search = root.querySelector('[data-search-input]');
+  const sort = root.querySelector('[data-sort-select]');
+  const grid = root.querySelector('[data-grid]');
+  const empty = root.querySelector('[data-empty]');
+  const countEl = root.querySelector('[data-count]');
+  const cards = [...grid.querySelectorAll('[data-card]')];
+  const state = { q: '', kind: 'all', lang: 'all', cat: null, sort: 'relevance' };
+
+  function matchLang(cardLangs, f) {
+    if (f === 'all') return true;
+    const langs = cardLangs.split(',');
+    if (f === 'multi') return langs.includes('multi');
+    return langs.includes(f) || langs.includes('multi');
+  }
+
+  function apply() {
+    const visible = [];
+    for (const c of cards) {
+      const ok =
+        (!state.q || c.dataset.search.includes(state.q)) &&
+        (state.kind === 'all' || c.dataset.kind === state.kind) &&
+        matchLang(c.dataset.langs, state.lang) &&
+        (!state.cat || c.dataset.cat === state.cat);
+      c.style.display = ok ? '' : 'none';
+      if (ok) visible.push(c);
+    }
+    visible.sort((a, b) => {
+      if (state.sort === 'name') return a.dataset.name.localeCompare(b.dataset.name);
+      if (state.sort === 'updated') return b.dataset.updated.localeCompare(a.dataset.updated);
+      return 0;
+    });
+    for (const c of visible) grid.appendChild(c);
+    empty.hidden = visible.length > 0;
+    countEl.textContent = countTemplate.replace('{{n}}', String(visible.length));
+  }
+
+  // kind + lang rows share one container: scope by dataset key presence
+  const kindRow = root.querySelector('[data-kind-row]');
+  kindRow.addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    if (btn.dataset.kind !== undefined) {
+      state.kind = btn.dataset.kind;
+      kindRow.querySelectorAll('[data-kind]').forEach((b) =>
+        b === btn ? b.setAttribute('data-active', 'true') : b.removeAttribute('data-active'),
+      );
+    } else if (btn.dataset.lang !== undefined) {
+      state.lang = btn.dataset.lang;
+      kindRow.querySelectorAll('[data-lang]').forEach((b) =>
+        b === btn ? b.setAttribute('data-active', 'true') : b.removeAttribute('data-active'),
+      );
+    }
+    apply();
+  });
+
+  const catRow = root.querySelector('[data-cat-row]');
+  catRow.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-cat]');
+    if (!btn) return;
+    const was = state.cat === btn.dataset.cat;
+    state.cat = was ? null : btn.dataset.cat;
+    catRow.querySelectorAll('[data-cat]').forEach((b) => b.removeAttribute('data-active'));
+    if (!was) btn.setAttribute('data-active', 'true');
+    apply();
+  });
+
+  search.addEventListener('input', () => {
+    state.q = search.value.trim().toLowerCase();
+    apply();
+  });
+  sort.addEventListener('change', () => {
+    state.sort = sort.value;
+    apply();
+  });
+  root.querySelector('[data-clear]').addEventListener('click', () => {
+    Object.assign(state, { q: '', kind: 'all', lang: 'all', cat: null, sort: 'relevance' });
+    search.value = '';
+    sort.value = 'relevance';
+    root.querySelectorAll('[data-active]').forEach((b) => b.removeAttribute('data-active'));
+    root.querySelector('[data-kind="all"]').setAttribute('data-active', 'true');
+    root.querySelector('[data-lang="all"]').setAttribute('data-active', 'true');
+    apply();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === '/' && document.activeElement !== search && !e.metaKey && !e.ctrlKey) {
+      e.preventDefault();
+      search.focus();
+    }
+  });
+  apply();
+</script>

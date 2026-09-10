@@ -1,0 +1,16 @@
+---
+import { ADDONS, getAddon } from '../../data/addons';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import DetailView from '../../components/DetailView.astro';
+
+export function getStaticPaths() {
+  return ADDONS.map((a) => ({ params: { id: a.id } }));
+}
+
+const { id } = Astro.params;
+const addon = getAddon(id ?? '');
+if (!addon) return new Response('Not found', { status: 404 });
+---
+<BaseLayout title={`${addon.name} — NextPage`}>
+  <DetailView addon={addon} locale="es" />
+</BaseLayout>

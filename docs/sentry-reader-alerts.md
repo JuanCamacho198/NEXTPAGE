@@ -102,3 +102,60 @@ are stored.
   the sentry.io UI (**Projects > Alerts** or **Issues > Saved Searches**).
   No code deploy required.
 - This document: revert via `git revert <commit-sha>`.
+
+## Performance metric vocabulary (cross-platform-telemetry-v1)
+
+The P0 performance metrics share one vocabulary across `nextpage-desktop` and
+`nextpage-android` (defined in TS in
+`desktop/src/lib/shared/logger/metricTypes.ts`, mirrored in
+`android/app/src/main/java/com/nextpage/debug/MetricVocabulary.kt`; a lockstep
+test fails the build on drift):
+
+| Metric | Type | Producers |
+|---|---|---|
+| `app_cold_start` | distribution (ms, bucketed) | desktop + android |
+| `reader_open` | distribution (ms, bucketed) | desktop + android |
+| `reader_ttfp_web` | distribution (ms, bucketed) | desktop only |
+| `reader_ttfp_native` | distribution (ms, bucketed) | android only |
+| `sync_flush` | distribution (ms, bucketed) | desktop + android |
+| `outbox_depth` | gauge (bucketed count) | desktop + android |
+| `book_import` | distribution (ms, bucketed) | android (desktop e2e import = `ipc_call` with `feature=importBook`) |
+| `ipc_call` | distribution (ms, bucketed) | desktop only |
+
+### Tag contract
+
+- `source` = `reader` | `app_shell` | `sync` | `import`
+- `event` = metric name (metrics); typed event name (errors)
+- `feature` = Tauri command name (`ipc_call` only)
+- `format` = `epub` | `pdf`
+- `platform` = `desktop` | `android`
+- `engine` = `epubjs` | `readium` | `pdfjs` (reader metrics only)
+
+No tag ever carries a book id, title, path, ISBN, CFI, or user identity; the
+redaction layers denylist these keys even on call-site error.
+
+### Bucketing rules (numerics are never exact)
+
+- Durations (ms): log-scale buckets `[100, 250, 500, 1000, 2000, 4000, 8000, 16000, 32000, 64000, +Inf]` — emitted as the bucket's upper bound.
+- Outbox depth: `0, 1-4, 5-19, 20-99, 100+` — emitted as the bucket's upper bound, only on bucket change.
+- File/library sizes: `0, 1-5MB, 5-20MB, 20-100MB, 100MB+`.
+
+### Platform-specific TTFP definitions — NEVER average across them
+
+- `reader_ttfp_web` (desktop, epubjs): `display(cfi)` called → first `rendered`
+  callback for that opening. A webview-paint timestamp.
+- `reader_ttfp_native` (android, Readium): `loadBook` invoked →
+  `readiumPublication` set with `isLoading=false`. A native-publication-ready
+  timestamp.
+
+These are structurally different events; a dashboard query MUST group by
+`platform` (and `engine` where present) and MUST NOT average or directly
+compare `reader_ttfp_web` with `reader_ttfp_native`.
+
+### Alert rules for performance series
+
+- Group by `platform`; use `engine` to split reader series.
+- Cold start: alert when the `app_cold_start` p95 (per release) crosses its
+  bucket by two edges vs the previous release, per platform separately.
+- Sync: alert on `sync_flush` failure rate (from `<name>_error` increments) and
+  on `outbox_depth` sustaining the `100+` bucket for 30 minutes.

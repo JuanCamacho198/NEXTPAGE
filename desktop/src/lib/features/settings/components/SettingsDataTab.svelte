@@ -1,5 +1,6 @@
 <script lang="ts">
   import Panel from '$lib/shared/ui/layout/Panel.svelte';
+  import SettingsPrivacySection from './SettingsPrivacySection.svelte';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
 
@@ -182,3 +183,5 @@
     >
   </button>
 </Panel>
+
+<SettingsPrivacySection {t} />

@@ -895,6 +895,12 @@ export const messagesEn = {
   'welcome.brandDesktop': 'Desktop',
   'welcome.signInAria': 'Sign in',
   'welcome.cardCreateAccount': "Don't have an account? Create account",
+  'settings.privacy.title': 'Privacy & telemetry',
+  'settings.privacy.description':
+    'We collect crash reports, bucketed performance timings, and app version/platform info via Sentry. We never collect book content, titles, highlights, or your searches.',
+  'settings.privacy.sendTelemetry': 'Send telemetry',
+  'settings.privacy.telemetryOn': 'Telemetry is being sent.',
+  'settings.privacy.telemetryOff': 'Telemetry sending is stopped.',
 } as const;
 
 export type MessageKey = keyof typeof messagesEn;

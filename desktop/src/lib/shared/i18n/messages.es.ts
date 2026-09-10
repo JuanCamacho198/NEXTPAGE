@@ -902,4 +902,10 @@ export const messagesEs: Record<MessageKey, string> = {
   'reader.zoom': 'Zoom',
   'reader.zoomLevel': 'Zoom: {{level}}%',
   'reader.fullscreenHint': 'Pulsa F para pantalla completa',
+  'settings.privacy.title': 'Privacidad y telemetría',
+  'settings.privacy.description':
+    'Recopilamos informes de fallos, tiempos de rendimiento agrupados y versión/plataforma de la app vía Sentry. Nunca recopilamos contenido de libros, títulos, resaltados ni tus búsquedas.',
+  'settings.privacy.sendTelemetry': 'Enviar telemetría',
+  'settings.privacy.telemetryOn': 'Se está enviando telemetría.',
+  'settings.privacy.telemetryOff': 'El envío de telemetría está detenido.',
 };

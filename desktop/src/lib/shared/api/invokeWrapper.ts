@@ -1,6 +1,7 @@
 import { invoke as tauriInvoke } from '@tauri-apps/api/core';
 import { metricsStore } from '$lib/shared/logger/MetricsStore';
 import { METRIC_NAMES } from '$lib/shared/logger/metricTypes';
+import { bucketDurationMs } from '$lib/shared/logger/metricBuckets';
 
 /**
  * Wrapper around Tauri's invoke that measures the duration of every IPC call
@@ -16,9 +17,11 @@ export async function invoke<T>(cmd: string, args?: Record<string, unknown>): Pr
     metricsStore.record({
       name: METRIC_NAMES.IPC_CALL,
       durationMs: Math.round(durationMs),
+      bucketedDurationMs: bucketDurationMs(durationMs),
       feature: cmd,
       count: 1,
       success: true,
+      tags: { platform: 'desktop' },
     });
     return result;
   } catch (error) {
@@ -26,10 +29,12 @@ export async function invoke<T>(cmd: string, args?: Record<string, unknown>): Pr
     metricsStore.record({
       name: METRIC_NAMES.IPC_CALL,
       durationMs: Math.round(durationMs),
+      bucketedDurationMs: bucketDurationMs(durationMs),
       feature: cmd,
       count: 1,
       success: false,
       errorCode: error instanceof Error ? error.message : String(error),
+      tags: { platform: 'desktop' },
     });
     throw error;
   }

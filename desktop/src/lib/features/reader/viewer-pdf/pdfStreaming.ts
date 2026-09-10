@@ -3,6 +3,9 @@ import type { PDFDocumentProxy, PDFDocumentLoadingTask } from 'pdfjs-dist';
 import type { PdfOutlineItem } from '$lib/shared/types';
 import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
 import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
+import { metricsStore } from '$lib/shared/logger/MetricsStore';
+import { METRIC_NAMES } from '$lib/shared/logger/metricTypes';
+import { bucketDurationMs } from '$lib/shared/logger/metricBuckets';
 
 let libraryPort: LibraryPort = new TauriLibraryAdapter();
 
@@ -125,7 +128,17 @@ export async function createPdfDocument(
   }
 
   // Load the full file via Tauri IPC
-  const result = await loadPdfFromFile(filePath, options?.onProgress);
+        const openStart = performance.now();
+      const result = await loadPdfFromFile(filePath, options?.onProgress);
+      const openElapsed = performance.now() - openStart;
+      metricsStore.record({
+        name: METRIC_NAMES.READER_OPEN,
+        durationMs: Math.round(openElapsed),
+        bucketedDurationMs: bucketDurationMs(openElapsed),
+        count: 1,
+        success: true,
+        tags: { source: 'reader', engine: 'pdfjs', format: 'pdf', platform: 'desktop' },
+      });
 
   // Cache the document (outline loaded lazily by loadPdfOutline)
   documentCache.set(filePath, {

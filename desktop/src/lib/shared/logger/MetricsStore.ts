@@ -5,6 +5,7 @@ const MAX_IN_MEMORY_METRICS = 500;
 class MetricsStoreImpl {
   private sessionId: string;
   private buffer: MetricEvent[] = [];
+  private listeners: Array<(event: MetricEvent) => void> = [];
 
   constructor() {
     this.sessionId = crypto.randomUUID();
@@ -12,6 +13,14 @@ class MetricsStoreImpl {
 
   getSessionId(): string {
     return this.sessionId;
+  }
+
+  /** Subscribe to every recorded metric (used by the SentryMetricsSink). */
+  onRecord(listener: (event: MetricEvent) => void): () => void {
+    this.listeners.push(listener);
+    return () => {
+      this.listeners = this.listeners.filter((l) => l !== listener);
+    };
   }
 
   record(event: Omit<MetricEvent, 'id' | 'sessionId' | 'timestamp'>): MetricEvent {
@@ -26,6 +35,14 @@ class MetricsStoreImpl {
 
     if (this.buffer.length > MAX_IN_MEMORY_METRICS) {
       this.buffer.shift();
+    }
+
+    for (const listener of this.listeners) {
+      try {
+        listener(metric);
+      } catch {
+        // Listener failures must never break metric recording.
+      }
     }
 
     return metric;
@@ -98,6 +115,8 @@ export const recordMetric = (
     feature?: string;
     success?: boolean;
     errorCode?: string;
+    bucketedDurationMs?: number;
+    tags?: Record<string, string>;
   },
 ): MetricEvent => {
   if (options?.success === false) {

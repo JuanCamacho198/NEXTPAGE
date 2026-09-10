@@ -30,7 +30,6 @@ pub struct FeatureFlags;
 impl FeatureFlags {
     pub const IMPORT_HANDLER: &'static str = "feature_import_handler";
     pub const THUMBNAIL_HANDLER: &'static str = "feature_thumbnail_handler";
-    pub const TELEMETRY_ENABLED: &'static str = "feature_telemetry_enabled";
     pub const SYNC_ENABLED: &'static str = "feature_sync_enabled";
     pub const DEBUG_MODE: &'static str = "feature_debug_mode";
 }
@@ -65,7 +64,6 @@ mod tests {
     fn test_feature_flag_constants() {
         assert_eq!(FeatureFlags::IMPORT_HANDLER, "feature_import_handler");
         assert_eq!(FeatureFlags::THUMBNAIL_HANDLER, "feature_thumbnail_handler");
-        assert_eq!(FeatureFlags::TELEMETRY_ENABLED, "feature_telemetry_enabled");
         assert_eq!(FeatureFlags::SYNC_ENABLED, "feature_sync_enabled");
         assert_eq!(FeatureFlags::DEBUG_MODE, "feature_debug_mode");
     }

@@ -33,6 +33,9 @@ import { recheckLiveSession } from '$lib/services/supabase';
 import { reportAuthError } from '$lib/shared/stores/syncAlert.svelte';
 import { captureBreadcrumb } from '$lib/shared/logger/BreadcrumbsStore';
 import { BREADCRUMB_LABELS } from '$lib/shared/logger/breadcrumbTypes';
+import { metricsStore } from '$lib/shared/logger/MetricsStore';
+import { METRIC_NAMES } from '$lib/shared/logger/metricTypes';
+import { bucketDepth, bucketDurationMs } from '$lib/shared/logger/metricBuckets';
 
 /** Max breaker pause in seconds (D4): pause = min(300, 60·2^(streak−1)). */
 const BREAKER_MAX_PAUSE_SECONDS = 300;
@@ -62,6 +65,8 @@ export class SyncOutboxService {
   private intervalId: ReturnType<typeof setInterval> | null = null;
   private handler: OutboxHandler | null = null;
   private flushing = false;
+  /** D7: last emitted outbox-depth bucket (emit only on bucket change). */
+  private lastEmittedDepthBucket: number | null = null;
   /** Auth-class circuit breaker (D4): consecutive auth failures back off. */
   private authFailureStreak = 0;
   /** Epoch ms until which the flush is paused; null when not armed. */
@@ -141,6 +146,11 @@ export class SyncOutboxService {
     if (this.flushing || !this.handler) return;
     this.flushing = true;
 
+    // D6 - sync flush duration: timestamp taken after the gate/breaker
+    // short-circuits so skipped flushes emit nothing.
+    const flushStart = performance.now();
+    let gatePassed = false;
+
     try {
       // SR-1.1: no live session → skip the entire flush. Rows keep their retry
       // state; no request fires; no markFailed; no prune.
@@ -151,8 +161,24 @@ export class SyncOutboxService {
       // (60–300s backoff) absorbs RLS-400/401 storms without a hot retry loop.
       if (this.isBreakerPaused()) return;
 
+      gatePassed = true;
+
       const items = await this.dao.listReady();
       let hadAnyFailure = false;
+
+      // D7 - outbox depth gauge: bucketed, emitted only on bucket change.
+      const depthBucket = bucketDepth(items.length);
+      if (depthBucket !== this.lastEmittedDepthBucket) {
+        this.lastEmittedDepthBucket = depthBucket;
+        metricsStore.record({
+          name: METRIC_NAMES.OUTBOX_DEPTH,
+          durationMs: depthBucket,
+          bucketedDurationMs: depthBucket,
+          count: 1,
+          success: true,
+          tags: { source: 'sync', platform: 'desktop' },
+        });
+      }
 
       if (items.length > 0) {
         // Journey crumb: sync attempted with FIFO queue depth (ids/enums only).
@@ -206,6 +232,18 @@ export class SyncOutboxService {
       }
     } finally {
       this.flushing = false;
+
+      if (gatePassed) {
+        const flushElapsed = performance.now() - flushStart;
+        metricsStore.record({
+          name: METRIC_NAMES.SYNC_FLUSH,
+          durationMs: Math.round(flushElapsed),
+          bucketedDurationMs: bucketDurationMs(flushElapsed),
+          count: 1,
+          success: true,
+          tags: { source: 'sync', platform: 'desktop' },
+        });
+      }
     }
   }
 }

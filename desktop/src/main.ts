@@ -8,8 +8,17 @@ import { logger } from './lib/shared/logger/Logger';
 import { consoleSink } from './lib/shared/logger/ConsoleSink';
 import { tauriSink } from './lib/shared/logger/TauriSink';
 import { SentrySink } from './lib/shared/logger/SentrySink';
+import { SentryMetricsSink } from './lib/shared/logger/SentryMetricsSink';
+import { metricsStore } from './lib/shared/logger/MetricsStore';
 import { getSentrySettings } from './lib/shared/logger/sentryConfig';
 import { createErrorEvent, type ErrorEvent } from './lib/shared/events/ErrorEvent';
+import { METRIC_NAMES } from './lib/shared/logger/metricTypes';
+import { bucketDurationMs } from './lib/shared/logger/metricBuckets';
+import * as Sentry from '@sentry/browser';
+
+// D1 — cold start origin: first statement of the entry module.
+const coldStartOrigin = performance.now();
+let coldStartEmitted = false;
 
 let handlersRegistered = false;
 
@@ -21,8 +30,26 @@ const initLogger = async (): Promise<void> => {
   if (sentrySettings.dsn) {
     const sentrySink = new SentrySink(sentrySettings);
     logger.registerSink(sentrySink);
+
+    // D9 — metrics egress: stream buffered metrics to Sentry. Registered only
+    // when DSN is present and enabled; the sink re-checks `enabled` per-emit
+    // so a mid-session disable stops egress immediately.
+    if (sentrySettings.enabled !== false) {
+      const metricsSink = new SentryMetricsSink(sentrySettings);
+      metricsStore.onRecord((event) => metricsSink.handle(event));
+    }
   }
 };
+
+// One-shot flush of Sentry's internal metric buffer on page exit.
+const flushOnce = (): void => {
+  void Sentry.flush(2000);
+  metricsStore.flush();
+  window.removeEventListener('pagehide', flushOnce);
+  window.removeEventListener('beforeunload', flushOnce);
+};
+window.addEventListener('pagehide', flushOnce);
+window.addEventListener('beforeunload', flushOnce);
 
 const handleGlobalError = (event: ErrorEvent): void => {
   const errorEvent = createErrorEvent({
@@ -106,6 +133,22 @@ registerSupabaseCallbackHandler();
 
 const app = mount(App, {
   target: document.getElementById('app') as HTMLElement,
+});
+
+// D2 — cold start end boundary: one-shot rAF after mount (≈ first paint).
+// Exactly one `app_cold_start` emission per launch; nothing in steady state.
+requestAnimationFrame(() => {
+  if (coldStartEmitted) return;
+  coldStartEmitted = true;
+  const elapsed = performance.now() - coldStartOrigin;
+  metricsStore.record({
+    name: METRIC_NAMES.APP_COLD_START,
+    durationMs: Math.round(elapsed),
+    bucketedDurationMs: bucketDurationMs(elapsed),
+    count: 1,
+    success: true,
+    tags: { platform: 'desktop', source: 'app_shell' },
+  });
 });
 
 registerGlobalHandlers();

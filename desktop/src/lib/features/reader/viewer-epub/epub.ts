@@ -1,5 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import ePub, { Book, Rendition, NavItem } from 'epubjs';
+import { metricsStore } from '$lib/shared/logger/MetricsStore';
+import { METRIC_NAMES } from '$lib/shared/logger/metricTypes';
+import { bucketDurationMs } from '$lib/shared/logger/metricBuckets';
+
+const READER_TAGS = { source: 'reader', engine: 'epubjs', format: 'epub', platform: 'desktop' } as const;
 
 export interface EpubChapter {
   id: string;
@@ -94,7 +99,41 @@ export class EpubReaderService {
       throw new Error('Rendition not initialized');
     }
 
+    // D4 — reader open + web TTFP: timestamps only at open lifecycle
+    // boundaries (one-shot `rendered` listener), never in page-turn paths.
+    const openStart = performance.now();
+    let ttfpEmitted = false;
+    const onFirstRender = (): void => {
+      if (ttfpEmitted) return;
+      ttfpEmitted = true;
+      const elapsed = performance.now() - openStart;
+      metricsStore.record({
+        name: METRIC_NAMES.READER_TTFP_WEB,
+        durationMs: Math.round(elapsed),
+        bucketedDurationMs: bucketDurationMs(elapsed),
+        count: 1,
+        success: true,
+        tags: { ...READER_TAGS },
+      });
+    };
+    const renditionAny = this.rendition as any;
+    if (typeof renditionAny.once === 'function') {
+      renditionAny.once('rendered', onFirstRender);
+    } else {
+      renditionAny.on('rendered', onFirstRender);
+    }
+
     await this.rendition.display(cfi);
+
+    const openElapsed = performance.now() - openStart;
+    metricsStore.record({
+      name: METRIC_NAMES.READER_OPEN,
+      durationMs: Math.round(openElapsed),
+      bucketedDurationMs: bucketDurationMs(openElapsed),
+      count: 1,
+      success: true,
+      tags: { ...READER_TAGS },
+    });
   }
 
   getCurrentLocation(): EpubLocation | null {

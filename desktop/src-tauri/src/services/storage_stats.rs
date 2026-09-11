@@ -43,17 +43,20 @@ fn dir_size_recursive(path: &Path) -> AppResult<u64> {
     if !path.exists() {
         return Ok(0);
     }
-    let metadata = fs::metadata(path).map_err(|e| map_io_error(e, &format!("metadata {}", path.display())))?;
+    let metadata =
+        fs::metadata(path).map_err(|e| map_io_error(e, &format!("metadata {}", path.display())))?;
     if metadata.is_file() {
         return Ok(metadata.len());
     }
     if !metadata.is_dir() {
         return Ok(0);
     }
-    let entries = fs::read_dir(path).map_err(|e| map_io_error(e, &format!("read_dir {}", path.display())))?;
+    let entries =
+        fs::read_dir(path).map_err(|e| map_io_error(e, &format!("read_dir {}", path.display())))?;
     let mut total: u64 = 0;
     for entry in entries {
-        let entry = entry.map_err(|e| map_io_error(e, &format!("read_dir entry {}", path.display())))?;
+        let entry =
+            entry.map_err(|e| map_io_error(e, &format!("read_dir entry {}", path.display())))?;
         let p = entry.path();
         let m = match fs::metadata(&p) {
             Ok(m) => m,
@@ -124,16 +127,24 @@ fn remove_dir_contents_freed(path: &Path) -> AppResult<u64> {
     };
     if metadata.is_file() {
         let size = metadata.len();
-        fs::remove_file(path).map_err(|e| map_io_error(e, &format!("remove_file {}", path.display())))?;
+        fs::remove_file(path)
+            .map_err(|e| map_io_error(e, &format!("remove_file {}", path.display())))?;
         return Ok(size);
     }
     let size = dir_size_recursive(path)?;
-    fs::remove_dir_all(path).map_err(|e| map_io_error(e, &format!("remove_dir_all {}", path.display())))?;
-    fs::create_dir_all(path).map_err(|e| map_io_error(e, &format!("create_dir_all {}", path.display())))?;
+    fs::remove_dir_all(path)
+        .map_err(|e| map_io_error(e, &format!("remove_dir_all {}", path.display())))?;
+    fs::create_dir_all(path)
+        .map_err(|e| map_io_error(e, &format!("create_dir_all {}", path.display())))?;
     Ok(size)
 }
 
-pub fn clear_cache(app_data_dir: &Path, kind: &str, deep: bool, conn: &rusqlite::Connection) -> AppResult<ClearCacheResult> {
+pub fn clear_cache(
+    app_data_dir: &Path,
+    kind: &str,
+    deep: bool,
+    conn: &rusqlite::Connection,
+) -> AppResult<ClearCacheResult> {
     let covers_dir = app_data_dir.join("covers");
     let covers_tmp_dir = covers_dir.join("tmp");
     let epub_cache_dir = app_data_dir.join("epub_cache");
@@ -168,13 +179,19 @@ pub fn clear_cache(app_data_dir: &Path, kind: &str, deep: bool, conn: &rusqlite:
 }
 
 pub fn get_per_book_sizes(conn: &rusqlite::Connection) -> AppResult<Vec<PerBookSize>> {
-    let mut stmt = conn.prepare("SELECT id, title, file_path FROM books WHERE deleted_at IS NULL ORDER BY title ASC").map_err(AppError::Database)?;
-    let rows = stmt.query_map([], |row| {
-        let id: String = row.get(0)?;
-        let title: String = row.get(1)?;
-        let file_path: String = row.get(2)?;
-        Ok((id, title, file_path))
-    }).map_err(AppError::Database)?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, title, file_path FROM books WHERE deleted_at IS NULL ORDER BY title ASC",
+        )
+        .map_err(AppError::Database)?;
+    let rows = stmt
+        .query_map([], |row| {
+            let id: String = row.get(0)?;
+            let title: String = row.get(1)?;
+            let file_path: String = row.get(2)?;
+            Ok((id, title, file_path))
+        })
+        .map_err(AppError::Database)?;
 
     let mut out = Vec::new();
     for r in rows {
@@ -188,14 +205,28 @@ pub fn get_per_book_sizes(conn: &rusqlite::Connection) -> AppResult<Vec<PerBookS
     Ok(out)
 }
 
-pub fn delete_book_data(conn: &rusqlite::Connection, app_data_dir: &Path, book_id: &str) -> AppResult<()> {
-    let file_path: Option<String> = conn.query_row("SELECT file_path FROM books WHERE id = ?1 LIMIT 1", [book_id], |r| r.get(0)).optional().map_err(AppError::Database)?;
+pub fn delete_book_data(
+    conn: &rusqlite::Connection,
+    app_data_dir: &Path,
+    book_id: &str,
+) -> AppResult<()> {
+    let file_path: Option<String> = conn
+        .query_row("SELECT file_path FROM books WHERE id = ?1 LIMIT 1", [book_id], |r| r.get(0))
+        .optional()
+        .map_err(AppError::Database)?;
     if let Some(fp) = file_path {
         let p = PathBuf::from(&fp);
         if p.exists() {
             let _ = fs::remove_file(&p);
         }
-        let cover_path: Option<String> = conn.query_row("SELECT storage_path FROM book_covers WHERE book_id = ?1 LIMIT 1", [book_id], |r| r.get(0)).optional().map_err(AppError::Database)?;
+        let cover_path: Option<String> = conn
+            .query_row(
+                "SELECT storage_path FROM book_covers WHERE book_id = ?1 LIMIT 1",
+                [book_id],
+                |r| r.get(0),
+            )
+            .optional()
+            .map_err(AppError::Database)?;
         if let Some(cp) = cover_path {
             let _ = fs::remove_file(PathBuf::from(cp));
         }
@@ -209,12 +240,15 @@ pub fn delete_book_data(conn: &rusqlite::Connection, app_data_dir: &Path, book_i
 
 pub fn cleanup_orphans(conn: &rusqlite::Connection, app_data_dir: &Path) -> AppResult<u64> {
     let mut removed: u64 = 0;
-    let mut stmt = conn.prepare("SELECT id, storage_path FROM book_covers").map_err(AppError::Database)?;
-    let rows = stmt.query_map([], |row| {
-        let id: String = row.get(0)?;
-        let storage_path: String = row.get(1)?;
-        Ok((id, storage_path))
-    }).map_err(AppError::Database)?;
+    let mut stmt =
+        conn.prepare("SELECT id, storage_path FROM book_covers").map_err(AppError::Database)?;
+    let rows = stmt
+        .query_map([], |row| {
+            let id: String = row.get(0)?;
+            let storage_path: String = row.get(1)?;
+            Ok((id, storage_path))
+        })
+        .map_err(AppError::Database)?;
     let mut orphan_ids: Vec<String> = Vec::new();
     for r in rows {
         let (_id, storage_path) = r.map_err(AppError::Database)?;
@@ -226,11 +260,11 @@ pub fn cleanup_orphans(conn: &rusqlite::Connection, app_data_dir: &Path) -> AppR
     if covers_dir.exists() {
         let known_paths: std::collections::HashSet<String> = {
             let mut s = std::collections::HashSet::new();
-            let mut stmt2 = conn.prepare("SELECT storage_path FROM book_covers").map_err(AppError::Database)?;
-            let rows2 = stmt2.query_map([], |row| row.get::<_, String>(0)).map_err(AppError::Database)?;
-            for r in rows2 {
-                if let Ok(p) = r { s.insert(p); }
-            }
+            let mut stmt2 =
+                conn.prepare("SELECT storage_path FROM book_covers").map_err(AppError::Database)?;
+            let rows2 =
+                stmt2.query_map([], |row| row.get::<_, String>(0)).map_err(AppError::Database)?;
+            s.extend(rows2.flatten());
             s
         };
         if let Ok(entries) = fs::read_dir(&covers_dir) {
@@ -253,14 +287,18 @@ pub fn cleanup_orphans(conn: &rusqlite::Connection, app_data_dir: &Path) -> AppR
         }
     }
     for oid in orphan_ids {
-        conn.execute("DELETE FROM book_covers WHERE id = ?1", [&oid]).map_err(AppError::Database)?;
+        conn.execute("DELETE FROM book_covers WHERE id = ?1", [&oid])
+            .map_err(AppError::Database)?;
         removed += 1;
     }
     let book_ids: std::collections::HashSet<String> = {
         let mut s = std::collections::HashSet::new();
-        let mut stmt3 = conn.prepare("SELECT id FROM books WHERE deleted_at IS NULL").map_err(AppError::Database)?;
-        let rows3 = stmt3.query_map([], |row| row.get::<_, String>(0)).map_err(AppError::Database)?;
-        for r in rows3 { if let Ok(id) = r { s.insert(id); } }
+        let mut stmt3 = conn
+            .prepare("SELECT id FROM books WHERE deleted_at IS NULL")
+            .map_err(AppError::Database)?;
+        let rows3 =
+            stmt3.query_map([], |row| row.get::<_, String>(0)).map_err(AppError::Database)?;
+        s.extend(rows3.flatten());
         s
     };
     let epub_cache_base = app_data_dir.join("epub_cache");

@@ -82,7 +82,7 @@ pub fn list_dictionary_words(repo: &LibraryRepository) -> AppResult<Vec<Dictiona
         let mut stmt = repo.connection.prepare(
             "SELECT id, word, created_at, normalized_word, user_id, tags_json, is_favorite, srs_stage, updated_at, deleted_at, synced_at FROM dictionary_words WHERE deleted_at IS NULL ORDER BY normalized_word ASC",
         )?;
-        let rows = stmt.query_map([], |row| read_full_row(row))?;
+        let rows = stmt.query_map([], read_full_row)?;
         Ok(rows.collect::<Result<Vec<_>, _>>()?)
     } else {
         let mut statement = repo.connection.prepare(
@@ -128,14 +128,9 @@ pub fn add_dictionary_word(
         let mut stmt = repo.connection.prepare(
             "SELECT id, word, created_at, normalized_word, user_id, tags_json, is_favorite, srs_stage, updated_at, deleted_at, synced_at FROM dictionary_words WHERE user_id = ?1 AND normalized_word = ?2 AND deleted_at IS NULL LIMIT 1",
         )?;
-        let existing = stmt
-            .query_row(params![user_id, normalized], |row| read_full_row(row))
-            .optional()?;
+        let existing = stmt.query_row(params![user_id, normalized], read_full_row).optional()?;
         if let Some(existing) = existing {
-            return Err(AppError::DbConstraint(format!(
-                "dictionary.duplicate:{}",
-                existing.word
-            )));
+            return Err(AppError::DbConstraint(format!("dictionary.duplicate:{}", existing.word)));
         }
         let id = Uuid::new_v4().to_string();
         repo.connection.execute(
@@ -188,14 +183,12 @@ fn find_word_by_normalized(
         let mut stmt = repo.connection.prepare(
             "SELECT id, word, created_at, normalized_word, user_id, tags_json, is_favorite, srs_stage, updated_at, deleted_at, synced_at FROM dictionary_words WHERE normalized_word = ?1 AND deleted_at IS NULL LIMIT 1",
         )?;
-        let result = stmt
-            .query_row(params![normalized], |row| read_full_row(row))
-            .optional()?;
+        let result = stmt.query_row(params![normalized], read_full_row).optional()?;
         Ok(result)
     } else {
-        let mut statement = repo
-            .connection
-            .prepare("SELECT id, word, created_at FROM dictionary_words WHERE normalized_word = ?1")?;
+        let mut statement = repo.connection.prepare(
+            "SELECT id, word, created_at FROM dictionary_words WHERE normalized_word = ?1",
+        )?;
         let result = statement
             .query_row(params![normalized], |row| {
                 Ok(DictionaryWordDto {
@@ -225,8 +218,7 @@ pub fn update_dictionary_word(
         let mut stmt = repo.connection.prepare(
             "SELECT id, word, created_at, normalized_word, user_id, tags_json, is_favorite, srs_stage, updated_at, deleted_at, synced_at FROM dictionary_words WHERE id = ?1 LIMIT 1",
         )?;
-        stmt.query_row(params![input.id], |row| read_full_row(row))
-            .optional()?
+        stmt.query_row(params![input.id], read_full_row).optional()?
     } else {
         let mut stmt = repo
             .connection
@@ -248,7 +240,8 @@ pub fn update_dictionary_word(
         })
         .optional()?
     };
-    let existing = existing.ok_or_else(|| AppError::NotFound(format!("Dictionary word {} not found", input.id)))?;
+    let existing = existing
+        .ok_or_else(|| AppError::NotFound(format!("Dictionary word {} not found", input.id)))?;
     if !col_exists(&repo.connection, "user_id") {
         if let Some(new_word) = input.word.as_deref() {
             let trimmed = new_word.trim();
@@ -256,7 +249,9 @@ pub fn update_dictionary_word(
                 return Err(AppError::InvalidInput("Word is required".to_string()));
             }
             if trimmed.len() > 200 {
-                return Err(AppError::InvalidInput("Word must be 200 characters or less".to_string()));
+                return Err(AppError::InvalidInput(
+                    "Word must be 200 characters or less".to_string(),
+                ));
             }
             let normalized = normalize_word(trimmed);
             repo.connection.execute(
@@ -331,14 +326,17 @@ pub fn remove_dictionary_word(repo: &LibraryRepository, id: &str) -> AppResult<(
             params![now, id],
         )?;
         if rows == 0 {
-            let rows2 = repo.connection.execute("DELETE FROM dictionary_words WHERE id = ?1", params![id])?;
+            let rows2 = repo
+                .connection
+                .execute("DELETE FROM dictionary_words WHERE id = ?1", params![id])?;
             if rows2 == 0 {
                 return Err(AppError::NotFound(format!("Dictionary word {} not found", id)));
             }
         }
         Ok(())
     } else {
-        let rows = repo.connection.execute("DELETE FROM dictionary_words WHERE id = ?1", params![id])?;
+        let rows =
+            repo.connection.execute("DELETE FROM dictionary_words WHERE id = ?1", params![id])?;
         if rows == 0 {
             return Err(AppError::NotFound(format!("Dictionary word {} not found", id)));
         }
@@ -387,15 +385,14 @@ pub fn search_dictionary_words(
         "SELECT id, word, created_at, normalized_word, user_id, tags_json, is_favorite, srs_stage, updated_at, deleted_at, synced_at FROM dictionary_words WHERE deleted_at IS NULL AND (user_id = ?1 OR ?1 = '') AND (normalized_word LIKE ?2 OR normalized_word LIKE ?3) ORDER BY updated_at DESC LIMIT 200",
     )?;
     let mut candidates: Vec<DictionaryWordDto> = stmt
-        .query_map(params![uid, pattern_prefix, pattern_sub], |row| read_full_row(row))?
+        .query_map(params![uid, pattern_prefix, pattern_sub], read_full_row)?
         .collect::<Result<Vec<_>, _>>()?;
     if candidates.is_empty() && fuzzy {
         let mut stmt2 = repo.connection.prepare(
             "SELECT id, word, created_at, normalized_word, user_id, tags_json, is_favorite, srs_stage, updated_at, deleted_at, synced_at FROM dictionary_words WHERE deleted_at IS NULL AND (user_id = ?1 OR ?1 = '') LIMIT 500",
         )?;
-        let all: Vec<DictionaryWordDto> = stmt2
-            .query_map(params![uid], |row| read_full_row(row))?
-            .collect::<Result<Vec<_>, _>>()?;
+        let all: Vec<DictionaryWordDto> =
+            stmt2.query_map(params![uid], read_full_row)?.collect::<Result<Vec<_>, _>>()?;
         candidates = all
             .into_iter()
             .filter(|d| {
@@ -410,9 +407,8 @@ pub fn search_dictionary_words(
         let mut stmt2 = repo.connection.prepare(
             "SELECT id, word, created_at, normalized_word, user_id, tags_json, is_favorite, srs_stage, updated_at, deleted_at, synced_at FROM dictionary_words WHERE deleted_at IS NULL AND (user_id = ?1 OR ?1 = '') LIMIT 500",
         )?;
-        let all: Vec<DictionaryWordDto> = stmt2
-            .query_map(params![uid], |row| read_full_row(row))?
-            .collect::<Result<Vec<_>, _>>()?;
+        let all: Vec<DictionaryWordDto> =
+            stmt2.query_map(params![uid], read_full_row)?.collect::<Result<Vec<_>, _>>()?;
         for d in all {
             if candidates.iter().any(|c| c.id == d.id) {
                 continue;
@@ -523,28 +519,55 @@ pub fn import_dictionary(
             }
             let parts: Vec<String> = split_csv_line(line);
             if parts.is_empty() {
-                errors.push(ImportDictionaryError { row: idx as i64 + 1, reason: "empty row".to_string() });
+                errors.push(ImportDictionaryError {
+                    row: idx as i64 + 1,
+                    reason: "empty row".to_string(),
+                });
                 continue;
             }
-            let word = parts.get(0).cloned().unwrap_or_default().trim().trim_matches('"').to_string();
-            let tags_str = parts.get(1).cloned().unwrap_or_default().trim().trim_matches('"').to_string();
-            let tags = if tags_str.is_empty() { vec![] } else { tags_str.split('|').map(|s| s.to_string()).collect() };
+            let word =
+                parts.first().cloned().unwrap_or_default().trim().trim_matches('"').to_string();
+            let tags_str =
+                parts.get(1).cloned().unwrap_or_default().trim().trim_matches('"').to_string();
+            let tags = if tags_str.is_empty() {
+                vec![]
+            } else {
+                tags_str.split('|').map(|s| s.to_string()).collect()
+            };
             let fav = parts.get(2).map(|s| s.trim().trim_matches('"') == "true").unwrap_or(false);
-            let srs = parts.get(3).and_then(|s| s.trim().trim_matches('"').parse::<i32>().ok()).unwrap_or(0);
-            let updated = parts.get(4).cloned().unwrap_or_else(|| Utc::now().to_rfc3339()).trim().trim_matches('"').to_string();
+            let srs = parts
+                .get(3)
+                .and_then(|s| s.trim().trim_matches('"').parse::<i32>().ok())
+                .unwrap_or(0);
+            let updated = parts
+                .get(4)
+                .cloned()
+                .unwrap_or_else(|| Utc::now().to_rfc3339())
+                .trim()
+                .trim_matches('"')
+                .to_string();
             v.push((word, tags, fav, srs, updated));
         }
         v
     } else {
-        let val: serde_json::Value = serde_json::from_str(payload).map_err(|e| AppError::InvalidInput(e.to_string()))?;
+        let val: serde_json::Value =
+            serde_json::from_str(payload).map_err(|e| AppError::InvalidInput(e.to_string()))?;
         let arr = val.get("words").and_then(|v| v.as_array()).cloned().unwrap_or_default();
         let mut v = vec![];
         for item in arr {
             let word = item.get("word").and_then(|x| x.as_str()).unwrap_or("").to_string();
-            let tags = item.get("tags").and_then(|x| x.as_array()).map(|a| a.iter().filter_map(|e| e.as_str().map(|s| s.to_string())).collect()).unwrap_or_default();
+            let tags = item
+                .get("tags")
+                .and_then(|x| x.as_array())
+                .map(|a| a.iter().filter_map(|e| e.as_str().map(|s| s.to_string())).collect())
+                .unwrap_or_default();
             let fav = item.get("is_favorite").and_then(|x| x.as_bool()).unwrap_or(false);
             let srs = item.get("srs_stage").and_then(|x| x.as_i64()).unwrap_or(0) as i32;
-            let updated = item.get("updated_at").and_then(|x| x.as_str()).unwrap_or(&Utc::now().to_rfc3339()).to_string();
+            let updated = item
+                .get("updated_at")
+                .and_then(|x| x.as_str())
+                .unwrap_or(&Utc::now().to_rfc3339())
+                .to_string();
             v.push((word, tags, fav, srs, updated));
         }
         v
@@ -552,7 +575,10 @@ pub fn import_dictionary(
     for (idx, (word, tags, fav, srs, updated_at)) in entries.into_iter().enumerate() {
         let trimmed = word.trim();
         if trimmed.is_empty() || trimmed.len() > 200 {
-            errors.push(ImportDictionaryError { row: idx as i64 + 1, reason: "invalid word len".to_string() });
+            errors.push(ImportDictionaryError {
+                row: idx as i64 + 1,
+                reason: "invalid word len".to_string(),
+            });
             continue;
         }
         let normalized = normalize_word(trimmed);
@@ -560,7 +586,7 @@ pub fn import_dictionary(
             let mut stmt = repo.connection.prepare(
                 "SELECT id, word, created_at, normalized_word, user_id, tags_json, is_favorite, srs_stage, updated_at, deleted_at, synced_at FROM dictionary_words WHERE user_id = ?1 AND normalized_word = ?2 LIMIT 1",
             ).unwrap();
-            stmt.query_row(params![uid, normalized], |row| read_full_row(row)).optional().unwrap()
+            stmt.query_row(params![uid, normalized], read_full_row).optional().unwrap()
         } else {
             None
         };
@@ -631,9 +657,17 @@ mod tests {
     #[test]
     fn add_and_list_dictionary_words() {
         let repo = new_repository();
-        let first =
-            add_dictionary_word(&repo, AddDictionaryWordInput { word: "Serendipity".to_string(), user_id: None, tags: None, is_favorite: None, srs_stage: None })
-                .unwrap();
+        let first = add_dictionary_word(
+            &repo,
+            AddDictionaryWordInput {
+                word: "Serendipity".to_string(),
+                user_id: None,
+                tags: None,
+                is_favorite: None,
+                srs_stage: None,
+            },
+        )
+        .unwrap();
         assert_eq!(first.word, "Serendipity");
         let words = list_dictionary_words(&repo).unwrap();
         assert_eq!(words.len(), 1);
@@ -649,9 +683,17 @@ mod tests {
     #[test]
     fn remove_dictionary_word_deletes_existing_word() {
         let repo = new_repository();
-        let word =
-            add_dictionary_word(&repo, AddDictionaryWordInput { word: "Ephemeral".to_string(), user_id: None, tags: None, is_favorite: None, srs_stage: None })
-                .unwrap();
+        let word = add_dictionary_word(
+            &repo,
+            AddDictionaryWordInput {
+                word: "Ephemeral".to_string(),
+                user_id: None,
+                tags: None,
+                is_favorite: None,
+                srs_stage: None,
+            },
+        )
+        .unwrap();
         remove_dictionary_word(&repo, &word.id).unwrap();
         let words = list_dictionary_words(&repo).unwrap();
         assert!(words.is_empty());
@@ -660,18 +702,67 @@ mod tests {
     #[test]
     fn duplicate_per_user_returns_error() {
         let repo = new_repository();
-        add_dictionary_word(&repo, AddDictionaryWordInput { word: "Hola".to_string(), user_id: Some("u1".to_string()), tags: None, is_favorite: None, srs_stage: None }).unwrap();
-        let dup = add_dictionary_word(&repo, AddDictionaryWordInput { word: "hola".to_string(), user_id: Some("u1".to_string()), tags: None, is_favorite: None, srs_stage: None });
+        add_dictionary_word(
+            &repo,
+            AddDictionaryWordInput {
+                word: "Hola".to_string(),
+                user_id: Some("u1".to_string()),
+                tags: None,
+                is_favorite: None,
+                srs_stage: None,
+            },
+        )
+        .unwrap();
+        let dup = add_dictionary_word(
+            &repo,
+            AddDictionaryWordInput {
+                word: "hola".to_string(),
+                user_id: Some("u1".to_string()),
+                tags: None,
+                is_favorite: None,
+                srs_stage: None,
+            },
+        );
         assert!(dup.is_err());
-        let ok = add_dictionary_word(&repo, AddDictionaryWordInput { word: "hola".to_string(), user_id: Some("u2".to_string()), tags: None, is_favorite: None, srs_stage: None }).unwrap();
+        let ok = add_dictionary_word(
+            &repo,
+            AddDictionaryWordInput {
+                word: "hola".to_string(),
+                user_id: Some("u2".to_string()),
+                tags: None,
+                is_favorite: None,
+                srs_stage: None,
+            },
+        )
+        .unwrap();
         assert_eq!(ok.word, "hola");
     }
 
     #[test]
     fn update_preserves_id_and_bumps_updated_at() {
         let repo = new_repository();
-        let w = add_dictionary_word(&repo, AddDictionaryWordInput { word: "hola".to_string(), user_id: None, tags: None, is_favorite: None, srs_stage: None }).unwrap();
-        let updated = update_dictionary_word(&repo, UpdateDictionaryWordInput { id: w.id.clone(), word: Some("Hola!".to_string()), tags: None, is_favorite: None, srs_stage: None }).unwrap();
+        let w = add_dictionary_word(
+            &repo,
+            AddDictionaryWordInput {
+                word: "hola".to_string(),
+                user_id: None,
+                tags: None,
+                is_favorite: None,
+                srs_stage: None,
+            },
+        )
+        .unwrap();
+        let updated = update_dictionary_word(
+            &repo,
+            UpdateDictionaryWordInput {
+                id: w.id.clone(),
+                word: Some("Hola!".to_string()),
+                tags: None,
+                is_favorite: None,
+                srs_stage: None,
+            },
+        )
+        .unwrap();
         assert_eq!(updated.id, w.id);
         assert_eq!(updated.word, "Hola!");
         assert!(updated.updated_at.unwrap() >= w.updated_at.unwrap());
@@ -680,7 +771,17 @@ mod tests {
     #[test]
     fn search_prefix_and_fuzzy() {
         let repo = new_repository();
-        add_dictionary_word(&repo, AddDictionaryWordInput { word: "biblioteca".to_string(), user_id: None, tags: None, is_favorite: None, srs_stage: None }).unwrap();
+        add_dictionary_word(
+            &repo,
+            AddDictionaryWordInput {
+                word: "biblioteca".to_string(),
+                user_id: None,
+                tags: None,
+                is_favorite: None,
+                srs_stage: None,
+            },
+        )
+        .unwrap();
         let res = search_dictionary_words(&repo, "bibli", 10, false, None).unwrap();
         assert_eq!(res.len(), 1);
         let fuzzy = search_dictionary_words(&repo, "bibilioteca", 10, true, None).unwrap();

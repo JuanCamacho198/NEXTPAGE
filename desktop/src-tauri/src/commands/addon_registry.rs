@@ -16,7 +16,9 @@ pub struct InstalledAddonDto {
     pub added_at: i64,
 }
 
-pub fn list_installed_addons(conn: &rusqlite::Connection) -> rusqlite::Result<Vec<InstalledAddonDto>> {
+pub fn list_installed_addons(
+    conn: &rusqlite::Connection,
+) -> rusqlite::Result<Vec<InstalledAddonDto>> {
     let mut statement = conn.prepare(
         "SELECT id, url, manifest_json, enabled, added_at FROM installed_addons ORDER BY added_at ASC, id ASC",
     )?;
@@ -84,12 +86,16 @@ pub fn delete_installed_addon(conn: &rusqlite::Connection, id: &str) -> rusqlite
 #[tauri::command(rename_all = "camelCase")]
 pub fn listInstalledAddons(state: State<'_, AppState>) -> Result<Vec<InstalledAddonDto>, String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
-    list_installed_addons(repository.connection()).map_err(|e| format!("Failed to list addons: {}", e))
+    list_installed_addons(repository.connection())
+        .map_err(|e| format!("Failed to list addons: {}", e))
 }
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn upsertInstalledAddon(state: State<'_, AppState>, addon: InstalledAddonDto) -> Result<(), String> {
+pub fn upsertInstalledAddon(
+    state: State<'_, AppState>,
+    addon: InstalledAddonDto,
+) -> Result<(), String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     upsert_installed_addon(repository.connection(), &addon)
         .map_err(|e| format!("Failed to upsert addon: {}", e))
@@ -97,7 +103,11 @@ pub fn upsertInstalledAddon(state: State<'_, AppState>, addon: InstalledAddonDto
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
-pub fn setAddonEnabled(state: State<'_, AppState>, id: String, enabled: bool) -> Result<(), String> {
+pub fn setAddonEnabled(
+    state: State<'_, AppState>,
+    id: String,
+    enabled: bool,
+) -> Result<(), String> {
     let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
     set_addon_enabled(repository.connection(), &id, enabled)
         .map_err(|e| format!("Failed to toggle addon: {}", e))?;
@@ -138,8 +148,10 @@ mod addon_registry_tests {
     #[test]
     fn insert_then_list_preserves_order() {
         let conn = registry_connection();
-        upsert_installed_addon(&conn, &row("b", "https://b.example/m.json", "{}", true, 200)).unwrap();
-        upsert_installed_addon(&conn, &row("a", "https://a.example/m.json", "{}", true, 100)).unwrap();
+        upsert_installed_addon(&conn, &row("b", "https://b.example/m.json", "{}", true, 200))
+            .unwrap();
+        upsert_installed_addon(&conn, &row("a", "https://a.example/m.json", "{}", true, 100))
+            .unwrap();
         let rows = list_installed_addons(&conn).unwrap();
         assert_eq!(rows.len(), 2);
         assert_eq!(rows[0].id, "a", "install order is added_at ASC");
@@ -149,8 +161,16 @@ mod addon_registry_tests {
     #[test]
     fn reinstall_updates_manifest_and_preserves_enabled() {
         let conn = registry_connection();
-        upsert_installed_addon(&conn, &row("x", "https://x.example/m.json", "{\"v\":1}", false, 100)).unwrap();
-        upsert_installed_addon(&conn, &row("x", "https://x.example/m.json", "{\"v\":2}", true, 999)).unwrap();
+        upsert_installed_addon(
+            &conn,
+            &row("x", "https://x.example/m.json", "{\"v\":1}", false, 100),
+        )
+        .unwrap();
+        upsert_installed_addon(
+            &conn,
+            &row("x", "https://x.example/m.json", "{\"v\":2}", true, 999),
+        )
+        .unwrap();
         let rows = list_installed_addons(&conn).unwrap();
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0].manifest_json, "{\"v\":2}", "manifest updated");
@@ -161,7 +181,8 @@ mod addon_registry_tests {
     #[test]
     fn set_enabled_toggles_and_reports_missing() {
         let conn = registry_connection();
-        upsert_installed_addon(&conn, &row("x", "https://x.example/m.json", "{}", true, 1)).unwrap();
+        upsert_installed_addon(&conn, &row("x", "https://x.example/m.json", "{}", true, 1))
+            .unwrap();
         assert!(set_addon_enabled(&conn, "x", false).unwrap());
         assert!(!list_installed_addons(&conn).unwrap()[0].enabled);
         assert!(!set_addon_enabled(&conn, "missing", true).unwrap());
@@ -170,8 +191,10 @@ mod addon_registry_tests {
     #[test]
     fn uninstall_removes_only_target_row() {
         let conn = registry_connection();
-        upsert_installed_addon(&conn, &row("x", "https://x.example/m.json", "{}", true, 1)).unwrap();
-        upsert_installed_addon(&conn, &row("y", "https://y.example/m.json", "{}", true, 2)).unwrap();
+        upsert_installed_addon(&conn, &row("x", "https://x.example/m.json", "{}", true, 1))
+            .unwrap();
+        upsert_installed_addon(&conn, &row("y", "https://y.example/m.json", "{}", true, 2))
+            .unwrap();
         assert!(delete_installed_addon(&conn, "x").unwrap());
         let rows = list_installed_addons(&conn).unwrap();
         assert_eq!(rows.len(), 1);
@@ -188,8 +211,10 @@ mod addon_registry_tests {
             conn.query_row("SELECT COUNT(*) FROM books", [], |r| r.get(0)).unwrap();
         let outbox_before: i64 =
             conn.query_row("SELECT COUNT(*) FROM sync_outbox", [], |r| r.get(0)).unwrap();
-        upsert_installed_addon(&conn, &row("x", "https://x.example/m.json", "{}", true, 1)).unwrap();
-        upsert_installed_addon(&conn, &row("x", "https://x.example/m.json", "{\"v\":2}", false, 1)).unwrap();
+        upsert_installed_addon(&conn, &row("x", "https://x.example/m.json", "{}", true, 1))
+            .unwrap();
+        upsert_installed_addon(&conn, &row("x", "https://x.example/m.json", "{\"v\":2}", false, 1))
+            .unwrap();
         set_addon_enabled(&conn, "x", true).unwrap();
         delete_installed_addon(&conn, "x").unwrap();
         let books_after: i64 =

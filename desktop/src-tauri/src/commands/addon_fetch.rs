@@ -110,9 +110,7 @@ pub async fn fetchAddonResource(
     maxBytes: Option<u64>,
 ) -> Result<AddonResource, String> {
     let max_bytes = maxBytes.unwrap_or(ADDON_MAX_BYTES).min(ADDON_MAX_BYTES);
-    fetch_resource(&addon_client(), &url, max_bytes)
-        .await
-        .map_err(|e| e.to_string())
+    fetch_resource(&addon_client(), &url, max_bytes).await.map_err(|e| e.to_string())
 }
 
 #[cfg(test)]

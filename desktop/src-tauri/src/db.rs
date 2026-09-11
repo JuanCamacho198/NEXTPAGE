@@ -28,10 +28,7 @@ const MIGRATIONS: [(&str, &str); 17] = [
     ("0014_reading_sessions_sync", include_str!("../migrations/0014_reading_sessions_sync.sql")),
     ("0015_dictionary_sync", include_str!("../migrations/0015_dictionary_sync.sql")),
     ("0016_discover_cache", include_str!("../migrations/0016_discover_cache.sql")),
-        (
-            "0017_addon_registry",
-            include_str!("../migrations/0017_addon_registry.sql"),
-        ),
+    ("0017_addon_registry", include_str!("../migrations/0017_addon_registry.sql")),
 ];
 
 pub fn resolve_db_path(app: &AppHandle) -> AppResult<PathBuf> {
@@ -326,7 +323,10 @@ mod tests {
         for (name, sql) in MIGRATIONS {
             connection.execute_batch(sql).expect("migration applies cleanly");
             connection
-                .execute("INSERT INTO schema_migrations (name, applied_at) VALUES (?1, 'test')", [name])
+                .execute(
+                    "INSERT INTO schema_migrations (name, applied_at) VALUES (?1, 'test')",
+                    [name],
+                )
                 .unwrap();
         }
         connection
@@ -334,8 +334,8 @@ mod tests {
 
     fn table_columns(connection: &Connection, table: &str) -> Vec<(String, String)> {
         let mut statement = connection.prepare(&format!("PRAGMA table_info({})", table)).unwrap();
-        let rows = statement
-            .query_map([], |row| Ok((row.get::<_, String>(1)?, row.get::<_, String>(2)?)));
+        let rows =
+            statement.query_map([], |row| Ok((row.get::<_, String>(1)?, row.get::<_, String>(2)?)));
         rows.expect("table_info works").map(|r| r.unwrap()).collect()
     }
 
@@ -419,9 +419,8 @@ mod tests {
             )
             .unwrap();
         assert_eq!(foreign, 0, "0017 must not add triggers/indexes touching user_books/outbox");
-        let outbox: i32 = connection
-            .query_row("SELECT COUNT(*) FROM sync_outbox", [], |row| row.get(0))
-            .unwrap();
+        let outbox: i32 =
+            connection.query_row("SELECT COUNT(*) FROM sync_outbox", [], |row| row.get(0)).unwrap();
         assert_eq!(outbox, 0, "migration must not write sync_outbox rows");
     }
 

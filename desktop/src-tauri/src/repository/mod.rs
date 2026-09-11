@@ -72,7 +72,11 @@ impl LibraryRepository {
         settings::get_daily_goal_minutes_for_user(self, user_id)
     }
 
-    pub fn save_daily_goal_minutes(&mut self, minutes: i64, user_id: Option<&str>) -> AppResult<()> {
+    pub fn save_daily_goal_minutes(
+        &mut self,
+        minutes: i64,
+        user_id: Option<&str>,
+    ) -> AppResult<()> {
         settings::save_daily_goal_minutes(self, minutes, user_id)
     }
 
@@ -1280,9 +1284,7 @@ mod tests {
         connection
             .execute_batch(include_str!("../../migrations/0015_dictionary_sync.sql"))
             .unwrap();
-            connection
-                .execute_batch(include_str!("../../migrations/0017_addon_registry.sql"))
-                .unwrap();
+        connection.execute_batch(include_str!("../../migrations/0017_addon_registry.sql")).unwrap();
     }
 
     pub(crate) fn new_repository() -> LibraryRepository {

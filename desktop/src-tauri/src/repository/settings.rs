@@ -1,6 +1,8 @@
 use rusqlite::{params, OptionalExtension};
 
 use crate::error::{AppError, AppResult};
+use serde_json::Value;
+
 use crate::models::AppSettingDto;
 
 use super::{LibraryRepository, MAX_SETTING_BATCH};
@@ -154,4 +156,67 @@ pub fn upsert_settings(
     tx.commit()?;
 
     Ok(())
+}
+pub(super) fn validate_setting(setting: &AppSettingDto) -> AppResult<()> {
+    let key = setting.key.trim();
+    if key.is_empty() {
+        return Err(AppError::InvalidInput("Setting key is required".to_string()));
+    }
+    if key.len() > 128 {
+        return Err(AppError::InvalidInput("Setting key exceeds 128 characters".to_string()));
+    }
+    if !key.chars().all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '_' || c == '-') {
+        return Err(AppError::InvalidInput(format!(
+            "Setting key contains unsupported characters: {}",
+            setting.key
+        )));
+    }
+
+    let parsed: Value = serde_json::from_str(&setting.value_json).map_err(|_| {
+        AppError::InvalidInput(format!(
+            "Setting '{}' must contain valid JSON in valueJson",
+            setting.key
+        ))
+    })?;
+
+    if !matches!(parsed, Value::String(_) | Value::Bool(_) | Value::Number(_) | Value::Null) {
+        return Err(AppError::InvalidInput(format!(
+            "Setting '{}' value must be scalar JSON type",
+            setting.key
+        )));
+    }
+
+    Ok(())
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::repository::tests::new_repository;
+    use chrono::Utc;
+
+    #[test]
+    fn settings_validation_rejects_invalid_payload_without_mutating_existing_values() {
+        let mut repository = new_repository();
+
+        repository
+            .upsert_settings(vec![AppSettingDto {
+                key: "ui.theme".to_string(),
+                value_json: "\"light\"".to_string(),
+                updated_at: Utc::now().to_rfc3339(),
+            }])
+            .unwrap();
+
+        let result = repository.upsert_settings(vec![AppSettingDto {
+            key: "ui.theme".to_string(),
+            value_json: "{\"nested\":true}".to_string(),
+            updated_at: Utc::now().to_rfc3339(),
+        }]);
+
+        assert!(matches!(result, Err(AppError::InvalidInput(_))));
+
+        let settings = repository.get_settings().unwrap();
+        assert_eq!(settings.len(), 1);
+        assert_eq!(settings[0].key, "ui.theme");
+        assert_eq!(settings[0].value_json, "\"light\"");
+    }
 }

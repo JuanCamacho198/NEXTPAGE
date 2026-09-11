@@ -109,3 +109,103 @@ pub fn search_book_text(
     let items = rows.collect::<Result<Vec<_>, _>>()?;
     Ok(SearchBookTextResponse { items, total, page, page_size })
 }
+pub(super) fn build_fts_match_query(query: &str) -> AppResult<String> {
+    let tokens: Vec<String> = query
+        .split_whitespace()
+        .map(|token| token.trim())
+        .filter(|token| !token.is_empty())
+        .map(|token| token.replace('"', "\"\""))
+        .map(|token| format!("\"{}\"", token))
+        .collect();
+
+    if tokens.is_empty() {
+        return Err(AppError::InvalidInput("Search query cannot be empty".to_string()));
+    }
+
+    Ok(tokens.join(" AND "))
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::repository::tests::{insert_book, new_repository};
+
+    #[test]
+    fn search_sanitization_quotes_tokens_for_fts_match() {
+        let query = LibraryRepository::build_fts_match_query("alpha \"beta\" gamma").unwrap();
+        assert!(query.contains("\"alpha\""));
+        assert!(query.contains("\"\"\"beta\"\"\""));
+        assert!(query.contains("\"gamma\""));
+        assert!(query.contains("AND"));
+    }
+
+    #[test]
+    fn search_result_page_size_is_bounded_to_200() {
+        let mut repository = new_repository();
+        insert_book(&repository, "book-search", "C:/library/book-search.epub");
+
+        let chunks = (0..250)
+            .map(|index| crate::models::IndexBookTextChunkInput {
+                locator: format!("cfi-{index}"),
+                chunk_index: index,
+                text_content: format!("keyword repeated text {index}"),
+            })
+            .collect::<Vec<_>>();
+
+        repository
+            .index_book_text(IndexBookTextInput { book_id: "book-search".to_string(), chunks })
+            .unwrap();
+
+        let response = repository
+            .search_book_text(SearchBookTextInput {
+                book_id: "book-search".to_string(),
+                query: "keyword".to_string(),
+                page: 1,
+                page_size: 500,
+            })
+            .unwrap();
+
+        assert_eq!(response.page_size, 200);
+        assert_eq!(response.items.len(), 200);
+        assert_eq!(response.total, 250);
+    }
+
+    #[test]
+    fn search_returns_empty_when_paging_beyond_final_results() {
+        let mut repository = new_repository();
+        insert_book(&repository, "book-pagination", "C:/library/book-pagination.epub");
+
+        let chunks = (0..450)
+            .map(|index| crate::models::IndexBookTextChunkInput {
+                locator: format!("loc-{index}"),
+                chunk_index: index,
+                text_content: format!("needle phrase segment {index}"),
+            })
+            .collect::<Vec<_>>();
+
+        repository
+            .index_book_text(IndexBookTextInput { book_id: "book-pagination".to_string(), chunks })
+            .unwrap();
+
+        let final_page = repository
+            .search_book_text(SearchBookTextInput {
+                book_id: "book-pagination".to_string(),
+                query: "needle".to_string(),
+                page: 3,
+                page_size: 200,
+            })
+            .unwrap();
+        assert_eq!(final_page.items.len(), 50);
+        assert_eq!(final_page.total, 450);
+
+        let out_of_range = repository
+            .search_book_text(SearchBookTextInput {
+                book_id: "book-pagination".to_string(),
+                query: "needle".to_string(),
+                page: 4,
+                page_size: 200,
+            })
+            .unwrap();
+        assert!(out_of_range.items.is_empty());
+        assert_eq!(out_of_range.total, 450);
+    }
+}

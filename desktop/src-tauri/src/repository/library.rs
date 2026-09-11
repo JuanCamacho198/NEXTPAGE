@@ -1,11 +1,15 @@
+use std::collections::HashSet;
+use std::path::Path;
+
 use super::LibraryRepository;
 use crate::error::{AppError, AppResult};
 use crate::models::{
-    BookDeleteInput, BookDto, BookImportInput, ScanFolderResultDto, ScannedBookFileDto,
+    BookDeleteInput, BookDto, BookImportInput, LibraryBookDto, ScanFolderResultDto,
+    ScannedBookFileDto,
 };
 use chrono::Utc;
 use epub::doc::EpubDoc;
-use rusqlite::params;
+use rusqlite::{params, OptionalExtension};
 use std::fs;
 use std::path::PathBuf;
 use tauri::Manager;
@@ -357,4 +361,261 @@ pub fn upsert_book(repo: &LibraryRepository, book: BookDto) -> AppResult<()> {
         ],
     )?;
     Ok(())
+}
+
+pub fn delete_book_metadata(
+    repo: &mut LibraryRepository,
+    book_id: &str,
+) -> AppResult<Option<String>> {
+    let book_id = book_id.trim();
+    if book_id.is_empty() {
+        return Err(AppError::MissingBookId);
+    }
+
+    let now = Utc::now().to_rfc3339();
+    let cover: Option<(String, String)> = repo
+        .connection
+        .query_row(
+            "SELECT id, storage_path
+             FROM book_covers
+             WHERE book_id = ?1 AND deleted_at IS NULL
+             LIMIT 1",
+            params![book_id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .optional()?;
+
+    let tx = repo.connection.transaction()?;
+    tx.execute(
+        "UPDATE books
+         SET deleted_at = ?1, updated_at = ?1, version = version + 1
+         WHERE id = ?2 AND deleted_at IS NULL",
+        params![now, book_id],
+    )?;
+
+    if let Some((cover_id, _)) = &cover {
+        tx.execute(
+            "UPDATE book_covers
+             SET deleted_at = ?1, updated_at = ?1, version = version + 1
+             WHERE id = ?2",
+            params![now, cover_id],
+        )?;
+    }
+    tx.commit()?;
+
+    Ok(cover.map(|(_, storage_path)| storage_path))
+}
+pub fn list_library_books(repo: &LibraryRepository) -> AppResult<Vec<LibraryBookDto>> {
+    let mut statement = repo.connection.prepare(
+        "SELECT b.id,
+                b.title,
+                b.author,
+                b.format,
+                b.current_page,
+                b.total_pages,
+                COALESCE(rp.percentage, 0.0) AS progress_percentage,
+                bc.storage_path,
+                COALESCE(CAST(ROUND(rs.total_duration_seconds / 60.0) AS INTEGER), 0) AS minutes_read,
+                 b.updated_at,
+                 b.created_at,
+                (SELECT GROUP_CONCAT(collection_id, ',') FROM book_collections bc2 WHERE bc2.book_id = b.id AND bc2.collection_id NOT IN (2, 3)) AS collection_ids,
+                b.genre,
+                b.language,
+                b.publication_date,
+                (SELECT MAX(user_deleted) FROM book_covers bc2 WHERE bc2.book_id = b.id) AS cover_user_deleted,
+                brs.status AS reading_status
+         FROM books b
+         LEFT JOIN reading_progress rp
+           ON rp.book_id = b.id
+          AND rp.deleted_at IS NULL
+         LEFT JOIN book_covers bc
+           ON bc.book_id = b.id
+          AND bc.deleted_at IS NULL
+         LEFT JOIN (
+            SELECT book_id, SUM(duration_seconds) AS total_duration_seconds
+            FROM reading_sessions
+            GROUP BY book_id
+         ) rs
+           ON rs.book_id = b.id
+         LEFT JOIN book_reading_status brs
+           ON brs.book_id = b.id
+         WHERE b.deleted_at IS NULL
+           AND b.hidden_at IS NULL
+         ORDER BY b.updated_at DESC, b.id ASC",
+    )?;
+
+    let rows = statement.query_map([], |row| {
+        let collection_ids_str: Option<String> = row.get(11)?;
+        let collection_ids: Vec<i64> = collection_ids_str
+            .map(|s| s.split(',').filter_map(|x| x.parse().ok()).collect())
+            .unwrap_or_default();
+        Ok(LibraryBookDto {
+            id: row.get(0)?,
+            title: row.get(1)?,
+            author: row.get(2)?,
+            format: row.get(3)?,
+            current_page: row.get(4)?,
+            total_pages: row.get(5)?,
+            progress_percentage: row.get(6)?,
+            cover_path: row.get(7)?,
+            minutes_read: row.get(8)?,
+            updated_at: row.get(9)?,
+            created_at: row.get(10)?,
+            collection_ids,
+            genre: row.get(12)?,
+            language: row.get(13)?,
+            publication_date: row.get(14)?,
+            cover_user_deleted: row.get(15)?,
+            reading_status: row.get(16)?,
+        })
+    })?;
+
+    let books = rows.collect::<Result<Vec<_>, _>>()?;
+    Ok(books)
+}
+pub(super) fn existing_book_filenames_lowercase(
+    repo: &LibraryRepository,
+) -> AppResult<HashSet<String>> {
+    let mut statement = repo.connection.prepare(
+        "SELECT file_path
+         FROM books
+         WHERE deleted_at IS NULL",
+    )?;
+
+    let rows = statement.query_map([], |row| row.get::<_, String>(0))?;
+    let mut names = HashSet::new();
+
+    for file_path in rows {
+        let file_path = file_path?;
+        let file_name = Path::new(&file_path)
+            .file_name()
+            .and_then(|value| value.to_str())
+            .map(|value| value.to_ascii_lowercase());
+        if let Some(value) = file_name {
+            names.insert(value);
+        }
+    }
+
+    Ok(names)
+}
+pub(super) fn has_desktop_parity_schema(repo: &LibraryRepository) -> AppResult<bool> {
+    const REQUIRED: [&str; 5] =
+        ["app_settings", "book_covers", "reading_sessions", "book_text_chunks", "book_text_fts"];
+
+    for table in REQUIRED {
+        let exists: Option<i32> = repo
+            .connection
+            .query_row(
+                "SELECT 1 FROM sqlite_master WHERE name = ?1 LIMIT 1",
+                params![table],
+                |row| row.get(0),
+            )
+            .optional()?;
+        if exists.is_none() {
+            return Ok(false);
+        }
+    }
+
+    Ok(true)
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::repository::tests::{insert_book, new_repository};
+    use chrono::Utc;
+
+    #[test]
+    fn delete_book_metadata_marks_cover_deleted_and_returns_path() {
+        let mut repository = new_repository();
+        insert_book(&repository, "book-cover-delete", "C:/library/book-cover-delete.epub");
+        let now = Utc::now().to_rfc3339();
+
+        repository
+            .connection
+            .execute(
+                "INSERT INTO book_covers (id, book_id, storage_path, mime_type, width, height, byte_size, checksum, created_at, updated_at, deleted_at, version)
+                 VALUES (?1, ?2, ?3, 'image/png', NULL, NULL, 10, NULL, ?4, ?4, NULL, 1)",
+                params![
+                    Uuid::new_v4().to_string(),
+                    "book-cover-delete",
+                    "C:/tmp/book-cover-delete.png",
+                    now
+                ],
+            )
+            .unwrap();
+
+        let storage_path = repository.delete_book_metadata("book-cover-delete").unwrap();
+        assert_eq!(storage_path.as_deref(), Some("C:/tmp/book-cover-delete.png"));
+
+        let deleted_cover_rows: i64 = repository
+            .connection
+            .query_row(
+                "SELECT COUNT(*) FROM book_covers WHERE book_id = ?1 AND deleted_at IS NOT NULL",
+                params!["book-cover-delete"],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(deleted_cover_rows, 1);
+    }
+
+    #[test]
+    fn list_library_books_scales_to_large_dataset() {
+        let repository = new_repository();
+        let now = Utc::now().to_rfc3339();
+
+        for index in 0..1_000 {
+            repository
+                .connection
+                .execute(
+                    "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version)
+                     VALUES (?1, ?2, 'Author', ?3, 'epub', 'local', 0, 100, ?4, ?4, 1)",
+                    params![
+                        format!("book-{index}"),
+                        format!("Book {index}"),
+                        format!("C:/library/book-{index}.epub"),
+                        now
+                    ],
+                )
+                .unwrap();
+        }
+
+        let rows = repository.list_library_books().unwrap();
+        assert_eq!(rows.len(), 1_000);
+    }
+
+    #[test]
+    fn hide_book_from_library_is_idempotent_and_removes_from_library_views() {
+        let repository = new_repository();
+        insert_book(&repository, "book-visible", "C:/library/book-visible.epub");
+
+        let initial_library_rows = repository.list_library_books().unwrap();
+        assert_eq!(initial_library_rows.len(), 1);
+        assert_eq!(initial_library_rows[0].id, "book-visible");
+
+        repository.hide_book_from_library("book-visible").unwrap();
+        repository.hide_book_from_library("book-visible").unwrap();
+
+        let remaining_library_rows = repository.list_library_books().unwrap();
+        assert!(remaining_library_rows.is_empty());
+
+        let remaining_books = repository.list_books().unwrap();
+        assert!(remaining_books.is_empty());
+
+        let hidden_at: Option<String> = repository
+            .connection
+            .query_row(
+                "SELECT hidden_at FROM books WHERE id = ?1",
+                params!["book-visible"],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert!(hidden_at.is_some());
+    }
+
+    #[test]
+    fn hide_book_from_library_returns_error_for_unknown_book() {
+        let repository = new_repository();
+        let result = repository.hide_book_from_library("missing-book-id");
+        assert!(matches!(result, Err(AppError::InvalidInput(_))));
+    }
 }

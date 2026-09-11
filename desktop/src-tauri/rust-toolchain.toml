@@ -1,0 +1,15 @@
+# Pinned toolchain for the desktop crate.
+#
+# The CI Rust gate runs cargo fmt --check and cargo clippy -D warnings, and both
+# depend on the toolchain version: rustfmt's output changes between releases, and
+# clippy gains lints over time. Without a pin, the gate would compare against
+# whichever version the runner image happens to ship, so formatting that is clean
+# locally can fail in CI (and vice versa) for reasons unrelated to the code.
+#
+# 1.95.0 is the version the gate was verified green against.
+# rustup installs this channel on demand, including the rustfmt and clippy
+# components the gate needs. Bump deliberately, not incidentally.
+
+[toolchain]
+channel = "1.95.0"
+components = ["rustfmt", "clippy"]

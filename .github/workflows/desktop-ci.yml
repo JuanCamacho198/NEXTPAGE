@@ -77,6 +77,16 @@ jobs:
             src/test/unit/logger/SentrySink.crumbs.test.ts \
             src/test/unit/epub/useEpubBridge.iframemap.test.ts
 
+      - name: Install pinned Rust toolchain
+        working-directory: desktop/src-tauri
+        # rustup reads rust-toolchain.toml and installs that channel plus the
+        # rustfmt and clippy components. Doing it in its own step keeps the
+        # download visible and lets the build cache key on it, instead of the
+        # gate comparing against whatever Rust the runner image ships.
+        run: |
+          rustup show
+          rustc --version
+
       - name: Cache Rust build
         # No Rust cache existed before this step; only a Bun cache did.
         uses: Swatinem/rust-cache@v2

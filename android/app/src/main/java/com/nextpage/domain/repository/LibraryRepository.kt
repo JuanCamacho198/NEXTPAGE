@@ -54,6 +54,16 @@ interface LibraryRepository {
 
     suspend fun getBookById(bookId: String): Book?
 
+    /**
+     * Best-effort duplicate lookup used before a catalog download: returns an
+     * active library book with the same title (case-insensitive) and, when
+     * both sides carry an author, the same author. Returns `null` when absent.
+     *
+     * Default `null` keeps lightweight fakes and partial implementations
+     * compiling; the production repository overrides it.
+     */
+    suspend fun findBookByTitleAndAuthor(title: String, author: String?): Book? = null
+
     suspend fun startReading(bookId: String): Result<Unit> = Result.success(Unit)
 
     suspend fun updateReadingProgress(bookId: String, progress: Float): Result<Unit> = Result.success(Unit)

@@ -25,6 +25,23 @@ class CatalogDataSourcesTest {
 
     // ── Gutendex ────────────────────────────────────────────────
 
+    @Test fun gutendexFeatured_emitsOnlyVerifiedSortLiterals() = runTest {
+        val transport = FakeCatalogHttpTransport({ ok(fixture("gutendex-search.json")) })
+        val ds = GutendexDataSource(transport)
+        val popular = ds.featured(CatalogFeaturedSort.POPULAR, 1)
+        val newest = ds.featured(CatalogFeaturedSort.NEWEST, 2)
+        assertEquals(
+            "$GUTENDEX_BASE_URL/books/?sort=popular&page=1",
+            transport.requestedUrls[0]
+        )
+        assertEquals(
+            "$GUTENDEX_BASE_URL/books/?sort=descending&page=2",
+            transport.requestedUrls[1]
+        )
+        assertEquals(3, popular.totalCount)
+        assertEquals(listOf("gutendex:1342", "gutendex:11"), newest.books.map { it.id })
+    }
+
     @Test fun gutendexSearch_queriesHostAndDropsInCopyrightRecords() = runTest {
         val transport = FakeCatalogHttpTransport({ ok(fixture("gutendex-search.json")) })
         val ds = GutendexDataSource(transport)

@@ -63,7 +63,14 @@ data class CatalogBook(
     val coverUrl: String?,
     val languages: List<String>,
     val subjects: List<String>,
-    val downloadUrl: String?
+    val downloadUrl: String?,
+    /**
+     * Additive fields (defaulted) so payloads cached before they existed keep
+     * decoding with `ignoreUnknownKeys = true` and call sites keep compiling.
+     */
+    val description: String? = null,
+    val isPublicDomain: Boolean? = null,
+    val formats: Map<String, String> = emptyMap()
 )
 
 @Serializable
@@ -123,6 +130,26 @@ interface CatalogProvider {
 
     /** Pure function (no I/O): the sources this provider can serve, in order. */
     fun listSources(): List<CatalogSourceInfo>
+
+    /**
+     * Featured/popular rail page. [page] is 1-based like [search].
+     *
+     * Fail-closed default: a provider with no featured capability returns an
+     * empty page, so its rail auto-hides instead of surfacing an error or a
+     * placeholder section.
+     */
+    suspend fun featured(sort: CatalogFeaturedSort, page: Int): PagedResult =
+        PagedResult(emptyList(), null, 0)
+
+    /** Fail-closed capability probe: false means "do not build a featured rail". */
+    fun supportsFeatured(): Boolean = false
+
+    /**
+     * Per-source search scoped to one [sourceId]. Fail-closed default: an
+     * unsupported id yields an empty page rather than a crash.
+     */
+    suspend fun searchSource(sourceId: String, query: String, page: Int): PagedResult =
+        PagedResult(emptyList(), null, 0)
 }
 
 enum class CatalogSourceKind {

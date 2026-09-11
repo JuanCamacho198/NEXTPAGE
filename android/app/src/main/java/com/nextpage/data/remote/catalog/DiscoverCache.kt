@@ -16,6 +16,7 @@ const val DISCOVER_CACHE_VERSION = "v2"
 
 private const val PAGE_KEY_PREFIX = "p:$DISCOVER_CACHE_VERSION:"
 private const val DETAIL_KEY_PREFIX = "d:$DISCOVER_CACHE_VERSION:"
+private const val FEATURED_KEY_PREFIX = "f:$DISCOVER_CACHE_VERSION:"
 
 /** Page cache key: `p:v2:{sourceId}:{query}:{page}` (24h). Query is normalized. */
 fun pageCacheKey(sourceId: String, query: String, page: Int): String =
@@ -23,6 +24,15 @@ fun pageCacheKey(sourceId: String, query: String, page: Int): String =
 
 /** Detail cache key: `d:v2:{sourceId}:{id}` (7d). */
 fun detailCacheKey(sourceId: String, id: String): String = "$DETAIL_KEY_PREFIX$sourceId:$id"
+
+/**
+ * Featured rail cache key: `f:v2:{sourceId}:{sort}:{page}` (same 24h page TTL).
+ *
+ * This is a new key *kind* under the unchanged `v2` payload version, so no cache
+ * migration and no invalidation of existing search/detail entries.
+ */
+fun featuredCacheKey(sourceId: String, sort: CatalogFeaturedSort, page: Int): String =
+    "$FEATURED_KEY_PREFIX$sourceId:${sort.name}:$page"
 
 /**
  * TTL cache store for catalog pages/details.

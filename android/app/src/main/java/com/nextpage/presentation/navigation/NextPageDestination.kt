@@ -17,6 +17,15 @@ sealed class NextPageDestination(
     data object Home : NextPageDestination("home", R.string.nav_home, NextPageIcons.Home)
     data object Library : NextPageDestination("library", R.string.nav_library, NextPageIcons.Library)
     data object Discover : NextPageDestination("discover", R.string.nav_discover, NextPageIcons.Search)
+
+    /**
+     * "Ver todo" section list. All three arguments are optional query params:
+     * `sectionTitle` is already localized, and exactly one of `sort` / `sourceId`
+     * is non-null so the screen knows which paging seam to use.
+     */
+    data object DiscoverSection : NextPageDestination(
+        "discover/section?sectionTitle={sectionTitle}&sort={sort}&sourceId={sourceId}"
+    )
     data object Reader : NextPageDestination("reader", R.string.tab_reader, NextPageIcons.BookOpen)
     data object Highlights : NextPageDestination("highlights", R.string.nav_highlights, NextPageIcons.Highlights)
     data object Settings : NextPageDestination("settings", R.string.nav_settings, NextPageIcons.Settings)
@@ -41,5 +50,6 @@ sealed class NextPageDestination(
     data object SettingsDevices : NextPageDestination("settings/devices")
     data object SettingsDailyGoal : NextPageDestination("settings/daily-goal")
     data object SettingsPerformance : NextPageDestination("settings/performance")
+    data object SettingsAddons : NextPageDestination("settings/addons", R.string.settings_addons_title, NextPageIcons.LibraryBooks)
     data object LogViewer : NextPageDestination("settings/log-viewer")
 }

@@ -4,231 +4,186 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.itemsIndexed
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nextpage.R
-import com.nextpage.data.remote.catalog.CatalogBook
-import com.nextpage.data.remote.catalog.CatalogErrorCode
-import com.nextpage.presentation.viewmodel.DiscoverDetailStatus
 import com.nextpage.presentation.viewmodel.DiscoverStatus
 import com.nextpage.presentation.viewmodel.DiscoverUiState
 import com.nextpage.presentation.viewmodel.DiscoverViewModel
+import com.nextpage.ui.icons.NextPageIcons
 
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+/**
+ * Discover shell: header, search field, trending chips, then exactly one body
+ * state. The body is owned per state — rails own their Loading/Loaded/Hidden
+ * lifecycle, so the shell never shows a screen-level spinner for them.
+ *
+ * @param userInitial Initial of the signed-in user, resolved by the nav call site
+ *   (the screen no longer reaches into a service locator). Null renders a
+ *   neutral avatar placeholder.
+ * @param onOpenSection Opens the "Ver todo" list for a rail, forwarding the
+ *   already-localized section title.
+ */
 @Composable
 fun DiscoverScreen(
     contentPadding: PaddingValues,
     viewModel: DiscoverViewModel,
+    userInitial: String? = null,
+    onOpenSection: (DiscoverRailState.Loaded, String) -> Unit = { _, _ -> },
+    onNavigateToSettingsAddons: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var query by remember { mutableStateOf(uiState.query) }
+    val trendingChips = trendingChips()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(contentPadding)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(
-            text = stringResource(R.string.nav_discover),
-            style = MaterialTheme.typography.headlineSmall,
-        )
-        OutlinedTextField(
-            value = query,
-            onValueChange = {
-                query = it
-                viewModel.onQueryChange(it)
-            },
-            placeholder = { Text(stringResource(R.string.discover_search_hint)) },
-            singleLine = true,
-            trailingIcon = {
-                TextButton(onClick = viewModel::searchFirstPage) {
-                    Text(stringResource(R.string.discover_search))
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
+        DiscoverHeader(
+            title = stringResource(R.string.discover_title),
+            subtitle = headerSubtitle(uiState),
+            userInitial = userInitial,
+            avatarContentDescription = stringResource(R.string.discover_avatar_content_desc)
         )
 
-        DiscoverDetailSection(
+        DiscoverSearchField(
+            query = uiState.query,
+            isSearching = uiState.isSearching,
+            onQueryChange = viewModel::onQueryChange,
+            onClear = { viewModel.onQueryChange("") },
+            onSearch = viewModel::searchFirstPage
+        )
+
+        if (uiState.status == DiscoverStatus.IDLE) {
+            DiscoverChipRow(
+                chips = trendingChips,
+                onChipClick = { index ->
+                    val term = trendingChips[index].label
+                    viewModel.onQueryChange(term)
+                    viewModel.searchFirstPage()
+                }
+            )
+        }
+
+        // Source narrowing applies to the merged result list, so the chips are
+        // only meaningful once a search has produced results.
+        if (
+            uiState.sources.isNotEmpty() &&
+            (
+                uiState.status == DiscoverStatus.LOADED ||
+                    uiState.status == DiscoverStatus.LOADING_MORE ||
+                    uiState.status == DiscoverStatus.EMPTY
+                )
+        ) {
+            DiscoverSourceFilterRow(
+                sources = uiState.sources,
+                selected = uiState.sourceFilter,
+                onSelect = viewModel::setSourceFilter
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+        ) {
+            when (uiState.status) {
+                DiscoverStatus.IDLE -> DiscoverIdleRails(
+                    rails = uiState.rails,
+                    attributionNames = uiState.attributionNames,
+                    onOpenBook = viewModel::openDetail,
+                    onSeeAll = onOpenSection,
+                    onNavigateToSettingsAddons = onNavigateToSettingsAddons
+                )
+                DiscoverStatus.LOADING -> DiscoverSkeletonState()
+                DiscoverStatus.EMPTY -> DiscoverEmptyState(
+                    query = uiState.query,
+                    onSuggestionClick = { term ->
+                        viewModel.onQueryChange(term)
+                        viewModel.searchFirstPage()
+                    }
+                )
+                DiscoverStatus.ERROR -> DiscoverErrorState(onRetry = viewModel::retry)
+                DiscoverStatus.OFFLINE -> DiscoverOfflineState(onRetry = viewModel::retry)
+                DiscoverStatus.LOADED, DiscoverStatus.LOADING_MORE -> DiscoverResultsGrid(
+                    books = uiState.visibleBooks,
+                    nextPage = uiState.nextPage,
+                    isLoadingMore = uiState.status == DiscoverStatus.LOADING_MORE,
+                    onOpen = viewModel::openDetail,
+                    onLoadNext = viewModel::loadNextPage,
+                    attributionNames = uiState.attributionNames
+                )
+            }
+        }
+
+        DiscoverDetailSheet(
             detail = uiState.detail,
             detailStatus = uiState.detailStatus,
-            onDismiss = viewModel::dismissDetail,
+            download = uiState.download,
+            onDownload = viewModel::startDownload,
+            onCancelDownload = viewModel::cancelDownload,
+            onDismiss = viewModel::dismissDetail
         )
-
-        Box(modifier = Modifier.fillMaxSize()) {
-            when (uiState.status) {
-                DiscoverStatus.IDLE ->
-                    DiscoverStatusText(stringResource(R.string.discover_idle))
-                DiscoverStatus.LOADING ->
-                    DiscoverStatusText(stringResource(R.string.discover_loading))
-                DiscoverStatus.EMPTY ->
-                    DiscoverStatusText(stringResource(R.string.discover_empty))
-                DiscoverStatus.OFFLINE, DiscoverStatus.ERROR -> {
-                    val message = when {
-                        uiState.status == DiscoverStatus.OFFLINE -> stringResource(R.string.discover_offline)
-                        uiState.errorCode == CatalogErrorCode.INVALID_PAGE ->
-                            stringResource(R.string.discover_error_invalid_page)
-                        uiState.errorCode == CatalogErrorCode.NOT_FOUND ->
-                            stringResource(R.string.discover_error_not_found)
-                        else -> stringResource(R.string.discover_error_upstream)
-                    }
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        DiscoverStatusText(message)
-                        Button(onClick = viewModel::retry) {
-                            Text(stringResource(R.string.discover_retry))
-                        }
-                    }
-                }
-                DiscoverStatus.LOADED, DiscoverStatus.LOADING_MORE -> {
-                    val books = uiState.books
-                    LazyVerticalGrid(
-                        columns = GridCells.Adaptive(160.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        itemsIndexed(books, key = { _, book -> book.id }) { index, book ->
-                            DiscoverCard(book = book, onOpen = viewModel::openDetail)
-                            if (index >= books.lastIndex - 3 && uiState.nextPage != null) {
-                                LaunchedEffect(books.size) { viewModel.loadNextPage() }
-                            }
-                        }
-                        item(span = { GridItemSpan(maxLineSpan) }) {
-                            val footer = when {
-                                uiState.status == DiscoverStatus.LOADING_MORE ->
-                                    stringResource(R.string.discover_loading_more)
-                                uiState.nextPage == null ->
-                                    stringResource(R.string.discover_end_of_results)
-                                else -> null
-                            }
-                            if (footer != null) {
-                                Text(
-                                    text = footer,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(8.dp),
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 
+/**
+ * IDLE body: vertically scrollable stack of featured rails. A Hidden rail
+ * composes nothing, so a partially servable IDLE shows only the rails that
+ * actually resolved.
+ */
 @Composable
-private fun DiscoverStatusText(message: String) {
-    Text(
-        text = message,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-}
-
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
-@Composable
-private fun DiscoverDetailSection(
-    detail: CatalogBook?,
-    detailStatus: DiscoverDetailStatus,
-    onDismiss: () -> Unit,
+private fun DiscoverIdleRails(
+    rails: List<DiscoverRailState>,
+    onOpenBook: (String) -> Unit,
+    onSeeAll: (DiscoverRailState.Loaded, String) -> Unit,
+    onNavigateToSettingsAddons: () -> Unit,
+    attributionNames: Map<String, String> = emptyMap()
 ) {
-    if (detailStatus == DiscoverDetailStatus.CLOSED) return
-    val sheetState = rememberModalBottomSheetState()
-
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
-        when {
-            detailStatus == DiscoverDetailStatus.LOADING ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                ) {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                }
-            detailStatus == DiscoverDetailStatus.NOT_FOUND || detail == null ->
-                Text(
-                    text = stringResource(
-                        if (detailStatus == DiscoverDetailStatus.NOT_FOUND) {
-                            R.string.discover_detail_not_found
-                        } else {
-                            R.string.discover_error_upstream
-                        },
-                    ),
-                    modifier = Modifier.padding(24.dp),
-                )
-            else -> DiscoverDetailContent(detail = detail, onDismiss = onDismiss)
-        }
-    }
-}
-
-@Composable
-private fun DiscoverDetailContent(detail: CatalogBook, onDismiss: () -> Unit) {
-    val uriHandler = LocalUriHandler.current
     Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp)
-            .padding(bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        Text(text = detail.title, style = MaterialTheme.typography.titleLarge)
-        Text(
-            text = stringResource(R.string.discover_by_authors, detail.authors.joinToString(", ")),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        if (detail.languages.isNotEmpty()) {
-            Text(
-                text = stringResource(R.string.discover_languages, detail.languages.joinToString(", ")),
-                style = MaterialTheme.typography.bodySmall,
+        rails.forEach { rail ->
+            DiscoverRailSection(
+                state = rail,
+                onBookClick = onOpenBook,
+                onSeeAll = onSeeAll,
+                attributionNames = attributionNames
             )
         }
-        if (detail.subjects.isNotEmpty()) {
-            Text(
-                text = stringResource(R.string.discover_subjects, detail.subjects.take(8).joinToString(", ")),
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 4,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        HorizontalDivider()
-        if (detail.downloadUrl != null) {
-            TextButton(onClick = { uriHandler.openUri(detail.downloadUrl) }) {
-                Text(stringResource(R.string.discover_download))
-            }
-        }
-        TextButton(onClick = onDismiss) {
-            Text(stringResource(R.string.discover_dismiss))
-        }
+        DiscoverManageAddonsEntry(onClick = onNavigateToSettingsAddons)
     }
 }
+
+@Composable
+private fun headerSubtitle(uiState: DiscoverUiState): String = when {
+    uiState.status == DiscoverStatus.LOADED || uiState.status == DiscoverStatus.LOADING_MORE ->
+        if (uiState.totalCount > 0) {
+            stringResource(R.string.discover_results_count, uiState.totalCount)
+        } else {
+            stringResource(R.string.discover_subtitle)
+        }
+    else -> stringResource(R.string.discover_subtitle)
+}
+
+@Composable
+private fun trendingChips(): List<DiscoverChip> = listOf(
+    DiscoverChip(label = stringResource(R.string.discover_trending_all), icon = NextPageIcons.Sparkle),
+    DiscoverChip(label = stringResource(R.string.discover_trending_popular), icon = NextPageIcons.Flame),
+    DiscoverChip(label = stringResource(R.string.discover_trending_scifi), icon = NextPageIcons.Sparkle),
+    DiscoverChip(label = stringResource(R.string.discover_trending_classics), icon = NextPageIcons.Book)
+)

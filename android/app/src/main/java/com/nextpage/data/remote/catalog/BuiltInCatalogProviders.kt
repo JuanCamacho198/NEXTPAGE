@@ -16,6 +16,14 @@ open class GutendexCatalogProvider(
         return toPagedResult(result.books, page, result.totalCount)
     }
 
+    /** Featured rails are served by Gutendex alone (POPULAR / NEWEST). */
+    override suspend fun featured(sort: CatalogFeaturedSort, page: Int): PagedResult {
+        val result = ds.featured(sort, page)
+        return toPagedResult(result.books, page, result.totalCount)
+    }
+
+    override fun supportsFeatured(): Boolean = true
+
     /** Gutendex detail by numeric id; malformed ids reject NOT_FOUND. */
     override suspend fun getDetails(id: String): CatalogBook {
         if (!id.startsWith("gutendex:")) {
@@ -44,6 +52,12 @@ open class OpenLibraryCatalogProvider(
         val result = ds.search(query, page)
         return toPagedResult(result.books, page, result.totalCount)
     }
+
+    // NOTE: `featured` / `supportsFeatured` are deliberately left at the
+    // fail-closed defaults. `/trending/*.json` returns 100 works but is dominated
+    // by borrow-restricted in-copyright titles that mapOpenLibraryDoc drops, its
+    // payloads are 274-319 KB, and the endpoint proved flaky - so no OL rail,
+    // no new OL endpoint, and the rail simply auto-hides.
 
     /** OL ids are not detail-resolvable (NOT_FOUND — preserved contract). */
     override suspend fun getDetails(id: String): CatalogBook {

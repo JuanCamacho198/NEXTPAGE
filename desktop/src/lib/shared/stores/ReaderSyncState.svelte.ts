@@ -404,8 +404,7 @@ export class ReaderSyncState {
           .upsertRemoteReadingSessions([row])
           .then(() => {
             const cb = this.onStatsRefreshNeeded as unknown as
-              | ((bookId: string) => Promise<void>)
-              | null;
+              ((bookId: string) => Promise<void>) | null;
             void cb?.(row.bookId);
           })
           .catch((e) => {

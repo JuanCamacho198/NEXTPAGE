@@ -4,7 +4,12 @@ import { metricsStore } from '$lib/shared/logger/MetricsStore';
 import { METRIC_NAMES } from '$lib/shared/logger/metricTypes';
 import { bucketDurationMs } from '$lib/shared/logger/metricBuckets';
 
-const READER_TAGS = { source: 'reader', engine: 'epubjs', format: 'epub', platform: 'desktop' } as const;
+const READER_TAGS = {
+  source: 'reader',
+  engine: 'epubjs',
+  format: 'epub',
+  platform: 'desktop',
+} as const;
 
 export interface EpubChapter {
   id: string;

@@ -258,8 +258,7 @@
             value={message}
             oninput={handleInput}
             maxlength={FEEDBACK_MAX_CHARS}
-            disabled={dialogState === 'sending' || dialogState === 'sent'}
-          ></textarea>
+            disabled={dialogState === 'sending' || dialogState === 'sent'}></textarea>
           <span
             class="self-end text-[11px] {message.length > FEEDBACK_MAX_CHARS
               ? 'text-(--color-error)'

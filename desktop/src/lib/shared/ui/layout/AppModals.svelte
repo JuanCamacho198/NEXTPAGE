@@ -12,10 +12,10 @@
   import ErrorFallback from '$lib/shared/ui/feedback/ErrorFallback.svelte';
   import ToastHost from '$lib/shared/ui/feedback/ToastHost.svelte';
   import FeedbackDialog from '$lib/shared/ui/feedback/FeedbackDialog.svelte';
-import AddonInstallConfirmDialog from '$lib/shared/ui/addons/AddonInstallConfirmDialog.svelte';
-import { getAddonRegistry } from '$lib/shared/services/addons/AddonRegistry';
-import { createInstallDeepLink } from '$lib/features/settings/useInstallDeepLink.svelte';
-import { setInstallDeepLinkHandler } from '$lib/features/addons/installDeepLink';
+  import AddonInstallConfirmDialog from '$lib/shared/ui/addons/AddonInstallConfirmDialog.svelte';
+  import { getAddonRegistry } from '$lib/shared/services/addons/AddonRegistry';
+  import { createInstallDeepLink } from '$lib/features/settings/useInstallDeepLink.svelte';
+  import { setInstallDeepLinkHandler } from '$lib/features/addons/installDeepLink';
   import {
     isDismissed,
     readLastEventId,

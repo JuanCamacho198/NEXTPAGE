@@ -13,11 +13,7 @@
  * reuse the same label set.
  */
 export type CanonicalGenre =
-  | 'Desarrollo personal'
-  | 'Productividad'
-  | 'Finanzas'
-  | 'Ficcion'
-  | 'Sin clasificar';
+  'Desarrollo personal' | 'Productividad' | 'Finanzas' | 'Ficcion' | 'Sin clasificar';
 
 export type ConcreteCanonicalGenre = Exclude<CanonicalGenre, 'Sin clasificar'>;
 

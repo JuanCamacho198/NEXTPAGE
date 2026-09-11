@@ -268,7 +268,7 @@
                 </p>
                 {#if book.collectionIds && book.collectionIds.length > 0}
                   <div class="mt-2 flex flex-wrap gap-1">
-                    {#each collections.filter( (c) => book.collectionIds?.includes(c.id), ) as collection}
+                    {#each collections.filter( (c) => book.collectionIds?.includes(c.id) ) as collection}
                       <CollectionBadge {collection} />
                     {/each}
                   </div>
@@ -327,7 +327,7 @@
                       </p>
                       {#if book.collectionIds && book.collectionIds.length > 0}
                         <div class="mt-1 flex flex-wrap gap-1">
-                          {#each collections.filter( (c) => book.collectionIds?.includes(c.id), ) as collection}
+                          {#each collections.filter( (c) => book.collectionIds?.includes(c.id) ) as collection}
                             <CollectionBadge {collection} />
                           {/each}
                         </div>

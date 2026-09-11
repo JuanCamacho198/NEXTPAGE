@@ -2,13 +2,7 @@ import { isCatalogError, liveCatalogProvider } from '$lib/shared/services/catalo
 import type { CatalogBook, CatalogErrorCode, CatalogProvider } from '$lib/shared/services/catalog';
 
 export type DiscoverStatus =
-  | 'idle'
-  | 'loading'
-  | 'loadingMore'
-  | 'loaded'
-  | 'empty'
-  | 'error'
-  | 'offline';
+  'idle' | 'loading' | 'loadingMore' | 'loaded' | 'empty' | 'error' | 'offline';
 
 export type DiscoverDetailStatus = 'closed' | 'loading' | 'loaded' | 'notFound' | 'error';
 

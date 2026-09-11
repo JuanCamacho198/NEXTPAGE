@@ -51,11 +51,7 @@ export interface SupabaseUserBookRow {
 export type CatalogChangeCallback = (row: SupabaseUserBookRow) => void;
 
 export type CatalogChangeDecision =
-  | 'apply'
-  | 'ignore-stale'
-  | 'ignore-equal'
-  | 'ignore-missing-local'
-  | 'ignore-local-tombstone';
+  'apply' | 'ignore-stale' | 'ignore-equal' | 'ignore-missing-local' | 'ignore-local-tombstone';
 
 /**
  * PR5 Realtime convergence: decide whether an incoming catalog/tombstone

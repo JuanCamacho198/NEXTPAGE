@@ -9,7 +9,10 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { SHARED_METRIC_VOCABULARY } from '$lib/shared/logger/metricTypes';
 
-const KOTLIN_PATH = resolve(process.cwd(), '../android/app/src/main/java/com/nextpage/debug/MetricVocabulary.kt');
+const KOTLIN_PATH = resolve(
+  process.cwd(),
+  '../android/app/src/main/java/com/nextpage/debug/MetricVocabulary.kt',
+);
 
 describe('metricVocabulary lockstep', () => {
   it('Kotlin mirror exists', () => {

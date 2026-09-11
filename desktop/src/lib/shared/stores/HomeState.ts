@@ -62,10 +62,7 @@ export type ShelfQueryToken = {
 };
 
 export type ShelfQueryInvalidTokenReason =
-  | 'unknown_field'
-  | 'missing_value'
-  | 'invalid_value'
-  | 'malformed';
+  'unknown_field' | 'missing_value' | 'invalid_value' | 'malformed';
 
 export type ShelfQueryInvalidToken = {
   raw: string;

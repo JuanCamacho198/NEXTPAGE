@@ -128,17 +128,17 @@ export async function createPdfDocument(
   }
 
   // Load the full file via Tauri IPC
-        const openStart = performance.now();
-      const result = await loadPdfFromFile(filePath, options?.onProgress);
-      const openElapsed = performance.now() - openStart;
-      metricsStore.record({
-        name: METRIC_NAMES.READER_OPEN,
-        durationMs: Math.round(openElapsed),
-        bucketedDurationMs: bucketDurationMs(openElapsed),
-        count: 1,
-        success: true,
-        tags: { source: 'reader', engine: 'pdfjs', format: 'pdf', platform: 'desktop' },
-      });
+  const openStart = performance.now();
+  const result = await loadPdfFromFile(filePath, options?.onProgress);
+  const openElapsed = performance.now() - openStart;
+  metricsStore.record({
+    name: METRIC_NAMES.READER_OPEN,
+    durationMs: Math.round(openElapsed),
+    bucketedDurationMs: bucketDurationMs(openElapsed),
+    count: 1,
+    success: true,
+    tags: { source: 'reader', engine: 'pdfjs', format: 'pdf', platform: 'desktop' },
+  });
 
   // Cache the document (outline loaded lazily by loadPdfOutline)
   documentCache.set(filePath, {

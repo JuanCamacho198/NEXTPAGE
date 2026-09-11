@@ -4,8 +4,7 @@ export interface SafeTextLayerParams {
   container: HTMLElement;
   viewport: { scale: number; width: number; height: number };
   textContentSource:
-    | { on: (event: string, callback: (...args: unknown[]) => void) => void }
-    | Promise<unknown>;
+    { on: (event: string, callback: (...args: unknown[]) => void) => void } | Promise<unknown>;
 }
 
 export interface SafeTextLayerUpdateParams {

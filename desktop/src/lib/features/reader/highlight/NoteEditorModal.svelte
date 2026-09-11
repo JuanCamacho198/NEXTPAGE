@@ -134,8 +134,7 @@
           rows="5"
           maxlength="1000"
           class="w-full resize-none rounded-2xl border border-(--color-border) bg-(--color-bg-deep) p-4 text-sm text-(--color-text-inverse) placeholder-(--color-text-auxiliary) focus:outline-none focus:ring-1 focus:ring-(--color-accent-sky)"
-          placeholder={t('highlight.notePlaceholder')}
-        ></textarea>
+          placeholder={t('highlight.notePlaceholder')}></textarea>
 
         <!-- Note color selector -->
         <div class="flex items-center gap-2">

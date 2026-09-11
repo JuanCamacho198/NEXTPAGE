@@ -60,8 +60,7 @@ export type EpubBridgeDeps = {
   getLastContinueLocation: () => string | null;
   setLastContinueLocation: (v: string | null) => void;
   getOnTocReady?: () =>
-    | ((entries: Array<{ id: string; title: string; depth: number }>) => void)
-    | undefined;
+    ((entries: Array<{ id: string; title: string; depth: number }>) => void) | undefined;
   onLocationChange?: (cfiLocation: string, percentage: number) => void;
   onLocationContext?: (ctx: { locator: string; percentage: number }) => void;
   onselection?: (event: {

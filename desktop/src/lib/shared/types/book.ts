@@ -135,13 +135,7 @@ export interface HighlightActionOpts {
 
 // ─── Sync Observability (PR3) ─────────────────────────────────────
 export type SyncScope =
-  | 'progress'
-  | 'bookmarks'
-  | 'highlights'
-  | 'sessions'
-  | 'catalog'
-  | 'dictionary'
-  | 'library';
+  'progress' | 'bookmarks' | 'highlights' | 'sessions' | 'catalog' | 'dictionary' | 'library';
 
 export type RealtimeStatus = 'connected' | 'connecting' | 'closed' | 'error';
 

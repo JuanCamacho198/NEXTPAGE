@@ -5,7 +5,11 @@ import {
   bucketDurationMs,
   bucketSizeBytes,
 } from '$lib/shared/logger/metricBuckets';
-import { METRIC_TAG_KEYS, SHARED_METRIC_VOCABULARY, TAG_DOMAINS } from '$lib/shared/logger/metricTypes';
+import {
+  METRIC_TAG_KEYS,
+  SHARED_METRIC_VOCABULARY,
+  TAG_DOMAINS,
+} from '$lib/shared/logger/metricTypes';
 
 describe('metricBuckets', () => {
   it('buckets durations to log-scale upper bounds', () => {
@@ -41,7 +45,9 @@ describe('metricBuckets', () => {
   });
 
   it('exposes an explicit bucket list so an unbucketed value cannot exist', () => {
-    expect(DURATION_BUCKETS_MS).toEqual([100, 250, 500, 1000, 2000, 4000, 8000, 16000, 32000, 64000]);
+    expect(DURATION_BUCKETS_MS).toEqual([
+      100, 250, 500, 1000, 2000, 4000, 8000, 16000, 32000, 64000,
+    ]);
   });
 });
 
@@ -53,14 +59,7 @@ describe('metric vocabulary', () => {
   });
 
   it('exposes the tag contract keys and enumerated domains', () => {
-    expect(METRIC_TAG_KEYS).toEqual([
-      'source',
-      'event',
-      'feature',
-      'format',
-      'platform',
-      'engine',
-    ]);
+    expect(METRIC_TAG_KEYS).toEqual(['source', 'event', 'feature', 'format', 'platform', 'engine']);
     expect(TAG_DOMAINS.platform).toEqual(['desktop', 'android']);
     expect(TAG_DOMAINS.format).toEqual(['epub', 'pdf']);
   });

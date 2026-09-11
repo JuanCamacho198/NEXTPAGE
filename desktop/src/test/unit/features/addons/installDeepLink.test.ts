@@ -15,7 +15,9 @@ import {
 
 describe('parseInstallDeepLink', () => {
   it('parses a valid nextpage://install url', () => {
-    expect(parseInstallDeepLink('nextpage://install?url=https://example.com/manifest.json')).toEqual({
+    expect(
+      parseInstallDeepLink('nextpage://install?url=https://example.com/manifest.json'),
+    ).toEqual({
       installUrl: 'https://example.com/manifest.json',
     });
   });
@@ -27,7 +29,9 @@ describe('parseInstallDeepLink', () => {
   });
 
   it('rejects a wrong host', () => {
-    expect(parseInstallDeepLink('nextpage://open?url=https://example.com/manifest.json')).toBeNull();
+    expect(
+      parseInstallDeepLink('nextpage://open?url=https://example.com/manifest.json'),
+    ).toBeNull();
   });
 
   it('rejects a missing url param', () => {
@@ -40,9 +44,11 @@ describe('parseInstallDeepLink', () => {
   });
 
   it('passes through http and file targets (https enforced later, pre-fetch)', () => {
-    expect(parseInstallDeepLink('nextpage://install?url=http://example.com/manifest.json')).toEqual({
-      installUrl: 'http://example.com/manifest.json',
-    });
+    expect(parseInstallDeepLink('nextpage://install?url=http://example.com/manifest.json')).toEqual(
+      {
+        installUrl: 'http://example.com/manifest.json',
+      },
+    );
     expect(parseInstallDeepLink('nextpage://install?url=file:///etc/passwd')).toEqual({
       installUrl: 'file:///etc/passwd',
     });

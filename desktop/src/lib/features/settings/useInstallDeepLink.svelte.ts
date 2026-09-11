@@ -25,13 +25,7 @@ export interface InstallDeepLinkDeps {
 }
 
 export type InstallDeepLinkState =
-  | 'idle'
-  | 'parsing'
-  | 'fetching'
-  | 'confirming'
-  | 'installing'
-  | 'done'
-  | 'error';
+  'idle' | 'parsing' | 'fetching' | 'confirming' | 'installing' | 'done' | 'error';
 
 export function createInstallDeepLink(deps: InstallDeepLinkDeps): {
   state: InstallDeepLinkState;
@@ -44,9 +38,11 @@ export function createInstallDeepLink(deps: InstallDeepLinkDeps): {
   cancel: () => void;
 } {
   const registry = deps.registry;
-  const transport = deps.transport ?? (async () => {
-    throw new AddonFetchError(AddonFetchErrorCode.NETWORK, 'no transport');
-  });
+  const transport =
+    deps.transport ??
+    (async () => {
+      throw new AddonFetchError(AddonFetchErrorCode.NETWORK, 'no transport');
+    });
   let state = $state<InstallDeepLinkState>('idle');
   let manifest = $state<AddonManifest | null>(null);
   let errorCode = $state<AddonFetchErrorCode | null>(null);
@@ -66,7 +62,10 @@ export function createInstallDeepLink(deps: InstallDeepLinkDeps): {
       state = 'fetching';
       const fetched = await transport(url);
       if (fetched.status < 200 || fetched.status >= 300) {
-        throw new AddonFetchError(AddonFetchErrorCode.NETWORK, `addon fetch status ${fetched.status}`);
+        throw new AddonFetchError(
+          AddonFetchErrorCode.NETWORK,
+          `addon fetch status ${fetched.status}`,
+        );
       }
       manifest = validateManifest(fetched.body, fetched.contentType);
       const rows = await registry.listInstalled();

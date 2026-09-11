@@ -14,7 +14,6 @@ export interface InstallDeepLinkDeps {
 }
 
 let onInstallUrl: InstallDeepLinkDeps['onInstallUrl'] | null = null;
-let listenersRegistered = false;
 
 /** Register the install-flow handler (production: useInstallDeepLink store). */
 export function setInstallDeepLinkHandler(next: InstallDeepLinkDeps['onInstallUrl']): void {
@@ -24,24 +23,6 @@ export function setInstallDeepLinkHandler(next: InstallDeepLinkDeps['onInstallUr
 /** Test seam: clear the handler between tests. */
 export function resetInstallDeepLinkHandler(): void {
   onInstallUrl = null;
-}
-
-/**
- * Warm-start listener: the single-instance Rust callback emits
- * `deep-link-install` with the forwarded URL. Idempotent guard so both
- * cold-start (main.ts import) and App mount can call it safely.
- */
-export async function registerDeepLinkListener(): Promise<void> {
-  if (listenersRegistered) return;
-  listenersRegistered = true;
-  try {
-    const { listen } = await import('@tauri-apps/api/event');
-    await listen<string>('deep-link-install', (event) => {
-      void handleDeepLinkUrls([event.payload]);
-    });
-  } catch {
-    listenersRegistered = false;
-  }
 }
 
 /**

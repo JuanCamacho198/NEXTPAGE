@@ -3,7 +3,8 @@ import App from './App.svelte';
 import { mount } from 'svelte';
 import { onOpenUrl } from '@tauri-apps/plugin-deep-link';
 import { registerSupabaseCallbackHandler } from './lib/shared/services';
-import { handleDeepLinkUrls, registerDeepLinkListener } from './lib/features/addons/installDeepLink';
+import { handleDeepLinkUrls } from './lib/features/addons/installDeepLink';
+import { registerDeepLinkListener } from './lib/shared/ports/adapters/tauri/tauriDeepLink';
 import { logger } from './lib/shared/logger/Logger';
 import { consoleSink } from './lib/shared/logger/ConsoleSink';
 import { tauriSink } from './lib/shared/logger/TauriSink';
@@ -126,7 +127,11 @@ onOpenUrl((urls) => {
 });
 
 // Warm start: single-instance plugin forwards nextpage:// argv via this event.
-void registerDeepLinkListener();
+// The listener is Tauri wiring and lives in the adapter; routing stays in the
+// pure feature module, which is what keeps that module free of Tauri imports.
+void registerDeepLinkListener((url) => {
+  void handleDeepLinkUrls([url]);
+});
 
 // Supabase OAuth wiring: listen for OAuth callback on loopback URL.
 registerSupabaseCallbackHandler();

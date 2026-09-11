@@ -34,15 +34,18 @@ export class SentryMetricsSink {
 
     try {
       if (event.bucketedDurationMs != null) {
-        Sentry.metrics.distribution(event.name, event.bucketedDurationMs, { tags });
+        Sentry.metrics.distribution(event.name, event.bucketedDurationMs, {
+          unit: 'millisecond',
+          attributes: tags,
+        });
       } else {
-        Sentry.metrics.increment(event.name, event.count, { tags });
+        Sentry.metrics.count(event.name, event.count, { attributes: tags });
       }
 
       if (event.success === false) {
         const errorCode = (event.errorCode ?? 'UNKNOWN').slice(0, 8);
-        Sentry.metrics.increment(`${event.name}_error`, 1, {
-          tags: { ...tags, error_code: errorCode },
+        Sentry.metrics.count(`${event.name}_error`, 1, {
+          attributes: { ...tags, error_code: errorCode },
         });
       }
     } catch {

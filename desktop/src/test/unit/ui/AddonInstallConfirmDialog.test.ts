@@ -27,15 +27,17 @@ const MANIFEST: AddonManifest = {
   resources: ['catalog'],
 };
 
-function renderDialog(overrides: {
-  open?: boolean;
-  manifest?: AddonManifest | null;
-  busy?: boolean;
-  error?: string | null;
-  alreadyInstalled?: boolean;
-  onconfirm?: () => void;
-  oncancel?: () => void;
-} = {}) {
+function renderDialog(
+  overrides: {
+    open?: boolean;
+    manifest?: AddonManifest | null;
+    busy?: boolean;
+    error?: string | null;
+    alreadyInstalled?: boolean;
+    onconfirm?: () => void;
+    oncancel?: () => void;
+  } = {},
+) {
   return render(AddonInstallConfirmDialog, {
     open: overrides.open ?? true,
     manifest: overrides.manifest !== undefined ? overrides.manifest : MANIFEST,
@@ -85,9 +87,7 @@ describe('AddonInstallConfirmDialog', () => {
   it('cancel click invokes oncancel once', async () => {
     const oncancel = vi.fn();
     renderDialog({ oncancel });
-    await fireEvent.click(
-      screen.getByRole('button', { name: ADDON_INSTALL_CONFIRM_CANCEL_LABEL }),
-    );
+    await fireEvent.click(screen.getByRole('button', { name: ADDON_INSTALL_CONFIRM_CANCEL_LABEL }));
     expect(oncancel).toHaveBeenCalledTimes(1);
   });
 
@@ -102,9 +102,7 @@ describe('AddonInstallConfirmDialog', () => {
       name: ADDON_INSTALL_CONFIRM_INSTALLING_LABEL,
     });
     expect(install).toBeDisabled();
-    expect(
-      screen.getByRole('button', { name: ADDON_INSTALL_CONFIRM_CANCEL_LABEL }),
-    ).toBeDisabled();
+    expect(screen.getByRole('button', { name: ADDON_INSTALL_CONFIRM_CANCEL_LABEL })).toBeDisabled();
   });
 
   it('error text renders from mapped code', () => {

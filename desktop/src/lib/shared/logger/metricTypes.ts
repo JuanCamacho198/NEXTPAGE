@@ -18,7 +18,15 @@ export interface MetricEvent {
   sessionId: string;
   timestamp: string;
   name: MetricName;
+  /** Exact duration, kept for the in-app debug panel. Never leaves the process. */
   durationMs?: number;
+  /**
+   * Bucketed duration — what the egress sink actually sends. Bucketing happens at
+   * the instrumentation site so an exact value cannot reach Sentry.
+   */
+  bucketedDurationMs?: number;
+  /** Low-cardinality tags forwarded to Sentry as metric attributes. */
+  tags?: Record<string, string>;
   feature?: string;
   count: number;
   success: boolean;

@@ -23,11 +23,15 @@ import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.data.repository.SupabaseAuthRepository
 import com.nextpage.data.session.SessionManager
 import com.nextpage.data.session.SupabaseSessionManager
+import com.nextpage.domain.connectivity.ConnectivityObserver
 import com.nextpage.domain.error.AppError
 import com.nextpage.domain.error.ErrorCategory
 import com.nextpage.domain.repository.AuthRepository
+import com.nextpage.data.connectivity.AndroidConnectivityObserver
 import com.nextpage.data.remote.catalog.ANDROID_USER_AGENT
 import com.nextpage.data.remote.catalog.CatalogHttpTransport
+import com.nextpage.data.remote.catalog.CatalogFileDownloader
+import com.nextpage.data.remote.catalog.KtorCatalogFileDownloader
 import com.nextpage.data.remote.catalog.CatalogProvider
 import com.nextpage.data.remote.catalog.CompositeCatalogProvider
 import com.nextpage.data.remote.catalog.GutendexCatalogProvider
@@ -207,6 +211,17 @@ class NetworkModule(
         KtorCatalogHttpTransport(catalogHttpClient)
     }
 
+    // discover-screen U3a: binary catalog downloads reuse the catalog client
+    // identity (UA + timeouts) but live on their own streaming port.
+    val catalogFileDownloader: CatalogFileDownloader by lazy {
+        KtorCatalogFileDownloader(catalogHttpClient)
+    }
+
+    /** Internal storage where catalog downloads stage before import. */
+    val catalogTempDir: java.io.File by lazy {
+        java.io.File(context.filesDir, "catalog")
+    }
+
     val gutendexDataSource: GutendexDataSource by lazy {
         GutendexDataSource(catalogTransport)
     }
@@ -250,4 +265,10 @@ class NetworkModule(
     }
 
     val catalogProvider: CatalogProvider by lazy { LiveCatalogProvider(rebuildingCatalogProvider) }
+
+    // discover-screen U1: app-lifetime connectivity observer. Network callbacks
+    // are process-global, so this singleton has no cleanup hook.
+    val connectivityObserver: ConnectivityObserver by lazy {
+        AndroidConnectivityObserver(context)
+    }
 }

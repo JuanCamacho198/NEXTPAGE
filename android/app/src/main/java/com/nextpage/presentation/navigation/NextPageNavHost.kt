@@ -44,6 +44,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.nextpage.data.remote.drive.DriveAuthResult
 import com.nextpage.data.remote.drive.DriveConnectPromptGate
+import com.nextpage.domain.model.AuthSession
 import com.nextpage.data.session.DriveConnectPromptPrefs
 import com.nextpage.di.AppContainer
 import com.nextpage.presentation.navigation.feature.authGraph
@@ -196,9 +197,19 @@ fun NextPageNavHost(
 
         val discoverViewModel: DiscoverViewModel = viewModel(
             factory = DiscoverViewModelFactory(
-                catalogProvider = appContainer.catalogProvider
+                catalogProvider = appContainer.catalogProvider,
+                connectivityObserver = appContainer.connectivityObserver,
+                registerAddonChangeListener = { listener ->
+                    appContainer.addonRegistry.addOnChangedListener(listener)
+                }
             )
         )
+
+        // Resolved here (not inside the screen) so the Discover surface no longer
+        // reads the session through a service locator. Null when signed out.
+        val discoverUserInitial = remember(authState.currentSession) {
+            discoverUserInitialOf(authState.currentSession)
+        }
 
     var showDebugSheet by remember { mutableStateOf(false) }
 
@@ -364,6 +375,8 @@ fun NextPageNavHost(
                     navController = navController,
                     contentPadding = innerPadding,
                     discoverViewModel = discoverViewModel,
+                    catalogProvider = appContainer.catalogProvider,
+                    discoverUserInitial = discoverUserInitial,
                 )
 
                 libraryGraph(
@@ -485,4 +498,15 @@ fun NextPageNavHost(
         }
         }
     }
+}
+
+/**
+ * First glyph of the signed-in user's display name, falling back to the email.
+ * Null when signed out (or when neither field carries a character), which makes
+ * the Discover header render its neutral avatar placeholder.
+ */
+private fun discoverUserInitialOf(session: AuthSession?): String? {
+    val displayName = session?.displayName?.trim().orEmpty()
+    val source = if (displayName.isNotEmpty()) displayName else session?.email?.trim().orEmpty()
+    return source.firstOrNull()?.uppercaseChar()?.toString()
 }

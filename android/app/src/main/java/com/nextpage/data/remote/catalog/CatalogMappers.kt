@@ -20,7 +20,8 @@ data class GutendexRecord(
     val copyright: Boolean? = null,
     val languages: List<String> = emptyList(),
     val subjects: List<String> = emptyList(),
-    val formats: Map<String, String> = emptyMap()
+    val formats: Map<String, String> = emptyMap(),
+    @SerialName("summaries") val summaries: List<String> = emptyList()
 )
 
 @Serializable
@@ -68,7 +69,12 @@ fun mapGutendexBook(record: GutendexRecord): CatalogBook? {
         coverUrl = null,
         languages = record.languages,
         subjects = record.subjects,
-        downloadUrl = null
+        downloadUrl = runCatching {
+            resolveDownloadUrl(record.formats, preferEpub = true)
+        }.getOrNull(),
+        description = record.summaries.joinToString("\n\n").takeIf { it.isNotBlank() },
+        isPublicDomain = record.copyright?.let { !it },
+        formats = record.formats
     )
 }
 

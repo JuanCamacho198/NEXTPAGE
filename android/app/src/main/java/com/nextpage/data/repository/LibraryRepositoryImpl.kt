@@ -22,11 +22,13 @@ import com.nextpage.data.remote.drive.coverFailureError
 import com.nextpage.data.storage.CoverStorage
 import com.nextpage.domain.model.BookImportRequest
 import com.nextpage.domain.model.Book
+import com.nextpage.domain.model.DuplicateBookException
 import com.nextpage.domain.model.ReadingProgress
 import com.nextpage.domain.repository.LibraryRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import org.readium.r2.shared.publication.Publication
@@ -123,6 +125,12 @@ class LibraryRepositoryImpl(
         )
 
         val contentHash = computeSha256(request.sourcePath)
+        // Duplicate rule: identical bytes already imported are not imported
+        // twice. Surfaced as DuplicateBookException so the caller can render a
+        // neutral "already in library" outcome instead of a failure.
+        if (contentHash != null && bookDao.observeAllBooks().first().any { it.contentHash == contentHash }) {
+            throw DuplicateBookException()
+        }
         bookDao.upsert(book.toEntity().copy(contentHash = contentHash))
         queueBookOutboxEntry(bookId)
         book
@@ -159,6 +167,15 @@ class LibraryRepositoryImpl(
 
     override suspend fun getBookById(bookId: String): Book? =
         bookDao.getBookById(bookId)?.toDomain()
+
+    override suspend fun findBookByTitleAndAuthor(title: String, author: String?): Book? {
+        val requestedAuthor = author?.trim().orEmpty()
+        return bookDao.observeAllBooks().first().firstOrNull { candidate ->
+            candidate.title.equals(title, ignoreCase = true) &&
+                (requestedAuthor.isEmpty() ||
+                    candidate.author?.trim().orEmpty().equals(requestedAuthor, ignoreCase = true))
+        }?.toDomain()
+    }
 
     override suspend fun startReading(bookId: String): Result<Unit> = runCatching {
         bookDao.startReading(bookId, System.currentTimeMillis())

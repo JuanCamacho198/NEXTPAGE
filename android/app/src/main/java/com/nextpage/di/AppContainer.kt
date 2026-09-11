@@ -35,12 +35,16 @@ import com.nextpage.di.modules.StorageModule
 import com.nextpage.di.modules.UseCaseModule
 import com.nextpage.domain.repository.AuthRepository
 import com.nextpage.domain.repository.DictionaryRepository
+import com.nextpage.domain.connectivity.ConnectivityObserver
 import com.nextpage.domain.repository.HomeRepository
 import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.repository.ReadingStatsRepository
 import com.nextpage.domain.usecase.GetBookProgressUseCase
+import com.nextpage.data.remote.catalog.CatalogFileDownloader
+import com.nextpage.domain.usecase.DownloadAndImportBookUseCase
 import com.nextpage.domain.usecase.GetStatisticsUseCase
+import com.nextpage.domain.usecase.ImportEpubBookUseCase
 import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
 import com.nextpage.data.storage.AppInternalCoverStorage
 
@@ -87,6 +91,16 @@ class AppContainer(context: Context) {
     val supabaseBookCatalogDataSource: SupabaseBookCatalogDataSource by lazy { networkModule.supabaseBookCatalogDataSource }
     val supabaseBookCatalogSync: SupabaseBookCatalogSync by lazy { networkModule.supabaseBookCatalogSync }
     val catalogProvider: CatalogProvider by lazy { networkModule.catalogProvider }
+    val connectivityObserver: ConnectivityObserver by lazy { networkModule.connectivityObserver }
+    val catalogFileDownloader: CatalogFileDownloader by lazy { networkModule.catalogFileDownloader }
+    val downloadAndImportBookUseCase: DownloadAndImportBookUseCase by lazy {
+        DownloadAndImportBookUseCase(
+            downloader = networkModule.catalogFileDownloader,
+            importEpubBookUseCase = ImportEpubBookUseCase(repositoryModule.libraryRepository),
+            libraryRepository = repositoryModule.libraryRepository,
+            tempDir = networkModule.catalogTempDir
+        )
+    }
     val addonRegistry: com.nextpage.data.remote.addons.AddonRegistry by lazy { networkModule.addonRegistry }
 
     // ── addon-deeplink-v1: pending install deep links (B2/B3) ──────────

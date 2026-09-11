@@ -37,6 +37,19 @@ class LiveCatalogProvider(
     override suspend fun search(query: String, page: Int): PagedResult =
         supplier.provider().search(query, page)
 
+    override suspend fun featured(sort: CatalogFeaturedSort, page: Int): PagedResult =
+        supplier.provider().featured(sort, page)
+
+    /**
+     * Reads the already-built composite. Before the first [RebuildingCatalogProvider.provider]
+     * call there is nothing to probe, so this reports false; [featured] itself
+     * still builds the composite on demand and resolves the real capability.
+     */
+    override fun supportsFeatured(): Boolean = supplier.peek()?.supportsFeatured() ?: false
+
+    override suspend fun searchSource(sourceId: String, query: String, page: Int): PagedResult =
+        supplier.provider().searchSource(sourceId, query, page)
+
     override suspend fun getDetails(id: String): CatalogBook =
         supplier.provider().getDetails(id)
 

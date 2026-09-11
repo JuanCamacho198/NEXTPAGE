@@ -3,18 +3,36 @@ package com.nextpage.presentation.viewmodel
 import com.nextpage.data.remote.catalog.CatalogBook
 import com.nextpage.data.remote.catalog.CatalogErrorCode
 import com.nextpage.data.remote.catalog.CatalogException
+import com.nextpage.data.remote.catalog.CatalogFeaturedSort
 import com.nextpage.data.remote.catalog.CatalogProvider
 import com.nextpage.data.remote.catalog.CatalogSourceInfo
+import com.nextpage.data.remote.catalog.CatalogSourceKind
 import com.nextpage.data.remote.catalog.BUILTIN_GUTENDEX
 import com.nextpage.data.remote.catalog.BUILTIN_OPENLIBRARY
 import com.nextpage.data.remote.catalog.PagedResult
+import com.nextpage.presentation.feature.discover.DiscoverRailState
+import com.nextpage.domain.connectivity.ConnectivityObserver
+import com.nextpage.domain.connectivity.FakeConnectivityObserver
 import com.nextpage.testutil.MainDispatcherRule
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
+import com.nextpage.domain.model.Book
+import com.nextpage.domain.usecase.DownloadAndImportBookUseCase
+import com.nextpage.domain.usecase.DownloadImportState
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.mockk
+import kotlinx.coroutines.flow.flowOf
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -76,6 +94,24 @@ class DiscoverViewModelTest {
         }
     }
 
+    /** Provider whose [search] stays suspended until [gate] is completed. */
+    private class GatedCatalogProvider : CatalogProvider {
+        val gate = CompletableDeferred<Unit>()
+
+        override suspend fun search(query: String, page: Int): PagedResult {
+            gate.await()
+            return PagedResult(emptyList(), null, 0)
+        }
+
+        override suspend fun getDetails(id: String): CatalogBook =
+            throw CatalogException(CatalogErrorCode.NOT_FOUND, "unused")
+
+        override fun resolveDownloadUrl(formats: Map<String, String>, preferEpub: Boolean): String =
+            throw CatalogException(CatalogErrorCode.UNAVAILABLE_DOWNLOAD, "unused")
+
+        override fun listSources(): List<CatalogSourceInfo> = emptyList()
+    }
+
     @Test
     fun blankQueryResetsToIdleWithoutProviderIO() = runTest {
         val provider = FakeCatalogProvider()
@@ -124,19 +160,137 @@ class DiscoverViewModelTest {
     }
 
     @Test
-    fun networkErrorMapsToOfflineAndRetryRecovers() = runTest {
+    fun networkErrorWhileOnlineMapsToErrorAndRetryRecovers() = runTest {
         val provider = FakeCatalogProvider()
-        val vm = DiscoverViewModel(provider)
+        val vm = DiscoverViewModel(provider, FakeConnectivityObserver(initiallyOnline = true))
         vm.onQueryChange("pride")
         provider.searchError = CatalogErrorCode.NETWORK_ERROR
         vm.searchFirstPage()
-        assertEquals(DiscoverStatus.OFFLINE, vm.uiState.value.status)
+        // Online at failure time -> NOT corroborated -> ERROR, never OFFLINE.
+        assertEquals(DiscoverStatus.ERROR, vm.uiState.value.status)
         assertEquals(CatalogErrorCode.NETWORK_ERROR, vm.uiState.value.errorCode)
         provider.searchError = null
         vm.retry()
         assertEquals(DiscoverStatus.LOADED, vm.uiState.value.status)
         assertNull(vm.uiState.value.errorCode)
         assertTrue(vm.uiState.value.books.isNotEmpty())
+    }
+
+    @Test
+    fun offlineBeforeSearchRendersOfflineWithoutNetworkAttempt() = runTest {
+        val provider = FakeCatalogProvider()
+        val observer = FakeConnectivityObserver(initiallyOnline = false)
+        val vm = DiscoverViewModel(provider, observer)
+        assertEquals(DiscoverStatus.OFFLINE, vm.uiState.value.status)
+        assertFalse(vm.uiState.value.isOnline)
+
+        vm.onQueryChange("pride")
+        vm.searchFirstPage()
+
+        assertEquals(DiscoverStatus.OFFLINE, vm.uiState.value.status)
+        assertTrue(provider.searchCalls.isEmpty())
+    }
+
+    @Test
+    fun offlineDuringActiveSearchRendersOfflineAndCancelsJob() = runTest {
+        val provider = GatedCatalogProvider()
+        val observer = FakeConnectivityObserver(initiallyOnline = true)
+        val vm = DiscoverViewModel(provider, observer)
+        vm.onQueryChange("pride")
+        vm.searchFirstPage()
+        assertEquals(DiscoverStatus.LOADING, vm.uiState.value.status)
+        assertTrue(vm.uiState.value.isSearching)
+
+        observer.setOnline(false)
+
+        assertEquals(DiscoverStatus.OFFLINE, vm.uiState.value.status)
+        assertFalse(vm.uiState.value.isSearching)
+    }
+
+    @Test
+    fun connectivityRestoredRetriesPendingSearch() = runTest {
+        val provider = FakeCatalogProvider()
+        val observer = FakeConnectivityObserver(initiallyOnline = false)
+        val vm = DiscoverViewModel(provider, observer)
+        vm.onQueryChange("pride")
+        vm.searchFirstPage()
+        assertTrue(provider.searchCalls.isEmpty())
+        assertEquals(DiscoverStatus.OFFLINE, vm.uiState.value.status)
+
+        observer.setOnline(true)
+
+        assertEquals(DiscoverStatus.LOADED, vm.uiState.value.status)
+        assertEquals(listOf("pride"), provider.searchCalls.map { it.first })
+    }
+
+    @Test
+    fun debouncedQueryChangesOnlySearchLatest() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val provider = FakeCatalogProvider()
+        val vm = DiscoverViewModel(
+            catalogProvider = provider,
+            connectivityObserver = FakeConnectivityObserver(initiallyOnline = true),
+            mainDispatcher = dispatcher,
+            debounceMillis = 300
+        )
+
+        vm.onQueryChange("a")
+        advanceTimeBy(100)
+        vm.onQueryChange("ab")
+        advanceTimeBy(100)
+        vm.onQueryChange("abc")
+        advanceTimeBy(300)
+        advanceUntilIdle()
+
+        assertEquals(listOf("abc" to 1), provider.searchCalls)
+    }
+
+    @Test
+    fun queryClearedMidFlightResetsToIdleAndCancelsJob() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val provider = GatedCatalogProvider()
+        val vm = DiscoverViewModel(
+            catalogProvider = provider,
+            connectivityObserver = FakeConnectivityObserver(initiallyOnline = true),
+            mainDispatcher = dispatcher,
+            debounceMillis = 300
+        )
+
+        vm.onQueryChange("pride")
+        vm.searchFirstPage()
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.isSearching)
+
+        vm.onQueryChange("")
+        advanceUntilIdle()
+
+        assertEquals(DiscoverStatus.IDLE, vm.uiState.value.status)
+        assertFalse(vm.uiState.value.isSearching)
+    }
+
+    @Test
+    fun isSearchingTrueWhileFetchInFlight() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val provider = GatedCatalogProvider()
+        val vm = DiscoverViewModel(
+            catalogProvider = provider,
+            connectivityObserver = FakeConnectivityObserver(initiallyOnline = true),
+            mainDispatcher = dispatcher,
+            debounceMillis = 300
+        )
+
+        vm.onQueryChange("pride")
+        vm.searchFirstPage()
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.isSearching)
+        assertEquals(DiscoverStatus.LOADING, vm.uiState.value.status)
+
+        provider.gate.complete(Unit)
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.isSearching)
+        assertEquals(DiscoverStatus.EMPTY, vm.uiState.value.status)
     }
 
     @Test
@@ -167,19 +321,20 @@ class DiscoverViewModelTest {
         assertEquals(preserved, vm.uiState.value.books.size)
     }
 
-
     @Test
-    fun upstreamErrorMapsToErrorAndRateLimitedMapsToOffline() = runTest {
+    fun upstreamErrorAndRateLimitedStayErrorWhileOnline() = runTest {
         val provider = FakeCatalogProvider()
-        val vm = DiscoverViewModel(provider)
+        val vm = DiscoverViewModel(provider, FakeConnectivityObserver(initiallyOnline = true))
         vm.onQueryChange("pride")
         provider.searchError = CatalogErrorCode.UPSTREAM_ERROR
         vm.searchFirstPage()
         assertEquals(DiscoverStatus.ERROR, vm.uiState.value.status)
         assertEquals(CatalogErrorCode.UPSTREAM_ERROR, vm.uiState.value.errorCode)
+
         provider.searchError = CatalogErrorCode.RATE_LIMITED
         vm.retry()
-        assertEquals(DiscoverStatus.OFFLINE, vm.uiState.value.status)
+        // RATE_LIMITED no longer maps to OFFLINE while the observer is online.
+        assertEquals(DiscoverStatus.ERROR, vm.uiState.value.status)
         assertEquals(CatalogErrorCode.RATE_LIMITED, vm.uiState.value.errorCode)
     }
 
@@ -217,6 +372,7 @@ class DiscoverViewModelTest {
         assertEquals(preserved, vm.uiState.value.books.size)
         assertEquals(listOf("gutendex:1342"), provider.detailCalls)
     }
+
     @Test
     fun invalidPageMapsToErrorWithCodeAndListPreserved() = runTest {
         val provider = FakeCatalogProvider()
@@ -233,9 +389,394 @@ class DiscoverViewModelTest {
     }
 
     @Test
-    fun constructorSurfaceTakesOnlyCatalogProvider() {
-        val ctor = DiscoverViewModel::class.java.constructors.single()
-        assertEquals(1, ctor.parameterTypes.size)
-        assertEquals(CatalogProvider::class.java, ctor.parameterTypes[0])
+    fun constructorSurfaceTakesCatalogProviderAndConnectivityPorts() {
+        val ctor = DiscoverViewModel::class.java.constructors
+            .firstOrNull { it.parameterTypes.size == 7 }
+        assertTrue("expected a 7-arg constructor", ctor != null)
+        assertEquals(CatalogProvider::class.java, ctor!!.parameterTypes[0])
+        assertEquals(ConnectivityObserver::class.java, ctor.parameterTypes[1])
+        assertEquals(CoroutineDispatcher::class.java, ctor.parameterTypes[2])
+        assertEquals(java.lang.Long.TYPE, ctor.parameterTypes[3])
+        assertEquals(DownloadAndImportBookUseCase::class.java, ctor.parameterTypes[4])
+        assertEquals(kotlin.jvm.functions.Function1::class.java, ctor.parameterTypes[5])
+        assertEquals(kotlin.jvm.functions.Function1::class.java, ctor.parameterTypes[6])
+    }
+
+    /** Opt-in featured provider; [featured] is the seam under test. */
+    private class FakeFeaturedCatalogProvider(
+        private val featured: (CatalogFeaturedSort) -> PagedResult = { PagedResult(emptyList(), null, 0) }
+    ) : CatalogProvider {
+        val featuredCalls = mutableListOf<Pair<CatalogFeaturedSort, Int>>()
+
+        override suspend fun search(query: String, page: Int): PagedResult =
+            PagedResult(emptyList(), null, 0)
+
+        override suspend fun getDetails(id: String): CatalogBook =
+            throw CatalogException(CatalogErrorCode.NOT_FOUND, "unused")
+
+        override fun resolveDownloadUrl(formats: Map<String, String>, preferEpub: Boolean): String = "n/a"
+
+        override fun listSources(): List<CatalogSourceInfo> = emptyList()
+
+        override suspend fun featured(sort: CatalogFeaturedSort, page: Int): PagedResult {
+            featuredCalls.add(sort to page)
+            return featured(sort)
+        }
+
+        override fun supportsFeatured(): Boolean = true
+    }
+
+    /** Featured provider whose rails stay in flight until [gate] completes. */
+    private class GatedFeaturedProvider : CatalogProvider {
+        val gate = CompletableDeferred<Unit>()
+        val featuredCalls = mutableListOf<Pair<CatalogFeaturedSort, Int>>()
+
+        override suspend fun search(query: String, page: Int): PagedResult =
+            PagedResult(emptyList(), null, 0)
+
+        override suspend fun getDetails(id: String): CatalogBook =
+            throw CatalogException(CatalogErrorCode.NOT_FOUND, "unused")
+
+        override fun resolveDownloadUrl(formats: Map<String, String>, preferEpub: Boolean): String = "n/a"
+
+        override fun listSources(): List<CatalogSourceInfo> = emptyList()
+
+        override suspend fun featured(sort: CatalogFeaturedSort, page: Int): PagedResult {
+            featuredCalls.add(sort to page)
+            gate.await()
+            return if (sort == CatalogFeaturedSort.NEWEST) {
+                PagedResult(
+                    listOf(FakeCatalogProvider.book("gutendex:1", "Newest Book")),
+                    2,
+                    30
+                )
+            } else {
+                PagedResult(
+                    listOf(FakeCatalogProvider.book("gutendex:2", "Popular Book")),
+                    null,
+                    5
+                )
+            }
+        }
+
+        override fun supportsFeatured(): Boolean = true
+    }
+
+    @Test
+    fun idleRailsLoadAsynchronouslyAndNeverBlockTheShell() = runTest {
+        val provider = GatedFeaturedProvider()
+        val vm = DiscoverViewModel(provider)
+
+        // Both rails are published as Loading before anything resolves, and IDLE
+        // itself is already on screen: rails never gate the shell status.
+        assertEquals(DiscoverStatus.IDLE, vm.uiState.value.status)
+        assertEquals(
+            listOf<DiscoverRailState>(DiscoverRailState.Loading, DiscoverRailState.Loading),
+            vm.uiState.value.rails
+        )
+        assertEquals(2, provider.featuredCalls.size)
+        assertEquals(
+            listOf(CatalogFeaturedSort.NEWEST, CatalogFeaturedSort.POPULAR),
+            provider.featuredCalls.map { it.first }
+        )
+
+        provider.gate.complete(Unit)
+
+        val rails = vm.uiState.value.rails
+        assertTrue(rails.all { it is DiscoverRailState.Loaded })
+        val newest = rails[0] as DiscoverRailState.Loaded
+        assertEquals(CatalogFeaturedSort.NEWEST, newest.sort)
+        assertEquals(30, newest.totalCount)
+        assertEquals(1, newest.books.size)
+    }
+
+    @Test
+    fun failingRailIsHiddenWhileTheOtherStillLoads() = runTest {
+        val provider = FakeFeaturedCatalogProvider { sort ->
+            if (sort == CatalogFeaturedSort.NEWEST) {
+                PagedResult(listOf(FakeCatalogProvider.book("gutendex:1", "Newest Book")), null, 1)
+            } else {
+                throw CatalogException(CatalogErrorCode.UPSTREAM_ERROR, "injected")
+            }
+        }
+        val vm = DiscoverViewModel(provider)
+
+        val rails = vm.uiState.value.rails
+        assertTrue(rails[0] is DiscoverRailState.Loaded)
+        assertEquals(DiscoverRailState.Hidden, rails[1])
+        assertEquals(DiscoverStatus.IDLE, vm.uiState.value.status)
+    }
+
+    @Test
+    fun emptyFeaturedPageHidesRailAndProviderWithoutCapabilityHidesBoth() = runTest {
+        val emptyProvider = FakeFeaturedCatalogProvider { PagedResult(emptyList(), null, 0) }
+        val emptyVm = DiscoverViewModel(emptyProvider)
+        assertTrue(emptyVm.uiState.value.rails.all { it is DiscoverRailState.Hidden })
+
+        // Default (no featured override) -> fail-closed empty page -> hidden rails.
+        val plainVm = DiscoverViewModel(FakeCatalogProvider())
+        assertTrue(plainVm.uiState.value.rails.all { it is DiscoverRailState.Hidden })
+    }
+
+    @Test
+    fun offlineIdleStartsNoRailsAtAll() = runTest {
+        val provider = FakeFeaturedCatalogProvider {
+            PagedResult(listOf(FakeCatalogProvider.book("gutendex:1", "Newest Book")), null, 1)
+        }
+        val vm = DiscoverViewModel(provider, FakeConnectivityObserver(initiallyOnline = false))
+
+        assertEquals(DiscoverStatus.OFFLINE, vm.uiState.value.status)
+        assertTrue(vm.uiState.value.rails.isEmpty())
+        assertTrue(provider.featuredCalls.isEmpty())
+    }
+
+    // ── discover-screen U3a: in-app download → import ─────────────────────
+
+    private fun importedBook() = Book(
+        id = "book-1",
+        title = "Detail of gutendex:1342",
+        author = "Author A",
+        coverPath = null,
+        filePath = "/data/books/book-1.epub",
+        format = "epub",
+        updatedAtEpochMillis = 0L
+    )
+
+    @Test
+    fun downloadRelaysIdleDownloadingImportingSuccess() = runTest {
+        val useCase = mockk<DownloadAndImportBookUseCase>()
+        coEvery { useCase.invoke(any()) } returns flowOf(
+            DownloadImportState.Idle,
+            DownloadImportState.Downloading(512L, 2048L),
+            DownloadImportState.Importing,
+            DownloadImportState.Success(importedBook())
+        )
+        val vm = DiscoverViewModel(FakeCatalogProvider(), downloadAndImportBookUseCase = useCase)
+        vm.openDetail("gutendex:1342")
+        vm.startDownload()
+
+        assertTrue(vm.uiState.value.download is DownloadImportState.Success)
+    }
+
+    @Test
+    fun downloadDuplicate_rendersNonErrorState() = runTest {
+        val useCase = mockk<DownloadAndImportBookUseCase>()
+        coEvery { useCase.invoke(any()) } returns flowOf(
+            DownloadImportState.Idle,
+            DownloadImportState.Duplicate("already")
+        )
+        val vm = DiscoverViewModel(FakeCatalogProvider(), downloadAndImportBookUseCase = useCase)
+        vm.openDetail("gutendex:1342")
+        vm.startDownload()
+
+        val state = vm.uiState.value.download
+        assertTrue(state is DownloadImportState.Duplicate)
+        assertFalse(state is DownloadImportState.Failure)
+    }
+
+    @Test
+    fun downloadFailure_rendersInlineError_andRetryReinvokes() = runTest {
+        val useCase = mockk<DownloadAndImportBookUseCase>()
+        coEvery { useCase.invoke(any()) } returns flowOf(
+            DownloadImportState.Idle,
+            DownloadImportState.Failure(CatalogErrorCode.NETWORK_ERROR)
+        )
+        val vm = DiscoverViewModel(FakeCatalogProvider(), downloadAndImportBookUseCase = useCase)
+        vm.openDetail("gutendex:1342")
+        vm.startDownload()
+
+        assertTrue(vm.uiState.value.download is DownloadImportState.Failure)
+
+        vm.startDownload()
+        coVerify(exactly = 2) { useCase.invoke(any()) }
+    }
+
+    @Test
+    fun cancelDownload_resetsStateToIdle() = runTest {
+        val useCase = mockk<DownloadAndImportBookUseCase>()
+        coEvery { useCase.invoke(any()) } returns flowOf(
+            DownloadImportState.Idle,
+            DownloadImportState.Downloading(1L, 100L)
+        )
+        val vm = DiscoverViewModel(FakeCatalogProvider(), downloadAndImportBookUseCase = useCase)
+        vm.openDetail("gutendex:1342")
+        vm.startDownload()
+        vm.cancelDownload()
+
+        assertEquals(DownloadImportState.Idle, vm.uiState.value.download)
+    }
+
+    // ── discover-screen U3b: source filter, attribution, addon rails ──────
+
+    private class FakeSourceCatalogProvider : CatalogProvider {
+        var sources: List<CatalogSourceInfo> = emptyList()
+        var searchResults: List<CatalogBook> = emptyList()
+        var sourceResult: (String) -> PagedResult = { PagedResult(emptyList(), null, 0) }
+        val searchSourceCalls = mutableListOf<Pair<String, String>>()
+
+        override suspend fun search(query: String, page: Int): PagedResult =
+            PagedResult(searchResults, null, searchResults.size)
+
+        override suspend fun getDetails(id: String): CatalogBook =
+            throw CatalogException(CatalogErrorCode.NOT_FOUND, "unused")
+
+        override fun resolveDownloadUrl(formats: Map<String, String>, preferEpub: Boolean): String = "n/a"
+
+        override fun listSources(): List<CatalogSourceInfo> = sources
+
+        override suspend fun searchSource(sourceId: String, query: String, page: Int): PagedResult {
+            searchSourceCalls.add(sourceId to query)
+            return sourceResult(sourceId)
+        }
+    }
+
+    private fun catalogBook(id: String, provider: String, title: String) = CatalogBook(
+        id = id,
+        provider = provider,
+        title = title,
+        authors = listOf("Author A"),
+        coverUrl = null,
+        languages = listOf("en"),
+        subjects = emptyList(),
+        downloadUrl = null
+    )
+
+    private val addonSourceId = "addon:0123456789abcdef"
+
+    @Test
+    fun sourceChipsComeFromListSourcesWithAllAsDefault() = runTest {
+        val provider = FakeSourceCatalogProvider().apply {
+            sources = listOf(
+                CatalogSourceInfo(BUILTIN_GUTENDEX, "Gutendex", CatalogSourceKind.BUILTIN),
+                CatalogSourceInfo(addonSourceId, "My Addon", CatalogSourceKind.ADDON)
+            )
+        }
+        val vm = DiscoverViewModel(provider)
+
+        assertEquals(2, vm.uiState.value.sources.size)
+        assertEquals(DiscoverSourceFilter.AllSources, vm.uiState.value.sourceFilter)
+    }
+
+    @Test
+    fun sourceFilterNarrowsMergedBooksInMemory() = runTest {
+        val provider = FakeSourceCatalogProvider().apply {
+            searchResults = listOf(
+                catalogBook("gutendex:1", BUILTIN_GUTENDEX, "Builtin Book"),
+                catalogBook("a:1", addonSourceId, "Addon Book")
+            )
+        }
+        val vm = DiscoverViewModel(provider)
+        vm.onQueryChange("pride")
+        vm.searchFirstPage()
+
+        assertEquals(2, vm.uiState.value.visibleBooks.size)
+
+        vm.setSourceFilter(DiscoverSourceFilter.Source(addonSourceId))
+
+        assertEquals(1, vm.uiState.value.visibleBooks.size)
+        assertEquals(addonSourceId, vm.uiState.value.visibleBooks.single().provider)
+        // The merged list is preserved; only the derived view narrows.
+        assertEquals(2, vm.uiState.value.books.size)
+    }
+
+    @Test
+    fun registryChangeRefreshesChipsAndDegradesAnAbsentFilter() = runTest {
+        var listener: ((Int) -> Unit)? = null
+        val provider = FakeSourceCatalogProvider().apply {
+            sources = listOf(CatalogSourceInfo(addonSourceId, "My Addon", CatalogSourceKind.ADDON))
+        }
+        val vm = DiscoverViewModel(
+            catalogProvider = provider,
+            registerAddonChangeListener = { listener = it }
+        )
+        vm.setSourceFilter(DiscoverSourceFilter.Source(addonSourceId))
+
+        provider.sources = emptyList()
+        listener!!.invoke(1)
+
+        assertTrue(vm.uiState.value.sources.isEmpty())
+        assertEquals(DiscoverSourceFilter.AllSources, vm.uiState.value.sourceFilter)
+    }
+
+    @Test
+    fun attributionNamesResolveViaInjectedLookup() = runTest {
+        val addonId = "0123456789abcdef"
+        val provider = FakeSourceCatalogProvider().apply {
+            sources = listOf(CatalogSourceInfo("addon:$addonId", "Raw Name", CatalogSourceKind.ADDON))
+        }
+        val vm = DiscoverViewModel(
+            catalogProvider = provider,
+            addonNames = { id -> if (id == addonId) "Pretty Addon" else null }
+        )
+
+        assertEquals("Pretty Addon", vm.uiState.value.attributionNames[addonId])
+    }
+
+    @Test
+    fun cachedRowsFromDisabledAddonDegradeWithoutCrash() = runTest {
+        val goneId = "fedcba9876543210"
+        val provider = FakeSourceCatalogProvider().apply {
+            searchResults = listOf(catalogBook("x:1", "addon:$goneId", "Orphan Book"))
+            sources = emptyList()
+        }
+        val vm = DiscoverViewModel(provider)
+        vm.onQueryChange("pride")
+        vm.searchFirstPage()
+
+        // No attribution entry for the vanished addon, yet the cached row survives.
+        assertFalse(vm.uiState.value.attributionNames.containsKey(goneId))
+        assertEquals(1, vm.uiState.value.visibleBooks.size)
+    }
+
+    @Test
+    fun addonRailIsHiddenOnEmptyAndError() = runTest {
+        val source = CatalogSourceInfo(addonSourceId, "My Addon", CatalogSourceKind.ADDON)
+
+        val emptyVm = DiscoverViewModel(FakeSourceCatalogProvider().apply { sources = listOf(source) })
+        advanceUntilIdle()
+        assertEquals(3, emptyVm.uiState.value.rails.size)
+        assertTrue(emptyVm.uiState.value.rails.all { it is DiscoverRailState.Hidden })
+
+        val errorVm = DiscoverViewModel(
+            FakeSourceCatalogProvider().apply {
+                sources = listOf(source)
+                sourceResult = { throw CatalogException(CatalogErrorCode.UPSTREAM_ERROR, "injected") }
+            }
+        )
+        advanceUntilIdle()
+        assertTrue(errorVm.uiState.value.rails.all { it is DiscoverRailState.Hidden })
+    }
+
+    @Test
+    fun addonRailLoadsFromSearchSourceAndDisappearsOnUninstall() = runTest {
+        var listener: ((Int) -> Unit)? = null
+        val provider = FakeSourceCatalogProvider().apply {
+            sources = listOf(CatalogSourceInfo(addonSourceId, "My Addon", CatalogSourceKind.ADDON))
+            sourceResult = {
+                PagedResult(listOf(catalogBook("a:1", addonSourceId, "Addon Book")), null, 1)
+            }
+        }
+        val vm = DiscoverViewModel(
+            catalogProvider = provider,
+            registerAddonChangeListener = { listener = it }
+        )
+        advanceUntilIdle()
+
+        val addonRail = vm.uiState.value.rails
+            .filterIsInstance<DiscoverRailState.Loaded>()
+            .single { it.sourceId == addonSourceId }
+        assertEquals("My Addon", addonRail.addonName)
+        assertEquals(DiscoverViewModel.ADDON_RAIL_TERM, provider.searchSourceCalls.single().second)
+
+        // Uninstall: the source vanishes and the rail disappears on registry change.
+        provider.sources = emptyList()
+        listener!!.invoke(1)
+        advanceUntilIdle()
+
+        assertTrue(
+            vm.uiState.value.rails.none {
+                it is DiscoverRailState.Loaded && it.sourceId == addonSourceId
+            }
+        )
     }
 }

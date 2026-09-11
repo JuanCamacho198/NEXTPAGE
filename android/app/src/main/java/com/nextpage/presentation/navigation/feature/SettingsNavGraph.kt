@@ -13,6 +13,7 @@ import com.nextpage.domain.model.ThemeMode
 import com.nextpage.domain.repository.DictionaryRepository
 import com.nextpage.presentation.navigation.NextPageDestination
 import com.nextpage.presentation.screen.SettingsScreen
+import com.nextpage.presentation.screen.settings.AddonManagementRoute
 import com.nextpage.presentation.viewmodel.AuthViewModel
 import com.nextpage.presentation.viewmodel.StatisticsViewModel
 import com.nextpage.debug.LogViewerScreen
@@ -104,6 +105,13 @@ fun NavGraphBuilder.settingsGraph(
 
     composable(route = NextPageDestination.LogViewer.route) {
         LogViewerScreen(
+            onBack = { navController.popBackStack() }
+        )
+    }
+
+    composable(route = NextPageDestination.SettingsAddons.route) {
+        AddonManagementRoute(
+            registry = appContainer.addonRegistry,
             onBack = { navController.popBackStack() }
         )
     }

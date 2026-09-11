@@ -2,12 +2,17 @@ package com.nextpage.presentation.viewmodel
 
 import com.nextpage.data.remote.addons.AddonManifest
 import com.nextpage.data.remote.addons.InstalledAddonRow
+import com.nextpage.data.remote.addons.AddonRegistryLike
 import com.nextpage.testutil.MainDispatcherRule
+import io.mockk.coEvery
+import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -123,5 +128,53 @@ class AddonSettingsViewModelTest {
         advanceUntilIdle()
         assertEquals(listOf("id-1"), registry.uninstalled)
         assertEquals(0, vm.uiState.value.installed.size)
+    }
+
+    // ── MockK surface: busy transitions + captured onError ────────────────
+
+    @Test
+    fun `install wraps the registry call in busy transitions`() = runTest {
+        val registry = mockk<AddonRegistryLike>()
+        val gate = CompletableDeferred<Unit>()
+        coEvery { registry.install("https://example.com/m.json") } coAnswers {
+            gate.await()
+            manifest
+        }
+        coEvery { registry.listInstalled() } returns listOf(
+            InstalledAddonRow("id-1", "https://example.com/m.json", manifest, true, 1)
+        )
+        var reported: String? = null
+        val vm = AddonSettingsViewModel(registry, onError = { reported = it })
+
+        vm.onUrlChange("https://example.com/m.json")
+        vm.install()
+        assertTrue("busy while the install is in flight", vm.uiState.value.isBusy)
+
+        gate.complete(Unit)
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.isBusy)
+        assertEquals("", vm.uiState.value.url)
+        assertEquals(1, vm.uiState.value.installed.size)
+        assertNull(reported)
+    }
+
+    @Test
+    fun `install failure reports onError and preserves the url`() = runTest {
+        val registry = mockk<AddonRegistryLike>()
+        coEvery { registry.install(any()) } throws com.nextpage.data.remote.addons.AddonFetchException(
+            com.nextpage.data.remote.addons.AddonFetchErrorCode.HTTPS_REQUIRED,
+            "install URL must be https"
+        )
+        var reported: String? = null
+        val vm = AddonSettingsViewModel(registry, onError = { reported = it })
+
+        vm.onUrlChange("http://example.com/m.json")
+        vm.install()
+        advanceUntilIdle()
+
+        assertTrue(reported!!.contains("HTTPS_REQUIRED"))
+        assertEquals("http://example.com/m.json", vm.uiState.value.url)
+        assertFalse(vm.uiState.value.isBusy)
     }
 }

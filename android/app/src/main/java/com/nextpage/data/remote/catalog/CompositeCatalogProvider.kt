@@ -131,6 +131,42 @@ class CompositeCatalogProvider(
     }
 
     /**
+     * Featured page cache read for a single-source provider under the `f:v2:`
+     * namespace. Same existence check as [readProviderPage]: sources that are not
+     * active at read time are never served.
+     */
+    private suspend fun readProviderFeaturedPage(
+        provider: CatalogProvider,
+        sort: CatalogFeaturedSort,
+        page: Int,
+        active: Set<String>
+    ): PagedResult? {
+        val store = cache ?: return null
+        val source = singleSource(provider) ?: return null
+        if (source.sourceId !in active) return null
+        val hit = store.get(featuredCacheKey(source.sourceId, sort, page), nowEpochSecs()) ?: return null
+        return cacheJson.decodeFromString(PagedResult.serializer(), hit)
+    }
+
+    private suspend fun cacheProviderFeaturedPage(
+        provider: CatalogProvider,
+        sort: CatalogFeaturedSort,
+        page: Int,
+        result: PagedResult,
+        active: Set<String>
+    ) {
+        val store = cache ?: return
+        val source = singleSource(provider) ?: return
+        if (source.sourceId !in active) return
+        store.put(
+            featuredCacheKey(source.sourceId, sort, page),
+            cacheJson.encodeToString(PagedResult.serializer(), result),
+            nowEpochSecs(),
+            PAGE_TTL_S
+        )
+    }
+
+    /**
      * Ordered merge: left-fold the provider pages — earlier providers win fields,
      * later ones fill cover gaps and append unmatched books (the [Gutendex,
      * OpenLibrary] fold reproduces the legacy hardcoded-pair merge exactly).
@@ -144,6 +180,54 @@ class CompositeCatalogProvider(
             totalCount = resolveTotalCount(totalCount, pages[i].totalCount)
         }
         return toPagedResult(results, page, totalCount)
+    }
+
+    /**
+     * True when at least one active provider opts in, so the shell can decide
+     * whether any featured work is possible at all.
+     */
+    override fun supportsFeatured(): Boolean =
+        searchableProviders().any { it.supportsFeatured() }
+
+    /**
+     * Featured rails fan out with `async` over the providers that opt in via
+     * [CatalogProvider.supportsFeatured], then merge with the same [mergePaged]
+     * left-fold used by search. A provider that does not opt in is never called,
+     * so its rail can only ever come back empty (fail-closed) and be hidden.
+     */
+    override suspend fun featured(sort: CatalogFeaturedSort, page: Int): PagedResult {
+        if (page < 1) throw catalogError(CatalogErrorCode.INVALID_PAGE, "page must be >= 1, got $page")
+        return coroutineScope {
+            val active = activeSourceIds()
+            val pages = searchableProviders()
+                .filter { it.supportsFeatured() }
+                .map { provider ->
+                    async {
+                        val cached = readProviderFeaturedPage(provider, sort, page, active)
+                        if (cached != null) {
+                            cached
+                        } else {
+                            val result = provider.featured(sort, page)
+                            cacheProviderFeaturedPage(provider, sort, page, result, active)
+                            result
+                        }
+                    }
+                }
+            mergePaged(pages.map { it.await() }, page)
+        }
+    }
+
+    /**
+     * Per-source search: exact match over the active source set, routed to the
+     * single provider that owns [sourceId]. An unknown or inactive source fails
+     * closed with an empty page — never a crash, never a silent composite search.
+     */
+    override suspend fun searchSource(sourceId: String, query: String, page: Int): PagedResult {
+        if (page < 1) throw catalogError(CatalogErrorCode.INVALID_PAGE, "page must be >= 1, got $page")
+        val owner = searchableProviders().firstOrNull { provider ->
+            provider.listSources().any { it.sourceId == sourceId }
+        } ?: return PagedResult(emptyList(), null, 0)
+        return owner.search(query, page)
     }
 
     /**

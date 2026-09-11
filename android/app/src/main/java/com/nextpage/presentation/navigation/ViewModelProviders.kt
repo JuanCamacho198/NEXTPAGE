@@ -116,7 +116,12 @@ internal fun rememberNavHostViewModels(
 
     val discoverViewModel: DiscoverViewModel = viewModel(
         factory = DiscoverViewModelFactory(
-            catalogProvider = appContainer.catalogProvider
+            catalogProvider = appContainer.catalogProvider,
+            connectivityObserver = appContainer.connectivityObserver,
+            downloadAndImportBookUseCase = appContainer.downloadAndImportBookUseCase,
+            registerAddonChangeListener = { listener ->
+                appContainer.addonRegistry.addOnChangedListener(listener)
+            }
         )
     )
 

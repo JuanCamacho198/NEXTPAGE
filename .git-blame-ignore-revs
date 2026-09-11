@@ -1,0 +1,19 @@
+# Commits that are purely mechanical — reformatting or line-ending churn with no
+# change in behaviour. Excluded from git blame so the last real author of a line
+# stays visible.
+#
+# Usage (per clone; the file itself is tracked, the setting is not):
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+# GitHub reads this file automatically in the blame view.
+
+# Line-ending renormalization: 553 files' working trees and 11 index entries
+# brought to LF, plus the .gitattributes text/eol policy that keeps them there.
+cd785ad8737a7990603a54709fe3f82b3f6f1e93
+
+# Prettier applied to the 18 files the CI format:check gate reported.
+a84e7af3bed9effb6055e5b682d373d0bb3d2015
+
+# Deliberately NOT listed, because each one also carries a real change and
+# blaming those lines to a formatting commit would hide their author:
+#   291d9bd4  cargo fmt reflow of 8 files, but also 11 clippy fixes
+#   a15448b0  telemetry type/API repairs with formatting alongside

@@ -22,7 +22,9 @@ jobs:
   desktop-checks:
     name: Desktop checks
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Raised from 10: cold cargo build+test of the Tauri crate is estimated
+    # 8-15 min (unverified). Measure the first CI run and adjust if needed.
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -74,3 +76,19 @@ jobs:
             src/test/unit/logger/sentryPiiScrubber.test.ts \
             src/test/unit/logger/SentrySink.crumbs.test.ts \
             src/test/unit/epub/useEpubBridge.iframemap.test.ts
+
+      - name: Cache Rust build
+        # No Rust cache existed before this step; only a Bun cache did.
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+
+      - name: Rust gate (fmt, check, clippy, test)
+        working-directory: desktop/src-tauri
+        # Full suite, no exclusions. A flake here is a defect to fix, not a
+        # test to filter out of the gate.
+        run: |
+          cargo check
+          cargo clippy -- -D warnings
+          cargo test
+          cargo fmt --check

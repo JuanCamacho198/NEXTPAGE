@@ -22,6 +22,7 @@
     "rust:lint": "cd src-tauri && cargo clippy -- -D warnings",
     "rust:fmt": "cd src-tauri && cargo fmt",
     "rust:fmt:check": "cd src-tauri && cargo fmt --check",
+    "rust:test": "cd src-tauri && cargo test",
     "ci": "bun run check && bun run lint && bun run format:check && bun run rust:check && bun run rust:lint && bun run rust:fmt:check"
   },
   "engines": {

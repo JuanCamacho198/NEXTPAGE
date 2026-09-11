@@ -1,3 +1,21 @@
+# Line endings: text is stored AND checked out as LF, everywhere.
+#
+# Why this exists. Every tool in this repo emits and expects LF — prettier,
+# rustfmt, eslint, vitest. Without a policy the index held LF while a Windows
+# checkout produced CRLF, so the same file was clean for one tool and dirty for
+# another: local format checks disagreed with CI, a literal multi-line search
+# failed on a file that looked normal, and an agent rewriting three files
+# LF->CRLF inflated a one-line change into 656 lines of diff.
+#
+# This rule sits ABOVE the binary list on purpose. The last matching pattern
+# wins, and `binary` sets -text, which disables the conversion, so the binaries
+# below stay untouched no matter what this line says.
+#
+# Windows-native scripts (gradlew.bat, scripts/e2e/*.ps1) are deliberately not
+# exempted: they are already LF in the index and working tree, cmd.exe runs them
+# that way, and adding a CRLF rule would only create churn.
+* text=auto eol=lf
+
 # Binary files — never normalize line endings (protects encrypted .pen designs and assets)
 *.pen binary
 *.png binary

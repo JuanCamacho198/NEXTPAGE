@@ -23,8 +23,8 @@ import java.net.URLEncoder
 /**
  * Feature NavGraph for Discover.
  *
- * v1 keeps Discover out of `bottomNavDestinations`; entry arrives via
- * Home/Library actions (PR3) with `launchSingleTop` so pop returns to origin.
+ * Discover is the middle tab of the 5-tab bottom navigation
+ * (`bottomNavDestinations`), so the shell is reachable directly from the bar.
  *
  * Two routes live here: the search shell and the "Ver todo" section list. The
  * section route carries the already-localized section title plus exactly one

@@ -263,6 +263,7 @@ fun NextPageNavHost(
     val bottomNavDestinations = listOf(
         NextPageDestination.Home,
         NextPageDestination.Library,
+        NextPageDestination.Discover,
         NextPageDestination.Highlights,
         NextPageDestination.Settings
     )

@@ -47,7 +47,7 @@ import com.nextpage.data.remote.catalog.LiveCatalogProvider
 import com.nextpage.data.remote.catalog.RebuildingCatalogProvider
 import com.nextpage.data.remote.catalog.RoomDiscoverCache
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
+import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
@@ -187,12 +187,15 @@ class NetworkModule(
     val outboxCommit: OutboxCommit by lazy { OutboxCommit(databaseModule.syncOutboxDao) }
 
     // ── discover-catalog PR-2: dedicated catalog client ───────────────
-    // Separate CIO stack (timeouts, JSON, identified UA, HTTPS-only by
+    // Separate OkHttp stack (timeouts, JSON, identified UA, HTTPS-only by
     // constant base URLs + network_security_config) so public catalog
     // traffic never shares the Drive/Supabase client. No user_books or
     // outbox writes pass through here — search/detail only.
+    // Engine is OkHttp (not CIO): CIO failed to reach the catalog on real
+    // devices while the OkHttp-backed Supabase/Drive clients worked, so the
+    // catalog now uses the proven engine.
     val catalogHttpClient: HttpClient by lazy {
-        HttpClient(CIO) {
+        HttpClient(OkHttp) {
             install(ContentNegotiation) {
                 json(Json { ignoreUnknownKeys = true; isLenient = true })
             }

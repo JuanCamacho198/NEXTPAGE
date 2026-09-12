@@ -36,8 +36,24 @@ import com.nextpage.ui.icons.NextPageIcons
 fun DiscoverEmptyState(
     query: String,
     onSuggestionClick: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /**
+     * U5: when true the search matched books but the active universal-source
+     * filter narrowed them to zero — "sin coincidencias legales" in
+     * [sourceName] instead of the generic "sin resultados" copy.
+     */
+    legalEmpty: Boolean = false,
+    sourceName: String? = null
 ) {
+    if (legalEmpty && sourceName != null) {
+        DiscoverLegalEmptyState(
+            query = query,
+            sourceName = sourceName,
+            onSuggestionClick = onSuggestionClick,
+            modifier = modifier
+        )
+        return
+    }
     val suggestions = listOf(
         stringResource(R.string.discover_suggestion_1),
         stringResource(R.string.discover_suggestion_2),
@@ -63,8 +79,7 @@ fun DiscoverEmptyState(
     }
 }
 
-/** ERROR state: non-connectivity catalog failure with a retry action. */
-@Composable
+/** ERROR state: non-connectivity catalog failure with a retry action. */@Composable
 fun DiscoverErrorState(
     onRetry: () -> Unit,
     modifier: Modifier = Modifier
@@ -167,4 +182,41 @@ private fun DiscoverFeedbackBody(text: String) {
         color = NextPageColors.textSecondary,
         textAlign = TextAlign.Center
     )
+}
+
+/**
+ * U5 legal-empty state: the catalog matched books but the active
+ * universal-source filter narrowed them to zero. Names the filtered source
+ * so "sin coincidencias legales" never reads as "sin resultados".
+ */
+@Composable
+private fun DiscoverLegalEmptyState(
+    query: String,
+    sourceName: String,
+    onSuggestionClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val suggestions = listOf(
+        stringResource(R.string.discover_suggestion_1),
+        stringResource(R.string.discover_suggestion_2),
+        stringResource(R.string.discover_suggestion_3)
+    )
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        DiscoverIllustration(icon = NextPageIcons.Search, tint = NextPageColors.textSecondary)
+        Spacer(modifier = Modifier.height(16.dp))
+        DiscoverFeedbackTitle(stringResource(R.string.discover_empty_legal_title))
+        Spacer(modifier = Modifier.height(8.dp))
+        DiscoverFeedbackBody(stringResource(R.string.discover_empty_legal_body, sourceName, query))
+        Spacer(modifier = Modifier.height(20.dp))
+        DiscoverChipRow(
+            chips = suggestions.map { DiscoverChip(label = it) },
+            onChipClick = { index -> onSuggestionClick(suggestions[index]) }
+        )
+    }
 }

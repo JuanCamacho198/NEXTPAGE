@@ -12,7 +12,13 @@ import com.nextpage.data.remote.catalog.CatalogProvider
 import com.nextpage.data.remote.catalog.CatalogSourceInfo
 import com.nextpage.data.remote.catalog.CatalogSourceKind
 import com.nextpage.data.remote.catalog.CatalogSources
+import com.nextpage.data.remote.catalog.addonSource
 import com.nextpage.domain.connectivity.AlwaysOnlineConnectivityObserver
+import com.nextpage.domain.access.resolveAccess
+import com.nextpage.domain.access.LegalAccess
+import com.nextpage.presentation.feature.discover.AccessResolverState
+import com.nextpage.presentation.feature.discover.AddonReadState
+import com.nextpage.presentation.feature.discover.mapAccessState
 import com.nextpage.domain.usecase.DownloadAndImportBookUseCase
 import com.nextpage.domain.usecase.DownloadImportState
 import com.nextpage.domain.connectivity.ConnectivityObserver
@@ -75,6 +81,20 @@ data class DiscoverUiState(
     val detail: CatalogBook? = null,
     val detailStatus: DiscoverDetailStatus = DiscoverDetailStatus.CLOSED,
     /**
+     * U5 "Dónde leerlo" access state for the open detail book, mapped via
+     * [mapAccessState]: loading/skeleton while the detail fetch is in
+     * flight, then loaded/empty/error/offline/consent-gated.
+     */
+    val accessState: AccessResolverState = AccessResolverState.Loading,
+    /**
+     * U5 addon-resolved items sheet for the open detail book. [Hidden] by
+     * default; [openAddonRead] drives Resolving → Loaded/Empty/Error or the
+     * [AddonReadState.ConsentRequired] gate.
+     */
+    val addonRead: AddonReadState = AddonReadState.Hidden,
+    /** Display name of the addon owning [addonRead] (manifest name). */
+    val addonReadName: String = "",
+    /**
      * IDLE featured rails, in design order (newest first, then popular).
      * Empty while a search flow owns the screen; each rail independently resolves
      * to Hidden so a failed rail never renders a placeholder section.
@@ -118,7 +138,24 @@ class DiscoverViewModel(
      * install/enable/disable/uninstall refreshes the source set (and therefore
      * the filter chips and addon rails). Null means "registry not observed".
      */
-    private val registerAddonChangeListener: (((Int) -> Unit) -> Unit)? = null
+    private val registerAddonChangeListener: (((Int) -> Unit) -> Unit)? = null,
+    /**
+     * U5: per-addon disclosure-consent lookup for the access section's
+     * consent gate. Production wires the registry's durable store; the
+     * default (all-consented) keeps unit tests focused on the mapping.
+     */
+    private val addonConsent: (String) -> Boolean = { true },
+    /**
+     * U5: persists a disclosure-consent decision. Production wires the
+     * registry's durable store (record/revoke); defaults no-op for tests.
+     */
+    private val onAddonConsentChange: (addonId: String, granted: Boolean) -> Unit = { _, _ -> },
+    /**
+     * U5: resolves an addon book to its provider items. Production builds
+     * an ephemeral provider over the installed manifest; null (tests, or
+     * uninstalled addon) resolves to [AddonReadState.Empty].
+     */
+    private val addonResolve: (suspend (addonId: String, book: CatalogBook) -> LegalAccess)? = null
 ) : ViewModel() {
 
     private val initialOnline = connectivityObserver.current()
@@ -216,11 +253,28 @@ class DiscoverViewModel(
             _uiState.update { it.copy(download = DownloadImportState.Idle) }
         }
         viewModelScope.launch {
-            _uiState.update { it.copy(detailStatus = DiscoverDetailStatus.LOADING, detail = null) }
+            _uiState.update {
+                it.copy(
+                    detailStatus = DiscoverDetailStatus.LOADING,
+                    detail = null,
+                    accessState = AccessResolverState.Loading
+                )
+            }
             try {
                 val detail = catalogProvider.getDetails(id)
                 _uiState.update {
-                    it.copy(detailStatus = DiscoverDetailStatus.LOADED, detail = detail)
+                    val addonId = CatalogSources.addonIdOf(detail.provider)
+                    it.copy(
+                        detailStatus = DiscoverDetailStatus.LOADED,
+                        detail = detail,
+                        accessState = mapAccessState(
+                            isOnline = it.isOnline,
+                            consentRequiredAddonId = addonId,
+                            hasConsent = addonId?.let(addonConsent) ?: true,
+                            access = resolveAccess(detail),
+                            failed = false
+                        )
+                    )
                 }
             } catch (err: CancellationException) {
                 throw err
@@ -233,7 +287,14 @@ class DiscoverViewModel(
                         } else {
                             DiscoverDetailStatus.ERROR
                         },
-                        detail = null
+                        detail = null,
+                        accessState = mapAccessState(
+                            isOnline = it.isOnline,
+                            consentRequiredAddonId = null,
+                            hasConsent = true,
+                            access = null,
+                            failed = true
+                        )
                     )
                 }
             }
@@ -241,7 +302,131 @@ class DiscoverViewModel(
     }
 
     fun dismissDetail() {
-        _uiState.update { it.copy(detail = null, detailStatus = DiscoverDetailStatus.CLOSED) }
+        _uiState.update {
+            it.copy(
+                detail = null,
+                detailStatus = DiscoverDetailStatus.CLOSED,
+                accessState = AccessResolverState.Loading,
+                addonRead = AddonReadState.Hidden,
+                addonReadName = ""
+            )
+        }
+    }
+
+    /**
+     * U5: opens the addon items sheet for an addon-sourced detail book.
+     *
+     * Fail-closed: without disclosure consent no resolve runs (zero I/O)
+     * and the sheet prompts for consent; with consent the ephemeral
+     * provider resolve runs and maps to Loaded/Empty/Error. A null
+     * [addonResolve] (tests) resolves consented books to Empty.
+     */
+    fun openAddonRead(addonId: String, addonName: String) {
+        val book = _uiState.value.detail ?: return
+        if (book.provider != addonSource(addonId)) return
+        pendingAddonReadId = addonId
+        _uiState.update { it.copy(addonReadName = addonName) }
+        if (!addonConsent(addonId)) {
+            _uiState.update { it.copy(addonRead = AddonReadState.ConsentRequired) }
+            return
+        }
+        resolveAddonRead(addonId, book)
+    }
+
+    /** U5: hides the addon items sheet (resolve job keeps its outcome). */
+    fun dismissAddonRead() {
+        pendingAddonReadId = null
+        _uiState.update { it.copy(addonRead = AddonReadState.Hidden, addonReadName = "") }
+    }
+
+    /** U5: retries the pending addon resolve (no-op without a pending id). */
+    fun retryAddonRead() {
+        val addonId = pendingAddonReadId ?: return
+        val book = _uiState.value.detail ?: return
+        resolveAddonRead(addonId, book)
+    }
+
+    /**
+     * U5: records disclosure consent for [addonId] durably, then refreshes
+     * both the access section gate and the pending addon resolve.
+     */
+    fun grantAccessConsent(addonId: String) {
+        onAddonConsentChange(addonId, true)
+        val book = _uiState.value.detail
+        if (book != null) {
+            _uiState.update {
+                it.copy(
+                    accessState = mapAccessState(
+                        isOnline = it.isOnline,
+                        consentRequiredAddonId = CatalogSources.addonIdOf(book.provider),
+                        hasConsent = true,
+                        access = resolveAccess(book),
+                        failed = false
+                    )
+                )
+            }
+            if (_uiState.value.addonRead == AddonReadState.ConsentRequired &&
+                pendingAddonReadId == addonId
+            ) {
+                resolveAddonRead(addonId, book)
+            }
+        }
+    }
+
+    /**
+     * U5: records consent for the pending addon sheet ([openAddonRead]
+     * target) and resolves it. No-op without a pending id.
+     */
+    fun grantAddonReadConsent() {
+        pendingAddonReadId?.let { grantAccessConsent(it) }
+    }
+
+    /**
+     * U5: "not now" — no consent is recorded; the access section falls back
+     * to Empty and a pending addon sheet hides. Nothing is resolved.
+     */
+    fun denyAccessConsent() {
+        pendingAddonReadId = null
+        _uiState.update {
+            it.copy(
+                accessState = if (it.accessState is AccessResolverState.ConsentRequired) {
+                    AccessResolverState.Empty
+                } else {
+                    it.accessState
+                },
+                addonRead = AddonReadState.Hidden,
+                addonReadName = ""
+            )
+        }
+    }
+
+    private var pendingAddonReadId: String? = null
+
+    private fun resolveAddonRead(addonId: String, book: CatalogBook) {
+        val resolve = addonResolve
+        if (resolve == null) {
+            _uiState.update { it.copy(addonRead = AddonReadState.Empty) }
+            return
+        }
+        viewModelScope.launch(mainDispatcher) {
+            _uiState.update { it.copy(addonRead = AddonReadState.Resolving) }
+            try {
+                val access = resolve(addonId, book)
+                _uiState.update {
+                    it.copy(
+                        addonRead = if (access.options.isEmpty() && !access.canDownloadInApp) {
+                            AddonReadState.Empty
+                        } else {
+                            AddonReadState.Loaded(access)
+                        }
+                    )
+                }
+            } catch (err: CancellationException) {
+                throw err
+            } catch (_: Throwable) {
+                _uiState.update { it.copy(addonRead = AddonReadState.Error) }
+            }
+        }
     }
 
     /**
@@ -561,7 +746,10 @@ class DiscoverViewModelFactory(
     private val debounceMillis: Long = DiscoverViewModel.DEFAULT_DEBOUNCE_MS,
     private val downloadAndImportBookUseCase: DownloadAndImportBookUseCase? = null,
     private val addonNames: (String) -> String? = { null },
-    private val registerAddonChangeListener: (((Int) -> Unit) -> Unit)? = null
+    private val registerAddonChangeListener: (((Int) -> Unit) -> Unit)? = null,
+    private val addonConsent: (String) -> Boolean = { true },
+    private val onAddonConsentChange: (String, Boolean) -> Unit = { _, _ -> },
+    private val addonResolve: (suspend (String, CatalogBook) -> LegalAccess)? = null
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -573,7 +761,10 @@ class DiscoverViewModelFactory(
                 debounceMillis = debounceMillis,
                 downloadAndImportBookUseCase = downloadAndImportBookUseCase,
                 addonNames = addonNames,
-                registerAddonChangeListener = registerAddonChangeListener
+                registerAddonChangeListener = registerAddonChangeListener,
+                addonConsent = addonConsent,
+                onAddonConsentChange = onAddonConsentChange,
+                addonResolve = addonResolve
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

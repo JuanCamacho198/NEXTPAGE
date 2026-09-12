@@ -43,6 +43,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nextpage.R
 import com.nextpage.data.remote.addons.AddonRegistryLike
 import com.nextpage.data.remote.addons.InstalledAddonRow
+import com.nextpage.presentation.feature.discover.AddonCapabilityBadges
+import com.nextpage.presentation.feature.discover.AddonTrustNote
 import com.nextpage.presentation.viewmodel.AddonSettingsUiState
 import com.nextpage.presentation.viewmodel.AddonSettingsViewModel
 import com.nextpage.ui.components.atoms.NextPageButton
@@ -63,7 +65,11 @@ import com.nextpage.ui.icons.NextPageIcons
 @Composable
 fun AddonManagementRoute(
     registry: AddonRegistryLike,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    hasConsent: (String) -> Boolean = { false },
+    onConsentChange: (String, Boolean) -> Unit = { _, _ -> },
+    onNavigateToLegal: () -> Unit = {},
+    onOpenCapabilities: (String) -> Unit = {}
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -71,7 +77,9 @@ fun AddonManagementRoute(
     val viewModel: AddonSettingsViewModel = viewModel(
         factory = AddonSettingsViewModelFactory(
             registry = registry,
-            onError = { errorMessage = it }
+            onError = { errorMessage = it },
+            hasConsent = hasConsent,
+            onConsentChange = onConsentChange
         )
     )
 
@@ -91,6 +99,9 @@ fun AddonManagementRoute(
         onInstall = viewModel::install,
         onToggle = viewModel::toggle,
         onUninstall = viewModel::uninstall,
+        onConsentChange = viewModel::setConsent,
+        onNavigateToLegal = onNavigateToLegal,
+        onOpenCapabilities = onOpenCapabilities,
         onBack = onBack
     )
 }
@@ -98,12 +109,14 @@ fun AddonManagementRoute(
 /** Factory wiring [AddonSettingsViewModel] to the app-scoped addon registry. */
 class AddonSettingsViewModelFactory(
     private val registry: AddonRegistryLike,
-    private val onError: (String) -> Unit
+    private val onError: (String) -> Unit,
+    private val hasConsent: (String) -> Boolean = { false },
+    private val onConsentChange: (String, Boolean) -> Unit = { _, _ -> }
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(AddonSettingsViewModel::class.java)) {
-            return AddonSettingsViewModel(registry, onError) as T
+            return AddonSettingsViewModel(registry, onError, hasConsent, onConsentChange) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }
@@ -124,6 +137,9 @@ fun AddonManagementScreen(
     onUninstall: (String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onConsentChange: (String, Boolean) -> Unit = { _, _ -> },
+    onNavigateToLegal: () -> Unit = {},
+    onOpenCapabilities: (String) -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }
 ) {
     Scaffold(
@@ -196,12 +212,17 @@ fun AddonManagementScreen(
                         AddonRow(
                             row = row,
                             isBusy = uiState.isBusy,
+                            hasConsent = row.id in uiState.consentedIds,
                             onToggle = onToggle,
-                            onUninstall = onUninstall
+                            onUninstall = onUninstall,
+                            onConsentChange = onConsentChange,
+                            onOpenCapabilities = onOpenCapabilities
                         )
                     }
                 }
             }
+
+            AddonTrustNote(onViewPolicy = onNavigateToLegal)
         }
     }
 }
@@ -210,8 +231,11 @@ fun AddonManagementScreen(
 private fun AddonRow(
     row: InstalledAddonRow,
     isBusy: Boolean,
+    hasConsent: Boolean,
     onToggle: (String, Boolean) -> Unit,
-    onUninstall: (String) -> Unit
+    onUninstall: (String) -> Unit,
+    onConsentChange: (String, Boolean) -> Unit,
+    onOpenCapabilities: (String) -> Unit
 ) {
     var showUninstallDialog by remember { mutableStateOf(false) }
     val toggleDescription = stringResource(
@@ -220,45 +244,85 @@ private fun AddonRow(
     val stateCaption = stringResource(
         if (row.enabled) R.string.settings_addons_state_enabled else R.string.settings_addons_state_disabled
     )
+    val consentCaption = stringResource(
+        if (hasConsent) {
+            R.string.addon_consent_state_granted
+        } else {
+            R.string.addon_consent_state_missing
+        }
+    )
 
     Card(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.padding(16.dp).fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = row.manifest.name,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium
+        Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = row.manifest.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "v${row.manifest.version} \u00B7 $stateCaption",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Spacer(Modifier.width(12.dp))
+
+                Switch(
+                    checked = row.enabled,
+                    onCheckedChange = { checked -> onToggle(row.id, checked) },
+                    enabled = !isBusy,
+                    modifier = Modifier.semantics { contentDescription = toggleDescription }
                 )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = "v${row.manifest.version} \u00B7 $stateCaption",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+
+                Spacer(Modifier.width(8.dp))
+
+                TextButton(
+                    onClick = { showUninstallDialog = true },
+                    enabled = !isBusy
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_addons_uninstall),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             }
 
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.height(8.dp))
 
-            Switch(
-                checked = row.enabled,
-                onCheckedChange = { checked -> onToggle(row.id, checked) },
-                enabled = !isBusy,
-                modifier = Modifier.semantics { contentDescription = toggleDescription }
-            )
+            AddonCapabilityBadges(capabilities = row.manifest.capabilities)
 
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.height(8.dp))
 
-            TextButton(
-                onClick = { showUninstallDialog = true },
-                enabled = !isBusy
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = stringResource(R.string.settings_addons_uninstall),
-                    color = MaterialTheme.colorScheme.error
+                Switch(
+                    checked = hasConsent,
+                    onCheckedChange = { granted -> onConsentChange(row.id, granted) },
+                    enabled = !isBusy,
+                    modifier = Modifier.semantics { contentDescription = consentCaption }
                 )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = consentCaption,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+                TextButton(
+                    onClick = { onOpenCapabilities(row.id) },
+                    enabled = !isBusy
+                ) {
+                    Text(text = stringResource(R.string.addon_capabilities_title))
+                }
             }
         }
     }

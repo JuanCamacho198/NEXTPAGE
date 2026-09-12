@@ -16,12 +16,51 @@ import com.nextpage.data.remote.catalog.shouldRetryStatus
 import kotlinx.coroutines.delay
 import com.nextpage.data.remote.catalog.mapHttpStatusToCode
 import com.nextpage.data.remote.catalog.resolveDownloadUrl
+import com.nextpage.domain.access.AccessGroup
+import com.nextpage.domain.access.AccessOption
+import com.nextpage.domain.access.LegalAccess
+import com.nextpage.domain.access.resolveAccess as resolveU3Access
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+
+/**
+ * U4 external-open link title (localized copy, if any, belongs to U5).
+ */
+private const val TITLE_OPEN_EXTERNAL = "Open"
+
+/**
+ * U4 v2 resolve item: per-item `accessType`/`license`/`readUrl`/
+ * `downloadUrl`. Unknown access types parse to null and fail closed
+ * ([mayDownloadInApp] requires an explicit free or cleared license, so an
+ * unknown item is never downloadable); its `readUrl` may still surface as
+ * an external-open link.
+ */
+data class AddonResolveItem(
+    val accessType: AddonAccessType?,
+    val license: String?,
+    val readUrl: String?,
+    val downloadUrl: String?
+) {
+    /** Only `free` (or license-cleared) items with an https download may flow in-app. */
+    val mayDownloadInApp: Boolean
+        get() = (accessType == AddonAccessType.FREE || ManifestValidator.isLicenseCleared(license)) &&
+            downloadUrl != null
+
+    /** External-open link for this item, or null when it has no https read URL. */
+    fun toExternalOption(): AccessOption? {
+        val url = readUrl ?: return null
+        val group = when (accessType) {
+            AddonAccessType.BUY -> AccessGroup.BUY
+            AddonAccessType.SUBSCRIBE -> AccessGroup.SUBSCRIBE
+            else -> AccessGroup.FREE
+        }
+        return AccessOption(group, TITLE_OPEN_EXTERNAL, url, opensInApp = false)
+    }
+}
 
 /**
  * One [CatalogProvider] per installed addon manifest. Sources are
@@ -32,12 +71,18 @@ import kotlinx.serialization.json.JsonPrimitive
  * HttpClient) and parse them into CatalogBooks with provider = the addon
  * source id. Endpoint-less manifests stay browse-only: stable empty page /
  * NOT_FOUND, zero I/O. Mirrors desktop AddonCatalogProvider.ts.
+ *
+ * U4: v2 manifests MAY also declare `resolveUrl` + `capabilities`.
+ * [resolveAccess] renders `resolveUrl` from the book identity, but only
+ * after per-addon disclosure consent was recorded in [consent] — without
+ * consent it returns an empty [LegalAccess] with zero I/O.
  */
 class AddonCatalogProvider(
     manifest: AddonManifest,
     addonId: String,
     private val transport: AddonHttpTransport?,
-    private val retryDelayMs: Long = RETRY_BASE_DELAY_MS
+    private val retryDelayMs: Long = RETRY_BASE_DELAY_MS,
+    private val consent: AddonConsentStore = InMemoryAddonConsentStore()
 ) : CatalogProvider {
 
     init {
@@ -55,6 +100,11 @@ class AddonCatalogProvider(
 
     private val searchUrl: String? = manifest.searchUrl
     private val detailsUrl: String? = manifest.detailsUrl
+    private val resolveUrl: String? = manifest.resolveUrl
+    private val addonIdKey: String = addonId
+
+    /** U4: declared v2 capabilities, disclosed before consent is recorded (U5 UI). */
+    val capabilities: List<String> = manifest.capabilities
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -116,6 +166,30 @@ class AddonCatalogProvider(
     override fun resolveDownloadUrl(formats: Map<String, String>, preferEpub: Boolean): String =
         resolveDownloadUrl(formats, preferEpub)
 
+    /**
+     * U4 consent-gated resolve. Without recorded consent for this addon —
+     * or without a `resolveUrl` capability — returns an empty [LegalAccess]
+     * with zero I/O. With consent, `resolveUrl` renders from the book
+     * identity (`{isbn}`, `{title}`, `{author}`, `{openLibraryId}`,
+     * `{googleBooksId}`), the free-gate admits only `free`/license-cleared
+     * items to the in-app download path, everything else surfaces as
+     * external-open links, and the in-app download additionally reuses the
+     * U3 gate (`isPublicDomain == true` on the book).
+     */
+    suspend fun resolveAccess(book: CatalogBook): LegalAccess {
+        if (!consent.hasConsent(addonIdKey)) return LegalAccess(book.id, false, null, emptyList())
+        val template = resolveUrl ?: return LegalAccess(book.id, false, null, emptyList())
+        val items = parseResolvePayload(fetchJson(renderTemplate(template, resolveParams(book))))
+        val candidate = items.firstOrNull { it.mayDownloadInApp }?.downloadUrl
+        val gate = resolveU3Access(book.copy(downloadUrl = candidate))
+        return LegalAccess(
+            bookId = book.id,
+            canDownloadInApp = gate.canDownloadInApp,
+            downloadUrl = gate.downloadUrl,
+            options = items.mapNotNull { it.toExternalOption() }
+        )
+    }
+
     companion object {
         /** Parity with desktop encodeURIComponent: spaces are %20, never +. */
         private fun encodeValue(value: String): String =
@@ -123,11 +197,27 @@ class AddonCatalogProvider(
 
         private val BROWSE_ONLY_PAGE = PagedResult(emptyList(), null, 0)
 
+        /** U4 resolveUrl template keys, rendered from the U3 book identity. */
+        private const val PARAM_ISBN = "isbn"
+        private const val PARAM_TITLE = "title"
+        private const val PARAM_AUTHOR = "author"
+        private const val PARAM_OPEN_LIBRARY_ID = "openLibraryId"
+        private const val PARAM_GOOGLE_BOOKS_ID = "googleBooksId"
+
         /** Substitute `{placeholders}` in a validated endpoint template. */
         internal fun renderTemplate(template: String, params: Map<String, String>): String =
             Regex("\\{(\\w+)\\}").replace(template) { match ->
                 params[match.groupValues[1]] ?: match.value
             }
+
+        /** U4: identity params for a resolveUrl template (missing identity ⇒ empty). */
+        private fun resolveParams(book: CatalogBook): Map<String, String> = mapOf(
+            PARAM_ISBN to encodeValue(book.isbn13 ?: book.isbn10 ?: ""),
+            PARAM_TITLE to encodeValue(book.title),
+            PARAM_AUTHOR to encodeValue(book.authors.firstOrNull() ?: ""),
+            PARAM_OPEN_LIBRARY_ID to encodeValue(book.openLibraryWorkId ?: ""),
+            PARAM_GOOGLE_BOOKS_ID to encodeValue(book.googleBooksId ?: "")
+        )
 
         private fun httpsOrNull(value: JsonElement?): String? =
             ((value as? JsonPrimitive)?.takeIf { it !is JsonNull }?.content)
@@ -161,6 +251,29 @@ class AddonCatalogProvider(
                 subjects = stringArray(obj["subjects"], "subjects"),
                 downloadUrl = httpsOrNull(obj["downloadUrl"])
             )
+        }
+
+        /**
+         * U4: parse a resolve payload (`{"results": [...]}`) into access
+         * items. `accessType`/`license`/`readUrl`/`downloadUrl` are all
+         * optional per item; non-https URLs are dropped (never fail the
+         * whole payload); unknown `accessType` parses to null (fail closed
+         * for the download path at [AddonResolveItem.mayDownloadInApp]).
+         */
+        internal fun parseResolvePayload(payload: JsonElement): List<AddonResolveItem> {
+            val obj = payload as? JsonObject ?: malformed("resolve payload must be an object with a results array")
+            val results = obj["results"] as? JsonArray ?: malformed("resolve payload must be an object with a results array")
+            return results.mapIndexed { i, element ->
+                val entry = element as? JsonObject ?: malformed("resolve item $i must be an object")
+                AddonResolveItem(
+                    accessType = ManifestValidator.parseAccessType(
+                        (entry["accessType"] as? JsonPrimitive)?.takeIf { it !is JsonNull }?.content
+                    ),
+                    license = (entry["license"] as? JsonPrimitive)?.takeIf { it !is JsonNull }?.content,
+                    readUrl = httpsOrNull(entry["readUrl"]),
+                    downloadUrl = httpsOrNull(entry["downloadUrl"])
+                )
+            }
         }
 
         internal fun parseSearchPayload(payload: JsonElement, sourceId: String, page: Int): PagedResult {

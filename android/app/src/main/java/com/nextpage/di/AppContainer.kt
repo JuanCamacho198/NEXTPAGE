@@ -103,6 +103,10 @@ class AppContainer(context: Context) {
     }
     val addonRegistry: com.nextpage.data.remote.addons.AddonRegistry by lazy { networkModule.addonRegistry }
 
+    /** U5: ephemeral per-addon reading-link resolve for the detail sheet. */
+    val addonResolveForBook: suspend (String, com.nextpage.data.remote.catalog.CatalogBook) -> com.nextpage.domain.access.LegalAccess
+        by lazy { networkModule.addonResolveForBook }
+
     // ── addon-deeplink-v1: pending install deep links (B2/B3) ──────────
     // Main-scoped: onInstallUri/confirm mutate StateFlow read by the Compose
     // dialog host in NextPageNavHost root.

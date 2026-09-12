@@ -69,6 +69,13 @@ android {
         val googleOAuthAndroidClientId = (localProperties.getProperty("google.oauth.android.client.id") ?: "").escapeForBuildConfig()
         buildConfigField("String", "GOOGLE_OAUTH_ANDROID_CLIENT_ID", "\"$googleOAuthAndroidClientId\"")
 
+        // Google Books API key (U2) — read from local.properties (gitignored).
+        // When absent/blank the Google Books provider is omitted from the DI
+        // list (fail-closed) and the app keeps working on Open Library +
+        // Gutenberg. The real key has NOT been provided yet.
+        val googleBooksKey = (localProperties.getProperty("GOOGLE_BOOKS_KEY") ?: "").escapeForBuildConfig()
+        buildConfigField("String", "GOOGLE_BOOKS_KEY", "\"$googleBooksKey\"")
+
         // Drive OAuth redirect scheme injected into AndroidManifest.xml intent-filter.
         // Derived from the Android client ID (Google's reserved native-app pattern)
         // so the client ID literal never lives in the manifest or in Kotlin code.

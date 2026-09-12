@@ -11,5 +11,10 @@
         <domain includeSubdomains="true">gutendex.com</domain>
         <domain includeSubdomains="true">openlibrary.org</domain>
         <domain includeSubdomains="true">archive.org</domain>
+        <!-- U2: Google Books volumes API (HTTPS-only; googleapis.com entry
+             above already covers it via includeSubdomains, listed explicitly
+             so the allowlist is auditable). -->
+        <domain includeSubdomains="true">books.googleapis.com</domain>
+        <domain includeSubdomains="true">www.googleapis.com</domain>
     </domain-config>
 </network-security-config>

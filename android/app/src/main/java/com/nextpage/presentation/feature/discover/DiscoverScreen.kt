@@ -11,11 +11,19 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nextpage.R
+import com.nextpage.data.remote.catalog.CatalogSources
+import com.nextpage.data.session.LegalDisclaimerPrefs
+import com.nextpage.presentation.feature.legal.LegalNoticeDialog
+import com.nextpage.presentation.viewmodel.DiscoverSourceFilter
 import com.nextpage.presentation.viewmodel.DiscoverStatus
 import com.nextpage.presentation.viewmodel.DiscoverUiState
 import com.nextpage.presentation.viewmodel.DiscoverViewModel
@@ -25,6 +33,10 @@ import com.nextpage.ui.icons.NextPageIcons
  * Discover shell: header, search field, trending chips, then exactly one body
  * state. The body is owned per state — rails own their Loading/Loaded/Hidden
  * lifecycle, so the shell never shows a screen-level spinner for them.
+ *
+ * U5 hosts the one-time legal disclaimer dialog here: it shows on entry
+ * until [LegalDisclaimerPrefs] records acceptance (durable across
+ * restarts), with a direct route to the legal policy page.
  *
  * @param userInitial Initial of the signed-in user, resolved by the nav call site
  *   (the screen no longer reaches into a service locator). Null renders a
@@ -38,10 +50,24 @@ fun DiscoverScreen(
     viewModel: DiscoverViewModel,
     userInitial: String? = null,
     onOpenSection: (DiscoverRailState.Loaded, String) -> Unit = { _, _ -> },
-    onNavigateToSettingsAddons: () -> Unit = {}
+    onNavigateToSettingsAddons: () -> Unit = {},
+    onNavigateToLegalPolicy: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val trendingChips = trendingChips()
+    val context = LocalContext.current
+    val disclaimerPrefs = remember { LegalDisclaimerPrefs(context) }
+    var showDisclaimer by remember { mutableStateOf(!disclaimerPrefs.hasAccepted()) }
+    if (showDisclaimer) {
+        LegalNoticeDialog(
+            onAccept = {
+                disclaimerPrefs.accept()
+                showDisclaimer = false
+            },
+            onViewPolicy = onNavigateToLegalPolicy,
+            onDismiss = { showDisclaimer = false }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -112,7 +138,9 @@ fun DiscoverScreen(
                     onSuggestionClick = { term ->
                         viewModel.onQueryChange(term)
                         viewModel.searchFirstPage()
-                    }
+                    },
+                    legalEmpty = isLegalEmpty(uiState),
+                    sourceName = legalEmptySourceName(uiState)
                 )
                 DiscoverStatus.ERROR -> DiscoverErrorState(onRetry = viewModel::retry)
                 DiscoverStatus.OFFLINE -> DiscoverOfflineState(onRetry = viewModel::retry)
@@ -133,7 +161,29 @@ fun DiscoverScreen(
             download = uiState.download,
             onDownload = viewModel::startDownload,
             onCancelDownload = viewModel::cancelDownload,
-            onDismiss = viewModel::dismissDetail
+            onDismiss = viewModel::dismissDetail,
+            accessState = uiState.accessState,
+            addonRead = uiState.addonRead,
+            addonReadName = uiState.addonReadName,
+            addonName = detailAddonName(uiState),
+            onOpenAddonRead = { addonId ->
+                viewModel.openAddonRead(
+                    addonId,
+                    uiState.attributionNames[addonId] ?: addonId
+                )
+            },
+            onAllowAccessConsent = {
+                (uiState.accessState as? AccessResolverState.ConsentRequired)
+                    ?.addonId?.let(viewModel::grantAccessConsent)
+            },
+            onDenyAccessConsent = viewModel::denyAccessConsent,
+            onAllowAddonConsent = viewModel::grantAddonReadConsent,
+            onDenyAddonConsent = viewModel::denyAccessConsent,
+            onDismissAddonRead = viewModel::dismissAddonRead,
+            onRetryAddonRead = viewModel::retryAddonRead,
+            onRetryAccess = {
+                uiState.detail?.id?.let(viewModel::openDetail)
+            }
         )
     }
 }
@@ -187,3 +237,26 @@ private fun trendingChips(): List<DiscoverChip> = listOf(
     DiscoverChip(label = stringResource(R.string.discover_trending_scifi), icon = NextPageIcons.Sparkle),
     DiscoverChip(label = stringResource(R.string.discover_trending_classics), icon = NextPageIcons.Book)
 )
+
+/**
+ * U5: true when a universal-source chip narrowed a non-empty result list to
+ * zero visible books — "sin coincidencias legales" in the filtered source,
+ * not a globally empty catalog.
+ */
+private fun isLegalEmpty(uiState: DiscoverUiState): Boolean =
+    uiState.books.isNotEmpty() &&
+        uiState.visibleBooks.isEmpty() &&
+        uiState.sourceFilter is DiscoverSourceFilter.Source
+
+/** Display name of the source filter causing [isLegalEmpty], if known. */
+@Composable
+private fun legalEmptySourceName(uiState: DiscoverUiState): String? {
+    val filter = uiState.sourceFilter as? DiscoverSourceFilter.Source ?: return null
+    return uiState.sources.find { it.sourceId == filter.sourceId }?.name
+}
+
+/** Display name of the addon that sourced the open detail book, if any. */
+private fun detailAddonName(uiState: DiscoverUiState): String? {
+    val addonId = uiState.detail?.provider?.let(CatalogSources::addonIdOf) ?: return null
+    return uiState.attributionNames[addonId]
+}

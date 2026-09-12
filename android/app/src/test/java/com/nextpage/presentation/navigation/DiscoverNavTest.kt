@@ -2,6 +2,7 @@ package com.nextpage.presentation.navigation
 
 import com.nextpage.R
 import com.nextpage.data.remote.catalog.CatalogFeaturedSort
+import com.nextpage.presentation.feature.legal.addonCapabilitiesRoute
 import com.nextpage.presentation.navigation.feature.discoverSectionRoute
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -48,5 +49,17 @@ class DiscoverNavTest {
         val route = discoverSectionRoute("Gutendex", null, "builtin:gutendex")
         assertTrue(route.contains("&sort=&"))
         assertTrue(route.endsWith("&sourceId=builtin%3Agutendex"))
+    }
+
+    @Test
+    fun settingsLegal_usesLegalRoute() {
+        assertEquals("settings/legal", NextPageDestination.SettingsLegal.route)
+    }
+
+    @Test
+    fun addonCapabilitiesRoute_carriesAddonId() {
+        val route = addonCapabilitiesRoute("abc123")
+        assertEquals("settings/addon-capabilities/abc123", route)
+        assertTrue(NextPageDestination.SettingsAddonCapabilities.route.contains("{addonId}"))
     }
 }

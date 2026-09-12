@@ -171,7 +171,8 @@ class DiscoverCacheTest {
         val hit = catalog.search("pride", 1)
         val prideMiss = miss.results.first { it.id == "gutendex:1342" }
         val prideHit = hit.results.first { it.id == "gutendex:1342" }
-        assertEquals("https://covers.openlibrary.org/b/id/6794977-M.jpg", prideMiss.coverUrl)
+        // U2: Gutenberg-derived cover (record id) wins over the OL fallback.
+        assertEquals("https://www.gutenberg.org/cache/epub/1342/pg1342.cover.medium.jpg", prideMiss.coverUrl)
         assertEquals(prideMiss, prideHit)
     }
 

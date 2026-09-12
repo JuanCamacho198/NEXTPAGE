@@ -47,6 +47,7 @@ interface AddonRegistryLike {
 class AddonRegistry(
     private val dao: AddonDao,
     private val transport: AddonHttpTransport,
+    val consent: AddonConsentStore = InMemoryAddonConsentStore(),
     private val now: () -> Long = { System.currentTimeMillis() }
 ) : AddonRegistryLike {
 
@@ -62,6 +63,19 @@ class AddonRegistry(
         mutationVersion += 1
         for (listener in changeListeners.toList()) listener(mutationVersion)
     }
+
+    /**
+     * U4: record capability-disclosure consent for [addonId] (idempotent —
+     * recorded once per addon). Called after the disclosure surface (U5 UI);
+     * until recorded, [AddonCatalogProvider.resolveAccess] stays empty.
+     */
+    fun recordAddonConsent(addonId: String) = consent.recordConsent(addonId)
+
+    /** U4: true once disclosure consent was recorded for [addonId]. */
+    fun hasAddonConsent(addonId: String): Boolean = consent.hasConsent(addonId)
+
+    /** U4: withdraw disclosure consent for [addonId] (resolve goes empty again). */
+    fun revokeAddonConsent(addonId: String) = consent.revokeConsent(addonId)
 
     /** install(url): HTTPS check → fetch → validate → addonId → upsert preserving enabled. */
     override suspend fun install(url: String): AddonManifest {
@@ -123,6 +137,12 @@ class AddonRegistry(
                 ).apply {
                     manifest.searchUrl?.let { put("searchUrl", it) }
                     manifest.detailsUrl?.let { put("detailsUrl", it) }
+                    manifest.resolveUrl?.let { put("resolveUrl", it) }
+                    if (manifest.capabilities.isNotEmpty()) {
+                        put("capabilities", org.json.JSONArray().apply {
+                            manifest.capabilities.forEach { put(it) }
+                        })
+                    }
                 }.toString(),
                 enabled = existing?.enabled ?: true,
                 addedAt = existing?.addedAt ?: now()
@@ -192,6 +212,12 @@ internal object AddonManifestJson {
         .apply {
             manifest.searchUrl?.let { put("searchUrl", it) }
             manifest.detailsUrl?.let { put("detailsUrl", it) }
+            manifest.resolveUrl?.let { put("resolveUrl", it) }
+            if (manifest.capabilities.isNotEmpty()) {
+                put("capabilities", org.json.JSONArray().apply {
+                    manifest.capabilities.forEach { put(it) }
+                })
+            }
         }
         .toString()
 }
@@ -204,8 +230,9 @@ fun catalogProvidersWithAddons(
     builtIns: List<CatalogProvider>,
     curated: CatalogProvider,
     installedAddons: List<InstalledAddonRow>,
-    addonTransport: AddonHttpTransport? = null
+    addonTransport: AddonHttpTransport? = null,
+    addonConsent: AddonConsentStore? = null
 ): List<CatalogProvider> =
     builtIns + curated + installedAddons
         .filter { it.enabled }
-        .map { AddonCatalogProvider(it.manifest, it.id, addonTransport) }
+        .map { AddonCatalogProvider(it.manifest, it.id, addonTransport, consent = addonConsent ?: InMemoryAddonConsentStore()) }

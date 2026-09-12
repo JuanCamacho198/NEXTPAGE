@@ -127,6 +127,7 @@ fun DiscoverCard(
             provider = book.provider,
             attributionNames = attributionNames
         )
+        AccessBadge(book = book)
     }
 }
 

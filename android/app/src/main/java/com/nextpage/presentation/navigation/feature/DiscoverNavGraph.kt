@@ -54,6 +54,9 @@ fun NavGraphBuilder.discoverGraph(
             },
             onNavigateToSettingsAddons = {
                 navController.navigate(NextPageDestination.SettingsAddons.route)
+            },
+            onNavigateToLegalPolicy = {
+                navController.navigate(NextPageDestination.SettingsLegal.route)
             }
         )
     }

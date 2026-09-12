@@ -23,6 +23,10 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,6 +40,8 @@ import com.nextpage.R
 import com.nextpage.data.remote.catalog.BUILTIN_GUTENDEX
 import com.nextpage.data.remote.catalog.BUILTIN_OPENLIBRARY
 import com.nextpage.data.remote.catalog.CatalogBook
+import com.nextpage.data.remote.catalog.CatalogSources
+import com.nextpage.domain.access.resolveAccess
 import com.nextpage.domain.usecase.DownloadImportState
 import com.nextpage.presentation.feature.library.formatFileSize
 import com.nextpage.presentation.theme.NextPageColors
@@ -45,6 +51,7 @@ import com.nextpage.ui.components.atoms.NextPageButton
 import com.nextpage.ui.components.atoms.NextPageButtonVariant
 import com.nextpage.ui.components.atoms.NextPageDivider
 import com.nextpage.ui.components.atoms.NextPageProgressBar
+import com.nextpage.ui.components.atoms.NextPageSkeletonBox
 
 /**
  * A derivable off-app link for a catalog book, with the label that names the
@@ -76,10 +83,31 @@ fun DiscoverDetailSheet(
     download: DownloadImportState = DownloadImportState.Idle,
     onDownload: (() -> Unit)? = null,
     onCancelDownload: () -> Unit = {},
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    /**
+     * U5 access state for the "Dónde leerlo" section. Null (the "Ver todo"
+     * section screen, whose ViewModel owns no access state) derives the
+     * generic U3 links locally — zero I/O, no consent needed.
+     */
+    accessState: AccessResolverState? = null,
+    /** U5 addon items sheet state ([AddonReadState.Hidden] hides it). */
+    addonRead: AddonReadState = AddonReadState.Hidden,
+    /** Display name of the addon owning [addonRead]. */
+    addonReadName: String = "",
+    /** Display name of the addon that sourced [detail], if any. */
+    addonName: String? = null,
+    onOpenAddonRead: (addonId: String) -> Unit = {},
+    onAllowAccessConsent: () -> Unit = {},
+    onDenyAccessConsent: () -> Unit = {},
+    onAllowAddonConsent: () -> Unit = {},
+    onDenyAddonConsent: () -> Unit = {},
+    onDismissAddonRead: () -> Unit = {},
+    onRetryAddonRead: () -> Unit = {},
+    onRetryAccess: () -> Unit = {}
 ) {
     if (detailStatus == DiscoverDetailStatus.CLOSED) return
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var showReadAccess by remember(detailStatus) { mutableStateOf(false) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -113,21 +141,75 @@ fun DiscoverDetailSheet(
                 detail = detail,
                 download = download,
                 onDownload = onDownload,
-                onCancelDownload = onCancelDownload
+                onCancelDownload = onCancelDownload,
+                accessState = accessState,
+                addonName = addonName,
+                onOpenReadAccess = { showReadAccess = true },
+                onOpenAddonRead = onOpenAddonRead,
+                onAllowAccessConsent = onAllowAccessConsent,
+                onDenyAccessConsent = onDenyAccessConsent,
+                onRetryAccess = onRetryAccess
             )
         }
     }
+
+    if (showReadAccess && detail != null &&
+        detailStatus != DiscoverDetailStatus.LOADING &&
+        detailStatus != DiscoverDetailStatus.NOT_FOUND
+    ) {
+        ReadAccessSheet(
+            state = accessState ?: remember(detail) { derivedAccess(detail) },
+            download = download,
+            onDownloadInApp = { onDownload?.invoke() },
+            onCancelDownload = onCancelDownload,
+            onRetry = onRetryAccess,
+            onAllowConsent = onAllowAccessConsent,
+            onDenyConsent = onDenyAccessConsent,
+            onDismiss = { showReadAccess = false }
+        )
+    }
+
+    if (addonRead != AddonReadState.Hidden) {
+        AddonReadSheet(
+            addonName = addonReadName,
+            state = addonRead,
+            onAllowConsent = onAllowAddonConsent,
+            onDenyConsent = onDenyAddonConsent,
+            onRetry = onRetryAddonRead,
+            onDismiss = onDismissAddonRead
+        )
+    }
 }
+
+/**
+ * Locally derived access for hosts without an access state (the "Ver todo"
+ * section screen): generic U3 links, zero I/O, no consent involved.
+ */
+private fun derivedAccess(detail: CatalogBook): AccessResolverState = mapAccessState(
+    isOnline = true,
+    consentRequiredAddonId = null,
+    hasConsent = true,
+    access = resolveAccess(detail),
+    failed = false
+)
 
 @Composable
 private fun DiscoverDetailContent(
     detail: CatalogBook,
     download: DownloadImportState,
     onDownload: (() -> Unit)?,
-    onCancelDownload: () -> Unit
+    onCancelDownload: () -> Unit,
+    accessState: AccessResolverState?,
+    addonName: String?,
+    onOpenReadAccess: () -> Unit,
+    onOpenAddonRead: (addonId: String) -> Unit,
+    onAllowAccessConsent: () -> Unit,
+    onDenyAccessConsent: () -> Unit,
+    onRetryAccess: () -> Unit
 ) {
     val uriHandler = LocalUriHandler.current
     val externalLink = discoverExternalLink(detail)
+    val effectiveAccess = accessState ?: remember(detail) { derivedAccess(detail) }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -152,28 +234,19 @@ private fun DiscoverDetailContent(
 
         NextPageDivider()
 
-        detail.downloadUrl?.let { url ->
-            if (onDownload != null) {
-                DiscoverDownloadCta(
-                    download = download,
-                    onDownload = onDownload,
-                    onCancelDownload = onCancelDownload
-                )
-            } else {
-                // Host without the download bridge (e.g. the "Ver todo" section
-                // screen): preserve the external-open CTA rather than a dead one.
-                NextPageButton(
-                    onClick = { uriHandler.openUri(url) },
-                    variant = NextPageButtonVariant.FILLED,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = stringResource(R.string.discover_download),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-        }
+        DiscoverAccessSection(
+            detail = detail,
+            download = download,
+            onDownload = onDownload,
+            onCancelDownload = onCancelDownload,
+            accessState = effectiveAccess,
+            addonName = addonName,
+            onOpenReadAccess = onOpenReadAccess,
+            onOpenAddonRead = onOpenAddonRead,
+            onAllowAccessConsent = onAllowAccessConsent,
+            onDenyAccessConsent = onDenyAccessConsent,
+            onRetryAccess = onRetryAccess
+        )
 
         externalLink?.let { link ->
             NextPageButton(
@@ -190,6 +263,159 @@ private fun DiscoverDetailContent(
                 Text(
                     text = stringResource(link.labelRes),
                     style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+    }
+}
+
+/**
+ * U5 access section ("Dónde leerlo / disponible en otro lado"): replaces
+ * the old single download CTA.
+ *
+ * The in-app download CTA renders only when the resolved access gates it
+ * (`isPublicDomain == true` + `https` download URL) — the existing PD flow
+ * is unchanged; every other book offers the grouped web options through
+ * the full access sheet. Addon-sourced books additionally offer their
+ * provider's resolved items entry.
+ */
+@Composable
+private fun DiscoverAccessSection(
+    detail: CatalogBook,
+    download: DownloadImportState,
+    onDownload: (() -> Unit)?,
+    onCancelDownload: () -> Unit,
+    accessState: AccessResolverState,
+    addonName: String?,
+    onOpenReadAccess: () -> Unit,
+    onOpenAddonRead: (addonId: String) -> Unit,
+    onAllowAccessConsent: () -> Unit,
+    onDenyAccessConsent: () -> Unit,
+    onRetryAccess: () -> Unit
+) {
+    val addonId = remember(detail) { CatalogSources.addonIdOf(detail.provider) }
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.read_access_title),
+            style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp),
+            fontWeight = FontWeight.SemiBold,
+            color = NextPageColors.textPrimary
+        )
+        Text(
+            text = stringResource(R.string.read_access_subtitle),
+            style = MaterialTheme.typography.bodySmall,
+            color = NextPageColors.textSecondary
+        )
+        when (accessState) {
+            AccessResolverState.Loading -> {
+                NextPageSkeletonBox(modifier = Modifier.fillMaxWidth())
+                NextPageSkeletonBox(modifier = Modifier.fillMaxWidth())
+            }
+            is AccessResolverState.Loaded -> {
+                if (accessState.access.canDownloadInApp) {
+                    if (onDownload != null) {
+                        DiscoverDownloadCta(
+                            download = download,
+                            onDownload = onDownload,
+                            onCancelDownload = onCancelDownload
+                        )
+                    } else {
+                        // Host without the download bridge (the "Ver todo"
+                        // section screen): preserve the external-open CTA for
+                        // the gated PD download rather than a dead one.
+                        val gatedUrl = accessState.access.downloadUrl
+                        if (gatedUrl != null) {
+                            val uriHandler = LocalUriHandler.current
+                            NextPageButton(
+                                onClick = { uriHandler.openUri(gatedUrl) },
+                                variant = NextPageButtonVariant.FILLED,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.discover_download),
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                    }
+                }
+                if (addonId != null) {
+                    NextPageButton(
+                        onClick = { onOpenAddonRead(addonId) },
+                        variant = NextPageButtonVariant.OUTLINED,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = stringResource(
+                                R.string.discover_rail_from,
+                                addonName ?: addonId
+                            ),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+                NextPageButton(
+                    onClick = onOpenReadAccess,
+                    variant = NextPageButtonVariant.OUTLINED,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = stringResource(R.string.read_access_title),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+            AccessResolverState.Empty -> Text(
+                text = stringResource(R.string.read_access_empty_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = NextPageColors.textSecondary
+            )
+            AccessResolverState.Error -> {
+                Text(
+                    text = stringResource(R.string.discover_error_body),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NextPageColors.textSecondary
+                )
+                NextPageButton(
+                    text = stringResource(R.string.discover_retry),
+                    onClick = onRetryAccess,
+                    variant = NextPageButtonVariant.OUTLINED
+                )
+            }
+            AccessResolverState.Offline -> {
+                Text(
+                    text = stringResource(R.string.discover_offline_body),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NextPageColors.textSecondary
+                )
+                NextPageButton(
+                    text = stringResource(R.string.discover_retry),
+                    onClick = onRetryAccess,
+                    variant = NextPageButtonVariant.OUTLINED
+                )
+            }
+            is AccessResolverState.ConsentRequired -> {
+                Text(
+                    text = stringResource(
+                        R.string.addon_consent_body,
+                        addonName ?: accessState.addonId
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NextPageColors.textSecondary
+                )
+                NextPageButton(
+                    text = stringResource(R.string.addon_consent_allow),
+                    onClick = onAllowAccessConsent,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                NextPageButton(
+                    text = stringResource(R.string.addon_consent_deny),
+                    onClick = onDenyAccessConsent,
+                    variant = NextPageButtonVariant.OUTLINED,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }

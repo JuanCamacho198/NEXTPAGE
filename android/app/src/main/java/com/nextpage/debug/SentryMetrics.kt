@@ -77,12 +77,17 @@ object SentryMetrics {
         return DURATION_BUCKETS_MS.last()
     }
 
+    /** Outbox depth bucket edges (upper bound emitted): 0, 1-4, 5-19, 20-99, 100+. */
+    private const val OUTBOX_DEPTH_SMALL_MAX = 4
+    private const val OUTBOX_DEPTH_MEDIUM_MAX = 19
+    private const val OUTBOX_DEPTH_LARGE_MAX = 99
+
     /** Outbox depth buckets: 0, 1-4, 5-19, 20-99, 100+ (upper bound emitted). */
     fun bucketDepth(count: Int): Long = when {
         count <= 0 -> 0L
-        count <= 4 -> 4L
-        count <= 19 -> 19L
-        count <= 99 -> 99L
+        count <= OUTBOX_DEPTH_SMALL_MAX -> OUTBOX_DEPTH_SMALL_MAX.toLong()
+        count <= OUTBOX_DEPTH_MEDIUM_MAX -> OUTBOX_DEPTH_MEDIUM_MAX.toLong()
+        count <= OUTBOX_DEPTH_LARGE_MAX -> OUTBOX_DEPTH_LARGE_MAX.toLong()
         else -> 100L
     }
 

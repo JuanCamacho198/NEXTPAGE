@@ -12,12 +12,16 @@ import kotlinx.coroutines.launch
 data class AddonSettingsUiState(
     val url: String = "",
     val installed: List<InstalledAddonRow> = emptyList(),
-    val isBusy: Boolean = false
+    val isBusy: Boolean = false,
+    /** U5: addon ids with recorded capability-disclosure consent. */
+    val consentedIds: Set<String> = emptySet()
 )
 
 class AddonSettingsViewModel(
     private val registry: AddonRegistryLike,
-    private val onError: (message: String) -> Unit = {}
+    private val onError: (message: String) -> Unit = {},
+    private val hasConsent: (addonId: String) -> Boolean = { false },
+    private val onConsentChange: (addonId: String, granted: Boolean) -> Unit = { _, _ -> }
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddonSettingsUiState())
@@ -29,7 +33,11 @@ class AddonSettingsViewModel(
 
     fun refresh() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(installed = registry.listInstalled())
+            val installed = registry.listInstalled()
+            _uiState.value = _uiState.value.copy(
+                installed = installed,
+                consentedIds = installed.map { it.id }.filter(hasConsent).toSet()
+            )
         }
     }
 
@@ -67,6 +75,26 @@ class AddonSettingsViewModel(
             try {
                 registry.uninstall(id)
                 _uiState.value = _uiState.value.copy(installed = registry.listInstalled())
+            } finally {
+                _uiState.value = _uiState.value.copy(isBusy = false)
+            }
+        }
+    }
+
+    /**
+     * U5: records or revokes capability-disclosure consent for [id], then
+     * refreshes the consented set. Persisted durably by the caller's store.
+     */
+    fun setConsent(id: String, granted: Boolean) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isBusy = true)
+            try {
+                onConsentChange(id, granted)
+                val installed = registry.listInstalled()
+                _uiState.value = _uiState.value.copy(
+                    installed = installed,
+                    consentedIds = installed.map { it.id }.filter(hasConsent).toSet()
+                )
             } finally {
                 _uiState.value = _uiState.value.copy(isBusy = false)
             }

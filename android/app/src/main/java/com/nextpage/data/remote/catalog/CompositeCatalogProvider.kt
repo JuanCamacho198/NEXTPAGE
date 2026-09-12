@@ -1,5 +1,6 @@
 package com.nextpage.data.remote.catalog
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -61,13 +62,21 @@ class CompositeCatalogProvider(
         val active = activeSourceIds()
         val searches = searchableProviders().map { provider ->
             async {
-                val cached = readProviderPage(provider, query, page, active)
-                if (cached != null) {
-                    cached
-                } else {
-                    val result = provider.search(query, page)
-                    cacheProviderPage(provider, query, page, result, active)
-                    result
+                try {
+                    val cached = readProviderPage(provider, query, page, active)
+                    if (cached != null) {
+                        cached
+                    } else {
+                        val result = provider.search(query, page)
+                        cacheProviderPage(provider, query, page, result, active)
+                        result
+                    }
+                } catch (err: Throwable) {
+                    // Failure isolation (U1): one failing source fails closed to
+                    // an empty page so it can never fail the whole fan-out.
+                    // Cancellation still propagates to respect coroutine scope.
+                    if (err is CancellationException) throw err
+                    PagedResult(emptyList(), null, 0)
                 }
             }
         }

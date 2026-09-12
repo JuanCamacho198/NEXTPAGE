@@ -10,6 +10,10 @@ import com.nextpage.data.remote.catalog.CatalogSourceKind
 import com.nextpage.data.remote.catalog.BUILTIN_GUTENDEX
 import com.nextpage.data.remote.catalog.BUILTIN_OPENLIBRARY
 import com.nextpage.data.remote.catalog.PagedResult
+import com.nextpage.data.remote.catalog.addonSource
+import com.nextpage.domain.access.LegalAccess
+import com.nextpage.presentation.feature.discover.AccessResolverState
+import com.nextpage.presentation.feature.discover.AddonReadState
 import com.nextpage.presentation.feature.discover.DiscoverRailState
 import com.nextpage.domain.connectivity.ConnectivityObserver
 import com.nextpage.domain.connectivity.FakeConnectivityObserver
@@ -391,8 +395,8 @@ class DiscoverViewModelTest {
     @Test
     fun constructorSurfaceTakesCatalogProviderAndConnectivityPorts() {
         val ctor = DiscoverViewModel::class.java.constructors
-            .firstOrNull { it.parameterTypes.size == 7 }
-        assertTrue("expected a 7-arg constructor", ctor != null)
+            .firstOrNull { it.parameterTypes.size == 10 }
+        assertTrue("expected a 10-arg constructor", ctor != null)
         assertEquals(CatalogProvider::class.java, ctor!!.parameterTypes[0])
         assertEquals(ConnectivityObserver::class.java, ctor.parameterTypes[1])
         assertEquals(CoroutineDispatcher::class.java, ctor.parameterTypes[2])
@@ -400,6 +404,10 @@ class DiscoverViewModelTest {
         assertEquals(DownloadAndImportBookUseCase::class.java, ctor.parameterTypes[4])
         assertEquals(kotlin.jvm.functions.Function1::class.java, ctor.parameterTypes[5])
         assertEquals(kotlin.jvm.functions.Function1::class.java, ctor.parameterTypes[6])
+        // U5: disclosure-consent lookup, consent-write callback, addon resolve.
+        assertEquals(kotlin.jvm.functions.Function1::class.java, ctor.parameterTypes[7])
+        assertEquals(kotlin.jvm.functions.Function2::class.java, ctor.parameterTypes[8])
+        assertEquals(kotlin.jvm.functions.Function3::class.java, ctor.parameterTypes[9])
     }
 
     /** Opt-in featured provider; [featured] is the seam under test. */
@@ -778,5 +786,193 @@ class DiscoverViewModelTest {
                 it is DiscoverRailState.Loaded && it.sourceId == addonSourceId
             }
         )
+    }
+
+    // ── U5: consent-gated access UI state ────────────────────────────────
+
+    private class DetailConsentProvider(var detail: CatalogBook) : CatalogProvider {
+        override suspend fun search(query: String, page: Int): PagedResult =
+            PagedResult(emptyList(), null, 0)
+
+        override suspend fun getDetails(id: String): CatalogBook = detail
+
+        override fun resolveDownloadUrl(formats: Map<String, String>, preferEpub: Boolean): String =
+            throw CatalogException(CatalogErrorCode.UNAVAILABLE_DOWNLOAD, "no formats")
+
+        override fun listSources(): List<CatalogSourceInfo> = emptyList()
+    }
+
+    private fun consentPdBook(): CatalogBook = CatalogBook(
+        id = "gutendex:1342",
+        provider = BUILTIN_GUTENDEX,
+        title = "Pride and Prejudice",
+        authors = listOf("Jane Austen"),
+        coverUrl = null,
+        languages = listOf("en"),
+        subjects = emptyList(),
+        downloadUrl = "https://www.gutenberg.org/cache/epub/1342/pg1342.epub",
+        isPublicDomain = true
+    )
+
+    private fun consentAddonBook(): CatalogBook = CatalogBook(
+        id = "addon:abcdef1234567890:1",
+        provider = addonSource("abcdef1234567890"),
+        title = "Addon Title",
+        authors = listOf("Addon Author"),
+        coverUrl = null,
+        languages = listOf("en"),
+        subjects = emptyList(),
+        downloadUrl = null,
+        isPublicDomain = null
+    )
+
+    /** Mutable-set consent backend standing in for the durable store. */
+    private class ConsentBackend {
+        val consented = mutableSetOf<String>()
+        val writes = mutableListOf<Pair<String, Boolean>>()
+        fun lookup(id: String): Boolean = id in consented
+        fun write(id: String, granted: Boolean) {
+            writes.add(id to granted)
+            if (granted) consented.add(id) else consented.remove(id)
+        }
+    }
+
+    private fun consentViewModel(
+        provider: DetailConsentProvider,
+        backend: ConsentBackend,
+        resolve: (suspend (String, CatalogBook) -> LegalAccess)? = null
+    ): DiscoverViewModel = DiscoverViewModel(
+        catalogProvider = provider,
+        connectivityObserver = FakeConnectivityObserver(initiallyOnline = true),
+        addonConsent = backend::lookup,
+        onAddonConsentChange = backend::write,
+        addonResolve = resolve
+    )
+
+    @Test
+    fun openDetail_publicDomainBook_loadsAccessWithDownload() = runTest {
+        val vm = consentViewModel(DetailConsentProvider(consentPdBook()), ConsentBackend())
+        vm.openDetail("gutendex:1342")
+        advanceUntilIdle()
+        val state = vm.uiState.value.accessState
+        assertTrue(state is AccessResolverState.Loaded)
+        assertTrue((state as AccessResolverState.Loaded).access.canDownloadInApp)
+    }
+
+    @Test
+    fun openDetail_unconsentedAddonBook_gatesConsent() = runTest {
+        val vm = consentViewModel(DetailConsentProvider(consentAddonBook()), ConsentBackend())
+        vm.openDetail("addon:abcdef1234567890:1")
+        advanceUntilIdle()
+        assertEquals(
+            AccessResolverState.ConsentRequired("abcdef1234567890"),
+            vm.uiState.value.accessState
+        )
+    }
+
+    @Test
+    fun grantAccessConsent_recordsDurablyAndLoads() = runTest {
+        val backend = ConsentBackend()
+        val vm = consentViewModel(DetailConsentProvider(consentAddonBook()), backend)
+        vm.openDetail("addon:abcdef1234567890:1")
+        advanceUntilIdle()
+        vm.grantAccessConsent("abcdef1234567890")
+        advanceUntilIdle()
+        assertEquals(listOf("abcdef1234567890" to true), backend.writes)
+        assertTrue(vm.uiState.value.accessState is AccessResolverState.Loaded)
+    }
+
+    @Test
+    fun denyAccessConsent_recordsNothingAndEmpties() = runTest {
+        val backend = ConsentBackend()
+        val vm = consentViewModel(DetailConsentProvider(consentAddonBook()), backend)
+        vm.openDetail("addon:abcdef1234567890:1")
+        advanceUntilIdle()
+        vm.denyAccessConsent()
+        advanceUntilIdle()
+        assertTrue(backend.writes.isEmpty())
+        assertEquals(AccessResolverState.Empty, vm.uiState.value.accessState)
+    }
+
+    @Test
+    fun openAddonRead_withoutConsent_promptsWithoutResolve() = runTest {
+        var resolved = false
+        val vm = consentViewModel(
+            DetailConsentProvider(consentAddonBook()),
+            ConsentBackend(),
+            resolve = { _, book ->
+                resolved = true
+                LegalAccess(book.id, false, null, emptyList())
+            }
+        )
+        vm.openDetail("addon:abcdef1234567890:1")
+        advanceUntilIdle()
+        vm.openAddonRead("abcdef1234567890", "Test Addon")
+        advanceUntilIdle()
+        assertEquals(AddonReadState.ConsentRequired, vm.uiState.value.addonRead)
+        assertEquals("Test Addon", vm.uiState.value.addonReadName)
+        assertEquals(false, resolved)
+    }
+
+    @Test
+    fun grantAddonReadConsent_resolvesToEmpty() = runTest {
+        val backend = ConsentBackend()
+        val vm = consentViewModel(
+            DetailConsentProvider(consentAddonBook()),
+            backend,
+            resolve = { _, book -> LegalAccess(book.id, false, null, emptyList()) }
+        )
+        vm.openDetail("addon:abcdef1234567890:1")
+        advanceUntilIdle()
+        vm.openAddonRead("abcdef1234567890", "Test Addon")
+        advanceUntilIdle()
+        vm.grantAddonReadConsent()
+        advanceUntilIdle()
+        assertEquals(AddonReadState.Empty, vm.uiState.value.addonRead)
+    }
+
+    @Test
+    fun openAddonRead_withConsentAndItems_loads() = runTest {
+        val backend = ConsentBackend().apply { consented.add("abcdef1234567890") }
+        val vm = consentViewModel(
+            DetailConsentProvider(consentAddonBook()),
+            backend,
+            resolve = { _, book ->
+                LegalAccess(book.id, true, "https://www.gutenberg.org/cache/epub/1342/pg1342.epub", emptyList())
+            }
+        )
+        vm.openDetail("addon:abcdef1234567890:1")
+        advanceUntilIdle()
+        vm.openAddonRead("abcdef1234567890", "Test Addon")
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.addonRead is AddonReadState.Loaded)
+    }
+
+    @Test
+    fun openAddonRead_resolveFailure_mapsToError() = runTest {
+        val backend = ConsentBackend().apply { consented.add("abcdef1234567890") }
+        val vm = consentViewModel(
+            DetailConsentProvider(consentAddonBook()),
+            backend,
+            resolve = { _, _ ->
+                throw CatalogException(CatalogErrorCode.UPSTREAM_ERROR, "boom")
+            }
+        )
+        vm.openDetail("addon:abcdef1234567890:1")
+        advanceUntilIdle()
+        vm.openAddonRead("abcdef1234567890", "Test Addon")
+        advanceUntilIdle()
+        assertEquals(AddonReadState.Error, vm.uiState.value.addonRead)
+    }
+
+    @Test
+    fun dismissAddonRead_hidesSheet() = runTest {
+        val vm = consentViewModel(DetailConsentProvider(consentAddonBook()), ConsentBackend())
+        vm.openDetail("addon:abcdef1234567890:1")
+        advanceUntilIdle()
+        vm.openAddonRead("abcdef1234567890", "Test Addon")
+        advanceUntilIdle()
+        vm.dismissAddonRead()
+        assertEquals(AddonReadState.Hidden, vm.uiState.value.addonRead)
     }
 }

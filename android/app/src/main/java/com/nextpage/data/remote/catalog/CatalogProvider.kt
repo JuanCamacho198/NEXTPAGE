@@ -18,10 +18,11 @@ private val ADDON_ID_RE = Regex("^[0-9a-f]{16}$")
 object CatalogSources {
     const val GUTENDEX = "builtin:gutendex"
     const val OPENLIBRARY = "builtin:openlibrary"
+    const val GOOGLEBOOKS = "builtin:googlebooks"
 
     /** Closed registry of first-party built-in source names. */
     private val KNOWN_BUILTIN_NAMES =
-        setOf("gutendex", "openlibrary", "standard-ebooks", "librivox", "wikisource", "faded-page")
+        setOf("gutendex", "openlibrary", "googlebooks", "standard-ebooks", "librivox", "wikisource", "faded-page")
 
     fun addonSource(addonId: String): String = "addon:$addonId"
 
@@ -47,6 +48,7 @@ object CatalogSources {
 
 const val BUILTIN_GUTENDEX = CatalogSources.GUTENDEX
 const val BUILTIN_OPENLIBRARY = CatalogSources.OPENLIBRARY
+const val BUILTIN_GOOGLEBOOKS = CatalogSources.GOOGLEBOOKS
 
 fun addonSource(addonId: String): String = CatalogSources.addonSource(addonId)
 
@@ -70,7 +72,18 @@ data class CatalogBook(
      */
     val description: String? = null,
     val isPublicDomain: Boolean? = null,
-    val formats: Map<String, String> = emptyMap()
+    val formats: Map<String, String> = emptyMap(),
+    /**
+     * U3 identity fields (all additive + defaulted): ISBN pair split by length,
+     * Open Library work key (`/works/OL…W`), first Internet Archive id, and the
+     * Google Books volume id. Unknown stays null; old cached payloads keep
+     * decoding via `ignoreUnknownKeys = true`. No Room migration.
+     */
+    val isbn13: String? = null,
+    val isbn10: String? = null,
+    val openLibraryWorkId: String? = null,
+    val internetArchiveId: String? = null,
+    val googleBooksId: String? = null
 )
 
 @Serializable

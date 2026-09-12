@@ -96,11 +96,12 @@ data class PerformanceUiState(
 )
 
 class PerformanceViewModel(
-    application: Application,
+    application: Application
+) : AndroidViewModel(application) {
+
     private val dataSource: PerformanceDataSource = RealPerformanceDataSource(
         appContext = application.applicationContext
     )
-) : AndroidViewModel(application) {
 
     private val appContext: Context = application.applicationContext
 

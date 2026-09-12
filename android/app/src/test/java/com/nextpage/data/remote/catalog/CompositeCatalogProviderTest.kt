@@ -82,7 +82,9 @@ class CompositeCatalogProviderTest {
         assertEquals(3, page.totalCount)
         assertEquals(2, page.results.size)
         val pride = page.results.first { it.id == "gutendex:1342" }
-        assertEquals("https://covers.openlibrary.org/b/id/6794977-M.jpg", pride.coverUrl)
+        // U2: Gutendex cover is derived from the record id (Gutenberg cache),
+        // so it wins over the OL cover fallback for this book.
+        assertEquals("https://www.gutenberg.org/cache/epub/1342/pg1342.cover.medium.jpg", pride.coverUrl)
         assertFalse(page.results.any { it.title == "Borrow Restricted Title" })
         // Debounced fan-out hit both sources exactly once.
         assertEquals(1, g.calls)

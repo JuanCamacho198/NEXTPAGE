@@ -34,8 +34,30 @@ data class AddonManifest(
     /** Optional catalog endpoint template: `{query}`, `{page}` placeholders. */
     val searchUrl: String? = null,
     /** Optional detail endpoint template: `{bookId}` placeholder. */
-    val detailsUrl: String? = null
+    val detailsUrl: String? = null,
+    /**
+     * Optional v2 resolve endpoint template: `{isbn}`, `{title}`,
+     * `{author}`, `{openLibraryId}`, `{googleBooksId}` placeholders.
+     * Absent ⇒ the addon has no resolve capability (resolve stays empty).
+     */
+    val resolveUrl: String? = null,
+    /**
+     * Optional v2 capability list (e.g. `"resolve"`). Absent ⇒ empty;
+     * disclosed to the user before consent is recorded (U5 UI).
+     */
+    val capabilities: List<String> = emptyList()
 )
+
+/**
+ * U4 per-item access type for v2 resolve payloads. Wire values are
+ * lowercase; unknown raw values parse to null so callers fail closed
+ * (never treated as free).
+ */
+enum class AddonAccessType {
+    FREE,
+    BUY,
+    SUBSCRIBE
+}
 
 /** Rules and codes mirror desktop validateManifest.ts byte-for-byte. */
 object ManifestValidator {
@@ -46,6 +68,14 @@ object ManifestValidator {
     private const val MAX_RESOURCES = 16
     private const val MAX_RESOURCE_CHARS = 64
     private const val MAX_ENDPOINT_CHARS = 2048
+    private const val MAX_CAPABILITIES = 16
+    private const val MAX_CAPABILITY_CHARS = 64
+    private const val ACCESS_TYPE_FREE = "free"
+    private const val ACCESS_TYPE_BUY = "buy"
+    private const val ACCESS_TYPE_SUBSCRIBE = "subscribe"
+
+    /** License tokens treated as cleared for the in-app download path (closed set). */
+    private val LICENSE_CLEARED_TOKENS = setOf("public-domain", "public domain", "cc0", "cc0-1.0", "pd")
 
     internal fun isJsonContentType(contentType: String?): Boolean {
         if (contentType == null) return false
@@ -81,6 +111,41 @@ object ManifestValidator {
 
     private fun nonEmptyString(value: Any?): Boolean =
         value is String && value.isNotEmpty()
+
+    /**
+     * U4: parse a v2 per-item `accessType` wire value. Unknown or missing
+     * values return null so resolve callers fail closed (never free).
+     */
+    fun parseAccessType(raw: String?): AddonAccessType? = when (raw?.trim()?.lowercase()) {
+        ACCESS_TYPE_FREE -> AddonAccessType.FREE
+        ACCESS_TYPE_BUY -> AddonAccessType.BUY
+        ACCESS_TYPE_SUBSCRIBE -> AddonAccessType.SUBSCRIBE
+        else -> null
+    }
+
+    /** U4: true only for license tokens in the closed cleared set (case-insensitive). */
+    fun isLicenseCleared(license: String?): Boolean =
+        license?.trim()?.lowercase() in LICENSE_CLEARED_TOKENS
+
+    /** U4: optional endpoint — absent/null ⇒ skipped (no validation); present ⇒ https rules. */
+    private fun parseOptionalEndpoint(value: Any?): String? {
+        if (value == null || value == JSONObject.NULL) return null
+        return parseEndpoint(value)
+    }
+
+    /** U4: optional capabilities — absent/null ⇒ empty (skipped); present ⇒ string-array rules. */
+    private fun parseCapabilities(value: Any?): List<String> {
+        if (value == null || value == JSONObject.NULL) return emptyList()
+        if (value !is JSONArray) invalid("capabilities must be an array of strings")
+        if (value.length() > MAX_CAPABILITIES) invalid("too many capabilities")
+        return (0 until value.length()).map { i ->
+            val entry = value.opt(i)
+            if (!nonEmptyString(entry) || (entry as String).length > MAX_CAPABILITY_CHARS) {
+                invalid("invalid capability entry")
+            }
+            entry
+        }
+    }
 
     private fun parseCatalogEntry(entry: Any?): AddonCatalogEntry {
         if (entry !is JSONObject) invalid("catalog entry must be an object")
@@ -125,7 +190,9 @@ object ManifestValidator {
             catalogs = (0 until catalogs.length()).map { parseCatalogEntry(catalogs.opt(it)) },
             resources = parseResources(value.opt("resources")),
             searchUrl = parseEndpoint(value.opt("searchUrl")),
-            detailsUrl = parseEndpoint(value.opt("detailsUrl"))
+            detailsUrl = parseEndpoint(value.opt("detailsUrl")),
+            resolveUrl = parseOptionalEndpoint(value.opt("resolveUrl")),
+            capabilities = parseCapabilities(value.opt("capabilities"))
         )
     }
 

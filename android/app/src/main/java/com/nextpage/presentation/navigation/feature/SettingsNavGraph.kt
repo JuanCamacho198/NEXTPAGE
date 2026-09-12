@@ -5,12 +5,17 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
+import androidx.navigation.NavType
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.nextpage.data.remote.drive.GoogleDriveAuthHelper
 import com.nextpage.di.AppContainer
 import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.model.ThemeMode
 import com.nextpage.domain.repository.DictionaryRepository
+import com.nextpage.presentation.feature.legal.AddonCapabilityDetailRoute
+import com.nextpage.presentation.feature.legal.LegalPolicyScreen
+import com.nextpage.presentation.feature.legal.addonCapabilitiesRoute
 import com.nextpage.presentation.navigation.NextPageDestination
 import com.nextpage.presentation.screen.SettingsScreen
 import com.nextpage.presentation.screen.settings.AddonManagementRoute
@@ -112,6 +117,48 @@ fun NavGraphBuilder.settingsGraph(
     composable(route = NextPageDestination.SettingsAddons.route) {
         AddonManagementRoute(
             registry = appContainer.addonRegistry,
+            onBack = { navController.popBackStack() },
+            hasConsent = { addonId -> appContainer.addonRegistry.hasAddonConsent(addonId) },
+            onConsentChange = { addonId, granted ->
+                if (granted) {
+                    appContainer.addonRegistry.recordAddonConsent(addonId)
+                } else {
+                    appContainer.addonRegistry.revokeAddonConsent(addonId)
+                }
+            },
+            onNavigateToLegal = {
+                navController.navigate(NextPageDestination.SettingsLegal.route)
+            },
+            onOpenCapabilities = { addonId ->
+                navController.navigate(addonCapabilitiesRoute(addonId))
+            }
+        )
+    }
+
+    composable(route = NextPageDestination.SettingsLegal.route) {
+        LegalPolicyScreen(
+            onBack = { navController.popBackStack() }
+        )
+    }
+
+    composable(
+        route = NextPageDestination.SettingsAddonCapabilities.route,
+        arguments = listOf(navArgument("addonId") { type = NavType.StringType })
+    ) { entry ->
+        AddonCapabilityDetailRoute(
+            registry = appContainer.addonRegistry,
+            addonId = entry.arguments?.getString("addonId").orEmpty(),
+            hasConsent = { addonId -> appContainer.addonRegistry.hasAddonConsent(addonId) },
+            onConsentChange = { addonId, granted ->
+                if (granted) {
+                    appContainer.addonRegistry.recordAddonConsent(addonId)
+                } else {
+                    appContainer.addonRegistry.revokeAddonConsent(addonId)
+                }
+            },
+            onViewPolicy = {
+                navController.navigate(NextPageDestination.SettingsLegal.route)
+            },
             onBack = { navController.popBackStack() }
         )
     }

@@ -36,13 +36,20 @@ import com.nextpage.data.remote.catalog.CatalogProvider
 import com.nextpage.data.remote.catalog.CompositeCatalogProvider
 import com.nextpage.data.remote.catalog.GutendexCatalogProvider
 import com.nextpage.data.remote.catalog.GutendexDataSource
+import com.nextpage.data.remote.catalog.GoogleBooksCatalogProvider
+import com.nextpage.data.remote.catalog.GoogleBooksDataSource
+import com.nextpage.data.remote.catalog.googleBooksProviderOrNull
 import com.nextpage.data.remote.catalog.KtorCatalogHttpTransport
 import com.nextpage.data.remote.catalog.OpenLibraryCatalogProvider
 import com.nextpage.data.remote.catalog.OpenLibraryDataSource
 import com.nextpage.data.remote.addons.CuratedCatalogProvider
+import com.nextpage.data.remote.addons.AddonCatalogProvider
 import com.nextpage.data.remote.addons.AddonRegistry
 import com.nextpage.data.remote.addons.KtorAddonHttpTransport
+import com.nextpage.data.remote.addons.PersistentAddonConsentStore
 import com.nextpage.data.remote.addons.catalogProvidersWithAddons
+import com.nextpage.data.remote.catalog.CatalogBook
+import com.nextpage.domain.access.LegalAccess
 import com.nextpage.data.remote.catalog.LiveCatalogProvider
 import com.nextpage.data.remote.catalog.RebuildingCatalogProvider
 import com.nextpage.data.remote.catalog.RoomDiscoverCache
@@ -233,12 +240,52 @@ class NetworkModule(
         OpenLibraryDataSource(catalogTransport)
     }
 
+    /**
+     * Google Books (U2, fail-closed): null when `GOOGLE_BOOKS_KEY` is
+     * absent/blank (key not provided yet) so the composite fan-out — already
+     * failure-isolated per provider (U1) — simply never sees the source and
+     * the app keeps working on Open Library + Gutenberg.
+     */
+    val googleBooksDataSource: GoogleBooksDataSource? by lazy {
+        BuildConfig.GOOGLE_BOOKS_KEY.trim().takeIf { it.isNotEmpty() }?.let {
+            GoogleBooksDataSource(catalogTransport, it)
+        }
+    }
+
+    val googleBooksCatalogProvider: GoogleBooksCatalogProvider? by lazy {
+        googleBooksProviderOrNull(catalogTransport, BuildConfig.GOOGLE_BOOKS_KEY)
+    }
+
     val addonRegistry: AddonRegistry by lazy {
         AddonRegistry(
             databaseModule.installedAddonDao,
-            KtorAddonHttpTransport(catalogHttpClient)
+            KtorAddonHttpTransport(catalogHttpClient),
+            // U5: durable consent (survives process restart); delivers the
+            // persistence deferred from U4's in-memory default.
+            PersistentAddonConsentStore(context)
         )
     }
+
+    /**
+     * U5: resolves one installed addon's reading links for [book] through an
+     * ephemeral provider over its manifest. Fail-closed: unknown addon or
+     * missing disclosure consent resolves to an empty [LegalAccess] with
+     * zero I/O (mirrors the provider gate).
+     */
+    val addonResolveForBook: suspend (addonId: String, book: CatalogBook) -> LegalAccess =
+        { addonId, book ->
+            val row = addonRegistry.listInstalled().find { it.id == addonId }
+            if (row == null || !addonRegistry.hasAddonConsent(addonId)) {
+                LegalAccess(book.id, false, null, emptyList())
+            } else {
+                AddonCatalogProvider(
+                    row.manifest,
+                    addonId,
+                    addonTransport,
+                    consent = addonRegistry.consent
+                ).resolveAccess(book)
+            }
+        }
 
     // ── addon-registry PR4: live composite ─────────────────────────────
     // The composite rebuilds from installed addon rows whenever the registry
@@ -252,13 +299,18 @@ class NetworkModule(
         val provider = RebuildingCatalogProvider {
             CompositeCatalogProvider(
                 catalogProvidersWithAddons(
-                    builtIns = listOf(
+                    builtIns = listOfNotNull(
                         GutendexCatalogProvider(gutendexDataSource),
-                        OpenLibraryCatalogProvider(openLibraryDataSource)
+                        OpenLibraryCatalogProvider(openLibraryDataSource),
+                        // Fail-closed: absent/blank GOOGLE_BOOKS_KEY ⇒ null ⇒ omitted.
+                        googleBooksCatalogProvider
                     ),
                     curated = CuratedCatalogProvider(context),
                     installedAddons = addonRegistry.listInstalled(),
-                    addonTransport = addonTransport
+                    addonTransport = addonTransport,
+                    // U4: providers share the registry consent store so a
+                    // recorded disclosure consent unblocks resolveAccess.
+                    addonConsent = addonRegistry.consent
                 ),
                 cache = RoomDiscoverCache(databaseModule.discoverCacheDao)
             )

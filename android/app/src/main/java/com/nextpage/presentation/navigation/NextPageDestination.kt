@@ -51,5 +51,9 @@ sealed class NextPageDestination(
     data object SettingsDailyGoal : NextPageDestination("settings/daily-goal")
     data object SettingsPerformance : NextPageDestination("settings/performance")
     data object SettingsAddons : NextPageDestination("settings/addons", R.string.settings_addons_title, NextPageIcons.LibraryBooks)
+    /** U5: legal policy page, reachable from the disclaimer and addon screens. */
+    data object SettingsLegal : NextPageDestination("settings/legal", R.string.legal_policy_title, NextPageIcons.LibraryBooks)
+    /** U5: per-addon capability detail; `{addonId}` is the registry id (hex). */
+    data object SettingsAddonCapabilities : NextPageDestination("settings/addon-capabilities/{addonId}")
     data object LogViewer : NextPageDestination("settings/log-viewer")
 }

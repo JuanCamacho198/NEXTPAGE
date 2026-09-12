@@ -121,7 +121,16 @@ internal fun rememberNavHostViewModels(
             downloadAndImportBookUseCase = appContainer.downloadAndImportBookUseCase,
             registerAddonChangeListener = { listener ->
                 appContainer.addonRegistry.addOnChangedListener(listener)
-            }
+            },
+            addonConsent = { addonId -> appContainer.addonRegistry.hasAddonConsent(addonId) },
+            onAddonConsentChange = { addonId, granted ->
+                if (granted) {
+                    appContainer.addonRegistry.recordAddonConsent(addonId)
+                } else {
+                    appContainer.addonRegistry.revokeAddonConsent(addonId)
+                }
+            },
+            addonResolve = { addonId, book -> appContainer.addonResolveForBook(addonId, book) }
         )
     )
 

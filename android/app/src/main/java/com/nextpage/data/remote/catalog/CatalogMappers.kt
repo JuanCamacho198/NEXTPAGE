@@ -32,7 +32,10 @@ data class OpenLibraryDoc(
     @SerialName("cover_i") val coverId: Int? = null,
     @SerialName("ebook_access") val ebookAccess: String? = null,
     val language: List<String> = emptyList(),
-    val subject: List<String> = emptyList()
+    val subject: List<String> = emptyList(),
+    /** Identity fields carried by the permissive mapper (U1); defaulted so old payloads keep decoding. */
+    val isbn: List<String> = emptyList(),
+    @SerialName("ia") val internetArchiveIds: List<String> = emptyList()
 )
 
 @Serializable
@@ -58,6 +61,16 @@ fun openLibraryCoverUrl(coverId: Int?): String? {
     return "https://covers.openlibrary.org/b/id/$coverId-M.jpg"
 }
 
+/**
+ * Project Gutenberg cover derived from the record id (no mirroring, no HTML
+ * scraping). Coil loads it; the UI keeps the initial-letter fallback on load
+ * failure (see `DiscoverBookCover`).
+ */
+fun gutenbergCoverUrl(gutenbergId: Int): String? {
+    if (gutenbergId < 1) return null
+    return "https://www.gutenberg.org/cache/epub/$gutenbergId/pg$gutenbergId.cover.medium.jpg"
+}
+
 /** Map a Gutendex record; null when in-copyright (excluded, never surfaced). */
 fun mapGutendexBook(record: GutendexRecord): CatalogBook? {
     if (!isGutendexPublicDomain(record)) return null
@@ -66,7 +79,7 @@ fun mapGutendexBook(record: GutendexRecord): CatalogBook? {
         provider = BUILTIN_GUTENDEX,
         title = record.title,
         authors = record.authors.map { it.name },
-        coverUrl = null,
+        coverUrl = gutenbergCoverUrl(record.id),
         languages = record.languages,
         subjects = record.subjects,
         downloadUrl = runCatching {
@@ -89,7 +102,35 @@ fun mapOpenLibraryDoc(doc: OpenLibraryDoc): CatalogBook? {
         coverUrl = openLibraryCoverUrl(doc.coverId),
         languages = doc.language,
         subjects = doc.subject.take(8),
-        downloadUrl = null
+        downloadUrl = null,
+        isbn13 = firstIsbn13(doc.isbn),
+        isbn10 = firstIsbn10(doc.isbn),
+        openLibraryWorkId = doc.key.takeIf { it.isNotBlank() },
+        internetArchiveId = doc.internetArchiveIds.firstOrNull()
+    )
+}
+
+/**
+ * Permissive OL mapping (U1): keeps non-public/borrowable docs that the strict
+ * [mapOpenLibraryDoc] drops. Identity is preserved (`openlibrary:<key>` id,
+ * `isbn`/`ia` parsed on the doc, `cover_i` via cover URL). U3 surfaces that
+ * identity on [CatalogBook] (`isbn13`/`isbn10` split by length, work key, first
+ * IA id); this mapper never returns null.
+ */
+fun mapOpenLibraryAnyDoc(doc: OpenLibraryDoc): CatalogBook {
+    return CatalogBook(
+        id = "openlibrary:${doc.key}",
+        provider = BUILTIN_OPENLIBRARY,
+        title = doc.title,
+        authors = doc.authorName,
+        coverUrl = openLibraryCoverUrl(doc.coverId),
+        languages = doc.language,
+        subjects = doc.subject.take(8),
+        downloadUrl = null,
+        isbn13 = firstIsbn13(doc.isbn),
+        isbn10 = firstIsbn10(doc.isbn),
+        openLibraryWorkId = doc.key.takeIf { it.isNotBlank() },
+        internetArchiveId = doc.internetArchiveIds.firstOrNull()
     )
 }
 
@@ -127,6 +168,8 @@ fun normalizeMatchKey(title: String, authors: List<String>): String {
 /**
  * Merge sources: every Gutendex field wins; an empty Gutendex `coverUrl`
  * is filled from the matching OL doc. Unmatched OL books are appended.
+ * U3: identity gaps (`isbn13`/`isbn10`/work key/IA id) are filled from the same
+ * [normalizeMatchKey] match — no parallel identity model.
  */
 fun mergeResults(gutendexBooks: List<CatalogBook>, olBooks: List<CatalogBook>): List<CatalogBook> {
     val olByKey = olBooks.associateBy { normalizeMatchKey(it.title, it.authors) }
@@ -135,11 +178,15 @@ fun mergeResults(gutendexBooks: List<CatalogBook>, olBooks: List<CatalogBook>): 
         val key = normalizeMatchKey(g.title, g.authors)
         val match = olByKey[key]
         if (match != null) usedOlKeys.add(key)
-        if (match != null && g.coverUrl == null && match.coverUrl != null) {
-            g.copy(coverUrl = match.coverUrl)
-        } else {
-            g
-        }
+        if (match == null) return@map g
+        val withCover =
+            if (g.coverUrl == null && match.coverUrl != null) g.copy(coverUrl = match.coverUrl) else g
+        withCover.copy(
+            isbn13 = withCover.isbn13 ?: match.isbn13,
+            isbn10 = withCover.isbn10 ?: match.isbn10,
+            openLibraryWorkId = withCover.openLibraryWorkId ?: match.openLibraryWorkId,
+            internetArchiveId = withCover.internetArchiveId ?: match.internetArchiveId
+        )
     }
     val extras = olBooks.filter {
         !usedOlKeys.contains(normalizeMatchKey(it.title, it.authors))
@@ -165,3 +212,95 @@ fun toPagedResult(results: List<CatalogBook>, page: Int, totalCount: Int): Paged
         nextPage = computeNextPage(page, results.size, totalCount),
         totalCount = totalCount
     )
+
+// ── Identity (U3) ───────────────────────────────────────────────────
+
+/** ISBN-13 digit length. */
+private const val ISBN13_LENGTH = 13
+
+/** ISBN-10 digit length. */
+private const val ISBN10_LENGTH = 10
+
+/** Google Books `industryIdentifiers` type for ISBN-13. */
+private const val GOOGLE_ISBN13_TYPE = "ISBN_13"
+
+/** Google Books `industryIdentifiers` type for ISBN-10. */
+private const val GOOGLE_ISBN10_TYPE = "ISBN_10"
+
+private fun digitsOf(value: String): String = value.filter { it.isDigit() }
+
+/** First ISBN with 13 digits (dashes/spaces ignored); null when absent. */
+fun firstIsbn13(isbns: List<String>): String? =
+    isbns.firstOrNull { digitsOf(it).length == ISBN13_LENGTH }?.let(::digitsOf)
+
+/** First ISBN with 10 digits (dashes/spaces ignored); null when absent. */
+fun firstIsbn10(isbns: List<String>): String? =
+    isbns.firstOrNull { digitsOf(it).length == ISBN10_LENGTH }?.let(::digitsOf)
+
+/** Identifier of [type] from a Google Books `industryIdentifiers` list. */
+fun googleIndustryIdentifier(identifiers: List<Map<String, String>>, type: String): String? =
+    identifiers.firstOrNull { it["type"] == type }?.get("identifier")?.takeIf { it.isNotBlank() }
+
+// ── Google Books (U2) ─────────────────────────────────────────────
+
+@Serializable
+data class GoogleBooksImageLinks(
+    val thumbnail: String? = null,
+    @SerialName("smallThumbnail") val smallThumbnail: String? = null
+)
+
+@Serializable
+data class GoogleBooksVolumeInfo(
+    val title: String? = null,
+    val authors: List<String> = emptyList(),
+    val description: String? = null,
+    val language: String? = null,
+    val categories: List<String> = emptyList(),
+    val imageLinks: GoogleBooksImageLinks? = null,
+    @SerialName("industryIdentifiers") val industryIdentifiers: List<Map<String, String>> = emptyList()
+)
+
+@Serializable
+data class GoogleBooksVolumeItem(
+    val id: String = "",
+    @SerialName("volumeInfo") val volumeInfo: GoogleBooksVolumeInfo = GoogleBooksVolumeInfo()
+)
+
+@Serializable
+data class GoogleBooksSearchResponse(
+    @SerialName("totalItems") val totalItems: Int? = null,
+    val items: List<GoogleBooksVolumeItem> = emptyList()
+)
+
+/** Normalize a Google Books thumbnail to https (mixed-content safe). */
+fun googleBooksCoverUrl(thumbnail: String?): String? {
+    if (thumbnail.isNullOrBlank()) return null
+    val https = if (thumbnail.startsWith("http://")) "https://" + thumbnail.removePrefix("http://") else thumbnail
+    return if (https.startsWith("https://")) https else null
+}
+
+/**
+ * Map a Google Books volume; null when the volume carries no usable title.
+ * Google Books is a metadata/enrichment source (no download URL surfaced).
+ */
+fun mapGoogleBooksVolume(item: GoogleBooksVolumeItem): CatalogBook? {
+    val title = item.volumeInfo.title?.trim().orEmpty()
+    if (title.isBlank() || item.id.isBlank()) return null
+    val info = item.volumeInfo
+    return CatalogBook(
+        id = "googlebooks:${item.id}",
+        provider = BUILTIN_GOOGLEBOOKS,
+        title = title,
+        authors = info.authors,
+        coverUrl = googleBooksCoverUrl(info.imageLinks?.thumbnail ?: info.imageLinks?.smallThumbnail),
+        languages = listOfNotNull(info.language?.takeIf { it.isNotBlank() }),
+        subjects = info.categories.take(8),
+        downloadUrl = null,
+        description = info.description?.takeIf { it.isNotBlank() },
+        isbn13 = googleIndustryIdentifier(info.industryIdentifiers, GOOGLE_ISBN13_TYPE)
+            ?.let { digitsOf(it).takeIf { digits -> digits.length == ISBN13_LENGTH } },
+        isbn10 = googleIndustryIdentifier(info.industryIdentifiers, GOOGLE_ISBN10_TYPE)
+            ?.let { digitsOf(it).takeIf { digits -> digits.length == ISBN10_LENGTH } },
+        googleBooksId = item.id
+    )
+}

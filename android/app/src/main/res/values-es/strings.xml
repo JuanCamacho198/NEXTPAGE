@@ -173,6 +173,13 @@
     <string name="discover_source_addon_fallback">Complemento</string>
     <string name="discover_rail_from">De %1$s</string>
     <string name="discover_manage_addons">Gestionar addons</string>
+    <!-- U2: atribución de Google Books + aviso de key ausente (voseo) -->
+    <string name="google_books_attribution">Con tecnología de Google</string>
+    <string name="discover_google_books_disabled">Google Books está deshabilitado (falta la API key). Mostrando resultados de Open Library + Gutenberg.</string>
+    <!-- U3: etiquetas de grupos de acceso (voseo) -->
+    <string name="access_group_free">Gratis</string>
+    <string name="access_group_buy">Comprar</string>
+    <string name="access_group_subscribe">Suscripción</string>
     <string name="discover_back">Volver</string>
     <string name="discover_rail_newest">Recién agregados al catálogo</string>
     <string name="discover_rail_popular">Populares del catálogo</string>
@@ -849,4 +856,49 @@
     <string name="settings_privacy_toggle_label">Enviar telemetría</string>
     <string name="settings_privacy_toggle_hint_off">Esto detiene el ENVÍO de telemetría de inmediato (los datos nunca se recopilan sin conexión).</string>
     <string name="settings_privacy_toggle_hint_on">Se está enviando telemetría. Desactívalo para dejar de enviar de inmediato.</string>
+    <!-- U5: read-access ("Dónde leerlo") section -->
+    <string name="read_access_title">Dónde leerlo</string>
+    <string name="read_access_subtitle">Opciones legales para este título, en otro lado</string>
+    <string name="read_access_open">Abrir</string>
+    <string name="read_access_loading">Buscando opciones legales…</string>
+    <string name="read_access_empty_title">Sin copias legales</string>
+    <string name="read_access_empty_body">Todavía no encontramos una forma legal de leer este título. Probá con otra edición u otra búsqueda.</string>
+    <string name="access_badge_download">Descarga gratis</string>
+    <!-- U5: addon consent/disclosure (deferred from 4.3) -->
+    <string name="addon_consent_title">¿Compartir los datos del libro con este complemento?</string>
+    <string name="addon_consent_body">«%1$s» puede ver el título, el autor y los identificadores de este libro para buscar dónde leerlo. Los enlaces se abren en tu navegador; nada se descarga sin tu acción.</string>
+    <string name="addon_consent_allow">Permitir</string>
+    <string name="addon_consent_deny">Ahora no</string>
+    <string name="addon_consent_trust_note">Los complementos corren fuera de NextPage. Compartí datos solo con fuentes en las que confíes.</string>
+    <string name="addon_consent_state_granted">Acceso otorgado: este complemento puede resolver enlaces de lectura.</string>
+    <string name="addon_consent_state_missing">Acceso no otorgado: este complemento no va a resolver enlaces de lectura.</string>
+    <!-- U5: addon capabilities -->
+    <string name="addon_capabilities_title">Capacidades</string>
+    <string name="addon_capability_search">Buscar</string>
+    <string name="addon_capability_details">Detalles</string>
+    <string name="addon_capability_resolve">Resolver enlaces</string>
+    <string name="addon_capability_detail_title">Capacidades de %1$s</string>
+    <string name="addon_capability_detail_body">Lo que este complemento declara que puede hacer con tus consultas del catálogo. Otorgá acceso solo si confiás en esta fuente.</string>
+    <!-- U5: addon read sheet -->
+    <string name="addon_read_resolving">Consultando al complemento…</string>
+    <string name="addon_read_empty_title">Sin opciones de este complemento</string>
+    <string name="addon_read_empty_body">«%1$s» no ofrece opciones de lectura para este título ahora.</string>
+    <string name="addon_read_legal_notice">Fuente externa: los enlaces se abren en tu navegador. La disponibilidad y los derechos dependen del proveedor y de tu región.</string>
+    <!-- U5: legal disclaimer + policy page -->
+    <string name="legal_disclaimer_title">Un aviso antes de explorar</string>
+    <string name="legal_disclaimer_body">NextPage apunta a fuentes externas legales. Las descargas en la app solo se ofrecen para libros de dominio público; lo demás se abre en tu navegador, donde la disponibilidad y los derechos dependen del proveedor.</string>
+    <string name="legal_disclaimer_accept">Entendido</string>
+    <string name="legal_disclaimer_view_policy">Leer aviso legal</string>
+    <string name="legal_policy_title">Aviso legal</string>
+    <string name="legal_policy_intro">NextPage es una app de lectura, no una librería: te ayuda a encontrar dónde leer legalmente y mantiene tu biblioteca sincronizada.</string>
+    <string name="legal_policy_sources_title">De dónde viene el catálogo</string>
+    <string name="legal_policy_sources_body">Los resultados vienen de catálogos públicos (Open Library, Project Gutenberg vía Gutendex, Google Books) y de complementos comunitarios que vos instalás. Cada resultado nombra su fuente.</string>
+    <string name="legal_policy_public_domain_title">Descargas</string>
+    <string name="legal_policy_public_domain_body">La descarga en la app solo se ofrece para libros de dominio público. Cualquier otro título se abre en tu navegador, donde los términos del proveedor y tu región deciden la disponibilidad.</string>
+    <string name="legal_policy_addons_title">Complementos y consentimiento</string>
+    <string name="legal_policy_addons_body">Los complementos corren fuera de NextPage. Un complemento solo resuelve enlaces de lectura después de que le otorgues acceso al título, autor e identificadores del libro, y podés revocar ese acceso cuando quieras desde la pantalla de complementos.</string>
+    <string name="legal_policy_updated_note">Este aviso puede cambiar a medida que se agreguen fuentes.</string>
+    <!-- U5: legal empty state + universal sources -->
+    <string name="discover_empty_legal_title">Sin coincidencias legales</string>
+    <string name="discover_empty_legal_body">Nada en %1$s coincide con «%2$s». Probá con otra fuente u otra búsqueda.</string>
 </resources>

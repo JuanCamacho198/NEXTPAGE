@@ -171,6 +171,7 @@ private fun DiscoverRailCard(
             provider = book.provider,
             attributionNames = attributionNames
         )
+        AccessBadge(book = book)
     }
 }
 

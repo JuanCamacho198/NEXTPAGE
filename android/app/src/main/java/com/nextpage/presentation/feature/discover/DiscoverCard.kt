@@ -20,14 +20,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.nextpage.R
 import com.nextpage.data.remote.catalog.CatalogBook
 import com.nextpage.presentation.theme.NextPageColors
 
@@ -63,8 +62,11 @@ internal fun DiscoverBookCover(
                 model = coverUrl,
                 contentDescription = title,
                 contentScale = ContentScale.Crop,
-                placeholder = painterResource(R.drawable.cover_placeholder),
-                error = painterResource(R.drawable.cover_error),
+                // Solid painters, not painterResource: the cover_* XML drawables are
+                // <shape>s, which crash Compose's vector/raster-only resource loader
+                // (IllegalArgumentException). Surface matches the card background.
+                placeholder = ColorPainter(NextPageColors.surface),
+                error = ColorPainter(NextPageColors.surface),
                 onError = { coverFailed = true },
                 modifier = Modifier.fillMaxSize()
             )

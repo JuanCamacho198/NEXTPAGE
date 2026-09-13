@@ -58,6 +58,20 @@ fun resolveReadingState(explicitState: String?, progressPercentage: Float): Stri
 }
 
 /**
+ * Whether this book belongs in Continue Reading: it is actively being read and is
+ * neither finished nor parked. Precedence for exclusion, highest first, is the
+ * explicit [status], the canonical [progressPercentage], then [readingState]
+ * (see the `home-continue-reading` spec). [progressPercentage] is expected to be
+ * the canonical value merged from `reading_progress.percentage`.
+ */
+fun Book.isActiveReadingCandidate(): Boolean {
+    if (status == BookStatus.COMPLETED || status == BookStatus.PLAN_TO_READ) return false
+    if (progressPercentage >= 100f) return false
+    if (readingState == ReadingState.COMPLETED) return false
+    return resolveReadingState(readingState, progressPercentage) == ReadingState.READING
+}
+
+/**
  * Resolves the effective reading status: an explicit [Book.status] wins; otherwise
  * the status is derived from accumulated [minutesRead] using [readingTargetMinutes].
  */

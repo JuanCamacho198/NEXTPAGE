@@ -3,6 +3,10 @@ name: Desktop CI
 on:
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'android/**'
+      - 'web/**'
+      - 'packages/**'
   push:
     branches: [main]
     paths:

@@ -3,6 +3,9 @@ name: Web CI
 on:
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'android/**'
+      - 'desktop/**'
   push:
     branches: [main]
     paths:

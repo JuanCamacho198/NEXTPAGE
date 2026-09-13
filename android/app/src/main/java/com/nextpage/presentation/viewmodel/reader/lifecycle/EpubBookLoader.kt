@@ -2,7 +2,9 @@ package com.nextpage.presentation.viewmodel.reader.lifecycle
 
 import android.app.Application
 import android.util.Log
+import com.nextpage.R
 import com.nextpage.data.remote.supabase.SupabaseProgressSync
+import com.nextpage.debug.DebugLog
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.presentation.UiEvent
 import com.nextpage.presentation.viewmodel.CfiMigrator
@@ -11,12 +13,14 @@ import java.io.File
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Locator
@@ -57,6 +61,7 @@ class EpubBookLoader(
 
     companion object {
         private const val TAG = "EpubBookLoader"
+        private const val EPUB_LOAD_TIMEOUT_MS = 30_000L
     }
 
     override suspend fun open(
@@ -96,6 +101,7 @@ class EpubBookLoader(
     fun loadEpubBook(bookId: String, filePath: String) {
         val epoch = ++loadEpoch
         val startTime = System.currentTimeMillis()
+        DebugLog.info(TAG, "loadEpubBook start bookId=$bookId epoch=$epoch")
         state.update {
             it.copy(
                 selectedBookId = bookId,
@@ -116,28 +122,42 @@ class EpubBookLoader(
         scope.launch(mainDispatcher) {
             try {
                 val file = File(filePath)
+                if (!file.exists()) {
+                    val message = application.getString(R.string.book_not_found)
+                    DebugLog.warn(TAG, "loadEpubBook missing file bookId=$bookId epoch=$epoch")
+                    state.update { it.copy(isLoading = false, error = message) }
+                    _isLoading.value = false
+                    onErrorEvent(UiEvent.ShowSnackbar(message))
+                    return@launch
+                }
                 val fileUri = android.net.Uri.fromFile(file).toString()
                 val httpClient = DefaultHttpClient()
                 val assetRetriever = AssetRetriever(application.contentResolver, httpClient)
                 val url = AbsoluteUrl(fileUri)
                     ?: throw Exception("Invalid file URI: $fileUri")
-                val retrieveResult = withContext(Dispatchers.IO) { assetRetriever.retrieve(url) }
-                val asset = retrieveResult.getOrNull()
-                    ?: throw Exception("Failed to retrieve EPUB asset")
-                val parser = DefaultPublicationParser(
-                    context = application,
-                    httpClient = httpClient,
-                    assetRetriever = assetRetriever,
-                    pdfFactory = null
-                )
-                val opener = PublicationOpener(parser)
-                val openResult = withContext(Dispatchers.IO) {
-                    opener.open(asset, allowUserInteraction = false)
+                val publication: Publication = withTimeout(EPUB_LOAD_TIMEOUT_MS) {
+                    val retrieveResult = withContext(Dispatchers.IO) { assetRetriever.retrieve(url) }
+                    val asset = retrieveResult.getOrNull()
+                        ?: throw Exception("Failed to retrieve EPUB asset")
+                    val parser = DefaultPublicationParser(
+                        context = application,
+                        httpClient = httpClient,
+                        assetRetriever = assetRetriever,
+                        pdfFactory = null
+                    )
+                    val opener = PublicationOpener(parser)
+                    val openResult = withContext(Dispatchers.IO) {
+                        opener.open(asset, allowUserInteraction = false)
+                    }
+                    openResult.fold(
+                        onSuccess = { it },
+                        onFailure = { error -> throw Exception("Readium open failed: ${error.message}") }
+                    )
                 }
-                val publication: Publication = openResult.fold(
-                    onSuccess = { it },
-                    onFailure = { error -> throw Exception("Readium open failed: ${error.message}") }
-                )
+                if (epoch != loadEpoch) {
+                    DebugLog.warn(TAG, "loadEpubBook stale completion ignored bookId=$bookId epoch=$epoch")
+                    return@launch
+                }
 
                 val loadTime = System.currentTimeMillis() - startTime
 
@@ -152,6 +172,7 @@ class EpubBookLoader(
                 com.nextpage.debug.SentryMetrics.distribution("reader_open", bucketedLoad, readerTags)
                 com.nextpage.debug.SentryMetrics.distribution("reader_ttfp_native", bucketedLoad, readerTags)
                 Log.d(TAG, "Readium loaded EPUB in ${loadTime}ms")
+                DebugLog.info(TAG, "loadEpubBook success bookId=$bookId epoch=$epoch loadTimeMs=$loadTime")
 
                 val chapters = TocBuilder.buildChaptersFromPublication(publication)
 
@@ -187,8 +208,24 @@ class EpubBookLoader(
                 }
                 onProgressDisplay()
                 onBookLoaded(bookId)
+            } catch (e: TimeoutCancellationException) {
+                if (epoch != loadEpoch) {
+                    DebugLog.warn(TAG, "loadEpubBook stale timeout ignored bookId=$bookId epoch=$epoch")
+                    return@launch
+                }
+                Log.e(TAG, "Readium EPUB open timed out", e)
+                DebugLog.error(TAG, "loadEpubBook timeout bookId=$bookId epoch=$epoch")
+                val timeoutMessage = application.getString(R.string.error_unknown)
+                state.update { it.copy(isLoading = false, error = timeoutMessage) }
+                _isLoading.value = false
+                onErrorEvent(UiEvent.ShowSnackbar(timeoutMessage))
             } catch (e: Exception) {
+                if (epoch != loadEpoch) {
+                    DebugLog.warn(TAG, "loadEpubBook stale failure ignored bookId=$bookId epoch=$epoch")
+                    return@launch
+                }
                 Log.e(TAG, "Readium failed to open EPUB", e)
+                DebugLog.error(TAG, "loadEpubBook failure bookId=$bookId epoch=$epoch cause=${e.message}")
                 val message = e.message ?: "Failed to open EPUB with Readium"
                 state.update { it.copy(isLoading = false, error = message) }
                 _isLoading.value = false

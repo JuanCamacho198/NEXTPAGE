@@ -11,10 +11,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalContext
+import com.nextpage.R
+import com.nextpage.debug.DebugLog
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 import kotlinx.coroutines.delay
 
 private const val FULLSCREEN_AUTOHIDE_MS = 3_000L
+private const val TAG = "ReaderScreenEffects"
 
 /**
  * Hosts 5 reader lifecycle effects + rememberUpdatedState bridge.
@@ -26,6 +29,7 @@ fun ReaderScreenEffects(
     selectedBookId: String,
     bookFilePath: String?,
     bookFormat: String,
+    bookIdentitySource: String = "snapshot",
     lastInteractionAt: Long,
     currentChapterIndex: Int,
     currentPdfPage: Int,
@@ -75,8 +79,14 @@ fun ReaderScreenEffects(
     }
 
     LaunchedEffect(selectedBookId, bookFilePath, bookFormat) {
-        if (selectedBookId.isNotBlank() && bookFilePath != null) {
-            viewModel.loadBook(selectedBookId, bookFilePath, bookFormat)
+        val idBlank = selectedBookId.isBlank()
+        val pathBlank = bookFilePath.isNullOrBlank()
+        if (idBlank && pathBlank) {
+            DebugLog.warn(TAG, "loadBook skipped: blank selection (source=$bookIdentitySource)")
+            viewModel.lifecycleHolder.reportLoadError(context.getString(R.string.book_not_found))
+        } else {
+            DebugLog.info(TAG, "loadBook trigger bookId=$selectedBookId format=$bookFormat source=$bookIdentitySource")
+            viewModel.loadBookWithFallback(selectedBookId, bookFilePath, bookFormat)
         }
     }
 

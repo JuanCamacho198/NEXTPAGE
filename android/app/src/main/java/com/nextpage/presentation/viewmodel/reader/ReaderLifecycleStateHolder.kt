@@ -256,6 +256,15 @@ class ReaderLifecycleStateHolder(
         pdfLoader.onPdfDocumentLoaded(pages)
     }
 
+    /**
+     * Surfaces an explicit load error (e.g. guard-skipped loadBook with a
+     * blank id / null path) so the reader shows retry UI instead of holding
+     * the initial `isLoading = true` spinner forever.
+     */
+    fun reportLoadError(message: String) {
+        _state.update { it.copy(isLoading = false, error = message) }
+    }
+
     // ── Progress / Locator ───────────────────────────────────────
 
     @Deprecated("Delegate to ReadingProgressTracker — to be removed in PR #2")

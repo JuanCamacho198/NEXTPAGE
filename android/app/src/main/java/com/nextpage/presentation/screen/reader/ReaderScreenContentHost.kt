@@ -119,6 +119,13 @@ fun ReaderScreenContentHost(
                 SharedSelectionOverlay()
             }
         }
+        else -> {
+            ErrorContent(
+                error = error ?: stringResource(R.string.error_unknown),
+                onRetry = onRetry,
+                modifier = modifier
+            )
+        }
     }
 }
 

@@ -2,11 +2,13 @@ package com.nextpage.di.modules
 
 import android.content.Context
 import android.util.Log
+import com.nextpage.data.repository.CacheRepositoryImpl
 import com.nextpage.data.repository.DictionaryRepositoryImpl
 import com.nextpage.data.repository.HomeRepositoryImpl
 import com.nextpage.data.repository.LibraryRepositoryImpl
 import com.nextpage.data.repository.ReaderRepositoryImpl
 import com.nextpage.data.repository.ReadingStatsRepositoryImpl
+import com.nextpage.domain.repository.CacheRepository
 import com.nextpage.domain.repository.DictionaryRepository
 import com.nextpage.domain.repository.HomeRepository
 import com.nextpage.domain.repository.LibraryRepository
@@ -68,5 +70,11 @@ class RepositoryModule(
 
     val dictionaryRepository: DictionaryRepository = DictionaryRepositoryImpl(
         dao = databaseModule.dictionaryWordDao
+    )
+
+    val cacheRepository: CacheRepository = CacheRepositoryImpl(
+        discoverCacheDao = databaseModule.discoverCacheDao,
+        appContext = context.applicationContext,
+        imageLoader = storageModule.coilImageLoader
     )
 }

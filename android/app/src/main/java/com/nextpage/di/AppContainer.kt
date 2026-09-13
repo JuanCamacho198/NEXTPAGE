@@ -34,6 +34,7 @@ import com.nextpage.di.modules.RepositoryModule
 import com.nextpage.di.modules.StorageModule
 import com.nextpage.di.modules.UseCaseModule
 import com.nextpage.domain.repository.AuthRepository
+import com.nextpage.domain.repository.CacheRepository
 import com.nextpage.domain.repository.DictionaryRepository
 import com.nextpage.domain.connectivity.ConnectivityObserver
 import com.nextpage.domain.repository.HomeRepository
@@ -70,6 +71,7 @@ class AppContainer(context: Context) {
     val readingStatsRepository: ReadingStatsRepository get() = repositoryModule.readingStatsRepository
     val homeRepository: HomeRepository get() = repositoryModule.homeRepository
     val dictionaryRepository: DictionaryRepository get() = repositoryModule.dictionaryRepository
+    val cacheRepository: CacheRepository get() = repositoryModule.cacheRepository
     val readerPreferences: ReaderPreferences get() = preferencesModule.readerPreferences
     val readingGoalPreferences: ReadingGoalPreferences get() = preferencesModule.readingGoalPreferences
     val dailyGoalProvider: () -> Int get() = preferencesModule.dailyGoalProvider

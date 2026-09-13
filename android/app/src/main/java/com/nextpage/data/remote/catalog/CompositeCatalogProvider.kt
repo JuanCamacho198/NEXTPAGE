@@ -1,11 +1,11 @@
 package com.nextpage.data.remote.catalog
 
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import com.nextpage.debug.SentryMetrics
 import kotlinx.serialization.json.Json
 
 /**
@@ -15,24 +15,17 @@ import kotlinx.serialization.json.Json
  * Page/details caching is per-source with v2 keys carrying the full source
  * string, and reads enforce the existence check (design A1): entries whose
  * source id is not in the active source set at read time are never served.
- * Burst searches are trailing-edge debounced; page < 1 rejects before I/O.
+ * Search entry is direct (cache pre-read then executeSearch); the single
+ * 250ms trailing debounce is owned by DiscoverViewModel (U2).
  * Mirrors desktop `CompositeCatalogProvider.ts`.
  */
 class CompositeCatalogProvider(
     private val providers: List<CatalogProvider>,
-    debounceMs: Long = DEBOUNCE_MS,
-    scope: CoroutineScope? = null,
     private val cache: DiscoverCacheStore? = null,
     private val nowEpochSecs: () -> Long = { System.currentTimeMillis() / 1000 }
 ) : CatalogProvider {
 
     private val cacheJson = Json { ignoreUnknownKeys = true }
-
-    // App-lifetime singleton scope by default; tests inject a TestScope
-    // so the trailing-edge debounce runs on virtual time.
-    private val debounceScope = scope ?: CoroutineScope(SupervisorJob() + Dispatchers.Default)
-
-    private val debounced = SearchDebouncer(debounceScope, debounceMs, ::executeSearch)
 
     /** Sources in provider order, deduped by sourceId (first occurrence wins). */
     override fun listSources(): List<CatalogSourceInfo> {
@@ -47,28 +40,32 @@ class CompositeCatalogProvider(
     }
 
     /**
-     * Debounced entry point: only the latest burst query issues network I/O.
-     * Fresh cache entries return immediately without waiting for debounce.
+     * Direct entry point (U2): cache pre-read, then straight to executeSearch.
+     * Fresh cache entries return immediately; page < 1 rejects before I/O.
      */
     override suspend fun search(query: String, page: Int): PagedResult {
         if (page < 1) throw catalogError(CatalogErrorCode.INVALID_PAGE, "page must be >= 1, got $page")
         readAllProviderPages(query, page)?.let { return it }
-        return debounced.search(query, page)
+        return executeSearch(query, page)
     }
 
     private suspend fun executeSearch(query: String, page: Int): PagedResult = coroutineScope {
-        // Re-check inside the debounce window: a concurrent caller may have filled it.
+        // Re-check before fan-out: a concurrent caller may have filled the cache.
         readAllProviderPages(query, page)?.let { return@coroutineScope it }
         val active = activeSourceIds()
         val searches = searchableProviders().map { provider ->
             async {
+                val startedMs = System.currentTimeMillis()
                 try {
                     val cached = readProviderPage(provider, query, page, active)
+                    val sourceId = singleSource(provider)?.sourceId ?: "unknown"
                     if (cached != null) {
+                        emitDiscoverSearch(cached, sourceId, startedMs, true)
                         cached
                     } else {
                         val result = provider.search(query, page)
                         cacheProviderPage(provider, query, page, result, active)
+                        emitDiscoverSearch(result, sourceId, startedMs, false)
                         result
                     }
                 } catch (err: Throwable) {
@@ -76,11 +73,18 @@ class CompositeCatalogProvider(
                     // an empty page so it can never fail the whole fan-out.
                     // Cancellation still propagates to respect coroutine scope.
                     if (err is CancellationException) throw err
+                    val code = (err as? CatalogException)?.code?.name
+                        ?: CatalogErrorCode.UPSTREAM_ERROR.name
+                    val sourceId = singleSource(provider)?.sourceId ?: "unknown"
+                    SentryMetrics.count(
+                        "discover_search_error",
+                        mapOf("provider" to sourceId, "code" to code)
+                    )
                     PagedResult(emptyList(), null, 0)
                 }
             }
-        }
-        mergePaged(searches.map { it.await() }, page)
+            }
+            mergePaged(searches.map { it.await() }, page)
     }
 
     /**
@@ -128,6 +132,9 @@ class CompositeCatalogProvider(
         result: PagedResult,
         active: Set<String>
     ) {
+        // Never-cache-empty: empty search results persist nothing and extend
+        // no TTL, so a prior valid cached page keeps its existing TTL.
+        if (result.results.isEmpty()) return
         val store = cache ?: return
         val source = singleSource(provider) ?: return
         if (source.sourceId !in active) return
@@ -140,7 +147,7 @@ class CompositeCatalogProvider(
     }
 
     /**
-     * Featured page cache read for a single-source provider under the `f:v2:`
+     * Featured page cache read for a single-source provider under the `f:v3:`
      * namespace. Same existence check as [readProviderPage]: sources that are not
      * active at read time are never served.
      */
@@ -164,6 +171,9 @@ class CompositeCatalogProvider(
         result: PagedResult,
         active: Set<String>
     ) {
+        // Never-cache-empty: empty rails persist nothing and extend no TTL,
+        // so a prior valid cached page keeps its existing TTL.
+        if (result.results.isEmpty()) return
         val store = cache ?: return
         val source = singleSource(provider) ?: return
         if (source.sourceId !in active) return
@@ -171,7 +181,7 @@ class CompositeCatalogProvider(
             featuredCacheKey(source.sourceId, sort, page),
             cacheJson.encodeToString(PagedResult.serializer(), result),
             nowEpochSecs(),
-            PAGE_TTL_S
+            FEATURED_TTL_S
         )
     }
 
@@ -180,6 +190,66 @@ class CompositeCatalogProvider(
      * later ones fill cover gaps and append unmatched books (the [Gutendex,
      * OpenLibrary] fold reproduces the legacy hardcoded-pair merge exactly).
      */
+    /**
+     * U3-2 search emission: latency distributionRaw + request/empty
+     * counters per provider completion. NEVER emits user IDs, query
+     * text, or book IDs; attribute set stays {provider, cached} /
+     * {surface, provider}.
+     */
+    private fun emitDiscoverSearch(
+        page: PagedResult,
+        sourceId: String,
+        startedMs: Long,
+        cached: Boolean
+    ) {
+        val elapsedMs = System.currentTimeMillis() - startedMs
+        SentryMetrics.distributionRaw(
+            "discover_search_latency",
+            elapsedMs,
+            mapOf("provider" to sourceId, "cached" to cached.toString())
+        )
+        SentryMetrics.count(
+            "discover_request_total",
+            mapOf("surface" to "search", "provider" to sourceId)
+        )
+        if (page.results.isEmpty()) {
+            SentryMetrics.count(
+                "discover_empty_total",
+                mapOf("surface" to "search", "provider" to sourceId)
+            )
+        }
+    }
+
+    /**
+     * U3-2 rail emission: latency distributionRaw + request/empty
+     * counters per provider completion. NEVER emits user IDs, query
+     * text, or book IDs; attribute set stays {provider, cached} /
+     * {surface, provider}.
+     */
+    private fun emitDiscoverRail(
+        page: PagedResult,
+        sourceId: String,
+        startedMs: Long,
+        cached: Boolean
+    ) {
+        val elapsedMs = System.currentTimeMillis() - startedMs
+        SentryMetrics.distributionRaw(
+            "discover_search_latency",
+            elapsedMs,
+            mapOf("provider" to sourceId, "cached" to cached.toString())
+        )
+        SentryMetrics.count(
+            "discover_request_total",
+            mapOf("surface" to "rail", "provider" to sourceId)
+        )
+        if (page.results.isEmpty()) {
+            SentryMetrics.count(
+                "discover_empty_total",
+                mapOf("surface" to "rail", "provider" to sourceId)
+            )
+        }
+    }
+
     private fun mergePaged(pages: List<PagedResult>, page: Int): PagedResult {
         if (pages.isEmpty()) return toPagedResult(emptyList(), page, 0)
         var results = pages.first().results
@@ -209,20 +279,39 @@ class CompositeCatalogProvider(
         return coroutineScope {
             val active = activeSourceIds()
             val pages = searchableProviders()
-                .filter { it.supportsFeatured() }
-                .map { provider ->
-                    async {
-                        val cached = readProviderFeaturedPage(provider, sort, page, active)
-                        if (cached != null) {
-                            cached
-                        } else {
-                            val result = provider.featured(sort, page)
-                            cacheProviderFeaturedPage(provider, sort, page, result, active)
-                            result
+                    .filter { it.supportsFeatured() }
+                    .map { provider ->
+                        async {
+                            val startedMs = System.currentTimeMillis()
+                            try {
+                                val cached = readProviderFeaturedPage(provider, sort, page, active)
+                                val sourceId = singleSource(provider)?.sourceId ?: "unknown"
+                                if (cached != null) {
+                                    emitDiscoverRail(cached, sourceId, startedMs, true)
+                                    cached
+                                } else {
+                                    val result = provider.featured(sort, page)
+                                    cacheProviderFeaturedPage(provider, sort, page, result, active)
+                                    emitDiscoverRail(result, sourceId, startedMs, false)
+                                    result
+                                }
+                            } catch (err: Throwable) {
+                                if (err is CancellationException) throw err
+                                currentCoroutineContext().ensureActive()
+                                // U3-2 (U1-3 catch path): error counter is the ONLY
+                                // addition authorized here; isolation stays untouched.
+                                val code = (err as? CatalogException)?.code?.name
+                                    ?: CatalogErrorCode.UPSTREAM_ERROR.name
+                                val sourceId = singleSource(provider)?.sourceId ?: "unknown"
+                                SentryMetrics.count(
+                                    "discover_search_error",
+                                    mapOf("provider" to sourceId, "code" to code)
+                                )
+                                PagedResult(emptyList(), null, 0)
+                            }
                         }
                     }
-                }
-            mergePaged(pages.map { it.await() }, page)
+                mergePaged(pages.map { it.await() }, page)
         }
     }
 

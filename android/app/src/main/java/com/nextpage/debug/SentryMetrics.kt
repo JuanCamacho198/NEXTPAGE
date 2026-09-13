@@ -126,6 +126,64 @@ object SentryMetrics {
         DebugDual.addPerfCrumb(name, tags)
     }
 
+    /**
+     * Bounded attribute keys for Discover Application Metrics (U3).
+     * Only these keys may egress; user IDs, query text, and book IDs
+     * MUST NEVER appear here. Legacy sync/outbox metrics keep their own
+     * keys and stay outside this allowlist.
+     */
+    val DISCOVER_ATTR_KEYS: Set<String> = setOf("provider", "code", "surface", "cached")
+
+    private fun requireAttrKeys(tags: Map<String, String>) {
+        require(tags.keys.all { it in DISCOVER_ATTR_KEYS }) {
+            "Discover metrics carry bounded attrs only " +
+                "{provider, code, surface, cached}; got ${tags.keys}"
+        }
+    }
+
+    /**
+     * Raw-value distribution (U3-1): forwards the EXACT sample to Sentry
+     * so p95 is valid. The bucketed edge is recorded for the local
+     * debug-only aggregate via [recordSample]; bucketed values never
+     * egress on this path. MUST land before any Discover emissions.
+     */
+    fun distributionRaw(name: String, rawMs: Long, tags: Map<String, String>) {
+        requireAttrKeys(tags)
+        if (egressEnabled()) {
+            runCatching {
+                Sentry.metrics().distribution(
+                    name,
+                    rawMs.toDouble(),
+                    "millisecond",
+                    metricParams(tags)
+                )
+            }
+        }
+        // Local aggregate and breadcrumb still run when disabled: neither
+        // is egress on this path (breadcrumbs are vetoed by
+        // beforeBreadcrumb). The aggregate keeps the bucket edge only.
+        recordSample(name, bucketDurationMs(rawMs))
+        DebugDual.addPerfCrumb(name, tags)
+    }
+
+    /**
+     * Bounded counter (U3-1): Discover totals, errors, empties, funnel.
+     * Intent-based emission only; no timing aggregate is recorded.
+     */
+    fun count(name: String, tags: Map<String, String>, value: Long = 1L) {
+        requireAttrKeys(tags)
+        if (egressEnabled()) {
+            runCatching {
+                Sentry.metrics().count(
+                    name,
+                    value.toDouble(),
+                    "none",
+                    metricParams(tags)
+                )
+            }
+        }
+    }
+
     private fun recordSample(name: String, bucketedValue: Long) {
         synchronized(samplesByKey) {
             val list = samplesByKey.getOrPut(name) { mutableListOf() }

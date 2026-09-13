@@ -127,9 +127,7 @@ class AddonCompositeRebuildTest {
                     curated = FakeProvider("curated", CatalogSourceKind.CURATED),
                     installedAddons = reg.listInstalled(),
                     addonTransport = payloadTransport
-                ),
-                debounceMs = 0,
-                scope = backgroundScope
+                )
             )
         }
         reg.addOnChangedListener { live.invalidate() }

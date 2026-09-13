@@ -847,6 +847,10 @@
     <string name="settings_addons_uninstall_confirm_body">Se quitará de tu biblioteca</string>
     <string name="settings_addons_uninstall_confirm_action">Desinstalar</string>
     <string name="settings_addons_uninstall_confirm_cancel">Cancelar</string>
+    <!-- U4: Fuentes integradas (read-only built-in sources) -->
+    <string name="settings_addons_builtin_title">Fuentes integradas</string>
+    <string name="settings_addons_builtin_gutendex_role">Alimenta los rieles Recién agregados y Populares</string>
+    <string name="settings_addons_builtin_openlibrary_role">Solo búsqueda combinada — sin riel dedicado</string>
     <string name="performance_no_data">Sin datos aún</string>
     <string name="performance_no_data_hint">Este flujo aún no tiene instrumento: los datos aparecen al usarlo en esta sesión.</string>
     <string name="settings_privacy_title">Privacidad y telemetría</string>

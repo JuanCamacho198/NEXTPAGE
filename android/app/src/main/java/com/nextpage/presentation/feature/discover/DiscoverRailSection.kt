@@ -156,6 +156,7 @@ private fun DiscoverRailCard(
         DiscoverBookCover(
             coverUrl = book.coverUrl,
             title = book.title,
+            surface = "rail",
             modifier = Modifier
                 .width(RAIL_CARD_WIDTH)
                 .height(RAIL_COVER_HEIGHT)

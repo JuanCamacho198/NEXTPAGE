@@ -13,6 +13,7 @@ import com.nextpage.data.remote.catalog.CatalogSourceInfo
 import com.nextpage.data.remote.catalog.CatalogSourceKind
 import com.nextpage.data.remote.catalog.CatalogSources
 import com.nextpage.data.remote.catalog.addonSource
+import com.nextpage.debug.SentryMetrics
 import com.nextpage.domain.connectivity.AlwaysOnlineConnectivityObserver
 import com.nextpage.domain.access.resolveAccess
 import com.nextpage.domain.access.LegalAccess
@@ -442,10 +443,34 @@ class DiscoverViewModel(
         if (downloadJob?.isActive == true) return
 
         downloadingBookId = book.id
+        SentryMetrics.count(
+            "discover_download_start",
+            mapOf("provider" to book.provider)
+        )
         downloadJob = viewModelScope.launch(mainDispatcher) {
             useCase(book).collect { state ->
+                emitDownloadTerminal(state, book.provider)
                 _uiState.update { it.copy(download = state) }
             }
+        }
+    }
+
+    /**
+     * U3-2 download funnel: terminal counters only (start fires on launch above).
+     * Attributes stay {provider[, code]} from CatalogErrorCode; NEVER book id,
+     * title, query, or user id. Duplicate/Idle/Downloading/Importing emit nothing.
+     */
+    private fun emitDownloadTerminal(state: DownloadImportState, provider: String) {
+        when (state) {
+            is DownloadImportState.Success ->
+                SentryMetrics.count("discover_download_complete", mapOf("provider" to provider))
+            is DownloadImportState.Failure -> {
+                val code = state.error?.name
+                val tags = if (code != null) mapOf("provider" to provider, "code" to code)
+                    else mapOf("provider" to provider)
+                SentryMetrics.count("discover_download_fail", tags)
+            }
+            else -> Unit
         }
     }
 
@@ -716,7 +741,7 @@ class DiscoverViewModel(
 
     companion object {
         /** Task-phase parameter (design §7.5): injectable for tests. */
-        const val DEFAULT_DEBOUNCE_MS = 300L
+        const val DEFAULT_DEBOUNCE_MS = 250L
 
         /**
          * Fixed query for per-addon IDLE rails. Addon manifests expose a search

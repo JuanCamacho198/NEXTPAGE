@@ -11,25 +11,28 @@ const val PAGE_TTL_S = 86_400L
 /** Detail TTL: 7d. */
 const val DETAIL_TTL_S = 604_800L
 
+/** Featured rail TTL: 6h (rails go stale faster than search pages). */
+const val FEATURED_TTL_S = 21_600L
+
 /** Discover cache format version (design A7): prefixed into every key. */
-const val DISCOVER_CACHE_VERSION = "v2"
+const val DISCOVER_CACHE_VERSION = "v3"
 
 private const val PAGE_KEY_PREFIX = "p:$DISCOVER_CACHE_VERSION:"
 private const val DETAIL_KEY_PREFIX = "d:$DISCOVER_CACHE_VERSION:"
 private const val FEATURED_KEY_PREFIX = "f:$DISCOVER_CACHE_VERSION:"
 
-/** Page cache key: `p:v2:{sourceId}:{query}:{page}` (24h). Query is normalized. */
+/** Page cache key: `p:v3:{sourceId}:{query}:{page}` (24h). Query is normalized. */
 fun pageCacheKey(sourceId: String, query: String, page: Int): String =
     "$PAGE_KEY_PREFIX$sourceId:${query.trim().lowercase()}:$page"
 
-/** Detail cache key: `d:v2:{sourceId}:{id}` (7d). */
+/** Detail cache key: `d:v3:{sourceId}:{id}` (7d). */
 fun detailCacheKey(sourceId: String, id: String): String = "$DETAIL_KEY_PREFIX$sourceId:$id"
 
 /**
- * Featured rail cache key: `f:v2:{sourceId}:{sort}:{page}` (same 24h page TTL).
+ * Featured rail cache key: `f:v3:{sourceId}:{sort}:{page}` (6h featured TTL).
  *
- * This is a new key *kind* under the unchanged `v2` payload version, so no cache
- * migration and no invalidation of existing search/detail entries.
+ * Bumped to `v3` with the rest of the catalog namespace; stale `v2` rows
+ * (search/detail/featured) are never served under the new prefixes.
  */
 fun featuredCacheKey(sourceId: String, sort: CatalogFeaturedSort, page: Int): String =
     "$FEATURED_KEY_PREFIX$sourceId:${sort.name}:$page"

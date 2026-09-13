@@ -892,6 +892,10 @@
     <string name="settings_addons_uninstall_confirm_body">This removes it from your library</string>
     <string name="settings_addons_uninstall_confirm_action">Uninstall</string>
     <string name="settings_addons_uninstall_confirm_cancel">Cancel</string>
+    <!-- U4: Fuentes integradas (read-only built-in sources) -->
+    <string name="settings_addons_builtin_title">Built-in sources</string>
+    <string name="settings_addons_builtin_gutendex_role">Powers the Recently added and Popular rails</string>
+    <string name="settings_addons_builtin_openlibrary_role">Combined search only — no dedicated rail</string>
     <string name="discover_source_filter_all">All</string>
     <string name="discover_source_addon_fallback">Addon</string>
     <string name="discover_rail_from">From %1$s</string>

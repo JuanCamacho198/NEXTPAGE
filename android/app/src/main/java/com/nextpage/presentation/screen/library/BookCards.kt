@@ -1,8 +1,7 @@
 package com.nextpage.presentation.screen.library
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,14 +35,12 @@ import com.nextpage.ui.components.molecules.BookContextMenuTrigger
 private const val READING_TARGET_MINUTES = 300L
 private const val SURFACE_ALPHA = 0.3f
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BookListCard(
     book: Book,
     minutesRead: Long,
     progressPercent: Float? = null,
     onClick: () -> Unit,
-    onLongPress: () -> Unit,
     onEdit: () -> Unit,
     onMarkCompleted: () -> Unit,
     onMarkPlanToRead: () -> Unit,
@@ -60,7 +57,7 @@ fun BookListCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .combinedClickable(onClick = onClick, onLongClick = onLongPress),
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = SURFACE_ALPHA)
     ) {
@@ -112,14 +109,12 @@ fun BookListCard(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BookGridCard(
     book: Book,
     minutesRead: Long,
     progressPercent: Float? = null,
     onClick: () -> Unit,
-    onLongPress: () -> Unit,
     onEdit: () -> Unit,
     onMarkCompleted: () -> Unit,
     onMarkPlanToRead: () -> Unit,
@@ -144,10 +139,7 @@ fun BookGridCard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = SURFACE_ALPHA))
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongPress
-            )
+            .clickable(onClick = onClick)
     ) {
         Box {
             CoverThumbnail(
@@ -230,7 +222,6 @@ private fun BookCardsDarkPreview() {
             book = PreviewBook,
             minutesRead = 60L,
             onClick = {},
-            onLongPress = {},
             onEdit = {},
             onMarkCompleted = {},
             onMarkPlanToRead = {},
@@ -248,7 +239,6 @@ private fun BookCardsLightPreview() {
             book = PreviewBook,
             minutesRead = 60L,
             onClick = {},
-            onLongPress = {},
             onEdit = {},
             onMarkCompleted = {},
             onMarkPlanToRead = {},

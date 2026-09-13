@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.nextpage.data.remote.catalog.CatalogBook
+import com.nextpage.debug.SentryMetrics
 import com.nextpage.presentation.theme.NextPageColors
 
 /**
@@ -38,6 +39,7 @@ import com.nextpage.presentation.theme.NextPageColors
  * otherwise the book's initial in the brand color on `bg_surface`. A failed load
  * degrades to the letter art instead of leaving a broken image box.
  *
+ * @param surface Funnel attribution for discover_cover_fail (rail|grid|detail).
  * @param letterSize Glyph size for the fallback. The design scales the initial
  *   with the surface (48sp for rail/grid covers, 28sp for the detail head).
  */
@@ -46,7 +48,8 @@ internal fun DiscoverBookCover(
     coverUrl: String?,
     title: String,
     modifier: Modifier = Modifier,
-    letterSize: TextUnit = 32.sp
+    letterSize: TextUnit = 32.sp,
+    surface: String = "grid"
 ) {
     var coverFailed by remember(coverUrl) { mutableStateOf(false) }
     val showCover = !coverUrl.isNullOrBlank() && !coverFailed
@@ -67,7 +70,10 @@ internal fun DiscoverBookCover(
                 // (IllegalArgumentException). Surface matches the card background.
                 placeholder = ColorPainter(NextPageColors.surface),
                 error = ColorPainter(NextPageColors.surface),
-                onError = { coverFailed = true },
+                onError = {
+                    coverFailed = true
+                    SentryMetrics.count("discover_cover_fail", mapOf("surface" to surface))
+                },
                 modifier = Modifier.fillMaxSize()
             )
         } else {
@@ -103,6 +109,7 @@ fun DiscoverCard(
         DiscoverBookCover(
             coverUrl = book.coverUrl,
             title = book.title,
+            surface = "grid",
             letterSize = 48.sp,
             modifier = Modifier
                 .fillMaxWidth()

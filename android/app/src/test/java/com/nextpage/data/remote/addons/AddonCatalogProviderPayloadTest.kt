@@ -118,7 +118,7 @@ class AddonCatalogProviderPayloadTest {
             AddonCatalogProvider(ManifestValidator.validate(manifestJson.toByteArray(), "application/json"), addonId, transport)
         }
         val builtin = FakeBuiltinProvider()
-        val composite = CompositeCatalogProvider(listOf(builtin) + providers, debounceMs = 0, scope = backgroundScope)
+        val composite = CompositeCatalogProvider(listOf(builtin) + providers)
         val page = composite.search("dune", 1)
         assertEquals(
             providers.map { it.listSources()[0].sourceId },
@@ -131,7 +131,7 @@ class AddonCatalogProviderPayloadTest {
     fun `getDetails routes to the owning addon and renders the detailsUrl R3-1`() = runTest {
         val transport = RoutingTransport(mapOf("space.example" to (200 to bookJson(id = "book-7", title = "Detail Book"))))
         val provider = AddonCatalogProvider(spaceManifest(), ADDON_ID, transport)
-        val composite = CompositeCatalogProvider(listOf(provider), debounceMs = 0, scope = backgroundScope)
+        val composite = CompositeCatalogProvider(listOf(provider))
         val detail = composite.getDetails("addon:$ADDON_ID:book-7")
         assertEquals("addon:$ADDON_ID:book-7", detail.id)
         assertEquals("addon:$ADDON_ID", detail.provider)

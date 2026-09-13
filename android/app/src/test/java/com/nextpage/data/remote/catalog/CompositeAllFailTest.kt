@@ -27,9 +27,7 @@ class CompositeAllFailTest {
 
     @Test fun search_returnsEmptyPageWhenAllProvidersFail() = runTest {
         val catalog = CompositeCatalogProvider(
-            listOf(failing("builtin:failing-a"), failing("builtin:failing-b")),
-            debounceMs = 0L,
-            scope = backgroundScope
+            listOf(failing("builtin:failing-a"), failing("builtin:failing-b"))
         )
         // Must not throw: fail-closed empty page.
         val page = catalog.search("alice", 1)

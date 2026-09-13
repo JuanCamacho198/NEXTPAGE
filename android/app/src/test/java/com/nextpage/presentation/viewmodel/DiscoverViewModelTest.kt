@@ -30,6 +30,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
+import com.nextpage.debug.SentryMetrics
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.usecase.DownloadAndImportBookUseCase
 import com.nextpage.domain.usecase.DownloadImportState
@@ -235,7 +236,7 @@ class DiscoverViewModelTest {
             catalogProvider = provider,
             connectivityObserver = FakeConnectivityObserver(initiallyOnline = true),
             mainDispatcher = dispatcher,
-            debounceMillis = 300
+            debounceMillis = 250
         )
 
         vm.onQueryChange("a")
@@ -243,8 +244,11 @@ class DiscoverViewModelTest {
         vm.onQueryChange("ab")
         advanceTimeBy(100)
         vm.onQueryChange("abc")
-        advanceTimeBy(300)
-        advanceUntilIdle()
+            // U2: single 250ms trailing debounce — still pending just before the window.
+            advanceTimeBy(249)
+            assertTrue(provider.searchCalls.isEmpty())
+            advanceTimeBy(1)
+            advanceUntilIdle()
 
         assertEquals(listOf("abc" to 1), provider.searchCalls)
     }
@@ -257,7 +261,7 @@ class DiscoverViewModelTest {
             catalogProvider = provider,
             connectivityObserver = FakeConnectivityObserver(initiallyOnline = true),
             mainDispatcher = dispatcher,
-            debounceMillis = 300
+            debounceMillis = 250
         )
 
         vm.onQueryChange("pride")
@@ -280,7 +284,7 @@ class DiscoverViewModelTest {
             catalogProvider = provider,
             connectivityObserver = FakeConnectivityObserver(initiallyOnline = true),
             mainDispatcher = dispatcher,
-            debounceMillis = 300
+            debounceMillis = 250
         )
 
         vm.onQueryChange("pride")
@@ -597,6 +601,55 @@ class DiscoverViewModelTest {
 
         vm.startDownload()
         coVerify(exactly = 2) { useCase.invoke(any()) }
+    }
+
+    // ── U3-2 funnel: download start/complete/fail counters (egress runCatching-safe; assert via UI state) ──
+
+    @Test
+    fun downloadSuccess_emitsFunnelStartAndComplete() = runTest {
+        SentryMetrics.clearForTest()
+        val useCase = mockk<DownloadAndImportBookUseCase>()
+        coEvery { useCase.invoke(any()) } returns flowOf(
+            DownloadImportState.Idle,
+            DownloadImportState.Downloading(512L, 2048L),
+            DownloadImportState.Success(importedBook())
+        )
+        val vm = DiscoverViewModel(FakeCatalogProvider(), downloadAndImportBookUseCase = useCase)
+        vm.openDetail("gutendex:1342")
+        vm.startDownload()
+        assertTrue(vm.uiState.value.download is DownloadImportState.Success)
+        coVerify(exactly = 1) { useCase.invoke(any()) }
+        SentryMetrics.clearForTest()
+    }
+
+    @Test
+    fun downloadFailure_emitsFunnelFailWithCode() = runTest {
+        SentryMetrics.clearForTest()
+        val useCase = mockk<DownloadAndImportBookUseCase>()
+        coEvery { useCase.invoke(any()) } returns flowOf(
+            DownloadImportState.Idle,
+            DownloadImportState.Failure(CatalogErrorCode.NETWORK_ERROR)
+        )
+        val vm = DiscoverViewModel(FakeCatalogProvider(), downloadAndImportBookUseCase = useCase)
+        vm.openDetail("gutendex:1342")
+        vm.startDownload()
+        assertTrue(vm.uiState.value.download is DownloadImportState.Failure)
+        coVerify(exactly = 1) { useCase.invoke(any()) }
+        SentryMetrics.clearForTest()
+    }
+
+    @Test
+    fun downloadFailureNullError_emitsProviderOnlyFail() = runTest {
+        SentryMetrics.clearForTest()
+        val useCase = mockk<DownloadAndImportBookUseCase>()
+        coEvery { useCase.invoke(any()) } returns flowOf(DownloadImportState.Failure(null))
+        val vm = DiscoverViewModel(FakeCatalogProvider(), downloadAndImportBookUseCase = useCase)
+        vm.openDetail("gutendex:1342")
+        vm.startDownload()
+        val state = vm.uiState.value.download
+        assertTrue(state is DownloadImportState.Failure)
+        assertNull((state as DownloadImportState.Failure).error)
+        SentryMetrics.clearForTest()
     }
 
     @Test

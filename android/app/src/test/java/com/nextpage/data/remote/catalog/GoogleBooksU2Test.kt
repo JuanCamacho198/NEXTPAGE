@@ -143,9 +143,7 @@ class GoogleBooksU2Test {
                 listOf(CatalogSourceInfo(BUILTIN_GUTENDEX, "Gutendex", CatalogSourceKind.BUILTIN))
         }
         val catalog = CompositeCatalogProvider(
-            listOf(gutendexStub, failingProvider(BUILTIN_GOOGLEBOOKS)),
-            debounceMs = 0L,
-            scope = backgroundScope
+            listOf(gutendexStub, failingProvider(BUILTIN_GOOGLEBOOKS))
         )
         val page = catalog.search("alice", 1)
         assertEquals(listOf(survivor), page.results)

@@ -4,6 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.Assert.fail
 
 /**
  * Bucketing helper edge tests (metric-vocabulary spec: an unbucketed value
@@ -57,6 +58,50 @@ class SentryMetricsTest {
         SentryMetrics.clearForTest()
         assertEquals(0, SentryMetrics.lastKnownPendingCount)
         assertTrue(true)
+    }
+
+    private fun expectIllegal(block: () -> Unit) {
+        try { block(); fail("expected IllegalArgumentException") }
+        catch (_: IllegalArgumentException) { /* expected */ }
+    }
+
+    @Test
+    fun `install false still buckets aggregate behind gate`() {
+        SentryMetrics.clearForTest()
+        SentryMetrics.install { false }
+        SentryMetrics.distributionRaw("discover_search_latency", 137L, mapOf("provider" to "builtin:gutendex", "cached" to "true"))
+        val agg = SentryMetrics.aggregate("discover_search_latency")!!
+        assertEquals(1, agg.count)
+        assertEquals(SentryMetrics.bucketDurationMs(137L), agg.maxMs)
+        SentryMetrics.clearForTest()
+    }
+
+    @Test
+    fun `attr allowlist rejects userId query bookId keys`() {
+        SentryMetrics.clearForTest()
+        for (bad in listOf("userId", "query", "bookId", "user_id", "title")) {
+            expectIllegal {
+                SentryMetrics.distributionRaw("discover_search_latency", 100L, mapOf(bad to "x"))
+            }
+            expectIllegal {
+                SentryMetrics.count("discover_request_total", mapOf(bad to "x"))
+            }
+        }
+        expectIllegal {
+            SentryMetrics.distributionRaw("x", 1L, mapOf("provider" to "p", "userId" to "u"))
+        }
+        SentryMetrics.clearForTest()
+    }
+
+    @Test
+    fun `raw egress path forwards exact ms while aggregate keeps bucket edge`() {
+        SentryMetrics.clearForTest()
+        SentryMetrics.distributionRaw("discover_search_latency", 1237L, mapOf("provider" to "p", "cached" to "false"))
+        val agg = SentryMetrics.aggregate("discover_search_latency")!!
+        assertEquals(2000L, agg.maxMs)
+        assertEquals(2000L, agg.avgMs)
+        assertEquals(1, agg.count)
+        SentryMetrics.clearForTest()
     }
 
     @Test

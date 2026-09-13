@@ -2,7 +2,6 @@ package com.nextpage.data.remote.catalog
 
 import com.nextpage.data.local.dao.DiscoverCacheDao
 import com.nextpage.data.local.entity.DiscoverCacheEntity
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -86,44 +85,43 @@ class DiscoverCacheTest {
     private fun provider(
         g: FakeGutendex,
         o: FakeOpenLibrary,
-        scope: CoroutineScope,
         cache: DiscoverCacheStore,
         now: () -> Long
         ) = CompositeCatalogProvider(
             listOf(GutendexCatalogProvider(g), OpenLibraryCatalogProvider(o)),
-            debounceMs = 0L,
-            scope = scope,
             cache = cache,
             nowEpochSecs = now
         )
 
-        @Test fun keys_useSourceScopedV2PrefixesAndTtls() {
-            assertEquals("p:v2:builtin:gutendex:pride:1", pageCacheKey(BUILTIN_GUTENDEX, "Pride ", 1))
-            assertEquals("d:v2:builtin:gutendex:gutendex:1342", detailCacheKey(BUILTIN_GUTENDEX, "gutendex:1342"))
+        @Test fun keys_useSourceScopedV3PrefixesAndTtls() {
+            assertEquals("p:v3:builtin:gutendex:pride:1", pageCacheKey(BUILTIN_GUTENDEX, "Pride ", 1))
+            assertEquals("d:v3:builtin:gutendex:gutendex:1342", detailCacheKey(BUILTIN_GUTENDEX, "gutendex:1342"))
+            assertEquals("f:v3:builtin:gutendex:POPULAR:1", featuredCacheKey(BUILTIN_GUTENDEX, CatalogFeaturedSort.POPULAR, 1))
         assertEquals(86_400L, PAGE_TTL_S)
         assertEquals(604_800L, DETAIL_TTL_S)
+        assertEquals(21_600L, FEATURED_TTL_S)
     }
 
     @Test fun memoryCache_hitWithinTtlAndEvictsExpiredRows() = runTest {
         val cache = InMemoryDiscoverCache()
-        cache.put("p:v2:builtin:gutendex:pride:1", "{\"n\":1}", 1_000L, PAGE_TTL_S)
-        assertEquals("{\"n\":1}", cache.get("p:v2:builtin:gutendex:pride:1", 1_000L + 3_600L))
-        assertNull(cache.get("p:v2:builtin:gutendex:pride:1", 1_000L + PAGE_TTL_S + 1L))
+        cache.put("p:v3:builtin:gutendex:pride:1", "{\"n\":1}", 1_000L, PAGE_TTL_S)
+        assertEquals("{\"n\":1}", cache.get("p:v3:builtin:gutendex:pride:1", 1_000L + 3_600L))
+        assertNull(cache.get("p:v3:builtin:gutendex:pride:1", 1_000L + PAGE_TTL_S + 1L))
         assertEquals(0, cache.size())
     }
 
     @Test fun memoryCache_missAndOverwrite() = runTest {
         val cache = InMemoryDiscoverCache()
-        assertNull(cache.get("p:v2:builtin:gutendex:missing:1", 1_000L))
-        cache.put("p:v2:builtin:gutendex:pride:1", "{\"n\":1}", 1_000L, PAGE_TTL_S)
-        cache.put("p:v2:builtin:gutendex:pride:1", "{\"n\":2}", 2_000L, PAGE_TTL_S)
-        assertEquals("{\"n\":2}", cache.get("p:v2:builtin:gutendex:pride:1", 2_001L))
+        assertNull(cache.get("p:v3:builtin:gutendex:missing:1", 1_000L))
+        cache.put("p:v3:builtin:gutendex:pride:1", "{\"n\":1}", 1_000L, PAGE_TTL_S)
+        cache.put("p:v3:builtin:gutendex:pride:1", "{\"n\":2}", 2_000L, PAGE_TTL_S)
+        assertEquals("{\"n\":2}", cache.get("p:v3:builtin:gutendex:pride:1", 2_001L))
     }
 
     @Test fun search_servesRepeatedQueryFromCacheWithoutIo() = runTest {
         val g = FakeGutendex()
         val o = FakeOpenLibrary()
-        val catalog = provider(g, o, backgroundScope, InMemoryDiscoverCache(), { 1_000L })
+        val catalog = provider(g, o, InMemoryDiscoverCache(), { 1_000L })
         val first = catalog.search("pride", 1)
         assertEquals(1, g.calls)
         assertEquals(1, o.calls)
@@ -137,7 +135,7 @@ class DiscoverCacheTest {
         val g = FakeGutendex()
         val o = FakeOpenLibrary()
         var now = 1_000L
-        val catalog = provider(g, o, backgroundScope, InMemoryDiscoverCache(), { now })
+        val catalog = provider(g, o, InMemoryDiscoverCache(), { now })
         catalog.search("pride", 1)
         now += PAGE_TTL_S + 1L
         catalog.search("pride", 1)
@@ -149,7 +147,7 @@ class DiscoverCacheTest {
         val g = FakeGutendex()
         val o = FakeOpenLibrary()
         var now = 5_000L
-        val catalog = provider(g, o, backgroundScope, InMemoryDiscoverCache(), { now })
+        val catalog = provider(g, o, InMemoryDiscoverCache(), { now })
         val first = catalog.getDetails("gutendex:1342")
         assertEquals("gutendex:1342", first.id)
         now += 3_600L
@@ -166,7 +164,7 @@ class DiscoverCacheTest {
     @Test fun search_mergeCoverFallbackIdenticalOnHit() = runTest {
         val g = FakeGutendex()
         val o = FakeOpenLibrary()
-        val catalog = provider(g, o, backgroundScope, InMemoryDiscoverCache(), { 1_000L })
+        val catalog = provider(g, o, InMemoryDiscoverCache(), { 1_000L })
         val miss = catalog.search("pride", 1)
         val hit = catalog.search("pride", 1)
         val prideMiss = miss.results.first { it.id == "gutendex:1342" }
@@ -179,13 +177,56 @@ class DiscoverCacheTest {
     @Test fun roomStore_passThroughWithTtlExpiryAndCacheOnlyKeys() = runTest {
         val dao = FakeDiscoverCacheDao()
         val store = RoomDiscoverCache(dao)
-        store.put("p:v2:builtin:gutendex:pride:1", "{\"n\":1}", 1_000L, PAGE_TTL_S)
-        assertEquals("{\"n\":1}", store.get("p:v2:builtin:gutendex:pride:1", 2_000L))
-        assertNull(store.get("p:v2:builtin:gutendex:pride:1", 1_000L + PAGE_TTL_S + 1L))
+        store.put("p:v3:builtin:gutendex:pride:1", "{\"n\":1}", 1_000L, PAGE_TTL_S)
+        assertEquals("{\"n\":1}", store.get("p:v3:builtin:gutendex:pride:1", 2_000L))
+        assertNull(store.get("p:v3:builtin:gutendex:pride:1", 1_000L + PAGE_TTL_S + 1L))
         assertEquals(0, dao.count())
         // Isolation: every key is cache-scoped; the DAO interface exposes
         // discover_cache SQL only — no user_books/outbox method exists to call.
-        assertTrue(dao.calls.all { it.contains("p:v2:") || it == "count" })
-        assertTrue(dao.calls.any { it.startsWith("delete:p:v2:") })
+        assertTrue(dao.calls.all { it.contains("p:v3:") || it == "count" })
+        assertTrue(dao.calls.any { it.startsWith("delete:p:v3:") })
+    }
+
+    /** Counts cache writes while delegating reads to a real TTL store. */
+    private class CountingStore(
+        private val delegate: DiscoverCacheStore = InMemoryDiscoverCache()
+    ) : DiscoverCacheStore {
+        val puts = mutableListOf<Triple<String, String, Long>>()
+
+        override suspend fun get(key: String, nowEpochSecs: Long): String? =
+            delegate.get(key, nowEpochSecs)
+
+        override suspend fun put(key: String, payload: String, fetchedAtEpochSecs: Long, ttlSecs: Long) {
+            puts.add(Triple(key, payload, ttlSecs))
+            delegate.put(key, payload, fetchedAtEpochSecs, ttlSecs)
+        }
+    }
+
+    private fun emptyStub(sourceId: String): CatalogProvider =
+        object : CatalogProvider {
+            override suspend fun search(query: String, page: Int): PagedResult =
+                PagedResult(emptyList(), null, 0)
+
+            override suspend fun getDetails(id: String): CatalogBook =
+                throw catalogError(CatalogErrorCode.NOT_FOUND, "n/a")
+
+            override fun resolveDownloadUrl(formats: Map<String, String>, preferEpub: Boolean): String =
+                throw catalogError(CatalogErrorCode.UNAVAILABLE_DOWNLOAD, "n/a")
+
+            override fun listSources(): List<CatalogSourceInfo> =
+                listOf(CatalogSourceInfo(sourceId, "Empty", CatalogSourceKind.BUILTIN))
+        }
+
+    @Test fun search_neverCachesEmptyPages() = runTest {
+        val store = CountingStore()
+        val catalog = CompositeCatalogProvider(
+            listOf(emptyStub(BUILTIN_GUTENDEX), emptyStub(BUILTIN_OPENLIBRARY)),
+            cache = store,
+            nowEpochSecs = { 1_000L }
+        )
+        val page = catalog.search("pride", 1)
+        assertTrue(page.results.isEmpty())
+        // Never-cache-empty: empty search results persist nothing.
+        assertTrue(store.puts.isEmpty())
     }
 }

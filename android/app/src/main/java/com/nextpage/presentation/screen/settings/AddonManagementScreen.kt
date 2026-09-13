@@ -197,6 +197,8 @@ fun AddonManagementScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
+            BuiltInSourcesSection()
+
             if (uiState.installed.isEmpty()) {
                 Text(
                     text = stringResource(R.string.settings_addons_empty),
@@ -223,6 +225,46 @@ fun AddonManagementScreen(
             }
 
             AddonTrustNote(onViewPolicy = onNavigateToLegal)
+        }
+    }
+}
+
+/**
+ * U4: read-only built-in sources section, rendered above managed addons.
+ *
+ * Zero state writes; rows are plain Cards with no clickable, toggle, Switch,
+ * or onClick on any row.
+ */
+@Composable
+fun BuiltInSourcesSection(
+    modifier: Modifier = Modifier,
+    sources: List<BuiltInSource> = builtInSources
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.settings_addons_builtin_title),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Medium
+        )
+        sources.forEach { source ->
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
+                    Text(
+                        text = source.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = stringResource(source.roleResId),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
 }

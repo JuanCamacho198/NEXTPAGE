@@ -1,6 +1,5 @@
 package com.nextpage.data.remote.catalog
 
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -55,18 +54,16 @@ class CompositeCatalogProviderTest {
         }
     }
 
-    private fun provider(g: FakeGutendex, o: FakeOpenLibrary, scope: CoroutineScope) =
+    private fun provider(g: FakeGutendex, o: FakeOpenLibrary) =
         CompositeCatalogProvider(
-            listOf(GutendexCatalogProvider(g), OpenLibraryCatalogProvider(o)),
-            debounceMs = 0L,
-            scope = scope
+            listOf(GutendexCatalogProvider(g), OpenLibraryCatalogProvider(o))
         )
 
     @Test fun search_rejectsPageBelow1BeforeAnyIo() = runTest {
         val g = FakeGutendex()
         val o = FakeOpenLibrary()
         try {
-            provider(g, o, backgroundScope).search("x", 0)
+            provider(g, o).search("x", 0)
             fail("expected CatalogException")
         } catch (err: CatalogException) {
             assertEquals(CatalogErrorCode.INVALID_PAGE, err.code)
@@ -78,7 +75,7 @@ class CompositeCatalogProviderTest {
     @Test fun search_mergesWithGutendexAuthorityAndOlCoverFallback() = runTest {
         val g = FakeGutendex()
         val o = FakeOpenLibrary()
-        val page = provider(g, o, backgroundScope).search("pride", 1)
+        val page = provider(g, o).search("pride", 1)
         assertEquals(3, page.totalCount)
         assertEquals(2, page.results.size)
         val pride = page.results.first { it.id == "gutendex:1342" }
@@ -94,7 +91,7 @@ class CompositeCatalogProviderTest {
     @Test fun getDetails_resolvesGutendexIdsAnd404sUnknownPrefixes() = runTest {
         val g = FakeGutendex()
         val o = FakeOpenLibrary()
-        val catalog = provider(g, o, backgroundScope)
+        val catalog = provider(g, o)
         assertEquals("gutendex:1342", catalog.getDetails("gutendex:1342").id)
         for (id in listOf("openlibrary:/works/OL11W", "gutendex:99991", "gutendex:abc")) {
             try {
@@ -107,7 +104,7 @@ class CompositeCatalogProviderTest {
     }
 
     @Test fun resolveDownloadUrl_delegatesToPurePriorityFunction() = runTest {
-        val catalog = provider(FakeGutendex(), FakeOpenLibrary(), backgroundScope)
+        val catalog = provider(FakeGutendex(), FakeOpenLibrary())
         assertEquals(
             "https://example.com/b.txt",
             catalog.resolveDownloadUrl(mapOf("text/plain" to "https://example.com/b.txt"), true)

@@ -116,6 +116,9 @@ fun DiscoverSectionScreen(
         DiscoverDetailSheet(
             detail = uiState.detail,
             detailStatus = uiState.detailStatus,
+            download = uiState.download,
+            onDownload = viewModel::startDownload,
+            onCancelDownload = viewModel::cancelDownload,
             onDismiss = viewModel::dismissDetail
         )
     }

@@ -13,6 +13,7 @@ import com.nextpage.data.remote.catalog.CatalogSourceInfo
 import com.nextpage.data.remote.catalog.CatalogSourceKind
 import com.nextpage.data.remote.catalog.CatalogSources
 import com.nextpage.data.remote.catalog.addonSource
+import com.nextpage.debug.DebugLog
 import com.nextpage.debug.SentryMetrics
 import com.nextpage.domain.connectivity.AlwaysOnlineConnectivityObserver
 import com.nextpage.domain.access.resolveAccess
@@ -437,18 +438,41 @@ class DiscoverViewModel(
      * it — only [cancelDownload] or opening a different book does.
      */
     fun startDownload() {
-        val useCase = downloadAndImportBookUseCase ?: return
-        val book = _uiState.value.detail ?: return
-        if (book.downloadUrl.isNullOrBlank()) return
-        if (downloadJob?.isActive == true) return
+        val useCase = downloadAndImportBookUseCase
+        if (useCase == null) {
+            DebugLog.warn(TAG, "startDownload ignored: download unavailable")
+            return
+        }
+        val book = _uiState.value.detail
+        if (book == null) {
+            DebugLog.warn(TAG, "startDownload ignored: no detail open")
+            return
+        }
+        if (book.downloadUrl.isNullOrBlank()) {
+            DebugLog.warn(TAG, "startDownload failed: blank downloadUrl for ${book.id}")
+            _uiState.update {
+                it.copy(download = DownloadImportState.Failure(CatalogErrorCode.UNAVAILABLE_DOWNLOAD))
+            }
+            return
+        }
+        if (downloadJob?.isActive == true) {
+            DebugLog.warn(TAG, "startDownload ignored: download already in flight for ${book.id}")
+            return
+        }
 
         downloadingBookId = book.id
         SentryMetrics.count(
             "discover_download_start",
             mapOf("provider" to book.provider)
         )
+        // Synchronous Idle → Downloading so the progress UI appears on tap,
+        // before the use-case flow emits its first value.
+        _uiState.update { it.copy(download = DownloadImportState.Downloading(0L, null)) }
         downloadJob = viewModelScope.launch(mainDispatcher) {
             useCase(book).collect { state ->
+                // The synchronous preset above already rendered progress; the
+                // flow's leading Idle would flicker back, so skip it.
+                if (state is DownloadImportState.Idle) return@collect
                 emitDownloadTerminal(state, book.provider)
                 _uiState.update { it.copy(download = state) }
             }
@@ -740,6 +764,9 @@ class DiscoverViewModel(
         (err as? CatalogException)?.code ?: CatalogErrorCode.UPSTREAM_ERROR
 
     companion object {
+        /** Log tag for the guarded download entry points (never silent). */
+        private const val TAG = "DiscoverViewModel"
+
         /** Task-phase parameter (design §7.5): injectable for tests. */
         const val DEFAULT_DEBOUNCE_MS = 250L
 

@@ -11,6 +11,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.nextpage.data.remote.catalog.CatalogFeaturedSort
 import com.nextpage.data.remote.catalog.CatalogProvider
+import com.nextpage.domain.usecase.DownloadAndImportBookUseCase
 import com.nextpage.presentation.feature.discover.DiscoverRailState
 import com.nextpage.presentation.feature.discover.DiscoverScreen
 import com.nextpage.presentation.feature.discover.DiscoverSectionScreen
@@ -37,6 +38,7 @@ fun NavGraphBuilder.discoverGraph(
     discoverViewModel: DiscoverViewModel,
     catalogProvider: CatalogProvider,
     discoverUserInitial: String? = null,
+    downloadAndImportBookUseCase: DownloadAndImportBookUseCase? = null,
 ) {
     composable(
         route = NextPageDestination.Discover.route,
@@ -84,7 +86,8 @@ fun NavGraphBuilder.discoverGraph(
                 catalogProvider = catalogProvider,
                 sectionTitle = sectionTitle,
                 sort = sort,
-                sourceId = sourceId
+                sourceId = sourceId,
+                downloadAndImportBookUseCase = downloadAndImportBookUseCase
             )
         )
         DiscoverSectionScreen(

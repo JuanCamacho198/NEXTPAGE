@@ -9,6 +9,10 @@ import com.nextpage.data.remote.catalog.CatalogException
 import com.nextpage.data.remote.catalog.CatalogFeaturedSort
 import com.nextpage.data.remote.catalog.CatalogProvider
 import com.nextpage.data.remote.catalog.PagedResult
+import com.nextpage.debug.DebugLog
+import com.nextpage.debug.SentryMetrics
+import com.nextpage.domain.usecase.DownloadAndImportBookUseCase
+import com.nextpage.domain.usecase.DownloadImportState
 import com.nextpage.presentation.viewmodel.DiscoverDetailStatus
 import com.nextpage.presentation.viewmodel.DiscoverStatus
 import kotlinx.coroutines.CancellationException
@@ -31,7 +35,9 @@ data class DiscoverSectionUiState(
     val activePage: Int = 0,
     val errorCode: CatalogErrorCode? = null,
     val detail: CatalogBook? = null,
-    val detailStatus: DiscoverDetailStatus = DiscoverDetailStatus.CLOSED
+    val detailStatus: DiscoverDetailStatus = DiscoverDetailStatus.CLOSED,
+    /** Download → import lifecycle for the detail book currently on screen. */
+    val download: DownloadImportState = DownloadImportState.Idle
 )
 
 /**
@@ -48,13 +54,16 @@ class DiscoverSectionViewModel(
     private val sort: CatalogFeaturedSort?,
     private val sourceId: String?,
     private val term: String = "",
-    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
+    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
+    private val downloadAndImportBookUseCase: DownloadAndImportBookUseCase? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DiscoverSectionUiState(sectionTitle = sectionTitle))
     val uiState: StateFlow<DiscoverSectionUiState> = _uiState.asStateFlow()
 
     private var loadJob: Job? = null
+    private var downloadJob: Job? = null
+    private var downloadingBookId: String? = null
 
     init {
         loadFirstPage()
@@ -76,6 +85,14 @@ class DiscoverSectionViewModel(
 
     /** Opens the same base detail sheet as the search grid (existing fields only). */
     fun openDetail(id: String) {
+        // Opening a different book supersedes any download in flight for the
+        // previous one; reopening the same book keeps its progress/outcome.
+        if (downloadingBookId != id) {
+            downloadJob?.cancel()
+            downloadJob = null
+            downloadingBookId = null
+            _uiState.update { it.copy(download = DownloadImportState.Idle) }
+        }
         viewModelScope.launch {
             _uiState.update { it.copy(detailStatus = DiscoverDetailStatus.LOADING, detail = null) }
             try {
@@ -103,6 +120,84 @@ class DiscoverSectionViewModel(
 
     fun dismissDetail() {
         _uiState.update { it.copy(detail = null, detailStatus = DiscoverDetailStatus.CLOSED) }
+    }
+
+    /**
+     * Starts (or retries) the in-app download → import of the open detail book.
+     * Mirrors [com.nextpage.presentation.viewmodel.DiscoverViewModel.startDownload]:
+     * guarded entries log instead of returning silently, a blank download URL
+     * surfaces Failure (retryable via the existing CTA string), and Idle →
+     * Downloading applies synchronously so progress shows on tap.
+     *
+     * The job lives in [viewModelScope]; dismissing the sheet does NOT cancel
+     * it — only [cancelDownload] or opening a different book does.
+     */
+    fun startDownload() {
+        val useCase = downloadAndImportBookUseCase
+        if (useCase == null) {
+            DebugLog.warn(TAG, "startDownload ignored: download unavailable")
+            return
+        }
+        val book = _uiState.value.detail
+        if (book == null) {
+            DebugLog.warn(TAG, "startDownload ignored: no detail open")
+            return
+        }
+        if (book.downloadUrl.isNullOrBlank()) {
+            DebugLog.warn(TAG, "startDownload failed: blank downloadUrl for ${book.id}")
+            _uiState.update {
+                it.copy(download = DownloadImportState.Failure(CatalogErrorCode.UNAVAILABLE_DOWNLOAD))
+            }
+            return
+        }
+        if (downloadJob?.isActive == true) {
+            DebugLog.warn(TAG, "startDownload ignored: download already in flight for ${book.id}")
+            return
+        }
+
+        downloadingBookId = book.id
+        SentryMetrics.count(
+            "discover_download_start",
+            mapOf("provider" to book.provider)
+        )
+        // Synchronous Idle → Downloading so the progress UI appears on tap,
+        // before the use-case flow emits its first value.
+        _uiState.update { it.copy(download = DownloadImportState.Downloading(0L, null)) }
+        downloadJob = viewModelScope.launch(mainDispatcher) {
+            useCase(book).collect { state ->
+                // The synchronous preset above already rendered progress; the
+                // flow's leading Idle would flicker back, so skip it.
+                if (state is DownloadImportState.Idle) return@collect
+                emitDownloadTerminal(state, book.provider)
+                _uiState.update { it.copy(download = state) }
+            }
+        }
+    }
+
+    /**
+     * U3-2 download funnel: terminal counters only (start fires on launch above).
+     * Attributes stay {provider[, code]} — NEVER book id, title, or user id.
+     */
+    private fun emitDownloadTerminal(state: DownloadImportState, provider: String) {
+        when (state) {
+            is DownloadImportState.Success ->
+                SentryMetrics.count("discover_download_complete", mapOf("provider" to provider))
+            is DownloadImportState.Failure -> {
+                val code = state.error?.name
+                val tags = if (code != null) mapOf("provider" to provider, "code" to code)
+                    else mapOf("provider" to provider)
+                SentryMetrics.count("discover_download_fail", tags)
+            }
+            else -> Unit
+        }
+    }
+
+    /** User-initiated cancel: stops the job and returns the CTA to Idle. */
+    fun cancelDownload() {
+        downloadJob?.cancel()
+        downloadJob = null
+        downloadingBookId = null
+        _uiState.update { it.copy(download = DownloadImportState.Idle) }
     }
 
     private fun load(page: Int, append: Boolean) {
@@ -159,6 +254,11 @@ class DiscoverSectionViewModel(
         // Neither or both selectors: fail closed, never a composite-wide search.
         else -> PagedResult(emptyList(), null, 0)
     }
+
+    private companion object {
+        /** Log tag for the guarded download entry points (never silent). */
+        const val TAG = "DiscoverSectionViewModel"
+    }
 }
 
 class DiscoverSectionViewModelFactory(
@@ -167,7 +267,8 @@ class DiscoverSectionViewModelFactory(
     private val sort: CatalogFeaturedSort?,
     private val sourceId: String?,
     private val term: String = "",
-    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
+    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
+    private val downloadAndImportBookUseCase: DownloadAndImportBookUseCase? = null
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
@@ -179,7 +280,8 @@ class DiscoverSectionViewModelFactory(
                 sort = sort,
                 sourceId = sourceId,
                 term = term,
-                mainDispatcher = mainDispatcher
+                mainDispatcher = mainDispatcher,
+                downloadAndImportBookUseCase = downloadAndImportBookUseCase
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

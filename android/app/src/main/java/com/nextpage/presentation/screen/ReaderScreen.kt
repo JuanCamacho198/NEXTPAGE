@@ -56,6 +56,7 @@ fun ReaderScreen(
     selectedBookId: String,
     bookFilePath: String?,
     bookFormat: String = "epub",
+    bookIdentitySource: String = "snapshot",
     viewModel: ReaderViewModel,
     onNavigateBack: () -> Unit = {}
 ) {
@@ -85,8 +86,6 @@ fun ReaderScreen(
         annotationUiState.showTagInput ||
         annotationUiState.showDefinitionInput ||
         annotationUiState.showColorPickerPopover
-
-    val onUserInteraction: () -> Unit = { lastInteractionAt = SystemClock.elapsedRealtime() }
 
     val onShowChrome: () -> Unit = {
         if (!sessionUiState.isLoading && !isSelectionActive) {
@@ -127,6 +126,7 @@ fun ReaderScreen(
         selectedBookId = selectedBookId,
         bookFilePath = bookFilePath,
         bookFormat = bookFormat,
+        bookIdentitySource = bookIdentitySource,
         lastInteractionAt = lastInteractionAt,
         currentChapterIndex = sessionUiState.currentChapterIndex,
         currentPdfPage = sessionUiState.currentPdfPage,
@@ -183,7 +183,7 @@ fun ReaderScreen(
                     inspectHighlightsHtmlTrigger = inspectHighlightsHtmlTrigger,
                     logWebViewTreeTrigger = logWebViewTreeTrigger,
                     onRetry = {
-                        bookFilePath?.let { viewModel.loadBook(selectedBookId, it, bookFormat) }
+                        viewModel.loadBookWithFallback(selectedBookId, bookFilePath, bookFormat)
                     }
                 )
             },
@@ -221,9 +221,7 @@ fun ReaderScreen(
                         goToPageError = null
                     },
                     bookmarkRibbonVisible = bookmarkRibbonVisible,
-                    onBookmarkRibbonEnd = { bookmarkRibbonVisible = false },
-                    isSelectionActive = isSelectionActive,
-                    onUserInteraction = onUserInteraction
+                    onBookmarkRibbonEnd = { bookmarkRibbonVisible = false }
                 )
             }
         )

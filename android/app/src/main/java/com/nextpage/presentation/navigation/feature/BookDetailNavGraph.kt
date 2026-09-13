@@ -47,7 +47,7 @@ fun NavGraphBuilder.bookDetailGraph(
             onEditBook = { navController.navigate("book_edit/$bookId") },
             onContinueReading = { id, filePath, format ->
                 onSelectBook(id, filePath, format)
-                navController.navigate(NextPageDestination.Reader.route) {
+                navController.navigate(NextPageDestination.Reader.routeFor(id, filePath, format)) {
                     popUpTo(NextPageDestination.Reader.route) { inclusive = true }
                 }
             }

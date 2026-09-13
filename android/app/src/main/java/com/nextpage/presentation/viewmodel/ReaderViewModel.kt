@@ -5,10 +5,13 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.nextpage.R
 import com.nextpage.data.session.ReaderPreferences
+import com.nextpage.debug.DebugLog
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.SearchResult
 import com.nextpage.domain.repository.DictionaryRepository
+import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.repository.ReadingStatsRepository
 import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
@@ -66,6 +69,9 @@ typealias BookChapter = com.nextpage.presentation.viewmodel.reader.BookChapter
  * @param readerPreferences Persistent user settings (font, theme, etc.). May be `null` in tests.
  * @param defaultBookId Book to restore progress for on construction. May be `null`.
  * @param dictionaryRepository Optional dictionary backing for the "add to dictionary" flow.
++ * @param libraryRepository Optional library backing used to resolve a book's
++ *   `filePath` by id when the navigation selection carries a null/blank path
++ *   (e.g. a stale Continuar snapshot). `null` in tests without a library.
  * @param mainDispatcher Dispatcher for state-collection coroutines. Defaults to [Dispatchers.Main].
  */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -77,6 +83,7 @@ class ReaderViewModel(
     private val readerPreferences: ReaderPreferences? = null,
     defaultBookId: String?,
     private val dictionaryRepository: DictionaryRepository? = null,
+    private val libraryRepository: LibraryRepository? = null,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
     private val supabaseProgressSync: SupabaseProgressSync? = null
 ) : AndroidViewModel(application) {
@@ -306,6 +313,51 @@ class ReaderViewModel(
         }
     }
 
+    /**
+     * Loads a book tolerating a null/blank navigation path.
+     *
+     * The Continuar selection snapshot can lag the nav write, so the Reader
+     * may arrive with a known [bookId] but a null/blank [filePath] while the
+     * file itself exists on disk. In that case the canonical `file_path` is
+     * re-resolved from the library by id instead of erroring immediately.
+     * Only when the id is blank or the DB has no usable path does the reader
+     * surface `book_not_found` with its retry path.
+     *
+     * @param bookId Database id of the book to load.
+     * @param filePath Navigation-carried absolute path; may be null/blank.
+     * @param format `"epub"` or `"pdf"`. Defaults to `"epub"`.
+     */
+    fun loadBookWithFallback(bookId: String, filePath: String?, format: String = "epub") {
+        val navPath = filePath?.takeIf { it.isNotBlank() }
+        if (navPath != null) {
+            loadBook(bookId, navPath, format)
+            return
+        }
+        if (bookId.isBlank()) {
+            DebugLog.warn(TAG, "loadBookWithFallback skipped: blank book id")
+            reportBookNotFound()
+            return
+        }
+        viewModelScope.launch(mainDispatcher) {
+            val resolved = try {
+                libraryRepository?.getBookById(bookId)?.filePath?.takeIf { it.isNotBlank() }
+            } catch (_: Exception) {
+                null
+            }
+            if (resolved != null) {
+                DebugLog.info(TAG, "loadBookWithFallback resolved path from library bookId=$bookId")
+                loadBook(bookId, resolved, format)
+            } else {
+                DebugLog.warn(TAG, "loadBookWithFallback unresolved bookId=$bookId")
+                reportBookNotFound()
+            }
+        }
+    }
+
+    private fun reportBookNotFound() {
+        lifecycleHolder.reportLoadError(getApplication<Application>().getString(R.string.book_not_found))
+    }
+
     // ── Readium Bridge ──────────────────────────────────────────────
     // (SDD reader-uiState-cleanup, S4+S7): the VM-side preview collector,
     // its private extractChapterPreviewText helper, and the S7 aggregate
@@ -491,6 +543,7 @@ class ReaderViewModelFactory(
     private val readerPreferences: ReaderPreferences,
     private val defaultBookId: String?,
     private val dictionaryRepository: DictionaryRepository? = null,
+    private val libraryRepository: LibraryRepository? = null,
     private val supabaseProgressSync: SupabaseProgressSync? = null
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
@@ -504,6 +557,7 @@ class ReaderViewModelFactory(
                 readerPreferences = readerPreferences,
                 defaultBookId = defaultBookId,
                 dictionaryRepository = dictionaryRepository,
+                libraryRepository = libraryRepository,
                 supabaseProgressSync = supabaseProgressSync
             ) as T
         }

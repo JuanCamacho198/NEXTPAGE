@@ -143,6 +143,7 @@ fun NextPageNavHost(
             readerPreferences = appContainer.readerPreferences,
             defaultBookId = selectedBookId,
             dictionaryRepository = appContainer.dictionaryRepository,
+            libraryRepository = appContainer.libraryRepository,
             supabaseProgressSync = appContainer.supabaseProgressSync
         )
     )
@@ -199,6 +200,7 @@ fun NextPageNavHost(
             factory = DiscoverViewModelFactory(
                 catalogProvider = appContainer.catalogProvider,
                 connectivityObserver = appContainer.connectivityObserver,
+                downloadAndImportBookUseCase = appContainer.downloadAndImportBookUseCase,
                 registerAddonChangeListener = { listener ->
                     appContainer.addonRegistry.addOnChangedListener(listener)
                 },
@@ -239,7 +241,7 @@ fun NextPageNavHost(
                 selectedBookFilePath = book.filePath
                 selectedBookFormat = book.format
                 readerViewModel.lifecycleHolder.navigateToCfiAfterLoad(event.cfiRange)
-                navController.navigate(NextPageDestination.Reader.route) {
+                navController.navigate(NextPageDestination.Reader.routeFor(book.id, book.filePath, book.format)) {
                     launchSingleTop = true
                 }
             } else {
@@ -387,6 +389,7 @@ fun NextPageNavHost(
                     discoverViewModel = discoverViewModel,
                     catalogProvider = appContainer.catalogProvider,
                     discoverUserInitial = discoverUserInitial,
+                    downloadAndImportBookUseCase = appContainer.downloadAndImportBookUseCase,
                 )
 
                 libraryGraph(

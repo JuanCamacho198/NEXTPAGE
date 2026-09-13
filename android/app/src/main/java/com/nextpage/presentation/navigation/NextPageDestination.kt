@@ -26,7 +26,50 @@ sealed class NextPageDestination(
     data object DiscoverSection : NextPageDestination(
         "discover/section?sectionTitle={sectionTitle}&sort={sort}&sourceId={sourceId}"
     )
-    data object Reader : NextPageDestination("reader", R.string.tab_reader, NextPageIcons.BookOpen)
+    data object Reader : NextPageDestination("reader?bookId={bookId}&bookPath={bookPath}&bookFormat={bookFormat}", R.string.tab_reader, NextPageIcons.BookOpen) {
+        const val ARG_BOOK_ID = "bookId"
+        const val ARG_BOOK_PATH = "bookPath"
+        const val ARG_BOOK_FORMAT = "bookFormat"
+
+        /**
+         * Builds a Reader route carrying the book identity as navigation
+         * arguments. The previous host-snapshot plumbing wrote the id into
+         * a `rememberSaveable` and navigated to bare `"reader"`, so the
+         * new entry captured stale blank values (NavHost composition
+         * snapshot). Args ride on the destination entry itself, survive
+         * process-death restore, and win over the snapshot backup.
+         * Paths are percent-encoded for route safety (spaces/special chars).
+         * Encoding is implemented on `Charsets.UTF_8` bytes directly (instead
+         * of `android.net.Uri.encode`) so it also runs on plain JVM unit tests
+         * where the Android stub throws.
+         */
+        fun routeFor(bookId: String, filePath: String?, format: String): String {
+            val encodedPath = filePath?.takeIf { it.isNotBlank() }?.let { encodeRouteParam(it) }.orEmpty()
+            return "reader" +
+                "?$ARG_BOOK_ID=${encodeRouteParam(bookId)}" +
+                "&$ARG_BOOK_PATH=$encodedPath" +
+                "&$ARG_BOOK_FORMAT=${encodeRouteParam(format)}"
+        }
+
+        private val ROUTE_PARAM_HEX = "0123456789ABCDEF"
+
+        private fun encodeRouteParam(value: String): String {
+            val out = StringBuilder(value.length)
+            for (byte in value.toByteArray(Charsets.UTF_8)) {
+                val c = byte.toInt() and 0xFF
+                val unreserved = c in 'a'.code..'z'.code ||
+                    c in 'A'.code..'Z'.code ||
+                    c in '0'.code..'9'.code ||
+                    c == '-'.code || c == '_'.code || c == '.'.code || c == '~'.code
+                if (unreserved) {
+                    out.append(c.toChar())
+                } else {
+                    out.append('%').append(ROUTE_PARAM_HEX[c shr 4]).append(ROUTE_PARAM_HEX[c and 0x0F])
+                }
+            }
+            return out.toString()
+        }
+    }
     data object Highlights : NextPageDestination("highlights", R.string.nav_highlights, NextPageIcons.Highlights)
     data object Settings : NextPageDestination("settings", R.string.nav_settings, NextPageIcons.Settings)
     data object Statistics : NextPageDestination("statistics", R.string.nav_statistics, NextPageIcons.Statistics)

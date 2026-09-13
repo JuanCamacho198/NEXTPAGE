@@ -73,6 +73,7 @@ internal fun rememberNavHostViewModels(
             readerPreferences = appContainer.readerPreferences,
             defaultBookId = selectedBookId,
             dictionaryRepository = appContainer.dictionaryRepository,
+            libraryRepository = appContainer.libraryRepository,
             supabaseProgressSync = appContainer.supabaseProgressSync
         )
     )

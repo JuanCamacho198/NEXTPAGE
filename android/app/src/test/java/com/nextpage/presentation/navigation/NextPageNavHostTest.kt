@@ -69,19 +69,40 @@ class NextPageNavHostTest {
         selectedBookFilePath = book.filePath
         selectedBookFormat = book.format
         cfiAfterLoad = event.cfiRange
-        navigatedRoute = NextPageDestination.Reader.route
+        navigatedRoute = NextPageDestination.Reader.routeFor(book.id, book.filePath, book.format)
 
         assertEquals("book-123", selectedBookId)
         assertEquals("/files/book.epub", selectedBookFilePath)
         assertEquals("epub", selectedBookFormat)
         assertEquals("/6/2[c1]", cfiAfterLoad)
-        assertEquals(NextPageDestination.Reader.route, navigatedRoute)
+        assertEquals(
+            NextPageDestination.Reader.routeFor("book-123", "/files/book.epub", "epub"),
+            navigatedRoute
+        )
+    }
+
+    @Test
+    fun `OpenBookAtLocation - Reader routeFor carries encoded book identity as nav args`() {
+        val route = NextPageDestination.Reader.routeFor("book-123", "/files/my book.epub", "epub")
+        assertEquals(
+            "reader?bookId={bookId}&bookPath={bookPath}&bookFormat={bookFormat}",
+            NextPageDestination.Reader.route
+        )
+        org.junit.Assert.assertTrue(route.startsWith("reader?"))
+        org.junit.Assert.assertTrue(route.contains("bookId=book-123"))
+        org.junit.Assert.assertTrue(route.contains("bookFormat=epub"))
+        // Space must be percent-encoded for route safety.
+        org.junit.Assert.assertTrue(route.contains("%20"))
+        org.junit.Assert.assertFalse(route.contains(" "))
     }
 
     @Test
     fun `OpenBookAtLocation - nextpage Destination Reader route is stable`() {
         // Equivalence guard: route strings must stay verbatim (spec equivalence requirement)
-        assertEquals("reader", NextPageDestination.Reader.route)
+        assertEquals(
+            "reader?bookId={bookId}&bookPath={bookPath}&bookFormat={bookFormat}",
+            NextPageDestination.Reader.route
+        )
         assertEquals("book_detail/{bookId}", NextPageDestination.BookDetail.route)
         assertEquals("auth", NextPageDestination.Auth.route)
     }

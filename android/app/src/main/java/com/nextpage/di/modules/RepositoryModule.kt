@@ -8,22 +8,32 @@ import com.nextpage.data.repository.HomeRepositoryImpl
 import com.nextpage.data.repository.LibraryRepositoryImpl
 import com.nextpage.data.repository.ReaderRepositoryImpl
 import com.nextpage.data.repository.ReadingStatsRepositoryImpl
+import com.nextpage.data.repository.StorageRepositoryImpl
 import com.nextpage.domain.repository.CacheRepository
 import com.nextpage.domain.repository.DictionaryRepository
 import com.nextpage.domain.repository.HomeRepository
 import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.repository.ReadingStatsRepository
+import com.nextpage.domain.repository.StorageRepository
+import com.nextpage.domain.sync.SyncSettleGate
 
 class RepositoryModule(
     context: Context,
     databaseModule: DatabaseModule,
     storageModule: StorageModule,
-    @Suppress("UNUSED_PARAMETER") preferencesModule: PreferencesModule
+    @Suppress("UNUSED_PARAMETER") preferencesModule: PreferencesModule,
+    syncSettleGateProvider: () -> SyncSettleGate
 ) {
     companion object {
         private const val TAG = "RepositoryModule"
     }
+
+    /**
+     * Resolves the orchestrator-backed gate lazily, on each cleanup attempt, so
+     * this module can be built before the (lazy) SyncOrchestrator exists.
+     */
+    val syncSettleGate: SyncSettleGate = SyncSettleGate { syncSettleGateProvider().awaitSettled() }
 
     private val epubImportStartTime = System.currentTimeMillis()
     val libraryRepository: LibraryRepository = LibraryRepositoryImpl(
@@ -34,7 +44,8 @@ class RepositoryModule(
         pdfParserService = storageModule.pdfParserService,
         coverStorage = storageModule.coverStorage,
         readingProgressDao = databaseModule.readingProgressDao,
-        outboxDao = databaseModule.syncOutboxDao
+        outboxDao = databaseModule.syncOutboxDao,
+        settleGate = syncSettleGate
     )
     val epubImportInitTimeMs: Long = System.currentTimeMillis() - epubImportStartTime
 
@@ -76,5 +87,11 @@ class RepositoryModule(
         discoverCacheDao = databaseModule.discoverCacheDao,
         appContext = context.applicationContext,
         imageLoader = storageModule.coilImageLoader
+    )
+
+    val storageRepository: StorageRepository = StorageRepositoryImpl(
+        appContext = context.applicationContext,
+        bookDao = databaseModule.bookDao,
+        settleGate = syncSettleGate
     )
 }

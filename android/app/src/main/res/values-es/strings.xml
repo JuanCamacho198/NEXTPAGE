@@ -384,8 +384,6 @@
     <string name="scroll_mode_paginated">Paginado</string>
     <string name="editor_values">Valores del editor</string>
     <string name="vertical_scroll">Desplazamiento vertical</string>
-    <string name="fullscreen_prev_page">Página anterior</string>
-    <string name="fullscreen_next_page">Página siguiente</string>
     <string name="reader_rotate_screen">Rotar pantalla</string>
 
     <!-- Reader / Header -->

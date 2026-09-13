@@ -440,8 +440,6 @@
     <string name="scroll_mode_paginated">Paginated</string>
     <string name="editor_values">Editor values</string>
     <string name="vertical_scroll">Vertical scroll</string>
-    <string name="fullscreen_prev_page">Previous page</string>
-    <string name="fullscreen_next_page">Next page</string>
     <string name="reader_rotate_screen">Rotate screen</string>
 
     <!-- Reader / Header -->

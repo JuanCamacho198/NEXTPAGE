@@ -11,7 +11,6 @@ import androidx.compose.ui.res.stringResource
 import com.nextpage.R
 import com.nextpage.presentation.feature.highlights.HighlightsSheet
 import com.nextpage.presentation.screen.BookmarkRibbonOverlay
-import com.nextpage.presentation.screen.ReaderFullscreenArrows
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 import com.nextpage.presentation.viewmodel.reader.AnnotationUiState
 import com.nextpage.presentation.viewmodel.reader.SearchUiState
@@ -43,26 +42,8 @@ fun ReaderScreenOverlaysHost(
     onGoToPageConfirm: () -> Unit,
     onDismissGoToPage: () -> Unit,
     bookmarkRibbonVisible: Boolean,
-    onBookmarkRibbonEnd: () -> Unit,
-    isSelectionActive: Boolean,
-    onUserInteraction: () -> Unit
+    onBookmarkRibbonEnd: () -> Unit
 ) {
-    if (!sessionUiState.isLoading && !isSelectionActive &&
-        !(settingsUiState.readerSettings.verticalScroll && sessionUiState.bookFormat == "epub") &&
-        sessionUiState.bookFormat != "pdf"
-    ) {
-        ReaderFullscreenArrows(
-            onPrevious = {
-                onUserInteraction()
-                viewModel.lifecycleHolder.onTapZone(isLeftZone = true)
-            },
-            onNext = {
-                onUserInteraction()
-                viewModel.lifecycleHolder.onTapZone(isLeftZone = false)
-            }
-        )
-    }
-
     BookmarkRibbonOverlay(
         visible = bookmarkRibbonVisible,
         onAnimationEnd = onBookmarkRibbonEnd

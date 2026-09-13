@@ -274,6 +274,9 @@ class CatalogFeaturedSeamTest {
         override suspend fun get(key: String, nowEpochSecs: Long): String? =
             delegate.get(key, nowEpochSecs)
 
+        override suspend fun read(key: String, nowEpochSecs: Long): DiscoverCacheRead? =
+            delegate.read(key, nowEpochSecs)
+
         override suspend fun put(key: String, payload: String, fetchedAtEpochSecs: Long, ttlSecs: Long) {
             puts.add(Triple(key, payload, ttlSecs))
             delegate.put(key, payload, fetchedAtEpochSecs, ttlSecs)

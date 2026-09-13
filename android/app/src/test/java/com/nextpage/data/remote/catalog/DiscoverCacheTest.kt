@@ -3,6 +3,7 @@ package com.nextpage.data.remote.catalog
 import com.nextpage.data.local.dao.DiscoverCacheDao
 import com.nextpage.data.local.entity.DiscoverCacheEntity
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -61,6 +62,9 @@ class DiscoverCacheTest {
         val rows = mutableMapOf<String, DiscoverCacheEntity>()
         val calls = mutableListOf<String>()
 
+        private fun payloadBytesOf(entry: DiscoverCacheEntity): Long =
+            entry.payloadJson.toByteArray(Charsets.UTF_8).size.toLong()
+
         override suspend fun getByKey(key: String): DiscoverCacheEntity? {
             calls.add("get:$key")
             return rows[key]
@@ -80,17 +84,53 @@ class DiscoverCacheTest {
             calls.add("count")
             return rows.size
         }
+
+        override suspend fun payloadBytes(): Long {
+            calls.add("payloadBytes")
+            return rows.values.sumOf { payloadBytesOf(it) }
+        }
+
+        override suspend fun payloadBytesForKey(key: String): Long {
+            calls.add("payloadBytesForKey:$key")
+            return rows[key]?.let { payloadBytesOf(it) } ?: 0L
+        }
+
+        override suspend fun deleteExpired(nowEpochSecs: Long): Int {
+            calls.add("deleteExpired:$nowEpochSecs")
+            val expired = rows.filterValues { it.fetchedAtEpochSecs + it.ttlSecs < nowEpochSecs }
+            expired.keys.forEach { rows.remove(it) }
+            return expired.size
+        }
+
+        override suspend fun deleteLegacyNamespaces(): Int {
+            calls.add("deleteLegacyNamespaces")
+            val legacy = rows.keys.filter { key ->
+                key.startsWith("p:v1:") || key.startsWith("d:v1:") || key.startsWith("f:v1:") ||
+                    key.startsWith("p:v2:") || key.startsWith("d:v2:") || key.startsWith("f:v2:")
+            }
+            legacy.forEach { rows.remove(it) }
+            return legacy.size
+        }
+
+        override suspend fun deleteAll(): Int {
+            calls.add("deleteAll")
+            val removed = rows.size
+            rows.clear()
+            return removed
+        }
     }
 
     private fun provider(
         g: FakeGutendex,
         o: FakeOpenLibrary,
         cache: DiscoverCacheStore,
-        now: () -> Long
+        now: () -> Long,
+        refreshScope: kotlinx.coroutines.CoroutineScope
         ) = CompositeCatalogProvider(
             listOf(GutendexCatalogProvider(g), OpenLibraryCatalogProvider(o)),
             cache = cache,
-            nowEpochSecs = now
+            nowEpochSecs = now,
+            refreshScope = refreshScope
         )
 
         @Test fun keys_useSourceScopedV3PrefixesAndTtls() {
@@ -121,7 +161,7 @@ class DiscoverCacheTest {
     @Test fun search_servesRepeatedQueryFromCacheWithoutIo() = runTest {
         val g = FakeGutendex()
         val o = FakeOpenLibrary()
-        val catalog = provider(g, o, InMemoryDiscoverCache(), { 1_000L })
+        val catalog = provider(g, o, InMemoryDiscoverCache(), { 1_000L }, this)
         val first = catalog.search("pride", 1)
         assertEquals(1, g.calls)
         assertEquals(1, o.calls)
@@ -135,10 +175,15 @@ class DiscoverCacheTest {
         val g = FakeGutendex()
         val o = FakeOpenLibrary()
         var now = 1_000L
-        val catalog = provider(g, o, InMemoryDiscoverCache(), { now })
+        val catalog = provider(g, o, InMemoryDiscoverCache(), { now }, this)
         catalog.search("pride", 1)
         now += PAGE_TTL_S + 1L
+        // Stale-while-revalidate: the resident stale page is served without I/O...
         catalog.search("pride", 1)
+        assertEquals(1, g.calls)
+        assertEquals(1, o.calls)
+        // ...and the background refresh replaces it once the refresh scope runs.
+        advanceUntilIdle()
         assertEquals(2, g.calls)
         assertEquals(2, o.calls)
     }
@@ -147,7 +192,7 @@ class DiscoverCacheTest {
         val g = FakeGutendex()
         val o = FakeOpenLibrary()
         var now = 5_000L
-        val catalog = provider(g, o, InMemoryDiscoverCache(), { now })
+        val catalog = provider(g, o, InMemoryDiscoverCache(), { now }, this)
         val first = catalog.getDetails("gutendex:1342")
         assertEquals("gutendex:1342", first.id)
         now += 3_600L
@@ -164,7 +209,7 @@ class DiscoverCacheTest {
     @Test fun search_mergeCoverFallbackIdenticalOnHit() = runTest {
         val g = FakeGutendex()
         val o = FakeOpenLibrary()
-        val catalog = provider(g, o, InMemoryDiscoverCache(), { 1_000L })
+        val catalog = provider(g, o, InMemoryDiscoverCache(), { 1_000L }, this)
         val miss = catalog.search("pride", 1)
         val hit = catalog.search("pride", 1)
         val prideMiss = miss.results.first { it.id == "gutendex:1342" }
@@ -181,10 +226,16 @@ class DiscoverCacheTest {
         assertEquals("{\"n\":1}", store.get("p:v3:builtin:gutendex:pride:1", 2_000L))
         assertNull(store.get("p:v3:builtin:gutendex:pride:1", 1_000L + PAGE_TTL_S + 1L))
         assertEquals(0, dao.count())
-        // Isolation: every key is cache-scoped; the DAO interface exposes
-        // discover_cache SQL only — no user_books/outbox method exists to call.
-        assertTrue(dao.calls.all { it.contains("p:v3:") || it == "count" })
+        // Isolation: every key-scoped call is cache-scoped; the DAO interface
+        // exposes discover_cache SQL only — no user_books/outbox method exists.
+        // (deleteExpired/payloadBytes are the slice-6a size-cap bookkeeping.)
+        assertTrue(
+            dao.calls
+                .filter { it.startsWith("get:") || it.startsWith("put:") || it.startsWith("delete:") }
+                .all { it.contains("p:v3:") }
+        )
         assertTrue(dao.calls.any { it.startsWith("delete:p:v3:") })
+        assertTrue(dao.calls.any { it.startsWith("deleteExpired:") })
     }
 
     /** Counts cache writes while delegating reads to a real TTL store. */
@@ -195,6 +246,9 @@ class DiscoverCacheTest {
 
         override suspend fun get(key: String, nowEpochSecs: Long): String? =
             delegate.get(key, nowEpochSecs)
+
+        override suspend fun read(key: String, nowEpochSecs: Long): DiscoverCacheRead? =
+            delegate.read(key, nowEpochSecs)
 
         override suspend fun put(key: String, payload: String, fetchedAtEpochSecs: Long, ttlSecs: Long) {
             puts.add(Triple(key, payload, ttlSecs))
@@ -222,7 +276,8 @@ class DiscoverCacheTest {
         val catalog = CompositeCatalogProvider(
             listOf(emptyStub(BUILTIN_GUTENDEX), emptyStub(BUILTIN_OPENLIBRARY)),
             cache = store,
-            nowEpochSecs = { 1_000L }
+            nowEpochSecs = { 1_000L },
+            refreshScope = this
         )
         val page = catalog.search("pride", 1)
         assertTrue(page.results.isEmpty())

@@ -25,6 +25,7 @@ import com.nextpage.domain.model.Book
 import com.nextpage.domain.model.DuplicateBookException
 import com.nextpage.domain.model.ReadingProgress
 import com.nextpage.domain.repository.LibraryRepository
+import com.nextpage.domain.sync.SyncSettleGate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -53,7 +54,13 @@ class LibraryRepositoryImpl(
     private val pdfParserService: PdfParserService,
     private val coverStorage: CoverStorage,
     private val readingProgressDao: ReadingProgressDao,
-    private val outboxDao: SyncOutboxDao
+    private val outboxDao: SyncOutboxDao,
+    /**
+     * Gates local backing-file deletion on sync having settled. Defaults to an
+     * already-settled gate so non-wired callers (and tests) keep the previous
+     * behavior; production wires the orchestrator-backed gate.
+     */
+    private val settleGate: SyncSettleGate = SyncSettleGate { true }
 ) : LibraryRepository {
     override fun observeLibrary(): Flow<List<Book>> =
         combine(bookDao.observeAllBooks(), readingProgressDao.observeAll()) { books, progresses ->
@@ -191,15 +198,20 @@ class LibraryRepositoryImpl(
     }
 
     override suspend fun deleteBook(bookId: String): Result<Unit> = runCatching {
+        // Capture the local backing path BEFORE the soft-delete — the row is
+        // excluded from observeAllBooks() once deleted_at is set.
+        val backingPath = bookDao.getBookById(bookId)?.filePath
         // Clean up cover file first (idempotent — no-op if missing)
         coverStorage.deleteCover(bookId).getOrNull()
         val now = System.currentTimeMillis()
         bookDao.deleteBook(bookId, now)
         readingStatsDao.deleteForBook(bookId)
         queueBookOutboxEntry(bookId, SyncOperation.DELETE)
+        deleteBackingFileIfSettled(backingPath, bookId)
     }
 
     override suspend fun deleteBookLocalOnly(bookId: String): Result<Unit> = runCatching {
+        val backingPath = bookDao.getBookById(bookId)?.filePath
         coverStorage.deleteCover(bookId).getOrNull()
         val now = System.currentTimeMillis()
         bookDao.deleteBook(bookId, now)
@@ -214,7 +226,36 @@ class LibraryRepositoryImpl(
             pending.forEach { outboxDao.deleteById(it.id) }
         } catch (_: Exception) {
         }
+        deleteBackingFileIfSettled(backingPath, bookId)
     }
+
+    /**
+     * Deletes a book's local backing file once sync has settled. Rules:
+     *  - Only regular files inside the app's internal `filesDir` are removed;
+     *    SAF/`content://` imports and any external original are left untouched,
+     *    and remote/Drive bytes are never touched (this is a local-only clean).
+     *  - A path still referenced by another live book row is kept (dedup by path).
+     *  - When the settle gate reports `false` (timeout/active sync) the file is
+     *    left for the orphan sweep instead of blocking the delete.
+     */
+    private suspend fun deleteBackingFileIfSettled(filePath: String?, bookId: String) {
+        if (filePath.isNullOrBlank()) return
+        val file = File(filePath)
+        if (!file.isFile) return
+        if (!isInsideAppFilesDir(file)) return
+        if (!settleGate.awaitSettled()) return
+        val referencedElsewhere = bookDao.observeAllBooks().first().any { other ->
+            other.id != bookId && other.filePath == filePath
+        }
+        if (referencedElsewhere) return
+        file.delete()
+    }
+
+    /** True when [file] resolves under this app's internal `filesDir`. */
+    private fun isInsideAppFilesDir(file: File): Boolean = runCatching {
+        val root = appContext.filesDir.canonicalPath
+        file.canonicalPath.startsWith("$root${File.separator}")
+    }.getOrDefault(false)
 
     override suspend fun updateBookRating(bookId: String, rating: Int?) {
         bookDao.updateRating(bookId, rating)

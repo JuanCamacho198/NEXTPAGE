@@ -80,6 +80,7 @@ jobs:
             :app:testDebugUnitTest \
             detekt \
             spotlessCheck \
+            :app:lintDebug \
             :app:verifyStringParity \
             :app:verifyAuthScreenNoHardcodedStrings \
             :app:verifyNoReaderUiStateResidue

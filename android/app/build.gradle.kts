@@ -179,6 +179,15 @@ android {
         }
     }
 
+    // SDD android-tooling-hygiene WS3 slice 8: lint baseline gate. The
+    // baseline freezes the post-reformat findings (see lint-baseline.xml);
+    // only NEW findings fail the gate. `verifyStringParity` stays the
+    // translation-parity gate (no double-gate on MissingTranslation).
+    lint {
+        baseline = file("lint-baseline.xml")
+        abortOnError = true
+    }
+
     // Robolectric reads schemas from the merged debug assets dir (AGP does not
     // merge test-sourceSet assets into it, and the Sentry asset-injection task
     // owns that directory). Copy Room schema exports there before unit tests.

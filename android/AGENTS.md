@@ -164,6 +164,14 @@ import androidx.lifecycle.viewModelScope
 - No hardcoded strings in Compose code
 - Custom Gradle task `verifyAuthScreenNoHardcodedStrings` enforces this
 
+### Lint baseline
+- `app/lint-baseline.xml` freezes the legacy lint findings; `lint { baseline = file("lint-baseline.xml"); abortOnError = true }`
+  in `app/build.gradle.kts` means only NEW findings fail `:app:lintDebug` (and the `Android checks` CI job).
+- Owning-PR convention: when your PR intentionally introduces a finding that is already covered by the baseline
+  (or fixes a baselined one), regenerate the baseline in the SAME PR — never in a separate PR:
+  `cmd /c gradlew.bat --no-daemon -Dorg.gradle.vfs.watch=false :app:updateLintBaseline`
+  then commit the updated `app/lint-baseline.xml` alongside the change. Do NOT hand-edit the baseline.
+
 ## Safety
 
 ### NEVER DO

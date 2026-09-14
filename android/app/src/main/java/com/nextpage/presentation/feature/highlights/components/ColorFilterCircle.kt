@@ -21,35 +21,37 @@ import com.nextpage.presentation.feature.highlights.utils.parseColorHex
 fun ColorFilterCircle(
     filterValue: String?,
     isSelected: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val borderColor = if (isSelected) Color.White else Color(0xFF4A5568)
     val borderWidth = if (isSelected) 1.5.dp else 1.dp
 
     Box(
         modifier = modifier.size(24.dp),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         if (filterValue == null) {
             Canvas(modifier = Modifier.fillMaxSize()) {
-                val stroke = Stroke(
-                    width = borderWidth.toPx(),
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 3f), 0f)
-                )
+                val stroke =
+                    Stroke(
+                        width = borderWidth.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 3f), 0f),
+                    )
                 drawCircle(
                     color = borderColor,
                     radius = size.minDimension / 2f - borderWidth.toPx() / 2f,
-                    style = stroke
+                    style = stroke,
                 )
             }
         } else {
             val fillColor = parseColorHex(filterValue)
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(CircleShape)
-                    .background(fillColor)
-                    .border(width = borderWidth, color = borderColor, shape = CircleShape)
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                        .background(fillColor)
+                        .border(width = borderWidth, color = borderColor, shape = CircleShape),
             )
         }
     }

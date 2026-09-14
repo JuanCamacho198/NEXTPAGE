@@ -54,18 +54,20 @@ fun EditBookMetadataScreen(
     bookId: String,
     libraryRepository: LibraryRepository,
     coverStorage: CoverStorage,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
 ) {
     val context = LocalContext.current
-    val viewModel: EditBookMetadataViewModel = viewModel(
-        factory = EditBookMetadataViewModel.Factory(
-            bookId = bookId,
-            libraryRepository = libraryRepository,
-            coverStorage = coverStorage,
-            appContext = context.applicationContext,
-            onSaved = onNavigateBack
+    val viewModel: EditBookMetadataViewModel =
+        viewModel(
+            factory =
+                EditBookMetadataViewModel.Factory(
+                    bookId = bookId,
+                    libraryRepository = libraryRepository,
+                    coverStorage = coverStorage,
+                    appContext = context.applicationContext,
+                    onSaved = onNavigateBack,
+                ),
         )
-    )
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -78,18 +80,20 @@ fun EditBookMetadataScreen(
         }
     }
 
-    val coverPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            scope.launch {
-                val bytes = withContext(Dispatchers.IO) {
-                    context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+    val coverPickerLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.GetContent(),
+        ) { uri: Uri? ->
+            if (uri != null) {
+                scope.launch {
+                    val bytes =
+                        withContext(Dispatchers.IO) {
+                            context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                        }
+                    if (bytes != null) viewModel.onCoverSelected(uri, bytes)
                 }
-                if (bytes != null) viewModel.onCoverSelected(uri, bytes)
             }
         }
-    }
 
     Scaffold(
         topBar = {
@@ -97,17 +101,17 @@ fun EditBookMetadataScreen(
                 title = {
                     Text(
                         text = stringResource(R.string.edit_metadata_title),
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleMedium,
                     )
                 },
                 navigationIcon = {
                     NextPageButton(
                         onClick = onNavigateBack,
-                        variant = NextPageButtonVariant.ICON
+                        variant = NextPageButtonVariant.ICON,
                     ) {
                         Icon(
                             imageVector = NextPageIcons.ArrowBack,
-                            contentDescription = stringResource(R.string.reader_cancel)
+                            contentDescription = stringResource(R.string.reader_cancel),
                         )
                     }
                 },
@@ -115,19 +119,20 @@ fun EditBookMetadataScreen(
                     NextPageButton(
                         onClick = viewModel::save,
                         enabled = state.book != null && !state.isSaving,
-                        variant = NextPageButtonVariant.ICON
+                        variant = NextPageButtonVariant.ICON,
                     ) {
                         Icon(
                             imageVector = NextPageIcons.Check,
-                            contentDescription = stringResource(R.string.edit_metadata_save_changes)
+                            contentDescription = stringResource(R.string.edit_metadata_save_changes),
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
-                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
-                )
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
             )
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
@@ -136,22 +141,24 @@ fun EditBookMetadataScreen(
                 NextPageButton(
                     onClick = viewModel::save,
                     enabled = state.book != null && !state.isSaving,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    shape = RoundedCornerShape(12.dp)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                    shape = RoundedCornerShape(12.dp),
                 ) {
                     Text(text = stringResource(R.string.edit_metadata_save_changes))
                 }
             }
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(contentPadding)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(contentPadding),
         ) {
             when {
                 state.isLoading -> {
@@ -162,7 +169,7 @@ fun EditBookMetadataScreen(
                         text = stringResource(R.string.book_detail_error_not_found),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.align(Alignment.Center)
+                        modifier = Modifier.align(Alignment.Center),
                     )
                 }
                 else -> {
@@ -178,7 +185,7 @@ fun EditBookMetadataScreen(
                         onGenreAdd = viewModel::onGenreAdd,
                         onGenreRemove = viewModel::onGenreRemove,
                         onTagAdd = viewModel::onTagAdd,
-                        onTagRemove = viewModel::onTagRemove
+                        onTagRemove = viewModel::onTagRemove,
                     )
                 }
             }
@@ -191,18 +198,19 @@ fun EditBookMetadataScreen(
 private fun EditBookMetadataScreenDarkPreview() {
     NextPageTheme(darkTheme = true) {
         EditMetadataContent(
-            state = EditBookMetadataUiState(
-                book = previewBook,
-                isLoading = false,
-                title = previewBook.title,
-                author = previewBook.author.orEmpty(),
-                description = previewBook.description.orEmpty(),
-                genres = listOf("Fantasy", "Classics"),
-                tags = listOf("favorites", "adventure"),
-                language = previewBook.language,
-                publisher = previewBook.publisher.orEmpty(),
-                publishedDate = previewBook.publishedDate
-            ),
+            state =
+                EditBookMetadataUiState(
+                    book = previewBook,
+                    isLoading = false,
+                    title = previewBook.title,
+                    author = previewBook.author.orEmpty(),
+                    description = previewBook.description.orEmpty(),
+                    genres = listOf("Fantasy", "Classics"),
+                    tags = listOf("favorites", "adventure"),
+                    language = previewBook.language,
+                    publisher = previewBook.publisher.orEmpty(),
+                    publishedDate = previewBook.publishedDate,
+                ),
             onChangeCover = {},
             onTitleChange = {},
             onAuthorChange = {},
@@ -213,7 +221,7 @@ private fun EditBookMetadataScreenDarkPreview() {
             onGenreAdd = {},
             onGenreRemove = {},
             onTagAdd = {},
-            onTagRemove = {}
+            onTagRemove = {},
         )
     }
 }
@@ -223,18 +231,19 @@ private fun EditBookMetadataScreenDarkPreview() {
 private fun EditBookMetadataScreenLightPreview() {
     NextPageTheme(darkTheme = false) {
         EditMetadataContent(
-            state = EditBookMetadataUiState(
-                book = previewBook,
-                isLoading = false,
-                title = previewBook.title,
-                author = previewBook.author.orEmpty(),
-                description = previewBook.description.orEmpty(),
-                genres = listOf("Fantasy"),
-                tags = listOf("favorites"),
-                language = previewBook.language,
-                publisher = previewBook.publisher.orEmpty(),
-                publishedDate = previewBook.publishedDate
-            ),
+            state =
+                EditBookMetadataUiState(
+                    book = previewBook,
+                    isLoading = false,
+                    title = previewBook.title,
+                    author = previewBook.author.orEmpty(),
+                    description = previewBook.description.orEmpty(),
+                    genres = listOf("Fantasy"),
+                    tags = listOf("favorites"),
+                    language = previewBook.language,
+                    publisher = previewBook.publisher.orEmpty(),
+                    publishedDate = previewBook.publishedDate,
+                ),
             onChangeCover = {},
             onTitleChange = {},
             onAuthorChange = {},
@@ -245,7 +254,7 @@ private fun EditBookMetadataScreenLightPreview() {
             onGenreAdd = {},
             onGenreRemove = {},
             onTagAdd = {},
-            onTagRemove = {}
+            onTagRemove = {},
         )
     }
 }

@@ -14,9 +14,10 @@ import kotlinx.coroutines.flow.update
  */
 internal class InteractionStateStore(
     private val state: MutableStateFlow<ReaderInteractionState>,
-    private val clearEvent: MutableSharedFlow<Unit>
+    private val clearEvent: MutableSharedFlow<Unit>,
 ) {
     lateinit var setCoordinator: (SelectionCoordinator) -> Unit
+
     fun update(transform: (ReaderInteractionState) -> ReaderInteractionState) {
         state.update(transform)
     }
@@ -43,7 +44,7 @@ internal class InteractionStateStore(
                 activeNoteText = "",
                 activeTagText = "",
                 activeDefinitionText = "",
-                tagSuggestions = emptyList()
+                tagSuggestions = emptyList(),
             )
         }
         clearEvent.tryEmit(Unit)

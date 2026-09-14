@@ -1,14 +1,14 @@
 package com.nextpage.presentation.viewmodel.reader.interaction
 
 import android.os.SystemClock
-import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.HighlightColor
+import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.presentation.viewmodel.CfiMigrator
 import com.nextpage.presentation.viewmodel.reader.BookChapter
+import com.nextpage.presentation.viewmodel.reader.HIGHLIGHT_TAP_DEBOUNCE_MS
 import com.nextpage.presentation.viewmodel.reader.ReaderSelectionState
 import com.nextpage.presentation.viewmodel.reader.SelectionCoordinator
-import com.nextpage.presentation.viewmodel.reader.HIGHLIGHT_TAP_DEBOUNCE_MS
 import com.nextpage.presentation.viewmodel.reader.lifecycle.Clearable
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -26,16 +26,18 @@ internal class AnnotationManager(
     private val selectionManager: SelectionManager,
     private val readerRepository: ReaderRepository,
     private val scope: CoroutineScope,
-    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
+    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
 ) : Clearable {
-
     companion object {
         private val DEFAULT_TAG_SUGGESTIONS = listOf("cita", "pasaje", "idea", "ficción", "no-ficción", "favoritos")
     }
 
     fun onShowNoteModal() {
         val activeId = selectionManager.activeHighlightId() ?: return
-        val existingText = store.value.highlights.find { it.id == activeId }?.note ?: ""
+        val existingText =
+            store.value.highlights
+                .find { it.id == activeId }
+                ?.note ?: ""
         store.update { it.copy(showNoteModal = true, activeNoteText = existingText, showTagInput = false, showDefinitionInput = false) }
     }
 
@@ -50,7 +52,13 @@ internal class AnnotationManager(
         scope.launch(mainDispatcher) { readerRepository.upsertHighlight(updated) }
         selectionManager.coordinator = SelectionCoordinator.MenuClosed()
         store.update {
-            it.copy(selectionState = ReaderSelectionState.None, showNoteModal = false, activeNoteText = "", selectedText = null, selectionRect = null)
+            it.copy(
+                selectionState = ReaderSelectionState.None,
+                showNoteModal = false,
+                activeNoteText = "",
+                selectedText = null,
+                selectionRect = null,
+            )
         }
     }
 
@@ -59,7 +67,7 @@ internal class AnnotationManager(
         bookFormat: String?,
         currentChapterIndex: Int,
         currentPdfPage: Int,
-        chapters: List<BookChapter>
+        chapters: List<BookChapter>,
     ) {
         val selection = store.value.selectionState
         when (selection) {
@@ -68,15 +76,42 @@ internal class AnnotationManager(
                 val bookId = selectedBookId ?: return
                 val text = selection.text
                 val locatorJson = selection.locator?.let { CfiMigrator.locatorToJson(it) }
-                val cfiRange = if (bookFormat == "pdf") "pdfpage:$currentPdfPage" else "readium:${selection.locator?.href ?: "epubcfi(/6/${currentChapterIndex + 1})"}"
+                val cfiRange =
+                    if (bookFormat ==
+                        "pdf"
+                    ) {
+                        "pdfpage:$currentPdfPage"
+                    } else {
+                        "readium:${selection.locator?.href ?: "epubcfi(/6/${currentChapterIndex + 1})"}"
+                    }
                 val newId = UUID.randomUUID().toString()
-                val highlight = Highlight(
-                    id = newId, bookId = bookId, cfiRange = cfiRange, textContent = text, note = null,
-                    color = HighlightColor.YELLOW.hex, updatedAtEpochMillis = System.currentTimeMillis(), deletedAtEpochMillis = null, locatorJson = locatorJson
-                )
+                val highlight =
+                    Highlight(
+                        id = newId,
+                        bookId = bookId,
+                        cfiRange = cfiRange,
+                        textContent = text,
+                        note = null,
+                        color = HighlightColor.YELLOW.hex,
+                        updatedAtEpochMillis = System.currentTimeMillis(),
+                        deletedAtEpochMillis = null,
+                        locatorJson = locatorJson,
+                    )
                 scope.launch(mainDispatcher) { readerRepository.upsertHighlight(highlight) }
-                selectionManager.coordinator = SelectionCoordinator.ExistingHighlight(highlight = highlight, rect = selection.rect, debounceUntil = SystemClock.elapsedRealtime() + HIGHLIGHT_TAP_DEBOUNCE_MS)
-                store.update { it.copy(selectionState = ReaderSelectionState.Existing(highlight, selection.rect), selectedText = text, selectionRect = selection.rect) }
+                selectionManager.coordinator =
+                    SelectionCoordinator.ExistingHighlight(
+                        highlight = highlight,
+                        rect = selection.rect,
+                        debounceUntil =
+                            SystemClock.elapsedRealtime() + HIGHLIGHT_TAP_DEBOUNCE_MS,
+                    )
+                store.update {
+                    it.copy(
+                        selectionState = ReaderSelectionState.Existing(highlight, selection.rect),
+                        selectedText = text,
+                        selectionRect = selection.rect,
+                    )
+                }
                 onShowNoteModal()
             }
             else -> {}
@@ -85,10 +120,26 @@ internal class AnnotationManager(
 
     fun onShowTagInput() {
         val activeId = selectionManager.activeHighlightId() ?: return
-        val existingTag = store.value.highlights.find { it.id == activeId }?.tag ?: ""
-        val existingTags = store.value.highlights.mapNotNull { it.tag }.filter { it.isNotBlank() }.distinct().sorted()
+        val existingTag =
+            store.value.highlights
+                .find { it.id == activeId }
+                ?.tag ?: ""
+        val existingTags =
+            store.value.highlights
+                .mapNotNull { it.tag }
+                .filter { it.isNotBlank() }
+                .distinct()
+                .sorted()
         val suggestions = (DEFAULT_TAG_SUGGESTIONS + existingTags).distinct().filter { it != existingTag }
-        store.update { it.copy(showTagInput = true, activeTagText = existingTag, tagSuggestions = suggestions, showNoteModal = false, showDefinitionInput = false) }
+        store.update {
+            it.copy(
+                showTagInput = true,
+                activeTagText = existingTag,
+                tagSuggestions = suggestions,
+                showNoteModal = false,
+                showDefinitionInput = false,
+            )
+        }
     }
 
     fun onDismissTagInput() {

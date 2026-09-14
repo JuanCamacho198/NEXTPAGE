@@ -7,5 +7,5 @@ data class Bookmark(
     val titleOrSnippet: String,
     val updatedAtEpochMillis: Long,
     val deletedAtEpochMillis: Long?,
-    val locatorJson: String? = null
+    val locatorJson: String? = null,
 )

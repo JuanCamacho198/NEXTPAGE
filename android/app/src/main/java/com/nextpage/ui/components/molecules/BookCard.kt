@@ -7,16 +7,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.nextpage.R
+import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.ui.components.atoms.NextPageBookCover
 import com.nextpage.ui.components.atoms.NextPageProgressBar
 import com.nextpage.ui.components.atoms.NextPageTypography
 import com.nextpage.ui.icons.NextPageIcons
-import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Card representing a single book in the library list/grid. Shows a
@@ -55,83 +55,86 @@ fun BookCard(
     progress: Float,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {},
-    onDeleteClick: () -> Unit = {}
+    onDeleteClick: () -> Unit = {},
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val progressDescription = stringResource(R.string.book_card_progress, (progress.coerceIn(0f, 1f) * 100).toInt())
-    
+
     Box(modifier = modifier) {
         Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .semantics { contentDescription = "$title, $progressDescription" }
-                .clickable(onClick = onClick),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .semantics { contentDescription = "$title, $progressDescription" }
+                    .clickable(onClick = onClick),
             shape = MaterialTheme.shapes.medium,
             color = MaterialTheme.colorScheme.surface,
-            shadowElevation = 2.dp
+            shadowElevation = 2.dp,
         ) {
             Column(
-                modifier = Modifier.padding(16.dp)
+                modifier = Modifier.padding(16.dp),
             ) {
                 NextPageBookCover(
                     title = title,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(140.dp)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(140.dp),
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 NextPageTypography(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
-                    maxLines = 2
+                    maxLines = 2,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 NextPageTypography(
                     text = author,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
+                    maxLines = 1,
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-            NextPageProgressBar(
-                progress = progress,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .semantics { contentDescription = progressDescription }
-            )
+                NextPageProgressBar(
+                    progress = progress,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .semantics { contentDescription = progressDescription },
+                )
             }
         }
-        
+
         // Options menu button
         IconButton(
             onClick = { showMenu = true },
-            modifier = Modifier.align(Alignment.TopEnd)
+            modifier = Modifier.align(Alignment.TopEnd),
         ) {
             Icon(
                 imageVector = NextPageIcons.MoreVert,
                 contentDescription = stringResource(R.string.book_card_options),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        
+
         // Dropdown menu
         DropdownMenu(
             expanded = showMenu,
-            onDismissRequest = { showMenu = false }
+            onDismissRequest = { showMenu = false },
         ) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.book_card_edit_metadata)) },
                 onClick = {
                     showMenu = false
                     // TODO: Navigate to edit screen
-                }
+                },
             )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.book_card_remove_from_library)) },
                 onClick = {
                     showMenu = false
                     onDeleteClick()
-                }
+                },
             )
         }
     }
@@ -147,7 +150,7 @@ private fun BookCardDarkPreview() {
                 author = "Hunt & Thomas",
                 progress = 0.65f,
                 onClick = {},
-                onDeleteClick = {}
+                onDeleteClick = {},
             )
         }
     }
@@ -163,7 +166,7 @@ private fun BookCardLightPreview() {
                 author = "Hunt & Thomas",
                 progress = 0.65f,
                 onClick = {},
-                onDeleteClick = {}
+                onDeleteClick = {},
             )
         }
     }

@@ -10,7 +10,6 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
-import io.mockk.verify
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -22,10 +21,6 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -50,27 +45,28 @@ import org.junit.Test
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class SyncOrchestratorTest {
-
     // ── pure reduce() tests (SYNC-ORCH-STATE) ────────────────────────────
 
     @Test
     fun reduce_stopFlag_emitsDisabled_regardlessOfDomains() {
-        val domains = DomainStates(
-            drive = DomainState.Running,
-            catalog = DomainState.Running,
-            progress = DomainState.Running,
-        )
+        val domains =
+            DomainStates(
+                drive = DomainState.Running,
+                catalog = DomainState.Running,
+                progress = DomainState.Running,
+            )
         assertEquals(SyncState.Disabled, SyncOrchestratorImpl.reduce(true, gateLive = true, domains = domains))
         assertEquals(SyncState.Disabled, SyncOrchestratorImpl.reduce(true, gateLive = false, domains = domains))
     }
 
     @Test
     fun reduce_firstDomainErrorWins() {
-        val domains = DomainStates(
-            drive = DomainState.Error("drive_401"),
-            catalog = DomainState.Error("catalog_5xx"),
-            progress = DomainState.Idle,
-        )
+        val domains =
+            DomainStates(
+                drive = DomainState.Error("drive_401"),
+                catalog = DomainState.Error("catalog_5xx"),
+                progress = DomainState.Idle,
+            )
         assertEquals(
             SyncState.Error("drive_401"),
             SyncOrchestratorImpl.reduce(false, gateLive = true, domains = domains),
@@ -79,42 +75,46 @@ class SyncOrchestratorTest {
 
     @Test
     fun reduce_anyRunning_emitsActive() {
-        val domains = DomainStates(
-            drive = DomainState.Idle,
-            catalog = DomainState.Running,
-            progress = DomainState.Idle,
-        )
+        val domains =
+            DomainStates(
+                drive = DomainState.Idle,
+                catalog = DomainState.Running,
+                progress = DomainState.Idle,
+            )
         assertEquals(SyncState.Active, SyncOrchestratorImpl.reduce(false, gateLive = true, domains = domains))
     }
 
     @Test
     fun reduce_allIdleAndGateLive_emitsIdle() {
-        val domains = DomainStates(
-            drive = DomainState.Idle,
-            catalog = DomainState.Idle,
-            progress = DomainState.Idle,
-        )
+        val domains =
+            DomainStates(
+                drive = DomainState.Idle,
+                catalog = DomainState.Idle,
+                progress = DomainState.Idle,
+            )
         assertEquals(SyncState.Idle, SyncOrchestratorImpl.reduce(false, gateLive = true, domains = domains))
     }
 
     @Test
     fun reduce_progressGated_passesThroughReasonString() {
-        val domains = DomainStates(
-            drive = DomainState.Idle,
-            catalog = DomainState.Idle,
-            progress = DomainState.Gated("session_expired"),
-        )
+        val domains =
+            DomainStates(
+                drive = DomainState.Idle,
+                catalog = DomainState.Idle,
+                progress = DomainState.Gated("session_expired"),
+            )
         val reduced = SyncOrchestratorImpl.reduce(false, gateLive = true, domains = domains)
         assertEquals(SyncState.Gated("session_expired"), reduced)
     }
 
     @Test
     fun reduce_gateClosed_emitsGated_sessionLost() {
-        val domains = DomainStates(
-            drive = DomainState.Idle,
-            catalog = DomainState.Idle,
-            progress = DomainState.Idle,
-        )
+        val domains =
+            DomainStates(
+                drive = DomainState.Idle,
+                catalog = DomainState.Idle,
+                progress = DomainState.Idle,
+            )
         assertEquals(
             SyncState.Gated("session_lost"),
             SyncOrchestratorImpl.reduce(false, gateLive = false, domains = domains),
@@ -124,11 +124,12 @@ class SyncOrchestratorTest {
     @Test
     fun reduce_runningBeatsError_firstWins() {
         // Spec rule: any domain Error AND no Running → Error. Otherwise Active wins.
-        val domains = DomainStates(
-            drive = DomainState.Error("drive_401"),
-            catalog = DomainState.Running,
-            progress = DomainState.Idle,
-        )
+        val domains =
+            DomainStates(
+                drive = DomainState.Error("drive_401"),
+                catalog = DomainState.Running,
+                progress = DomainState.Idle,
+            )
         assertEquals(SyncState.Active, SyncOrchestratorImpl.reduce(false, gateLive = true, domains = domains))
     }
 
@@ -146,10 +147,11 @@ class SyncOrchestratorTest {
     private val drivePending = MutableStateFlow(0)
     private val catalogState = MutableStateFlow<SupabaseBookCatalogSync.State>(SupabaseBookCatalogSync.State.Idle)
     private val progressState = MutableStateFlow<SupabaseProgressSync.State>(SupabaseProgressSync.State.Idle)
-    private val gateEvents = MutableSharedFlow<com.nextpage.domain.sync.SessionEvent>(
-        replay = 0,
-        extraBufferCapacity = 8,
-    )
+    private val gateEvents =
+        MutableSharedFlow<com.nextpage.domain.sync.SessionEvent>(
+            replay = 0,
+            extraBufferCapacity = 8,
+        )
     private val gateLive = MutableStateFlow(true)
     private val outboxPending = MutableStateFlow(0)
 
@@ -170,14 +172,15 @@ class SyncOrchestratorTest {
         every { outboxDao.observePendingCount() } returns outboxPending.asStateFlow()
 
         externalScope = CoroutineScope(UnconfinedTestDispatcher())
-        orchestrator = SyncOrchestratorImpl(
-            drive = drive,
-            catalog = catalog,
-            progress = progress,
-            gate = gate,
-            outboxDao = outboxDao,
-            externalScope = externalScope,
-        )
+        orchestrator =
+            SyncOrchestratorImpl(
+                drive = drive,
+                catalog = catalog,
+                progress = progress,
+                gate = gate,
+                outboxDao = outboxDao,
+                externalScope = externalScope,
+            )
     }
 
     @After
@@ -188,218 +191,234 @@ class SyncOrchestratorTest {
     // ── START ordering (SCEN-START-1..5) ────────────────────────────────
 
     @Test
-    fun start_runsDriveBeforeCatalogBeforeProgress_inOrder() = runTest {
-        coEvery { drive.bootstrap(any()) } coAnswers {
-            // Drive idle
+    fun start_runsDriveBeforeCatalogBeforeProgress_inOrder() =
+        runTest {
+            coEvery { drive.bootstrap(any()) } coAnswers {
+                // Drive idle
+                driveState.value = DriveSyncState.Idle
+                Result.success(Unit)
+            }
+
+            orchestrator.start("user-123")
+
+            coVerify(ordering = io.mockk.Ordering.ORDERED) {
+                drive.bootstrap("user-123")
+                catalog.bootstrap()
+                progress.startProcessing()
+                progress.subscribeToRealtimeChanges()
+            }
+        }
+
+    @Test
+    fun start_driveFailure_stillRunsCatalogAndProgress() =
+        runTest {
+            coEvery { drive.bootstrap(any()) } coAnswers {
+                driveState.value = DriveSyncState.Error("drive_unavailable")
+                Result.failure(RuntimeException("drive_unavailable"))
+            }
+
+            orchestrator.start("user-123")
+
+            // Catalog + Progress still ran.
+            coVerify(exactly = 1) { catalog.bootstrap() }
+            coVerify(exactly = 1) { progress.startProcessing() }
+            coVerify(exactly = 1) { progress.subscribeToRealtimeChanges() }
+            // Drive state surfaced as Error in the aggregate.
+            assertEquals(SyncState.Error("drive_unavailable"), orchestrator.state.value)
+        }
+
+    @Test
+    fun start_driveThrows_stillRunsCatalogAndProgress() =
+        runTest {
+            coEvery { drive.bootstrap(any()) } throws RuntimeException("drive_boom")
+
+            orchestrator.start("user-123")
+
+            coVerify(exactly = 1) { catalog.bootstrap() }
+            coVerify(exactly = 1) { progress.startProcessing() }
+        }
+
+    @Test
+    fun start_catalogFailure_stillRunsProgressAndEmitsError() =
+        runTest {
+            // Spec: each per-step is independently try/catched (Drive non-fatal
+            // semantic generalised). Catalog failure does NOT abort Progress.
+            coEvery { drive.bootstrap(any()) } returns Result.success(Unit)
+            coEvery { catalog.bootstrap() } coAnswers {
+                catalogState.value = SupabaseBookCatalogSync.State.Error("catalog_timeout")
+                throw RuntimeException("catalog_timeout")
+            }
+
+            orchestrator.start("user-123")
+
+            coVerify(exactly = 1) { progress.startProcessing() }
+            coVerify(exactly = 1) { progress.subscribeToRealtimeChanges() }
+            // Drive success + catalog error → catalog error wins (drive is Idle).
+            assertEquals(SyncState.Error("catalog_timeout"), orchestrator.state.value)
+        }
+
+    @Test
+    fun start_idempotent_secondCall_doesNothing() =
+        runTest {
+            coEvery { drive.bootstrap(any()) } returns Result.success(Unit)
+
+            orchestrator.start("user-123")
+            orchestrator.start("user-123") // second call
+
+            coVerify(exactly = 1) { drive.bootstrap("user-123") }
+            coVerify(exactly = 1) { catalog.bootstrap() }
+        }
+
+    @Test
+    fun start_allIdleSessionLive_emitsIdle() =
+        runTest {
+            coEvery { drive.bootstrap(any()) } returns Result.success(Unit)
             driveState.value = DriveSyncState.Idle
-            Result.success(Unit)
+            catalogState.value = SupabaseBookCatalogSync.State.Idle
+            progressState.value = SupabaseProgressSync.State.Idle
+            gateLive.value = true
+
+            orchestrator.start("user-123")
+
+            // After start, state should resolve to Idle (with UnconfinedTestDispatcher
+            // the fan-in has already re-reduced).
+            assertEquals(SyncState.Idle, orchestrator.state.value)
         }
-
-        orchestrator.start("user-123")
-
-        coVerify(ordering = io.mockk.Ordering.ORDERED) {
-            drive.bootstrap("user-123")
-            catalog.bootstrap()
-            progress.startProcessing()
-            progress.subscribeToRealtimeChanges()
-        }
-    }
-
-    @Test
-    fun start_driveFailure_stillRunsCatalogAndProgress() = runTest {
-        coEvery { drive.bootstrap(any()) } coAnswers {
-            driveState.value = DriveSyncState.Error("drive_unavailable")
-            Result.failure(RuntimeException("drive_unavailable"))
-        }
-
-        orchestrator.start("user-123")
-
-        // Catalog + Progress still ran.
-        coVerify(exactly = 1) { catalog.bootstrap() }
-        coVerify(exactly = 1) { progress.startProcessing() }
-        coVerify(exactly = 1) { progress.subscribeToRealtimeChanges() }
-        // Drive state surfaced as Error in the aggregate.
-        assertEquals(SyncState.Error("drive_unavailable"), orchestrator.state.value)
-    }
-
-    @Test
-    fun start_driveThrows_stillRunsCatalogAndProgress() = runTest {
-        coEvery { drive.bootstrap(any()) } throws RuntimeException("drive_boom")
-
-        orchestrator.start("user-123")
-
-        coVerify(exactly = 1) { catalog.bootstrap() }
-        coVerify(exactly = 1) { progress.startProcessing() }
-    }
-
-    @Test
-    fun start_catalogFailure_stillRunsProgressAndEmitsError() = runTest {
-        // Spec: each per-step is independently try/catched (Drive non-fatal
-        // semantic generalised). Catalog failure does NOT abort Progress.
-        coEvery { drive.bootstrap(any()) } returns Result.success(Unit)
-        coEvery { catalog.bootstrap() } coAnswers {
-            catalogState.value = SupabaseBookCatalogSync.State.Error("catalog_timeout")
-            throw RuntimeException("catalog_timeout")
-        }
-
-        orchestrator.start("user-123")
-
-        coVerify(exactly = 1) { progress.startProcessing() }
-        coVerify(exactly = 1) { progress.subscribeToRealtimeChanges() }
-        // Drive success + catalog error → catalog error wins (drive is Idle).
-        assertEquals(SyncState.Error("catalog_timeout"), orchestrator.state.value)
-    }
-
-    @Test
-    fun start_idempotent_secondCall_doesNothing() = runTest {
-        coEvery { drive.bootstrap(any()) } returns Result.success(Unit)
-
-        orchestrator.start("user-123")
-        orchestrator.start("user-123") // second call
-
-        coVerify(exactly = 1) { drive.bootstrap("user-123") }
-        coVerify(exactly = 1) { catalog.bootstrap() }
-    }
-
-    @Test
-    fun start_allIdleSessionLive_emitsIdle() = runTest {
-        coEvery { drive.bootstrap(any()) } returns Result.success(Unit)
-        driveState.value = DriveSyncState.Idle
-        catalogState.value = SupabaseBookCatalogSync.State.Idle
-        progressState.value = SupabaseProgressSync.State.Idle
-        gateLive.value = true
-
-        orchestrator.start("user-123")
-
-        // After start, state should resolve to Idle (with UnconfinedTestDispatcher
-        // the fan-in has already re-reduced).
-        assertEquals(SyncState.Idle, orchestrator.state.value)
-    }
 
     // ── STOP fan-out (SCEN-STOP-1..4) ────────────────────────────────────
 
     @Test
-    fun stop_callsStopOnAllLiveDomains() = runTest {
-        coEvery { drive.stop() } just runs
-        coEvery { catalog.stop() } just runs
-        coEvery { progress.stop() } just runs
+    fun stop_callsStopOnAllLiveDomains() =
+        runTest {
+            coEvery { drive.stop() } just runs
+            coEvery { catalog.stop() } just runs
+            coEvery { progress.stop() } just runs
 
-        orchestrator.start("user-123")
-        orchestrator.stop()
+            orchestrator.start("user-123")
+            orchestrator.stop()
 
-        coVerify(exactly = 1) { drive.stop() }
-        coVerify(exactly = 1) { catalog.stop() }
-        coVerify(exactly = 1) { progress.stop() }
-    }
-
-    @Test
-    fun stop_partialFailure_closesRemainingChannels() = runTest {
-        coEvery { drive.stop() } just runs
-        coEvery { catalog.stop() } throws RuntimeException("channel_busy")
-        coEvery { progress.stop() } just runs
-
-        orchestrator.start("user-123")
-        orchestrator.stop() // must NOT throw
-
-        coVerify(exactly = 1) { drive.stop() }
-        coVerify(exactly = 1) { catalog.stop() }
-        coVerify(exactly = 1) { progress.stop() }
-        assertEquals(SyncState.Disabled, orchestrator.state.value)
-    }
+            coVerify(exactly = 1) { drive.stop() }
+            coVerify(exactly = 1) { catalog.stop() }
+            coVerify(exactly = 1) { progress.stop() }
+        }
 
     @Test
-    fun stop_idempotent_secondCall_doesNothing() = runTest {
-        coEvery { drive.stop() } just runs
-        coEvery { catalog.stop() } just runs
-        coEvery { progress.stop() } just runs
+    fun stop_partialFailure_closesRemainingChannels() =
+        runTest {
+            coEvery { drive.stop() } just runs
+            coEvery { catalog.stop() } throws RuntimeException("channel_busy")
+            coEvery { progress.stop() } just runs
 
-        orchestrator.start("user-123")
-        orchestrator.stop()
-        orchestrator.stop() // second call
+            orchestrator.start("user-123")
+            orchestrator.stop() // must NOT throw
 
-        coVerify(exactly = 1) { drive.stop() }
-        coVerify(exactly = 1) { catalog.stop() }
-        coVerify(exactly = 1) { progress.stop() }
-    }
-
-    @Test
-    fun stop_afterLogout_emitsDisabledEvenIfSessionGone() = runTest {
-        coEvery { drive.stop() } just runs
-        coEvery { catalog.stop() } just runs
-        coEvery { progress.stop() } just runs
-
-        orchestrator.start("user-123")
-        gateLive.value = false // simulate logout
-        orchestrator.stop()
-
-        coVerify(exactly = 1) { drive.stop() }
-        coVerify(exactly = 1) { catalog.stop() }
-        coVerify(exactly = 1) { progress.stop() }
-        // Final state is Disabled — not Gated.
-        assertEquals(SyncState.Disabled, orchestrator.state.value)
-    }
+            coVerify(exactly = 1) { drive.stop() }
+            coVerify(exactly = 1) { catalog.stop() }
+            coVerify(exactly = 1) { progress.stop() }
+            assertEquals(SyncState.Disabled, orchestrator.state.value)
+        }
 
     @Test
-    fun stop_resetsPendingCountToZero() = runTest {
-        coEvery { drive.stop() } just runs
-        coEvery { catalog.stop() } just runs
-        coEvery { progress.stop() } just runs
-        outboxPending.value = 7
+    fun stop_idempotent_secondCall_doesNothing() =
+        runTest {
+            coEvery { drive.stop() } just runs
+            coEvery { catalog.stop() } just runs
+            coEvery { progress.stop() } just runs
 
-        orchestrator.start("user-123")
-        assertEquals(7, orchestrator.pendingCount.first())
+            orchestrator.start("user-123")
+            orchestrator.stop()
+            orchestrator.stop() // second call
 
-        orchestrator.stop()
-        assertEquals(0, orchestrator.pendingCount.first())
-    }
+            coVerify(exactly = 1) { drive.stop() }
+            coVerify(exactly = 1) { catalog.stop() }
+            coVerify(exactly = 1) { progress.stop() }
+        }
+
+    @Test
+    fun stop_afterLogout_emitsDisabledEvenIfSessionGone() =
+        runTest {
+            coEvery { drive.stop() } just runs
+            coEvery { catalog.stop() } just runs
+            coEvery { progress.stop() } just runs
+
+            orchestrator.start("user-123")
+            gateLive.value = false // simulate logout
+            orchestrator.stop()
+
+            coVerify(exactly = 1) { drive.stop() }
+            coVerify(exactly = 1) { catalog.stop() }
+            coVerify(exactly = 1) { progress.stop() }
+            // Final state is Disabled — not Gated.
+            assertEquals(SyncState.Disabled, orchestrator.state.value)
+        }
+
+    @Test
+    fun stop_resetsPendingCountToZero() =
+        runTest {
+            coEvery { drive.stop() } just runs
+            coEvery { catalog.stop() } just runs
+            coEvery { progress.stop() } just runs
+            outboxPending.value = 7
+
+            orchestrator.start("user-123")
+            assertEquals(7, orchestrator.pendingCount.first())
+
+            orchestrator.stop()
+            assertEquals(0, orchestrator.pendingCount.first())
+        }
 
     // ── PENDING aggregation (SCEN-PENDING-1..4) ──────────────────────────
 
     @Test
-    fun pendingCount_emitsFromOutboxDao() = runTest {
-        outboxPending.value = 0
-        orchestrator.start("user-123")
-        outboxPending.value = 5
-        assertEquals(5, orchestrator.pendingCount.first())
-    }
+    fun pendingCount_emitsFromOutboxDao() =
+        runTest {
+            outboxPending.value = 0
+            orchestrator.start("user-123")
+            outboxPending.value = 5
+            assertEquals(5, orchestrator.pendingCount.first())
+        }
 
     @Test
-    fun pendingCount_distinctUntilChanged_doesNotRepeat() = runTest {
-        orchestrator.start("user-123")
-        outboxPending.value = 3
-        // Force same value to be emitted; consumer should not see duplicate.
-        outboxPending.value = 3
-        assertEquals(3, orchestrator.pendingCount.first())
-    }
+    fun pendingCount_distinctUntilChanged_doesNotRepeat() =
+        runTest {
+            orchestrator.start("user-123")
+            outboxPending.value = 3
+            // Force same value to be emitted; consumer should not see duplicate.
+            outboxPending.value = 3
+            assertEquals(3, orchestrator.pendingCount.first())
+        }
 
     // ── GATE → Gated state propagation ───────────────────────────────────
 
     @Test
-    fun gateLost_emitsGatedSessionLost() = runTest {
-        coEvery { drive.stop() } just runs
-        coEvery { catalog.stop() } just runs
-        coEvery { progress.stop() } just runs
+    fun gateLost_emitsGatedSessionLost() =
+        runTest {
+            coEvery { drive.stop() } just runs
+            coEvery { catalog.stop() } just runs
+            coEvery { progress.stop() } just runs
 
-        orchestrator.start("user-123")
-        gateLive.value = false
-        gateEvents.tryEmit(com.nextpage.domain.sync.SessionEvent.Lost)
+            orchestrator.start("user-123")
+            gateLive.value = false
+            gateEvents.tryEmit(com.nextpage.domain.sync.SessionEvent.Lost)
 
-        assertEquals(SyncState.Gated("session_lost"), orchestrator.state.value)
-    }
+            assertEquals(SyncState.Gated("session_lost"), orchestrator.state.value)
+        }
 
     @Test
-    fun gateExpired_emitsGatedWithReason() = runTest {
-        coEvery { drive.stop() } just runs
-        coEvery { catalog.stop() } just runs
-        coEvery { progress.stop() } just runs
+    fun gateExpired_emitsGatedWithReason() =
+        runTest {
+            coEvery { drive.stop() } just runs
+            coEvery { catalog.stop() } just runs
+            coEvery { progress.stop() } just runs
 
-        orchestrator.start("user-123")
-        gateEvents.tryEmit(
-            com.nextpage.domain.sync.SessionEvent.Expired("refresh_token_revoked"),
-        )
+            orchestrator.start("user-123")
+            gateEvents.tryEmit(
+                com.nextpage.domain.sync.SessionEvent
+                    .Expired("refresh_token_revoked"),
+            )
 
-        assertEquals(SyncState.Gated("refresh_token_revoked"), orchestrator.state.value)
-    }
+            assertEquals(SyncState.Gated("refresh_token_revoked"), orchestrator.state.value)
+        }
 
     // ── DomainState mapping (table-driven sanity over the 5 DriveSyncState variants) ─
 

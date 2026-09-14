@@ -16,11 +16,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -39,7 +37,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -48,8 +45,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nextpage.R
-import com.nextpage.ui.icons.NextPageIcons
 import com.nextpage.presentation.theme.NextPageTheme
+import com.nextpage.ui.icons.NextPageIcons
 
 /**
  * Glassmorphic full-screen modal for adding or editing a personal
@@ -109,68 +106,73 @@ fun HighlightAnnotationModal(
     initialText: String = "",
     onSave: (String) -> Unit,
     onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     var text by remember(initialText) { mutableStateOf(initialText) }
 
     // ── Full-screen glassmorphic backdrop ──────────────────────────
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color(0x99000000))
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() }
-            ) {
-                onDismiss()
-            },
-        contentAlignment = Alignment.Center
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(Color(0x99000000))
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() },
+                ) {
+                    onDismiss()
+                },
+        contentAlignment = Alignment.Center,
     ) {
         // ── Prevent backdrop tap from propagating through the modal ──
         Box(
-            modifier = Modifier
-                .clickable(
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() }
-                ) { /* consume — don't dismiss on modal tap */ }
+            modifier =
+                Modifier
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() },
+                    ) { /* consume — don't dismiss on modal tap */ },
         ) {
             // ── Modal card ─────────────────────────────────────────
             Column(
-                modifier = Modifier
-                    .widthIn(max = 512.dp)
-                    .width(360.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(Color(0xFF101C2C))
-                    .border(1.dp, Color(0x1794ADCE), RoundedCornerShape(24.dp))
-                    .padding(24.dp)
+                modifier =
+                    Modifier
+                        .widthIn(max = 512.dp)
+                        .width(360.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(Color(0xFF101C2C))
+                        .border(1.dp, Color(0x1794ADCE), RoundedCornerShape(24.dp))
+                        .padding(24.dp),
             ) {
                 // ── Header: title + close ──────────────────────────
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
                         text = stringResource(titleRes),
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
+                        fontSize = 18.sp,
                     )
                     Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(Color(0x1494ADCE))
-                            .clickable { onDismiss() },
-                        contentAlignment = Alignment.Center
+                        modifier =
+                            Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(Color(0x1494ADCE))
+                                .clickable { onDismiss() },
+                        contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             imageVector = NextPageIcons.Close,
-                            contentDescription = stringResource(
-                                R.string.annotation_modal_close
-                            ),
+                            contentDescription =
+                                stringResource(
+                                    R.string.annotation_modal_close,
+                                ),
                             tint = Color(0xFF8FA3BF),
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(18.dp),
                         )
                     }
                 }
@@ -183,22 +185,22 @@ fun HighlightAnnotationModal(
                         text = stringResource(snippetLabelRes),
                         color = Color(0xFF8FA3BF),
                         fontSize = 13.sp,
-                        modifier = Modifier.padding(bottom = 8.dp)
+                        modifier = Modifier.padding(bottom = 8.dp),
                     )
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .drawBehind {
-                                val strokeWidth = 4.dp.toPx()
-                                drawLine(
-                                    color = Color(0xFF49D4FF),
-                                    start = Offset(0f, 0f),
-                                    end = Offset(0f, size.height),
-                                    strokeWidth = strokeWidth
-                                )
-                            }
-                            .background(Color(0x4008111F), RoundedCornerShape(8.dp))
-                            .padding(start = 16.dp, top = 12.dp, end = 12.dp, bottom = 12.dp)
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .drawBehind {
+                                    val strokeWidth = 4.dp.toPx()
+                                    drawLine(
+                                        color = Color(0xFF49D4FF),
+                                        start = Offset(0f, 0f),
+                                        end = Offset(0f, size.height),
+                                        strokeWidth = strokeWidth,
+                                    )
+                                }.background(Color(0x4008111F), RoundedCornerShape(8.dp))
+                                .padding(start = 16.dp, top = 12.dp, end = 12.dp, bottom = 12.dp),
                     ) {
                         Text(
                             text = selectedText,
@@ -206,7 +208,7 @@ fun HighlightAnnotationModal(
                             fontSize = 14.sp,
                             maxLines = 6,
                             overflow = TextOverflow.Ellipsis,
-                            lineHeight = 20.sp
+                            lineHeight = 20.sp,
                         )
                     }
 
@@ -220,23 +222,25 @@ fun HighlightAnnotationModal(
                     placeholder = {
                         Text(
                             text = stringResource(hintRes),
-                            color = Color(0xFF5C6A80)
+                            color = Color(0xFF5C6A80),
                         )
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color(0xFFDDE2F8),
-                        unfocusedTextColor = Color(0xFFDDE2F8),
-                        focusedContainerColor = Color(0xFF08111F),
-                        unfocusedContainerColor = Color(0xFF08111F),
-                        focusedBorderColor = Color(0x0894ADCE),
-                        unfocusedBorderColor = Color(0x0894ADCE),
-                        cursorColor = Color(0xFF49D4FF)
-                    ),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(120.dp),
+                    colors =
+                        OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color(0xFFDDE2F8),
+                            unfocusedTextColor = Color(0xFFDDE2F8),
+                            focusedContainerColor = Color(0xFF08111F),
+                            unfocusedContainerColor = Color(0xFF08111F),
+                            focusedBorderColor = Color(0x0894ADCE),
+                            unfocusedBorderColor = Color(0x0894ADCE),
+                            cursorColor = Color(0xFF49D4FF),
+                        ),
                     shape = RoundedCornerShape(16.dp),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default)
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -245,28 +249,29 @@ fun HighlightAnnotationModal(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     TextButton(onClick = onDismiss) {
                         Text(
                             text = stringResource(R.string.reader_cancel),
                             color = Color(0xFF8FA3BF),
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Medium,
                         )
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Button(
                         onClick = { onSave(text) },
                         shape = RoundedCornerShape(50),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF49D4FF),
-                            contentColor = Color(0xFF08111F)
-                        )
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF49D4FF),
+                                contentColor = Color(0xFF08111F),
+                            ),
                     ) {
                         Text(
                             text = stringResource(R.string.reader_save),
                             color = Color(0xFF08111F),
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
                         )
                     }
                 }
@@ -286,7 +291,7 @@ private fun HighlightAnnotationModalDarkPreview() {
             selectedText = "It was the best of times, it was the worst of times, it was the age of wisdom.",
             initialText = "",
             onSave = {},
-            onDismiss = {}
+            onDismiss = {},
         )
     }
 }
@@ -303,7 +308,7 @@ private fun HighlightAnnotationModalLightPreview() {
             selectedText = "It was the best of times, it was the worst of times, it was the age of wisdom.",
             initialText = "",
             onSave = {},
-            onDismiss = {}
+            onDismiss = {},
         )
     }
 }

@@ -25,25 +25,48 @@ import io.sentry.SentryEvent
  * Pure functions: never mutate inputs; idempotent; safe from any thread.
  */
 object SentryPiiScrubber {
-
     const val REDACTED = "[Redacted]"
 
     /** Credential/token denylist — ported verbatim from the desktop scrubber. */
-    private val CREDENTIAL_PATTERNS: Set<String> = setOf(
-        "password", "token", "secret", "api_key", "apikey",
-        "access_token", "accesstoken", "refresh_token", "refreshtoken",
-        "notetext", "note", "tagname", "tag"
-    )
+    private val CREDENTIAL_PATTERNS: Set<String> =
+        setOf(
+            "password",
+            "token",
+            "secret",
+            "api_key",
+            "apikey",
+            "access_token",
+            "accesstoken",
+            "refresh_token",
+            "refreshtoken",
+            "notetext",
+            "note",
+            "tagname",
+            "tag",
+        )
 
     /**
      * Reader-domain denylist (this change's new risk surface). Paths are
      * dropped entirely, never basename-kept.
      */
-    private val READER_DENYLIST: Set<String> = setOf(
-        "booktitle", "bookid", "title", "author", "isbn", "cfi", "locator",
-        "filepath", "bookpath", "epubpath", "highlight", "notetext", "query",
-        "email", "userid"
-    )
+    private val READER_DENYLIST: Set<String> =
+        setOf(
+            "booktitle",
+            "bookid",
+            "title",
+            "author",
+            "isbn",
+            "cfi",
+            "locator",
+            "filepath",
+            "bookpath",
+            "epubpath",
+            "highlight",
+            "notetext",
+            "query",
+            "email",
+            "userid",
+        )
 
     /** Path-like keys dropped entirely on Android. */
     val PATH_KEYS: Set<String> = setOf("filepath", "bookpath", "epubpath", "iframesource")
@@ -51,25 +74,32 @@ object SentryPiiScrubber {
     /** Keys emitted ONLY by the feedback path (desktop parity, sentryPiiScrubber.ts:88-90). */
     private val FEEDBACK_ONLY_KEYS: Set<String> = setOf("booktitle", "chapterlabel")
 
-    private val SENSITIVE_QUERY_PARAMS: Set<String> = setOf(
-        "code", "state", "token", "access_token", "refresh_token", "id_token"
-    )
+    private val SENSITIVE_QUERY_PARAMS: Set<String> =
+        setOf(
+            "code",
+            "state",
+            "token",
+            "access_token",
+            "refresh_token",
+            "id_token",
+        )
 
     /**
      * Breadcrumb allowlist: DebugDual.addCrumb names (message prefixes) plus
      * the `metric.` prefix added by P0 instrumentation. Everything else —
      * system/SDK navigation/network crumbs — is dropped by default.
      */
-    val BREADCRUMB_ALLOWLIST: Set<String> = setOf(
-        "progress.emit",
-        "footer.chapterResolved",
-        "reader.footerMismatch",
-        "highlights.applied",
-        "highlights.skipped",
-        "sync.outboxFailed",
-        "sync.receive",
-        "metric."
-    )
+    val BREADCRUMB_ALLOWLIST: Set<String> =
+        setOf(
+            "progress.emit",
+            "footer.chapterResolved",
+            "reader.footerMismatch",
+            "highlights.applied",
+            "highlights.skipped",
+            "sync.outboxFailed",
+            "sync.receive",
+            "metric.",
+        )
 
     private fun shouldRedactKey(key: String): Boolean {
         val lower = key.lowercase()
@@ -77,8 +107,7 @@ object SentryPiiScrubber {
             READER_DENYLIST.any { lower == it || lower.contains(it) }
     }
 
-    private fun isPathKey(key: String): Boolean =
-        PATH_KEYS.any { key.lowercase().contains(it) }
+    private fun isPathKey(key: String): Boolean = PATH_KEYS.any { key.lowercase().contains(it) }
 
     /** Port of redactStringMessage: scrub `<pattern>:<value>` occurrences. */
     fun redactStringMessage(input: String): String {
@@ -87,18 +116,20 @@ object SentryPiiScrubber {
         result = Regex("epubcfi[(][^)]*[)]").replace(result, "epubcfi([Redacted])")
         for (pattern in CREDENTIAL_PATTERNS + READER_DENYLIST) {
             val regex = Regex("(?i)" + Regex.escape(pattern) + ":[^\\s,}]+")
-            result = regex.replace(result) { m ->
-                m.value.substringBefore(':') + ":" + REDACTED
-            }
+            result =
+                regex.replace(result) { m ->
+                    m.value.substringBefore(':') + ":" + REDACTED
+                }
         }
         result = Regex("127\\.0\\.0\\.1:\\d+").replace(result, "127.0.0.1:$REDACTED")
         for (param in SENSITIVE_QUERY_PARAMS) {
             val regex = Regex("(?i)([?&])" + Regex.escape(param) + "=[^&\\s]+")
-            result = regex.replace(result) { m ->
-                val prefix = m.groupValues[1]
-                val name = m.value.substringAfter(prefix).substringBefore('=')
-                prefix + name + "=" + REDACTED
-            }
+            result =
+                regex.replace(result) { m ->
+                    val prefix = m.groupValues[1]
+                    val name = m.value.substringAfter(prefix).substringBefore('=')
+                    prefix + name + "=" + REDACTED
+                }
         }
         return result
     }
@@ -116,8 +147,7 @@ object SentryPiiScrubber {
         return out
     }
 
-    private fun isFeedbackLike(event: SentryEvent): Boolean =
-        event.contexts?.get("feedback") != null
+    private fun isFeedbackLike(event: SentryEvent): Boolean = event.contexts?.get("feedback") != null
 
     /**
      * Returns a redacted COPY of the event, or the same event unchanged when
@@ -173,13 +203,13 @@ object SentryPiiScrubber {
 
         // Tag denylist: an errant call site must not leak book-identifying tags.
         val tagMap: Map<String, String> = event.tags?.toMap() ?: emptyMap()
-            if (tagMap.isNotEmpty()) {
-                val scrubbedTags = LinkedHashMap<String, String>()
-                for ((key, value) in tagMap) {
-                    scrubbedTags[key] = if (shouldRedactKey(key)) REDACTED else value
-                }
-                event.tags = scrubbedTags
+        if (tagMap.isNotEmpty()) {
+            val scrubbedTags = LinkedHashMap<String, String>()
+            for ((key, value) in tagMap) {
+                scrubbedTags[key] = if (shouldRedactKey(key)) REDACTED else value
             }
+            event.tags = scrubbedTags
+        }
 
         return event
     }

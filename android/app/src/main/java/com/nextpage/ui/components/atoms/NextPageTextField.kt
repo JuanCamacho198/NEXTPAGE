@@ -87,7 +87,7 @@ fun NextPageTextField(
     enabled: Boolean = true,
     readOnly: Boolean = false,
     shape: Shape? = null,
-    visualTransformation: VisualTransformation = VisualTransformation.None
+    visualTransformation: VisualTransformation = VisualTransformation.None,
 ) {
     val isError = !errorMessage.isNullOrBlank()
 
@@ -107,48 +107,52 @@ fun NextPageTextField(
         isError = isError,
         label = label?.let { { Text(it) } },
         placeholder = placeholder?.let { { Text(it) } },
-        trailingIcon = trailingIcon?.let { icon ->
-            if (trailingIconOnClick != null) {
-                {
-                    IconButton(
-                        onClick = trailingIconOnClick,
-                        modifier = Modifier.size(48.dp)
-                    ) {
+        trailingIcon =
+            trailingIcon?.let { icon ->
+                if (trailingIconOnClick != null) {
+                    {
+                        IconButton(
+                            onClick = trailingIconOnClick,
+                            modifier = Modifier.size(48.dp),
+                        ) {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = trailingIconContentDescription,
+                            )
+                        }
+                    }
+                } else {
+                    {
                         Icon(
                             imageVector = icon,
-                            contentDescription = trailingIconContentDescription
+                            contentDescription = trailingIconContentDescription,
                         )
                     }
                 }
-            } else {
+            },
+        leadingIcon =
+            leadingIcon?.let { icon ->
                 {
                     Icon(
                         imageVector = icon,
-                        contentDescription = trailingIconContentDescription
+                        contentDescription = leadingIconContentDescription,
                     )
                 }
-            }
-        },
-        leadingIcon = leadingIcon?.let { icon ->
-            {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = leadingIconContentDescription
-                )
-            }
-        },
-        supportingText = if (isError) {
-            errorMessage?.let { { Text(it) } }
-        } else {
-            hint?.let { { Text(it) } }
-        },
+            },
+        supportingText =
+            if (isError) {
+                errorMessage?.let { { Text(it) } }
+            } else {
+                hint?.let { { Text(it) } }
+            },
         visualTransformation = visualTransformation,
         shape = shape ?: OutlinedTextFieldDefaults.shape,
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = unfocusedBorderColor,
-            errorBorderColor = MaterialTheme.colorScheme.error
-        )
+        colors =
+            OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = unfocusedBorderColor,
+                errorBorderColor = MaterialTheme.colorScheme.error,
+            ),
     )
 }
 
@@ -160,7 +164,7 @@ private fun NextPageTextFieldDarkPreview() {
             value = "hello@nextpage.app",
             onValueChange = {},
             label = "Email",
-            placeholder = "you@example.com"
+            placeholder = "you@example.com",
         )
     }
 }
@@ -173,7 +177,7 @@ private fun NextPageTextFieldLightPreview() {
             value = "hello@nextpage.app",
             onValueChange = {},
             label = "Email",
-            placeholder = "you@example.com"
+            placeholder = "you@example.com",
         )
     }
 }
@@ -187,7 +191,7 @@ private fun NextPageTextFieldErrorDarkPreview() {
             onValueChange = {},
             label = "Email",
             placeholder = "you@example.com",
-            errorMessage = "Invalid email address"
+            errorMessage = "Invalid email address",
         )
     }
 }
@@ -201,7 +205,7 @@ private fun NextPageTextFieldErrorLightPreview() {
             onValueChange = {},
             label = "Email",
             placeholder = "you@example.com",
-            errorMessage = "Invalid email address"
+            errorMessage = "Invalid email address",
         )
     }
 }

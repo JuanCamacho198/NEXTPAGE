@@ -30,7 +30,11 @@ import com.nextpage.ui.components.atoms.NextPageTextField
 import com.nextpage.ui.icons.NextPageIcons
 
 @Composable
-fun SearchBarSection(searchQuery: String, onSearchQueryChange: (String) -> Unit, onCloseSearch: () -> Unit) {
+fun SearchBarSection(
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onCloseSearch: () -> Unit,
+) {
     Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         NextPageTextField(value = searchQuery, onValueChange = onSearchQueryChange, placeholder = stringResource(R.string.library_search_placeholder), singleLine = true, shape = RoundedCornerShape(24.dp), modifier = Modifier.weight(1f))
         Spacer(modifier = Modifier.width(8.dp))
@@ -39,7 +43,10 @@ fun SearchBarSection(searchQuery: String, onSearchQueryChange: (String) -> Unit,
 }
 
 @Composable
-fun SearchResultsList(results: List<Book>, onBookSelected: (String, String, String) -> Unit) {
+fun SearchResultsList(
+    results: List<Book>,
+    onBookSelected: (String, String, String) -> Unit,
+) {
     Column {
         Text(text = stringResource(R.string.home_search_results), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         Spacer(modifier = Modifier.height(8.dp))

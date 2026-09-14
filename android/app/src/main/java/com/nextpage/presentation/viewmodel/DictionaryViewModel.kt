@@ -25,13 +25,12 @@ data class DictionaryUiState(
     val addWordText: String = "",
     val addDefinitionText: String = "",
     val wordBeingEdited: DictionaryWord? = null,
-    val editDefinitionText: String = ""
+    val editDefinitionText: String = "",
 )
 
 class DictionaryViewModel(
-    private val dictionaryRepository: DictionaryRepository
+    private val dictionaryRepository: DictionaryRepository,
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow(DictionaryUiState())
     val uiState: StateFlow<DictionaryUiState> = _uiState.asStateFlow()
 
@@ -44,16 +43,20 @@ class DictionaryViewModel(
         viewModelScope.launch {
             combine(
                 dictionaryRepository.observeAll(),
-                searchQuery
+                searchQuery,
             ) { words, query ->
-                val filtered = if (query.isBlank()) words
-                else words.filter { it.word.contains(query, ignoreCase = true) }
+                val filtered =
+                    if (query.isBlank()) {
+                        words
+                    } else {
+                        words.filter { it.word.contains(query, ignoreCase = true) }
+                    }
                 _uiState.update {
                     it.copy(
                         words = words,
                         searchQuery = query,
                         filteredWords = filtered,
-                        isLoading = false
+                        isLoading = false,
                     )
                 }
             }.collect { }
@@ -83,25 +86,34 @@ class DictionaryViewModel(
     fun onAddWordConfirm() {
         val trimmed = _uiState.value.addWordText.trim()
         if (trimmed.isBlank()) return
-        val definition = _uiState.value.addDefinitionText.trim().takeIf { it.isNotBlank() }
+        val definition =
+            _uiState.value.addDefinitionText
+                .trim()
+                .takeIf { it.isNotBlank() }
 
         viewModelScope.launch {
             if (dictionaryRepository.exists(trimmed)) {
-                _uiEvent.emit(UiEvent.ShowSnackbar(
-                    "\"$trimmed\" is already in your dictionary."
-                ))
+                _uiEvent.emit(
+                    UiEvent.ShowSnackbar(
+                        "\"$trimmed\" is already in your dictionary.",
+                    ),
+                )
             } else {
                 dictionaryRepository.save(trimmed, definition).fold(
                     onSuccess = {
-                        _uiEvent.emit(UiEvent.ShowSnackbar(
-                            "\"$trimmed\" added to your dictionary."
-                        ))
+                        _uiEvent.emit(
+                            UiEvent.ShowSnackbar(
+                                "\"$trimmed\" added to your dictionary.",
+                            ),
+                        )
                     },
                     onFailure = { e ->
-                        _uiEvent.emit(UiEvent.ShowSnackbar(
-                            e.message ?: "Failed to add word"
-                        ))
-                    }
+                        _uiEvent.emit(
+                            UiEvent.ShowSnackbar(
+                                e.message ?: "Failed to add word",
+                            ),
+                        )
+                    },
                 )
             }
             _uiState.update { it.copy(showAddDialog = false, addWordText = "", addDefinitionText = "") }
@@ -131,7 +143,7 @@ class DictionaryViewModel(
         _uiState.update {
             it.copy(
                 wordBeingEdited = word,
-                editDefinitionText = word.definition.orEmpty()
+                editDefinitionText = word.definition.orEmpty(),
             )
         }
     }
@@ -148,7 +160,10 @@ class DictionaryViewModel(
 
     fun onEditDefinitionConfirm() {
         val word = _uiState.value.wordBeingEdited ?: return
-        val definition = _uiState.value.editDefinitionText.trim().takeIf { it.isNotBlank() }
+        val definition =
+            _uiState.value.editDefinitionText
+                .trim()
+                .takeIf { it.isNotBlank() }
         viewModelScope.launch {
             dictionaryRepository.updateDefinition(word.id, definition).fold(
                 onSuccess = {
@@ -158,10 +173,12 @@ class DictionaryViewModel(
                     }
                 },
                 onFailure = { e ->
-                    _uiEvent.emit(UiEvent.ShowSnackbar(
-                        e.message ?: "Failed to save definition"
-                    ))
-                }
+                    _uiEvent.emit(
+                        UiEvent.ShowSnackbar(
+                            e.message ?: "Failed to save definition",
+                        ),
+                    )
+                },
             )
         }
     }

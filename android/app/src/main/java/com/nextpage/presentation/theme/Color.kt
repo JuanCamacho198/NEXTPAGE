@@ -3,6 +3,7 @@ package com.nextpage.presentation.theme
 import androidx.compose.ui.graphics.Color
 
 // ─── Design Tokens - Backgrounds ──────────────────────────────────────
+
 /**
  * BgMain — App-wide canvas background.
  *
@@ -10,7 +11,8 @@ import androidx.compose.ui.graphics.Color
  * Pairs with: TextPrimary for body text, BorderSubtle for dividers
  * Contrast: 14.8:1 against TextPrimary (AAA)
  */
-val BgMain = Color(0xFF0B1120)          // $bg_main: Dark, almost black blue
+val BgMain = Color(0xFF0B1120) // $bg_main: Dark, almost black blue
+
 /**
  * BgSurface — Elevated card/panel background (one step above [BgMain]).
  *
@@ -18,7 +20,8 @@ val BgMain = Color(0xFF0B1120)          // $bg_main: Dark, almost black blue
  * Pairs with: BgCardHover (hover/pressed state), TextPrimary (content)
  * Contrast: 12.5:1 against TextPrimary (AAA)
  */
-val BgSurface = Color(0xFF161F33)       // $bg_surface: Card/surface background
+val BgSurface = Color(0xFF161F33) // $bg_surface: Card/surface background
+
 /**
  * BgCardHover — Card hover/pressed state, slightly lighter than [BgSurface].
  *
@@ -26,7 +29,7 @@ val BgSurface = Color(0xFF161F33)       // $bg_surface: Card/surface background
  * Pairs with: BgSurface (resting state)
  * Contrast: 11.0:1 against TextPrimary (AAA)
  */
-val BgCardHover = Color(0xFF1E293B)     // $bg-card-hover
+val BgCardHover = Color(0xFF1E293B) // $bg-card-hover
 
 // ─── Design Tokens - Borders ─────────────────────────
 /**
@@ -57,7 +60,8 @@ val BgHeader = Color(0xFF0D1322)
  * Contrast: 5.2:1 against TextPrimary (AA), 4.6:1 against BgMain (AA Large)
  * Brand: NextPage signature blue from marketing palette
  */
-val PrimaryBlue = Color(0xFF3B82F6)     // $primary: Main brand color, buttons, accents
+val PrimaryBlue = Color(0xFF3B82F6) // $primary: Main brand color, buttons, accents
+
 /**
  * PrimaryBlueHover — Pressed/darker variant of [PrimaryBlue].
  *
@@ -66,6 +70,7 @@ val PrimaryBlue = Color(0xFF3B82F6)     // $primary: Main brand color, buttons, 
  * Contrast: 6.4:1 against TextPrimary (AAA)
  */
 val PrimaryBlueHover = Color(0xFF2563EB) // $primary-blue-hover
+
 /**
  * IconBgBlue — Darker blue background tint for icon containers.
  *
@@ -73,7 +78,8 @@ val PrimaryBlueHover = Color(0xFF2563EB) // $primary-blue-hover
  * Pairs with: PrimaryBlue foreground icon
  * Contrast: 5.8:1 against PrimaryBlue (AA)
  */
-val IconBgBlue = Color(0xFF1E3A8A)      // $icon-bg-blue: Darker blue for icon backgrounds
+val IconBgBlue = Color(0xFF1E3A8A) // $icon-bg-blue: Darker blue for icon backgrounds
+
 /**
  * WelcomeBrandBlueDark - Dark-scheme welcome/brand blue (parity with desktop
  * `--welcome-brand-blue` #5f82ff, tokens.css:173).
@@ -91,7 +97,8 @@ val WelcomeBrandBlueDark = Color(0xFF5F82FF)
  * Pairs with: BgMain, BgSurface, BgHeader (backgrounds it sits on)
  * Contrast: 14.8:1 against BgMain (AAA)
  */
-val TextPrimary = Color(0xFFFFFFFF)      // $text-primary: White
+val TextPrimary = Color(0xFFFFFFFF) // $text-primary: White
+
 /**
  * TextSecondary — De-emphasized text (captions, metadata, helper text).
  *
@@ -99,7 +106,8 @@ val TextPrimary = Color(0xFFFFFFFF)      // $text-primary: White
  * Pairs with: BgMain, BgSurface
  * Contrast: 5.4:1 against BgMain (AA)
  */
-val TextSecondary = Color(0xFF94A3B8)    // $text-secondary: Slate gray
+val TextSecondary = Color(0xFF94A3B8) // $text-secondary: Slate gray
+
 /**
  * TextAccent — Colored inline links and accent text.
  *
@@ -107,7 +115,7 @@ val TextSecondary = Color(0xFF94A3B8)    // $text-secondary: Slate gray
  * Pairs with: body text on BgMain/BgSurface
  * Contrast: 5.2:1 against BgMain (AA)
  */
-val TextAccent = Color(0xFF3B82F6)       // $text-accent: Blue accent
+val TextAccent = Color(0xFF3B82F6) // $text-accent: Blue accent
 
 // ─── Design Tokens - Status / Category Colors ─────────────────────────
 /**
@@ -118,6 +126,7 @@ val TextAccent = Color(0xFF3B82F6)       // $text-accent: Blue accent
  * Contrast: 9.8:1 against BgYellowTransparent (AAA)
  */
 val AccentYellow = Color(0xFFEAB308)
+
 /**
  * BgYellowTransparent — Background tint for yellow-accented chips/badges.
  *
@@ -125,6 +134,7 @@ val AccentYellow = Color(0xFFEAB308)
  * Pairs with: AccentYellow (foreground)
  */
 val BgYellowTransparent = Color(0xFF423419)
+
 /**
  * AccentGreen — Success/positive category color.
  *
@@ -133,6 +143,7 @@ val BgYellowTransparent = Color(0xFF423419)
  * Contrast: 6.5:1 against BgGreenTransparent (AAA)
  */
 val AccentGreen = Color(0xFF22C55E)
+
 /**
  * BgGreenTransparent — Background tint for green-accented chips/badges.
  *
@@ -140,6 +151,7 @@ val AccentGreen = Color(0xFF22C55E)
  * Pairs with: AccentGreen (foreground)
  */
 val BgGreenTransparent = Color(0xFF143A27)
+
 /**
  * AccentPurple — Highlight/category color (used for stats and insights).
  *
@@ -148,6 +160,7 @@ val BgGreenTransparent = Color(0xFF143A27)
  * Contrast: 6.0:1 against BgPurpleTransparent (AAA)
  */
 val AccentPurple = Color(0xFFA855F7)
+
 /**
  * BgPurpleTransparent — Background tint for purple-accented chips/badges.
  *
@@ -155,6 +168,7 @@ val AccentPurple = Color(0xFFA855F7)
  * Pairs with: AccentPurple (foreground)
  */
 val BgPurpleTransparent = Color(0xFF311C4A)
+
 /**
  * AccentBlue — Information/neutral category color (alias of [PrimaryBlue]).
  *
@@ -163,6 +177,7 @@ val BgPurpleTransparent = Color(0xFF311C4A)
  * Contrast: 5.2:1 against BgBlueTransparent (AA)
  */
 val AccentBlue = Color(0xFF3B82F6)
+
 /**
  * BgBlueTransparent — Background tint for blue-accented chips/badges.
  *
@@ -180,6 +195,7 @@ val BgBlueTransparent = Color(0xFF1E3A8A)
  * Contrast: 9.5:1 against BgSurface (AAA)
  */
 val NavBarActive = Color(0xFFADC6FF)
+
 /**
  * NavBarInactive — Foreground color for unselected bottom-nav items.
  *
@@ -188,6 +204,7 @@ val NavBarActive = Color(0xFFADC6FF)
  * Contrast: 8.6:1 against BgSurface (AAA)
  */
 val NavBarInactive = Color(0xFFC2C6D6)
+
 /**
  * NavBarOverlay — Translucent overlay for the floating action area on the navbar.
  *
@@ -204,6 +221,7 @@ val DeepDarkBlue = BgMain
 val AccentPrimary = PrimaryBlue
 val AccentSecondary = AccentGreen
 val ChartAccent = AccentPurple
+
 /**
  * ReadingBackgroundLight — Light reading surface for the Reader (day mode).
  *
@@ -211,6 +229,7 @@ val ChartAccent = AccentPurple
  * Pairs with: TextPrimary / ColorNeutral (text)
  */
 val ReadingBackgroundLight = Color(0xFFF9F9F9)
+
 /**
  * ReadingBackgroundDark — Dark reading surface for the Reader (night mode).
  *
@@ -226,6 +245,7 @@ val ColorNeutral = Color(0xFF000000)
 
 val BackgroundDark = BgMain
 val SurfaceDark = BgSurface
+
 /**
  * OutlineDark — Outline/stroke color for dark-theme surfaces.
  *
@@ -233,6 +253,7 @@ val SurfaceDark = BgSurface
  * Pairs with: BgSurface, BgCardHover
  */
 val OutlineDark = Color(0xFF30363D)
+
 /**
  * ErrorSoft — Soft red used for non-blocking errors and validation messages.
  *

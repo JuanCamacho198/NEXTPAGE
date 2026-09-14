@@ -26,7 +26,7 @@ fun SessionSyncEffect(
     session: AuthSession?,
     homeViewModel: HomeViewModel,
     getStatisticsUseCase: GetStatisticsUseCase,
-    readerViewModel: ReaderViewModel
+    readerViewModel: ReaderViewModel,
 ) {
     LaunchedEffect(session?.userId, session?.photoUrl) {
         homeViewModel.setActiveSession(session)

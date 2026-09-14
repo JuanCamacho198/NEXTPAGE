@@ -14,8 +14,8 @@ import java.security.MessageDigest
  */
 private const val SHA256_BUFFER_SIZE = 8192
 
-fun computeSha256(filePath: String): String? {
-    return try {
+fun computeSha256(filePath: String): String? =
+    try {
         val digest = MessageDigest.getInstance("SHA-256")
         FileInputStream(filePath).use { fis ->
             val buffer = ByteArray(SHA256_BUFFER_SIZE)
@@ -29,4 +29,3 @@ fun computeSha256(filePath: String): String? {
     } catch (_: Exception) {
         null
     }
-}

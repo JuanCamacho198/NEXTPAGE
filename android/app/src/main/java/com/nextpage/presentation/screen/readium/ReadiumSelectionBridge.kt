@@ -48,7 +48,7 @@ fun rememberSelectionBridge(
     highlights: List<Highlight>,
     publication: Publication,
     readingOrder: List<Link>,
-    viewModel: ReaderViewModel
+    viewModel: ReaderViewModel,
 ) {
     val tapProbeScope = rememberCoroutineScope()
     val latestHighlights by rememberUpdatedState(highlights)
@@ -71,57 +71,66 @@ fun rememberSelectionBridge(
             delay(POLL_MS)
             pollCount++
             Log.d("SelectionDebug", "Poll #$pollCount — calling currentSelection()...")
-            val sel: org.readium.r2.navigator.Selection? = try {
-                selectable.currentSelection()
-            } catch (e: Throwable) {
-                Log.e("SelectionDebug", "currentSelection() THREW: ${e::class.simpleName}: ${e.message}", e)
-                DebugLog.error("Readium", "currentSelection() threw: ${e::class.simpleName}: ${e.message}")
-                null
-            }
+            val sel: org.readium.r2.navigator.Selection? =
+                try {
+                    selectable.currentSelection()
+                } catch (e: Throwable) {
+                    Log.e("SelectionDebug", "currentSelection() THREW: ${e::class.simpleName}: ${e.message}", e)
+                    DebugLog.error("Readium", "currentSelection() threw: ${e::class.simpleName}: ${e.message}")
+                    null
+                }
             if (pollCount % 10 == 0) {
                 DebugLog.info(
                     "Readium",
-                    "Poll #$pollCount: ${if (sel != null) "selection present" else "no selection"}"
+                    "Poll #$pollCount: ${if (sel != null) "selection present" else "no selection"}",
                 )
             }
-            Log.d("SelectionDebug", "Poll #$pollCount — currentSelection() returned: ${if (sel != null) "non-null (locator=${sel.locator.href})" else "null"}")
+            Log.d(
+                "SelectionDebug",
+                "Poll #$pollCount — currentSelection() returned: ${if (sel != null) "non-null (locator=${sel.locator.href})" else "null"}",
+            )
             if (sel != null) {
-                Log.d("SelectionDebug", "sel.rect=${sel.rect}, sel.locator.locations.totalProgression=${sel.locator.locations.totalProgression}")
+                Log.d(
+                    "SelectionDebug",
+                    "sel.rect=${sel.rect}, sel.locator.locations.totalProgression=${sel.locator.locations.totalProgression}",
+                )
                 val selRect = sel.rect
-                    if (selRect == null) {
-                        Log.w("SelectionDebug", "sel.rect is null — skipping")
-                        if (lastSelection) {
-                            Log.d("SelectionDebug", "Clearing previous selection (rect was null)")
-                            viewModel.interactionHolder.onSelectionCleared()
-                        }
+                if (selRect == null) {
+                    Log.w("SelectionDebug", "sel.rect is null — skipping")
+                    if (lastSelection) {
+                        Log.d("SelectionDebug", "Clearing previous selection (rect was null)")
+                        viewModel.interactionHolder.onSelectionCleared()
+                    }
                     lastSelection = false
                     continue
                 }
-                val text: String = try {
-                    val jsResult = frag.evaluateJavascript(
-                        "(function(){var s=window.getSelection();return s?s.toString():'';})()"
-                    )
-                    Log.d("SelectionDebug", "evaluateJavascript result: '$jsResult'")
-                    if (jsResult.isNullOrBlank()) {
+                val text: String =
+                    try {
+                        val jsResult =
+                            frag.evaluateJavascript(
+                                "(function(){var s=window.getSelection();return s?s.toString():'';})()",
+                            )
+                        Log.d("SelectionDebug", "evaluateJavascript result: '$jsResult'")
+                        if (jsResult.isNullOrBlank()) {
+                            val fallback = sel.locator.text?.let { "${it.before ?: ""}${it.after ?: ""}" } ?: ""
+                            Log.d("SelectionDebug", "JS result empty, using locator.text fallback: '$fallback'")
+                            fallback
+                        } else {
+                            jsResult
+                        }
+                    } catch (e: Throwable) {
+                        Log.e("SelectionDebug", "evaluateJavascript THREW: ${e::class.simpleName}: ${e.message}", e)
                         val fallback = sel.locator.text?.let { "${it.before ?: ""}${it.after ?: ""}" } ?: ""
-                        Log.d("SelectionDebug", "JS result empty, using locator.text fallback: '$fallback'")
+                        Log.d("SelectionDebug", "Using locator.text fallback after exception: '$fallback'")
                         fallback
-                    } else {
-                        jsResult
                     }
-                } catch (e: Throwable) {
-                    Log.e("SelectionDebug", "evaluateJavascript THREW: ${e::class.simpleName}: ${e.message}", e)
-                    val fallback = sel.locator.text?.let { "${it.before ?: ""}${it.after ?: ""}" } ?: ""
-                    Log.d("SelectionDebug", "Using locator.text fallback after exception: '$fallback'")
-                    fallback
-                }
                 Log.d("SelectionDebug", "Calling interactionHolder.onReadiumSelection(text='${text.take(50)}', rect=$selRect)")
                 try {
                     viewModel.interactionHolder.onReadiumSelection(
                         locator = sel.locator,
                         rect = selRect,
                         text = text,
-                        existingHighlights = latestHighlights
+                        existingHighlights = latestHighlights,
                     )
                     Log.d("SelectionDebug", "interactionHolder.onReadiumSelection OK")
                 } catch (e: Throwable) {
@@ -143,62 +152,66 @@ fun rememberSelectionBridge(
         val frag = navigatorFragment
         val decorable = frag as? DecorableNavigator
         val selectable = frag as? SelectableNavigator
-        val listener = if (decorable != null) {
-            object : DecorableNavigator.Listener {
-                override fun onDecorationActivated(
-                    event: DecorableNavigator.OnActivatedEvent
-                ): Boolean {
-                    val rectString = event.rect?.toString() ?: "null"
-                    DebugLog.info(
-                        "Readium",
-                        "onDecorationActivated: group=${event.group}, id=${event.decoration.id}, rect=$rectString"
-                    )
-                    DebugStateHolder.recordDecorationEvent(
-                        event.decoration.id,
-                        event.group,
-                        event.rect
-                    )
-                    if (event.group != DECORATION_GROUP) {
-                        DebugLog.warn("Readium", "Decoration group mismatch (got ${event.group})")
-                        return false
-                    }
-                    val rect: RectF = event.rect ?: return false
-                    val highlight = latestHighlights.firstOrNull { it.id == event.decoration.id }
-                    if (highlight == null) {
-                        val knownIds = latestHighlights.map { it.id }
-                        DebugLog.warn(
+        val listener =
+            if (decorable != null) {
+                object : DecorableNavigator.Listener {
+                    override fun onDecorationActivated(event: DecorableNavigator.OnActivatedEvent): Boolean {
+                        val rectString = event.rect?.toString() ?: "null"
+                        DebugLog.info(
                             "Readium",
-                            "onDecorationActivated: no highlight found for id=${event.decoration.id} — known IDs: $knownIds"
+                            "onDecorationActivated: group=${event.group}, id=${event.decoration.id}, rect=$rectString",
                         )
-                        return false
-                    }
-                    DebugStateHolder.recordHighlightActivation(event.decoration.id, rectString)
-                    if (selectable != null) {
-                        tapProbeScope.launch {
-                            try {
-                                delay(TAP_PROBE_MS)
-                                val currentSel = try {
-                                    selectable.currentSelection()
-                                } catch (_: Throwable) { null }
-                                if (currentSel != null) {
-                                    DebugLog.info(
-                                        "Readium",
-                                        "onDecorationActivated SKIPPED: user is creating a new selection (id=${event.decoration.id})"
-                                    )
-                                    return@launch
-                                }
-                            } catch (_: Throwable) {
-                                // Probe failed — fall through and treat as a tap
-                            }
-                            viewModel.interactionHolder.onHighlightTapped(highlight, rect)
+                        DebugStateHolder.recordDecorationEvent(
+                            event.decoration.id,
+                            event.group,
+                            event.rect,
+                        )
+                        if (event.group != DECORATION_GROUP) {
+                            DebugLog.warn("Readium", "Decoration group mismatch (got ${event.group})")
+                            return false
                         }
+                        val rect: RectF = event.rect ?: return false
+                        val highlight = latestHighlights.firstOrNull { it.id == event.decoration.id }
+                        if (highlight == null) {
+                            val knownIds = latestHighlights.map { it.id }
+                            DebugLog.warn(
+                                "Readium",
+                                "onDecorationActivated: no highlight found for id=${event.decoration.id} — known IDs: $knownIds",
+                            )
+                            return false
+                        }
+                        DebugStateHolder.recordHighlightActivation(event.decoration.id, rectString)
+                        if (selectable != null) {
+                            tapProbeScope.launch {
+                                try {
+                                    delay(TAP_PROBE_MS)
+                                    val currentSel =
+                                        try {
+                                            selectable.currentSelection()
+                                        } catch (_: Throwable) {
+                                            null
+                                        }
+                                    if (currentSel != null) {
+                                        DebugLog.info(
+                                            "Readium",
+                                            "onDecorationActivated SKIPPED: user is creating a new selection (id=${event.decoration.id})",
+                                        )
+                                        return@launch
+                                    }
+                                } catch (_: Throwable) {
+                                    // Probe failed — fall through and treat as a tap
+                                }
+                                viewModel.interactionHolder.onHighlightTapped(highlight, rect)
+                            }
+                            return true
+                        }
+                        viewModel.interactionHolder.onHighlightTapped(highlight, rect)
                         return true
                     }
-                    viewModel.interactionHolder.onHighlightTapped(highlight, rect)
-                    return true
                 }
+            } else {
+                null
             }
-        } else null
 
         if (decorable != null && listener != null) {
             decorable.addDecorationListener(DECORATION_GROUP, listener)
@@ -246,7 +259,7 @@ fun rememberSelectionBridge(
                 decorable.applyDecorations(currentDecorations, DECORATION_GROUP)
                 DebugLog.info(
                     "Readium",
-                    "Post-listener re-apply: pushed ${currentDecorations.size} decorations"
+                    "Post-listener re-apply: pushed ${currentDecorations.size} decorations",
                 )
                 DebugDual.logHighlightApplied(currentDecorations.size)
                 DebugDual.d(DebugDual.TAG_SYNC, "Post-listener re-apply dual log count=${currentDecorations.size}")
@@ -271,7 +284,10 @@ fun rememberSelectionBridge(
             return@LaunchedEffect
         }
         DebugLog.info("Readium", "Decoration sync: pushing ${decorations.size} decorations")
-        DebugDual.d(DebugDual.TAG_SYNC, "Decoration sync: pushing ${decorations.size} decorations via ${if (readingOrder.isNotEmpty()) "readingOrder(${readingOrder.size})" else "no-order"}")
+        DebugDual.d(
+            DebugDual.TAG_SYNC,
+            "Decoration sync: pushing ${decorations.size} decorations via ${if (readingOrder.isNotEmpty()) "readingOrder(${readingOrder.size})" else "no-order"}",
+        )
         decorable.applyDecorations(decorations, DECORATION_GROUP)
         DebugDual.logHighlightApplied(decorations.size)
         DebugStateHolder.recordApplied(decorations.size)

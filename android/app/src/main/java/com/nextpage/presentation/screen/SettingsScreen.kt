@@ -33,14 +33,13 @@ import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.domain.repository.StorageRepository
 import com.nextpage.presentation.navigation.NextPageDestination
 import com.nextpage.presentation.screen.settings.AboutScreen
-import com.nextpage.presentation.screen.settings.SettingsAboutScreen
+import com.nextpage.presentation.screen.settings.PerformanceScreen
 import com.nextpage.presentation.screen.settings.SettingsAccountScreen
 import com.nextpage.presentation.screen.settings.SettingsDataStorageScreen
 import com.nextpage.presentation.screen.settings.SettingsDevicesScreen
 import com.nextpage.presentation.screen.settings.SettingsLanguageScreen
 import com.nextpage.presentation.screen.settings.SettingsListScreen
 import com.nextpage.presentation.screen.settings.SettingsNotificationsScreen
-import com.nextpage.presentation.screen.settings.PerformanceScreen
 import com.nextpage.presentation.screen.settings.SettingsPaletteScreen
 import com.nextpage.presentation.screen.settings.SettingsStatisticsScreen
 import com.nextpage.presentation.screen.settings.SettingsThemeScreen
@@ -73,7 +72,7 @@ fun SettingsScreen(
     readingGoalPreferences: ReadingGoalPreferences? = null,
     storageRepository: StorageRepository? = null,
     cacheRepository: CacheRepository? = null,
-    libraryRepository: LibraryRepository? = null
+    libraryRepository: LibraryRepository? = null,
 ) {
     SettingsScreenContent(
         contentPadding = contentPadding,
@@ -95,7 +94,7 @@ fun SettingsScreen(
         readingGoalPreferences = readingGoalPreferences,
         storageRepository = storageRepository,
         cacheRepository = cacheRepository,
-        libraryRepository = libraryRepository
+        libraryRepository = libraryRepository,
     )
 }
 
@@ -120,19 +119,21 @@ private fun SettingsScreenContent(
     readingGoalPreferences: ReadingGoalPreferences? = null,
     storageRepository: StorageRepository? = null,
     cacheRepository: CacheRepository? = null,
-    libraryRepository: LibraryRepository? = null
+    libraryRepository: LibraryRepository? = null,
 ) {
     val nestedNavController = rememberNavController()
-    val dictionaryViewModel = remember(dictionaryRepository) {
-        dictionaryRepository?.let { DictionaryViewModel(it) }
-    }
-    val storageViewModel = remember(storageRepository, cacheRepository, libraryRepository) {
-        if (storageRepository != null && cacheRepository != null && libraryRepository != null) {
-            StorageViewModel(storageRepository, cacheRepository, libraryRepository)
-        } else {
-            null
+    val dictionaryViewModel =
+        remember(dictionaryRepository) {
+            dictionaryRepository?.let { DictionaryViewModel(it) }
         }
-    }
+    val storageViewModel =
+        remember(storageRepository, cacheRepository, libraryRepository) {
+            if (storageRepository != null && cacheRepository != null && libraryRepository != null) {
+                StorageViewModel(storageRepository, cacheRepository, libraryRepository)
+            } else {
+                null
+            }
+        }
 
     val start = initialRoute ?: NextPageDestination.SettingsList.route
 
@@ -143,14 +144,15 @@ private fun SettingsScreenContent(
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(contentPadding)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(contentPadding),
     ) {
         NavHost(
             navController = nestedNavController,
             startDestination = start,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
         ) {
             composable(route = NextPageDestination.SettingsList.route) {
                 SettingsListScreen(
@@ -196,7 +198,7 @@ private fun SettingsScreenContent(
                     },
                     onNavigateToSync = {
                         nestedNavController.navigate(NextPageDestination.SettingsSync.route)
-                    }
+                    },
                 )
             }
 
@@ -211,7 +213,7 @@ private fun SettingsScreenContent(
                         if (!nestedNavController.popBackStack()) {
                             nestedNavController.navigate(NextPageDestination.SettingsList.route)
                         }
-                    }
+                    },
                 )
             }
 
@@ -219,13 +221,13 @@ private fun SettingsScreenContent(
                 SettingsThemeScreen(
                     appThemeMode = appThemeMode,
                     onAppThemeModeChanged = onAppThemeModeChanged,
-                    onBack = { nestedNavController.popBackStack() }
+                    onBack = { nestedNavController.popBackStack() },
                 )
             }
 
             composable(route = NextPageDestination.SettingsLanguage.route) {
                 SettingsLanguageScreen(
-                    onBack = { nestedNavController.popBackStack() }
+                    onBack = { nestedNavController.popBackStack() },
                 )
             }
 
@@ -236,7 +238,7 @@ private fun SettingsScreenContent(
                     onAddCustomHighlightColor = onAddCustomHighlightColor,
                     onDeleteCustomHighlightColor = onDeleteCustomHighlightColor,
                     onResetCustomHighlightColors = onResetCustomHighlightColors,
-                    onBack = { nestedNavController.popBackStack() }
+                    onBack = { nestedNavController.popBackStack() },
                 )
             }
 
@@ -249,13 +251,13 @@ private fun SettingsScreenContent(
                     onBack = { nestedNavController.popBackStack() },
                     onNavigateToStorage = {
                         nestedNavController.navigate(NextPageDestination.SettingsStorage.route)
-                    }
+                    },
                 )
             }
 
             composable(route = NextPageDestination.SettingsNotifications.route) {
                 SettingsNotificationsScreen(
-                    onBack = { nestedNavController.popBackStack() }
+                    onBack = { nestedNavController.popBackStack() },
                 )
             }
 
@@ -271,7 +273,7 @@ private fun SettingsScreenContent(
                         onDismissDelete = vm::dismissDeleteDialog,
                         onConfirmLocalOnly = vm::confirmDeleteLocalOnly,
                         onConfirmLocalAndDrive = vm::confirmDeleteLocalAndDrive,
-                        onSweepOrphans = vm::sweepOrphans
+                        onSweepOrphans = vm::sweepOrphans,
                     )
                 }
             }
@@ -281,13 +283,13 @@ private fun SettingsScreenContent(
                     onBack = { nestedNavController.popBackStack() },
                     onViewLogs = {
                         onNavigateToLogViewer()
-                    }
+                    },
                 )
             }
 
             composable(route = NextPageDestination.SettingsAbout.route) {
                 AboutScreen(
-                    onBack = { nestedNavController.popBackStack() }
+                    onBack = { nestedNavController.popBackStack() },
                 )
             }
 
@@ -295,7 +297,7 @@ private fun SettingsScreenContent(
                 statisticsViewModel?.let { vm ->
                     SettingsStatisticsScreen(
                         viewModel = vm,
-                        onBack = { nestedNavController.popBackStack() }
+                        onBack = { nestedNavController.popBackStack() },
                     )
                 }
             }
@@ -304,31 +306,33 @@ private fun SettingsScreenContent(
                 dictionaryViewModel?.let { vm ->
                     DictionaryScreen(
                         viewModel = vm,
-                        onNavigateBack = { nestedNavController.popBackStack() }
+                        onNavigateBack = { nestedNavController.popBackStack() },
                     )
                 }
             }
 
             composable(route = NextPageDestination.SettingsDevices.route) {
                 val context = LocalContext.current
-                val viewModel = remember(authSession?.userId) {
-                    authSession?.userId?.let { userId ->
-                        SettingsDevicesViewModel(
-                            application = context.applicationContext as Application,
-                            userId = userId
-                        )
+                val viewModel =
+                    remember(authSession?.userId) {
+                        authSession?.userId?.let { userId ->
+                            SettingsDevicesViewModel(
+                                application = context.applicationContext as Application,
+                                userId = userId,
+                            )
+                        }
                     }
-                }
 
                 val lifecycleOwner = LocalLifecycleOwner.current
                 DisposableEffect(lifecycleOwner) {
-                    val observer = LifecycleEventObserver { _, event ->
-                        if (event == Lifecycle.Event.ON_PAUSE) {
-                            viewModel?.stopHeartbeat()
-                        } else if (event == Lifecycle.Event.ON_RESUME) {
-                            viewModel?.loadDevices()
+                    val observer =
+                        LifecycleEventObserver { _, event ->
+                            if (event == Lifecycle.Event.ON_PAUSE) {
+                                viewModel?.stopHeartbeat()
+                            } else if (event == Lifecycle.Event.ON_RESUME) {
+                                viewModel?.loadDevices()
+                            }
                         }
-                    }
                     lifecycleOwner.lifecycle.addObserver(observer)
                     onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
                 }
@@ -343,7 +347,7 @@ private fun SettingsScreenContent(
                     SettingsDevicesScreen(
                         uiState = uiState,
                         onRemove = { id -> viewModel.removeDevice(id) },
-                        onBack = { nestedNavController.popBackStack() }
+                        onBack = { nestedNavController.popBackStack() },
                     )
                 }
             }
@@ -359,7 +363,7 @@ private fun SettingsScreenContent(
                             prefs.save(minutes)
                             nestedNavController.popBackStack()
                         },
-                        onNavigateBack = { nestedNavController.popBackStack() }
+                        onNavigateBack = { nestedNavController.popBackStack() },
                     )
                 }
             }
@@ -368,7 +372,7 @@ private fun SettingsScreenContent(
             if (BuildConfig.DEBUG) {
                 composable(route = NextPageDestination.SettingsPerformance.route) {
                     PerformanceScreen(
-                        onBack = { nestedNavController.popBackStack() }
+                        onBack = { nestedNavController.popBackStack() },
                     )
                 }
             }
@@ -382,12 +386,13 @@ private fun SettingsScreenDarkPreview() {
     NextPageTheme(darkTheme = true) {
         SettingsScreenContent(
             contentPadding = PaddingValues(16.dp),
-            authSession = AuthSession(
-                userId = "local-1",
-                email = "reader@nextpage.app",
-                displayName = "Reader",
-                provider = "email"
-            ),
+            authSession =
+                AuthSession(
+                    userId = "local-1",
+                    email = "reader@nextpage.app",
+                    displayName = "Reader",
+                    provider = "email",
+                ),
             appThemeMode = ThemeMode.SYSTEM,
             customHighlightColors = HighlightColor.defaultHexList(),
             onAppThemeModeChanged = {},
@@ -396,7 +401,7 @@ private fun SettingsScreenDarkPreview() {
             onAddCustomHighlightColor = {},
             onDeleteCustomHighlightColor = {},
             onResetCustomHighlightColors = {},
-            onNavigateToLogViewer = {}
+            onNavigateToLogViewer = {},
         )
     }
 }
@@ -407,12 +412,13 @@ private fun SettingsScreenLightPreview() {
     NextPageTheme(darkTheme = false) {
         SettingsScreenContent(
             contentPadding = PaddingValues(16.dp),
-            authSession = AuthSession(
-                userId = "local-1",
-                email = "reader@nextpage.app",
-                displayName = "Reader",
-                provider = "email"
-            ),
+            authSession =
+                AuthSession(
+                    userId = "local-1",
+                    email = "reader@nextpage.app",
+                    displayName = "Reader",
+                    provider = "email",
+                ),
             appThemeMode = ThemeMode.SYSTEM,
             customHighlightColors = HighlightColor.defaultHexList(),
             onAppThemeModeChanged = {},
@@ -421,7 +427,7 @@ private fun SettingsScreenLightPreview() {
             onAddCustomHighlightColor = {},
             onDeleteCustomHighlightColor = {},
             onResetCustomHighlightColors = {},
-            onNavigateToLogViewer = {}
+            onNavigateToLogViewer = {},
         )
     }
 }

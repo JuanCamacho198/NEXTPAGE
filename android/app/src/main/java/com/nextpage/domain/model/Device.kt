@@ -12,5 +12,5 @@ data class Device(
     val os: String = "",
     val type: String = "mobile",
     @SerialName("last_active") val lastActive: String = "",
-    @SerialName("created_at") val createdAt: String? = null
+    @SerialName("created_at") val createdAt: String? = null,
 )

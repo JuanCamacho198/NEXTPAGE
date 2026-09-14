@@ -48,9 +48,8 @@ class ReaderLifecycleStateHolder(
     private val onNavigateToLocator: (Locator) -> Unit = {},
     private val onBookLoaded: (bookId: String) -> Unit = {},
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
-    private val supabaseProgressSync: SupabaseProgressSync? = null
+    private val supabaseProgressSync: SupabaseProgressSync? = null,
 ) {
-
     private val _state = MutableStateFlow(ReaderLifecycleState())
     val state: StateFlow<ReaderLifecycleState> = _state.asStateFlow()
 
@@ -67,62 +66,67 @@ class ReaderLifecycleStateHolder(
         val currentPosition: Int,
         val estimatedPagesViaChars: Int,
         val viewportH: Int,
-        val viewportW: Int
+        val viewportW: Int,
     )
 
     // Collaborators — single StateFlow ownership via _state accessor
-    private val progressTracker = ReadingProgressTracker(
-        application = application,
-        state = _state,
-        scope = scope,
-        mainDispatcher = mainDispatcher,
-        readerRepository = readerRepository,
-        updateReadingProgressUseCase = updateReadingProgressUseCase,
-        onSelectionCleared = onSelectionCleared,
-        onErrorEvent = onErrorEvent
-    )
+    private val progressTracker =
+        ReadingProgressTracker(
+            application = application,
+            state = _state,
+            scope = scope,
+            mainDispatcher = mainDispatcher,
+            readerRepository = readerRepository,
+            updateReadingProgressUseCase = updateReadingProgressUseCase,
+            onSelectionCleared = onSelectionCleared,
+            onErrorEvent = onErrorEvent,
+        )
 
-    private val epubLoader = EpubBookLoader(
-        application = application,
-        readerRepository = readerRepository,
-        state = _state,
-        scope = scope,
-        mainDispatcher = mainDispatcher,
-        supabaseProgressSync = supabaseProgressSync,
-        onErrorEvent = onErrorEvent,
-        onNavigateToLocator = onNavigateToLocator,
-        onBookLoaded = onBookLoaded,
-        onProgressDisplay = { progressTracker.updateProgressDisplay() }
-    )
+    private val epubLoader =
+        EpubBookLoader(
+            application = application,
+            readerRepository = readerRepository,
+            state = _state,
+            scope = scope,
+            mainDispatcher = mainDispatcher,
+            supabaseProgressSync = supabaseProgressSync,
+            onErrorEvent = onErrorEvent,
+            onNavigateToLocator = onNavigateToLocator,
+            onBookLoaded = onBookLoaded,
+            onProgressDisplay = { progressTracker.updateProgressDisplay() },
+        )
 
-    private val pdfLoader = PdfBookLoader(
-        application = application,
-        state = _state,
-        scope = scope,
-        mainDispatcher = mainDispatcher,
-        onErrorEvent = onErrorEvent,
-        onBookLoaded = onBookLoaded,
-        onProgressDisplay = { progressTracker.updateProgressDisplay() }
-    )
+    private val pdfLoader =
+        PdfBookLoader(
+            application = application,
+            state = _state,
+            scope = scope,
+            mainDispatcher = mainDispatcher,
+            onErrorEvent = onErrorEvent,
+            onBookLoaded = onBookLoaded,
+            onProgressDisplay = { progressTracker.updateProgressDisplay() },
+        )
 
-    private val navigator = ReadingNavigator(
-        state = _state,
-        scope = scope,
-        mainDispatcher = mainDispatcher,
-        readerRepository = readerRepository,
-        updateReadingProgressUseCase = updateReadingProgressUseCase,
-        onChapterChanged = onChapterChanged,
-        onNavigateToLocator = onNavigateToLocator,
-        onSelectionCleared = onSelectionCleared,
-        onProgressDisplay = { progressTracker.updateProgressDisplay() }
-    )
+    private val navigator =
+        ReadingNavigator(
+            state = _state,
+            scope = scope,
+            mainDispatcher = mainDispatcher,
+            readerRepository = readerRepository,
+            updateReadingProgressUseCase = updateReadingProgressUseCase,
+            onChapterChanged = onChapterChanged,
+            onNavigateToLocator = onNavigateToLocator,
+            onSelectionCleared = onSelectionCleared,
+            onProgressDisplay = { progressTracker.updateProgressDisplay() },
+        )
 
-    private val sessionRecorder = ReadingSessionRecorder(
-        state = _state,
-        scope = scope,
-        mainDispatcher = mainDispatcher,
-        readingStatsRepository = readingStatsRepository
-    )
+    private val sessionRecorder =
+        ReadingSessionRecorder(
+            state = _state,
+            scope = scope,
+            mainDispatcher = mainDispatcher,
+            readingStatsRepository = readingStatsRepository,
+        )
 
     // loadEpoch preserved via epubLoader epoch (single source; pdf path increments separately but facade exposes unified)
     private val loadEpoch: Long
@@ -147,10 +151,10 @@ class ReaderLifecycleStateHolder(
      * PR #2 (facade removal) must carry this feed into the surviving
      * lifecycle collaborator.
      *
-      * Single source (SDD reader-uiState-cleanup, S4): the ViewModel
-      * collector feeding `mutableUiState.previewText` was deleted when
-      * `ReaderScreenOverlaysHost` migrated to `sessionUiState.previewText` —
-      * this feed is now the only preview derivation.
+     * Single source (SDD reader-uiState-cleanup, S4): the ViewModel
+     * collector feeding `mutableUiState.previewText` was deleted when
+     * `ReaderScreenOverlaysHost` migrated to `sessionUiState.previewText` —
+     * this feed is now the only preview derivation.
      */
     private val previewScope = CoroutineScope(SupervisorJob() + mainDispatcher)
 
@@ -180,27 +184,39 @@ class ReaderLifecycleStateHolder(
     private suspend fun extractChapterPreviewText(
         publication: Publication?,
         bookFormat: String?,
-        chapterIndex: Int
+        chapterIndex: Int,
     ): String? {
         if (publication == null || bookFormat != "epub") return null
         return withContext(Dispatchers.IO) {
             try {
                 // chapterIndex is TOC list position, NOT spine index — resolve via chapters mapping
                 val chapters = _state.value.chapters
-                val link = if (chapterIndex in chapters.indices) {
-                    val ch = chapters[chapterIndex]
-                    val normFile = ch.href.substringBefore('#').substringBefore('?').substringAfterLast('/').lowercase()
-                    publication.readingOrder.firstOrNull {
-                        it.href.toString().substringAfterLast('/').substringBefore('#').substringBefore('?').lowercase() == normFile
-                    } ?: publication.readingOrder.getOrNull(ch.index)
-                    ?: publication.readingOrder.getOrNull(chapterIndex)
-                } else {
-                    publication.readingOrder.getOrNull(chapterIndex)
-                } ?: return@withContext null
+                val link =
+                    if (chapterIndex in chapters.indices) {
+                        val ch = chapters[chapterIndex]
+                        val normFile =
+                            ch.href
+                                .substringBefore('#')
+                                .substringBefore('?')
+                                .substringAfterLast('/')
+                                .lowercase()
+                        publication.readingOrder.firstOrNull {
+                            it.href
+                                .toString()
+                                .substringAfterLast('/')
+                                .substringBefore('#')
+                                .substringBefore('?')
+                                .lowercase() == normFile
+                        } ?: publication.readingOrder.getOrNull(ch.index)
+                            ?: publication.readingOrder.getOrNull(chapterIndex)
+                    } else {
+                        publication.readingOrder.getOrNull(chapterIndex)
+                    } ?: return@withContext null
                 val resource = publication.get(link) ?: return@withContext null
                 val readResult = resource.read()
                 val bytes = readResult.getOrNull() ?: return@withContext null
-                bytes.decodeToString()
+                bytes
+                    .decodeToString()
                     .replace(Regex("<[^>]*>"), "")
                     .replace(Regex("\\s+"), " ")
                     .trim()
@@ -221,7 +237,11 @@ class ReaderLifecycleStateHolder(
     // ── Book Loading ────────────────────────────────────────────────
 
     @Deprecated("Delegate to BookLoader — to be removed in PR #2")
-    fun loadBook(bookId: String, filePath: String, format: String = "epub") {
+    fun loadBook(
+        bookId: String,
+        filePath: String,
+        format: String = "epub",
+    ) {
         val startTime = System.currentTimeMillis()
         _state.update {
             it.copy(
@@ -237,7 +257,7 @@ class ReaderLifecycleStateHolder(
                 progressPercent = 0f,
                 progressLabel = "",
                 readiumPublication = null,
-                readiumLocator = null
+                readiumLocator = null,
             )
         }
         when (format.lowercase()) {
@@ -247,7 +267,10 @@ class ReaderLifecycleStateHolder(
     }
 
     @Deprecated("Delegate to EpubBookLoader — to be removed in PR #2")
-    fun loadEpubBook(bookId: String, filePath: String) {
+    fun loadEpubBook(
+        bookId: String,
+        filePath: String,
+    ) {
         epubLoader.loadEpubBook(bookId, filePath)
     }
 
@@ -273,7 +296,10 @@ class ReaderLifecycleStateHolder(
     }
 
     @Deprecated("Delegate to ReadingProgressTracker — to be removed in PR #2")
-    fun onReadiumViewportChanged(height: Int, width: Int = 0) {
+    fun onReadiumViewportChanged(
+        height: Int,
+        width: Int = 0,
+    ) {
         progressTracker.onReadiumViewportChanged(height, width)
     }
 
@@ -283,7 +309,12 @@ class ReaderLifecycleStateHolder(
     }
 
     @Deprecated("Delegate to ReadingProgressTracker — to be removed in PR #2")
-    fun onTypographyConfigChanged(fontSizeSp: Float, lineHeight: Float, pageMarginsDp: Float = 16f, density: Float = 3f) {
+    fun onTypographyConfigChanged(
+        fontSizeSp: Float,
+        lineHeight: Float,
+        pageMarginsDp: Float = 16f,
+        density: Float = 3f,
+    ) {
         progressTracker.onTypographyConfigChanged(fontSizeSp, lineHeight, pageMarginsDp, density)
     }
 
@@ -292,7 +323,11 @@ class ReaderLifecycleStateHolder(
     }
 
     @Deprecated("Delegate to ReadingProgressTracker — to be removed in PR #2")
-    fun updateProgress(bookId: String, cfiLocation: String, percentage: Float) {
+    fun updateProgress(
+        bookId: String,
+        cfiLocation: String,
+        percentage: Float,
+    ) {
         progressTracker.updateProgress(bookId, cfiLocation, percentage)
     }
 
@@ -313,7 +348,15 @@ class ReaderLifecycleStateHolder(
             if (pageIndex != s.currentPdfPage) {
                 _state.update { it.copy(currentPdfPage = pageIndex) }
                 // delegate pdf progress persist via tracker
-                progressTracker.updateProgress(s.selectedBookId ?: return, "pdfpage:$pageIndex", ((pageIndex + 1).toFloat() / s.totalPdfPages * 100f).coerceIn(0f, 100f))
+                progressTracker.updateProgress(
+                    s.selectedBookId ?: return,
+                    "pdfpage:$pageIndex",
+                    (
+                        (pageIndex + 1).toFloat() /
+                            s.totalPdfPages *
+                            100f
+                    ).coerceIn(0f, 100f),
+                )
                 progressTracker.updateProgressDisplay()
                 navigator.goToPdfPage(pageIndex)
             }
@@ -346,7 +389,12 @@ class ReaderLifecycleStateHolder(
                 scope.launch(mainDispatcher) { onNavigateToLocator(locator) }
             } else {
                 val chapterMatch = Regex("/6/(\\d+)").find(cfi)
-                val spineIndex = chapterMatch?.groupValues?.getOrNull(1)?.toIntOrNull()?.minus(1)
+                val spineIndex =
+                    chapterMatch
+                        ?.groupValues
+                        ?.getOrNull(1)
+                        ?.toIntOrNull()
+                        ?.minus(1)
                 if (spineIndex != null) {
                     val chapters = _state.value.chapters
                     val listPos = navigator.spineIndexToListPosition(spineIndex, chapters)
@@ -359,29 +407,41 @@ class ReaderLifecycleStateHolder(
 
     @Deprecated("Delegate to ReadingNavigator — to be removed in PR #2")
     fun goToNextChapter() = navigator.goToNextChapter()
+
     @Deprecated("Delegate to ReadingNavigator — to be removed in PR #2")
     fun goToPreviousChapter() = navigator.goToPreviousChapter()
+
     @Deprecated("Delegate to ReadingNavigator — to be removed in PR #2")
     fun goToChapter(listPosition: Int) = navigator.goToChapter(listPosition)
+
     @Deprecated("Delegate to ReadingNavigator — to be removed in PR #2")
     fun goToNextPdfPage() = navigator.goToNextPdfPage()
+
     @Deprecated("Delegate to ReadingNavigator — to be removed in PR #2")
     fun goToPreviousPdfPage() = navigator.goToPreviousPdfPage()
+
     @Deprecated("Delegate to ReadingNavigator — to be removed in PR #2")
     fun goToPage(pageNumber: Int) = navigator.goToPage(pageNumber)
+
     @Deprecated("Delegate to ReadingNavigator — to be removed in PR #2")
     fun goToPdfPage(pageIndex: Int) = navigator.goToPdfPage(pageIndex)
+
     @Deprecated("Delegate to ReadingNavigator — to be removed in PR #2")
     fun onTapZone(isLeftZone: Boolean) = navigator.onTapZone(isLeftZone)
+
     @Deprecated("Delegate to TocBuilder — to be removed in PR #2")
-    fun onToggleTocSheet() { _state.update { it.copy(showTocSheet = !it.showTocSheet) } }
+    fun onToggleTocSheet() {
+        _state.update { it.copy(showTocSheet = !it.showTocSheet) }
+    }
 
     // ── Session ─────────────────────────────────────────────────
 
     @Deprecated("Delegate to ReadingSessionRecorder — to be removed in PR #2")
     fun onReaderOpened() = sessionRecorder.onReaderOpened()
+
     @Deprecated("Delegate to ReadingSessionRecorder — to be removed in PR #2")
     fun onReaderPaused() = sessionRecorder.onReaderPaused()
+
     @Deprecated("Delegate to ReadingSessionRecorder — to be removed in PR #2")
     fun onReaderBackgrounded() = sessionRecorder.onReaderBackgrounded()
 
@@ -413,7 +473,10 @@ class ReaderLifecycleStateHolder(
      * Observes reader-settings changes and recomputes footer remaining pages
      * within one frame (exact reflow). Margins are fixed at 16dp (VM parity).
      */
-    fun observeTypographyConfig(settings: StateFlow<ReaderSettingsState>, density: Float) {
+    fun observeTypographyConfig(
+        settings: StateFlow<ReaderSettingsState>,
+        density: Float,
+    ) {
         scope.launch(mainDispatcher) {
             settings.collect { s ->
                 val rs = s.readerSettings
@@ -421,7 +484,7 @@ class ReaderLifecycleStateHolder(
                     rs.fontSize.sizePx.toFloat(),
                     rs.lineHeight.value,
                     16f,
-                    density
+                    density,
                 )
             }
         }
@@ -435,7 +498,11 @@ class ReaderLifecycleStateHolder(
     }
 
     @VisibleForTesting
-    internal fun setPdfStateForTest(selectedBookId: String = "", totalPages: Int = 0, currentPage: Int = 0) {
+    internal fun setPdfStateForTest(
+        selectedBookId: String = "",
+        totalPages: Int = 0,
+        currentPage: Int = 0,
+    ) {
         _state.update {
             it.copy(selectedBookId = selectedBookId, totalPdfPages = totalPages, currentPdfPage = currentPage, bookFormat = "pdf")
         }
@@ -449,9 +516,19 @@ class ReaderLifecycleStateHolder(
     }
 
     @VisibleForTesting
-    internal fun setEpubStateForTest(chapters: List<BookChapter>, currentChapterIndex: Int = 0, selectedBookId: String = "") {
+    internal fun setEpubStateForTest(
+        chapters: List<BookChapter>,
+        currentChapterIndex: Int = 0,
+        selectedBookId: String = "",
+    ) {
         _state.update {
-            it.copy(chapters = chapters, currentChapterIndex = currentChapterIndex, bookFormat = "epub", totalPdfPages = 0, selectedBookId = selectedBookId)
+            it.copy(
+                chapters = chapters,
+                currentChapterIndex = currentChapterIndex,
+                bookFormat = "epub",
+                totalPdfPages = 0,
+                selectedBookId = selectedBookId,
+            )
         }
         progressTracker.updateProgressDisplay()
     }

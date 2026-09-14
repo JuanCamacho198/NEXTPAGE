@@ -38,12 +38,20 @@ import com.nextpage.ui.components.atoms.NextPageSkeletonBox
 sealed interface AddonReadState {
     /** Sheet hidden — the default; nothing is composed. */
     data object Hidden : AddonReadState
+
     data object Resolving : AddonReadState
+
     data object Downloading : AddonReadState
+
     /** Addon-resolved legal options for the open book. */
-    data class Loaded(val access: LegalAccess) : AddonReadState
+    data class Loaded(
+        val access: LegalAccess,
+    ) : AddonReadState
+
     data object Empty : AddonReadState
+
     data object Error : AddonReadState
+
     data object ConsentRequired : AddonReadState
 }
 
@@ -68,7 +76,7 @@ fun AddonReadSheet(
     onDenyConsent: () -> Unit,
     onOpenExternal: (String) -> Unit = {},
     onRetry: () -> Unit = {},
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val uriHandler = LocalUriHandler.current
@@ -76,20 +84,21 @@ fun AddonReadSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = NextPageColors.surface
+        containerColor = NextPageColors.surface,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
                 text = stringResource(R.string.discover_rail_from, addonName),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
-                color = NextPageColors.textPrimary
+                color = NextPageColors.textPrimary,
             )
             NextPageDivider()
             when (state) {
@@ -100,7 +109,7 @@ fun AddonReadSheet(
                     Text(
                         text = stringResource(R.string.addon_read_resolving),
                         style = MaterialTheme.typography.bodySmall,
-                        color = NextPageColors.textSecondary
+                        color = NextPageColors.textSecondary,
                     )
                 }
                 is AddonReadState.Loaded -> {
@@ -109,20 +118,20 @@ fun AddonReadSheet(
                         onOpenExternal = { url ->
                             onOpenExternal(url)
                             uriHandler.openUri(url)
-                        }
+                        },
                     )
                     AddonLegalNotice()
-                }                AddonReadState.Empty -> {
+                } AddonReadState.Empty -> {
                     Text(
                         text = stringResource(R.string.addon_read_empty_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = NextPageColors.textPrimary
+                        color = NextPageColors.textPrimary,
                     )
                     Text(
                         text = stringResource(R.string.addon_read_empty_body, addonName),
                         style = MaterialTheme.typography.bodySmall,
-                        color = NextPageColors.textSecondary
+                        color = NextPageColors.textSecondary,
                     )
                     AddonLegalNotice()
                 }
@@ -131,17 +140,17 @@ fun AddonReadSheet(
                         text = stringResource(R.string.discover_error_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = NextPageColors.textPrimary
+                        color = NextPageColors.textPrimary,
                     )
                     Text(
                         text = stringResource(R.string.discover_error_body),
                         style = MaterialTheme.typography.bodySmall,
-                        color = NextPageColors.textSecondary
+                        color = NextPageColors.textSecondary,
                     )
                     NextPageButton(
                         text = stringResource(R.string.discover_retry),
                         onClick = onRetry,
-                        variant = NextPageButtonVariant.OUTLINED
+                        variant = NextPageButtonVariant.OUTLINED,
                     )
                 }
                 AddonReadState.Hidden -> Unit
@@ -150,23 +159,23 @@ fun AddonReadSheet(
                         text = stringResource(R.string.addon_consent_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = NextPageColors.textPrimary
+                        color = NextPageColors.textPrimary,
                     )
                     Text(
                         text = stringResource(R.string.addon_consent_body, addonName),
                         style = MaterialTheme.typography.bodySmall,
-                        color = NextPageColors.textSecondary
+                        color = NextPageColors.textSecondary,
                     )
                     NextPageButton(
                         text = stringResource(R.string.addon_consent_allow),
                         onClick = onAllowConsent,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     )
                     NextPageButton(
                         text = stringResource(R.string.addon_consent_deny),
                         onClick = onDenyConsent,
                         variant = NextPageButtonVariant.OUTLINED,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     )
                     AddonLegalNotice()
                 }
@@ -184,7 +193,7 @@ private fun AddonLegalNotice(modifier: Modifier = Modifier) {
         Text(
             text = stringResource(R.string.addon_read_legal_notice),
             style = MaterialTheme.typography.bodySmall,
-            color = NextPageColors.textSecondary
+            color = NextPageColors.textSecondary,
         )
     }
 }

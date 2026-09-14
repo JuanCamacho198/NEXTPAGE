@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -38,7 +39,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.PaddingValues
 import com.nextpage.R
 import com.nextpage.presentation.screen.AuthTags
 import com.nextpage.presentation.theme.NextPageTheme
@@ -50,66 +50,76 @@ import com.nextpage.ui.util.safePainterResource
 fun AuthScreenScaffold(
     showBackArrow: Boolean,
     onNavigateBack: () -> Unit,
-    content: @Composable ColumnScope.() -> Unit
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     val isDarkBackground = MaterialTheme.colorScheme.background.luminance() < 0.5f
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
-            painter = safePainterResource(
-                resId = if (isDarkBackground) R.drawable.bg_auth_bookshelf_dark
-                else R.drawable.bg_auth_bookshelf_light,
-                fallbackColor = MaterialTheme.colorScheme.background,
-                source = "auth_background"
-            ),
+            painter =
+                safePainterResource(
+                    resId =
+                        if (isDarkBackground) {
+                            R.drawable.bg_auth_bookshelf_dark
+                        } else {
+                            R.drawable.bg_auth_bookshelf_light
+                        },
+                    fallbackColor = MaterialTheme.colorScheme.background,
+                    source = "auth_background",
+                ),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.Crop,
         )
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = if (isDarkBackground) {
-                            listOf(
-                                MaterialTheme.colorScheme.background.copy(alpha = 0.25f),
-                                Color.Black.copy(alpha = 0.65f)
-                            )
-                        } else {
-                            listOf(Color.White.copy(alpha = 0.10f), Color.White.copy(alpha = 0.35f))
-                        }
-                    )
-                )
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors =
+                                if (isDarkBackground) {
+                                    listOf(
+                                        MaterialTheme.colorScheme.background.copy(alpha = 0.25f),
+                                        Color.Black.copy(alpha = 0.65f),
+                                    )
+                                } else {
+                                    listOf(Color.White.copy(alpha = 0.10f), Color.White.copy(alpha = 0.35f))
+                                },
+                        ),
+                    ),
         )
 
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .navigationBarsPadding()
-                .verticalScroll(rememberScrollState()),
-            contentAlignment = Alignment.Center
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .navigationBarsPadding()
+                    .verticalScroll(rememberScrollState()),
+            contentAlignment = Alignment.Center,
         ) {
             if (showBackArrow) {
                 IconButton(
                     onClick = onNavigateBack,
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(8.dp)
-                        .testTag(AuthTags.BACK)
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopStart)
+                            .padding(8.dp)
+                            .testTag(AuthTags.BACK),
                 ) {
                     Icon(
                         imageVector = NextPageIcons.ArrowBack,
-                        contentDescription = stringResource(R.string.nav_back)
+                        contentDescription = stringResource(R.string.nav_back),
                     )
                 }
             }
 
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 24.dp, top = 24.dp, end = 24.dp, bottom = 48.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(start = 24.dp, top = 24.dp, end = 24.dp, bottom = 48.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 content()
             }
@@ -121,34 +131,38 @@ fun AuthScreenScaffold(
 fun AuthLogo() {
     val glowColor = NextPageTheme.colors.welcomeBrandBlue
     Box(
-        modifier = Modifier
-            .size(176.dp)
-            .drawBehind {
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            glowColor.copy(alpha = 0.30f),
-                            glowColor.copy(alpha = 0f)
-                        ),
-                        radius = size.minDimension / 2f
-                    ),
-                    radius = size.minDimension / 2f
-                )
-            },
-        contentAlignment = Alignment.Center
+        modifier =
+            Modifier
+                .size(176.dp)
+                .drawBehind {
+                    drawCircle(
+                        brush =
+                            Brush.radialGradient(
+                                colors =
+                                    listOf(
+                                        glowColor.copy(alpha = 0.30f),
+                                        glowColor.copy(alpha = 0f),
+                                    ),
+                                radius = size.minDimension / 2f,
+                            ),
+                        radius = size.minDimension / 2f,
+                    )
+                },
+        contentAlignment = Alignment.Center,
     ) {
         Box(
-            modifier = Modifier
-                .size(80.dp)
-                .clip(CircleShape)
-                .background(NextPageTheme.colors.welcomeBrandBlue),
-            contentAlignment = Alignment.Center
+            modifier =
+                Modifier
+                    .size(80.dp)
+                    .clip(CircleShape)
+                    .background(NextPageTheme.colors.welcomeBrandBlue),
+            contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = stringResource(R.string.app_logo_initials),
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimary
+                color = MaterialTheme.colorScheme.onPrimary,
             )
         }
     }
@@ -158,21 +172,21 @@ fun AuthLogo() {
 fun AuthOrDivider(text: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         HorizontalDivider(
             modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.outlineVariant
+            color = MaterialTheme.colorScheme.outlineVariant,
         )
         Text(
             text = text,
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 12.dp)
+            modifier = Modifier.padding(horizontal = 12.dp),
         )
         HorizontalDivider(
             modifier = Modifier.weight(1f),
-            color = MaterialTheme.colorScheme.outlineVariant
+            color = MaterialTheme.colorScheme.outlineVariant,
         )
     }
 }
@@ -182,13 +196,14 @@ fun AuthErrorText(uiState: AuthUiState) {
     uiState.errorMessage?.let { error ->
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = authFailureMessageTemplateRes(uiState.failureKind)
-                ?.let { messageTemplateRes -> stringResource(messageTemplateRes, error) }
-                ?: error,
+            text =
+                authFailureMessageTemplateRes(uiState.failureKind)
+                    ?.let { messageTemplateRes -> stringResource(messageTemplateRes, error) }
+                    ?: error,
             color = MaterialTheme.colorScheme.error,
             style = MaterialTheme.typography.bodySmall,
             textAlign = TextAlign.Center,
-            modifier = Modifier.testTag(AuthTags.ERROR)
+            modifier = Modifier.testTag(AuthTags.ERROR),
         )
     }
 }
@@ -198,24 +213,24 @@ fun AuthFooterLink(
     prefix: String,
     link: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = prefix,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(modifier = Modifier.width(4.dp))
         TextButton(onClick = onClick, contentPadding = PaddingValues(horizontal = 4.dp)) {
             Text(
                 text = link,
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
             )
         }
     }
@@ -229,7 +244,7 @@ fun AuthConfigError(uiState: com.nextpage.presentation.viewmodel.AuthUiState) {
             text = stringResource(R.string.auth_config_error_google_unavailable),
             color = MaterialTheme.colorScheme.error,
             style = MaterialTheme.typography.bodySmall,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.height(16.dp))
     } else {
@@ -244,19 +259,19 @@ fun AuthDevBypass(onContinueLocal: () -> Unit) {
         com.nextpage.ui.components.atoms.NextPageButton(
             onClick = onContinueLocal,
             variant = com.nextpage.ui.components.atoms.NextPageButtonVariant.TEXT,
-            modifier = Modifier.testTag(AuthTags.DEV_BYPASS)
+            modifier = Modifier.testTag(AuthTags.DEV_BYPASS),
         ) {
             Icon(
                 imageVector = NextPageIcons.Person,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(20.dp),
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = stringResource(R.string.auth_continue_local_dev),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.Normal
+                fontWeight = FontWeight.Normal,
             )
         }
     }

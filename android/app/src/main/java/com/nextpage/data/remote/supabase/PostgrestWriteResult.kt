@@ -20,5 +20,4 @@ import io.github.jan.supabase.postgrest.result.PostgrestResult
  * non-empty but malformed body still throws, so genuine protocol errors are never
  * swallowed.
  */
-internal inline fun <reified T : Any> PostgrestResult.decodeSingleOrNullTolerant(): T? =
-    if (data.isBlank()) null else decodeSingleOrNull<T>()
+internal inline fun <reified T : Any> PostgrestResult.decodeSingleOrNullTolerant(): T? = if (data.isBlank()) null else decodeSingleOrNull<T>()

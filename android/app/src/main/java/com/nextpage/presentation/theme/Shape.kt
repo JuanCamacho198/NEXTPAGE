@@ -16,10 +16,11 @@ import androidx.compose.ui.unit.dp
  * - `large` (50dp) — pill / fully-rounded surfaces (FAB, progress pills)
  * - `extraLarge` (50dp) — kept symmetric to `large` to match the brand
  */
-val NextPageShapes = Shapes(
-    extraSmall = RoundedCornerShape(4.dp),
-    small = RoundedCornerShape(8.dp),
-    medium = RoundedCornerShape(16.dp),
-    large = RoundedCornerShape(50.dp),
-    extraLarge = RoundedCornerShape(50.dp)
-)
+val NextPageShapes =
+    Shapes(
+        extraSmall = RoundedCornerShape(4.dp),
+        small = RoundedCornerShape(8.dp),
+        medium = RoundedCornerShape(16.dp),
+        large = RoundedCornerShape(50.dp),
+        extraLarge = RoundedCornerShape(50.dp),
+    )

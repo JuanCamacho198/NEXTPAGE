@@ -1,7 +1,7 @@
 package com.nextpage.data.remote.supabase
 
-import com.nextpage.domain.model.Device
 import com.nextpage.data.remote.supabase.SupabaseClientProvider
+import com.nextpage.domain.model.Device
 import io.github.jan.supabase.annotations.SupabaseExperimental
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Order
@@ -29,7 +29,6 @@ import kotlinx.coroutines.flow.mapNotNull
  */
 @OptIn(SupabaseExperimental::class)
 class SupabaseDeviceDataSource {
-
     private val postgrest get() = SupabaseClientProvider.client.postgrest
     private val realtime get() = SupabaseClientProvider.client.realtime
 
@@ -43,10 +42,11 @@ class SupabaseDeviceDataSource {
         unsubscribe()
         val channel = SupabaseClientProvider.client.channel("devices-changes")
         changesChannel = channel
-        val flow = channel.postgresChangeFlow<PostgresAction>(schema = "public") {
-            table = "devices"
-            filter("user_id", FilterOperator.EQ, userId)
-        }
+        val flow =
+            channel.postgresChangeFlow<PostgresAction>(schema = "public") {
+                table = "devices"
+                filter("user_id", FilterOperator.EQ, userId)
+            }
         channel.subscribe()
         return flow
     }
@@ -57,16 +57,17 @@ class SupabaseDeviceDataSource {
      */
     suspend fun observeDevices(userId: String): Flow<Device> {
         val channel = changesChannel ?: return emptyFlow()
-        return channel.postgresChangeFlow<PostgresAction>(schema = "public") {
-            table = "devices"
-            filter("user_id", FilterOperator.EQ, userId)
-        }.mapNotNull { action ->
-            when (action) {
-                is PostgresAction.Update -> action.decodeRecord<Device>()
-                is PostgresAction.Insert -> action.decodeRecord<Device>()
-                is PostgresAction.Delete, is PostgresAction.Select -> null
+        return channel
+            .postgresChangeFlow<PostgresAction>(schema = "public") {
+                table = "devices"
+                filter("user_id", FilterOperator.EQ, userId)
+            }.mapNotNull { action ->
+                when (action) {
+                    is PostgresAction.Update -> action.decodeRecord<Device>()
+                    is PostgresAction.Insert -> action.decodeRecord<Device>()
+                    is PostgresAction.Delete, is PostgresAction.Select -> null
+                }
             }
-        }
     }
 
     /**
@@ -77,16 +78,14 @@ class SupabaseDeviceDataSource {
         changesChannel = null
     }
 
-    suspend fun listDevices(userId: String): List<Device> {
-        return postgrest["devices"]
+    suspend fun listDevices(userId: String): List<Device> =
+        postgrest["devices"]
             .select {
                 filter {
                     eq("user_id", userId)
                 }
                 order("last_active", Order.DESCENDING)
-            }
-            .decodeList<Device>()
-    }
+            }.decodeList<Device>()
 
     suspend fun upsertDevice(device: Device): Device {
         // Empty response body = successful write (see decodeSingleOrNullTolerant).
@@ -94,21 +93,30 @@ class SupabaseDeviceDataSource {
             .upsert(device) {
                 onConflict = "user_id,hardware_id"
                 headers.append("Prefer", "return=representation")
-            }
-            .decodeSingleOrNullTolerant<Device>()
+            }.decodeSingleOrNullTolerant<Device>()
             ?: device
     }
 
     suspend fun updateHeartbeat(deviceId: String) {
         postgrest["devices"]
-            .update(mapOf("last_active" to java.time.Instant.now().toString())) {
+            .update(
+                mapOf(
+                    "last_active" to
+                        java.time.Instant
+                            .now()
+                            .toString(),
+                ),
+            ) {
                 filter {
                     eq("id", deviceId)
                 }
             }
     }
 
-    suspend fun removeDevice(deviceId: String, userId: String) {
+    suspend fun removeDevice(
+        deviceId: String,
+        userId: String,
+    ) {
         postgrest["devices"]
             .delete {
                 filter {

@@ -4,8 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.nextpage.R
-import com.nextpage.ui.components.molecules.FilterTab
 import com.nextpage.presentation.theme.NextPageTheme
+import com.nextpage.ui.components.molecules.FilterTab
 
 /**
  * Pre-configured [NextPageFilterTabs] instance with the four library
@@ -34,20 +34,21 @@ import com.nextpage.presentation.theme.NextPageTheme
 fun StatusChipRow(
     selectedTab: String,
     onTabSelected: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
-    val tabs = listOf(
-        FilterTab("all", R.string.library_tab_all),
-        FilterTab("reading", R.string.library_tab_reading),
-        FilterTab("pending", R.string.library_tab_pending),
-        FilterTab("completed", R.string.library_tab_completed)
-    )
+    val tabs =
+        listOf(
+            FilterTab("all", R.string.library_tab_all),
+            FilterTab("reading", R.string.library_tab_reading),
+            FilterTab("pending", R.string.library_tab_pending),
+            FilterTab("completed", R.string.library_tab_completed),
+        )
 
     NextPageFilterTabs(
         tabs = tabs,
         selectedTabId = selectedTab,
         onTabSelected = onTabSelected,
-        modifier = modifier
+        modifier = modifier,
     )
 }
 
@@ -57,7 +58,7 @@ private fun StatusChipRowDarkPreview() {
     NextPageTheme(darkTheme = true) {
         StatusChipRow(
             selectedTab = "reading",
-            onTabSelected = {}
+            onTabSelected = {},
         )
     }
 }
@@ -68,7 +69,7 @@ private fun StatusChipRowLightPreview() {
     NextPageTheme(darkTheme = false) {
         StatusChipRow(
             selectedTab = "reading",
-            onTabSelected = {}
+            onTabSelected = {},
         )
     }
 }

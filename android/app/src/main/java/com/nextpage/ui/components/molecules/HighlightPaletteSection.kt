@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -32,15 +31,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.domain.model.HighlightColor
+import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.ui.components.molecules.highlight.rememberColorPickerState
 import com.nextpage.ui.icons.NextPageIcons
-import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Settings section that displays the five customizable highlight
@@ -82,23 +80,24 @@ fun HighlightPaletteSection(
     onAddColor: () -> Unit,
     onDeleteColor: (Int) -> Unit,
     onReset: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val colors = customColors ?: HighlightColor.defaultHexList()
     var editingIndex by remember { mutableStateOf<Int?>(null) }
     var editorHex by remember { mutableStateOf("") }
 
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         // ── Subtitle ──────────────────────────────────────────────
         Text(
             text = stringResource(R.string.palette_section_subtitle),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
         // ── Swatch rows ──────────────────────────────────────────
@@ -111,37 +110,39 @@ fun HighlightPaletteSection(
                 onClick = {
                     editingIndex = index
                     editorHex = hex
-                }
+                },
             )
         }
 
         // ── Add color button ────────────────────────────────────
         if (colors.size < 5) {
             Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onAddColor),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onAddColor),
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant
+                color = MaterialTheme.colorScheme.surfaceVariant,
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
+                    horizontalArrangement = Arrangement.Center,
                 ) {
                     Icon(
                         NextPageIcons.Add,
                         contentDescription = stringResource(R.string.palette_add_color),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = stringResource(R.string.palette_add_color),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
                     )
                 }
             }
@@ -149,18 +150,19 @@ fun HighlightPaletteSection(
 
         // ── Reset button ──────────────────────────────────────────
         Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onReset),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onReset),
             shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant
+            color = MaterialTheme.colorScheme.surfaceVariant,
         ) {
             Text(
                 text = stringResource(R.string.palette_reset),
                 modifier = Modifier.padding(16.dp),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
             )
         }
     }
@@ -181,7 +183,7 @@ fun HighlightPaletteSection(
                         onUpdateColor(selectedEditingIndex, hex)
                         editingIndex = null
                     },
-                    onDismiss = { editingIndex = null }
+                    onDismiss = { editingIndex = null },
                 )
             },
             confirmButton = {},
@@ -189,7 +191,7 @@ fun HighlightPaletteSection(
                 TextButton(onClick = { editingIndex = null }) {
                     Text(text = stringResource(R.string.reader_cancel))
                 }
-            }
+            },
         )
     }
 }
@@ -202,41 +204,44 @@ private fun PaletteSwatchRow(
     canDelete: Boolean,
     onDelete: (Int) -> Unit,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant
+        color = MaterialTheme.colorScheme.surfaceVariant,
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(CircleShape)
-                    .background(parseColorHex(hex))
-                    .border(2.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f), CircleShape)
+                modifier =
+                    Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(parseColorHex(hex))
+                        .border(2.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f), CircleShape),
             )
             Spacer(Modifier.width(16.dp))
             Text(
                 text = hex.uppercase(),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
             if (canDelete) {
                 IconButton(onClick = { onDelete(index) }) {
                     Icon(
                         NextPageIcons.Close,
                         contentDescription = stringResource(R.string.annotation_modal_close),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             } else {
@@ -250,11 +255,12 @@ private fun PaletteSwatchRow(
 @Composable
 private fun parseColorHex(hex: String): Color {
     val sanitized = hex.removePrefix("#").trim()
-    val longHex = when (sanitized.length) {
-        6 -> "FF$sanitized"
-        8 -> sanitized
-        else -> "FF000000"
-    }
+    val longHex =
+        when (sanitized.length) {
+            6 -> "FF$sanitized"
+            8 -> sanitized
+            else -> "FF000000"
+        }
     return try {
         Color(longHex.toLong(16))
     } catch (_: Exception) {
@@ -271,7 +277,7 @@ private fun HighlightPaletteSectionDarkPreview() {
             onUpdateColor = { _, _ -> },
             onAddColor = {},
             onDeleteColor = {},
-            onReset = {}
+            onReset = {},
         )
     }
 }
@@ -285,7 +291,7 @@ private fun HighlightPaletteSectionLightPreview() {
             onUpdateColor = { _, _ -> },
             onAddColor = {},
             onDeleteColor = {},
-            onReset = {}
+            onReset = {},
         )
     }
 }

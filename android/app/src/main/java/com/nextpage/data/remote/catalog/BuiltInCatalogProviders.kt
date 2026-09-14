@@ -8,16 +8,21 @@ package com.nextpage.data.remote.catalog
  * `BuiltInCatalogProviders.ts`.
  */
 open class GutendexCatalogProvider(
-    private val ds: GutendexDataSource
+    private val ds: GutendexDataSource,
 ) : CatalogProvider {
-
-    override suspend fun search(query: String, page: Int): PagedResult {
+    override suspend fun search(
+        query: String,
+        page: Int,
+    ): PagedResult {
         val result = ds.search(query, page)
         return toPagedResult(result.books, page, result.totalCount)
     }
 
     /** Featured rails are served by Gutendex alone (POPULAR / NEWEST). */
-    override suspend fun featured(sort: CatalogFeaturedSort, page: Int): PagedResult {
+    override suspend fun featured(
+        sort: CatalogFeaturedSort,
+        page: Int,
+    ): PagedResult {
         val result = ds.featured(sort, page)
         return toPagedResult(result.books, page, result.totalCount)
     }
@@ -36,19 +41,26 @@ open class GutendexCatalogProvider(
         return ds.getById(numericId)
     }
 
-    override fun resolveDownloadUrl(formats: Map<String, String>, preferEpub: Boolean): String =
-        com.nextpage.data.remote.catalog.resolveDownloadUrl(formats, preferEpub)
+    override fun resolveDownloadUrl(
+        formats: Map<String, String>,
+        preferEpub: Boolean,
+    ): String =
+        com.nextpage.data.remote.catalog
+            .resolveDownloadUrl(formats, preferEpub)
 
-    override fun listSources(): List<CatalogSourceInfo> = listOf(
-        CatalogSourceInfo(BUILTIN_GUTENDEX, "Gutendex", CatalogSourceKind.BUILTIN)
-    )
+    override fun listSources(): List<CatalogSourceInfo> =
+        listOf(
+            CatalogSourceInfo(BUILTIN_GUTENDEX, "Gutendex", CatalogSourceKind.BUILTIN),
+        )
 }
 
 open class OpenLibraryCatalogProvider(
-    private val ds: OpenLibraryDataSource
+    private val ds: OpenLibraryDataSource,
 ) : CatalogProvider {
-
-    override suspend fun search(query: String, page: Int): PagedResult {
+    override suspend fun search(
+        query: String,
+        page: Int,
+    ): PagedResult {
         val result = ds.search(query, page)
         return toPagedResult(result.books, page, result.totalCount)
     }
@@ -60,14 +72,17 @@ open class OpenLibraryCatalogProvider(
     // no new OL endpoint, and the rail simply auto-hides.
 
     /** OL ids are not detail-resolvable (NOT_FOUND — preserved contract). */
-    override suspend fun getDetails(id: String): CatalogBook {
-        throw catalogError(CatalogErrorCode.NOT_FOUND, "openlibrary ids are not detail-resolvable: $id")
-    }
+    override suspend fun getDetails(id: String): CatalogBook = throw catalogError(CatalogErrorCode.NOT_FOUND, "openlibrary ids are not detail-resolvable: $id")
 
-    override fun resolveDownloadUrl(formats: Map<String, String>, preferEpub: Boolean): String =
-        com.nextpage.data.remote.catalog.resolveDownloadUrl(formats, preferEpub)
+    override fun resolveDownloadUrl(
+        formats: Map<String, String>,
+        preferEpub: Boolean,
+    ): String =
+        com.nextpage.data.remote.catalog
+            .resolveDownloadUrl(formats, preferEpub)
 
-    override fun listSources(): List<CatalogSourceInfo> = listOf(
-        CatalogSourceInfo(BUILTIN_OPENLIBRARY, "Open Library", CatalogSourceKind.BUILTIN)
-    )
+    override fun listSources(): List<CatalogSourceInfo> =
+        listOf(
+            CatalogSourceInfo(BUILTIN_OPENLIBRARY, "Open Library", CatalogSourceKind.BUILTIN),
+        )
 }

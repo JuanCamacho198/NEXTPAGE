@@ -39,32 +39,33 @@ import com.nextpage.ui.icons.NextPageIcons
 fun DiscoverSectionScreen(
     contentPadding: PaddingValues,
     viewModel: DiscoverSectionViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(contentPadding)
-            .padding(horizontal = 16.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(contentPadding)
+                .padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(
                 onClick = onBack,
-                modifier = Modifier.size(48.dp)
+                modifier = Modifier.size(48.dp),
             ) {
                 Icon(
                     imageVector = NextPageIcons.ArrowBack,
                     contentDescription = stringResource(R.string.discover_back),
                     modifier = Modifier.size(24.dp),
-                    tint = NextPageColors.textPrimary
+                    tint = NextPageColors.textPrimary,
                 )
             }
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+                verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
                 Text(
                     text = stringResource(R.string.discover_title),
@@ -72,44 +73,47 @@ fun DiscoverSectionScreen(
                     fontWeight = FontWeight.Bold,
                     color = NextPageColors.textPrimary,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = sectionSubtitle(uiState),
                     style = MaterialTheme.typography.bodyMedium,
                     color = NextPageColors.textSecondary,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
 
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
         ) {
             when (uiState.status) {
                 DiscoverStatus.IDLE, DiscoverStatus.LOADING -> DiscoverSkeletonState()
-                DiscoverStatus.EMPTY -> Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = stringResource(R.string.discover_empty),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = NextPageColors.textSecondary
-                    )
-                }
+                DiscoverStatus.EMPTY ->
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.discover_empty),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = NextPageColors.textSecondary,
+                        )
+                    }
                 DiscoverStatus.ERROR -> DiscoverErrorState(onRetry = viewModel::retry)
                 DiscoverStatus.OFFLINE -> DiscoverOfflineState(onRetry = viewModel::retry)
-                DiscoverStatus.LOADED, DiscoverStatus.LOADING_MORE -> DiscoverResultsGrid(
-                    books = uiState.books,
-                    nextPage = uiState.nextPage,
-                    isLoadingMore = uiState.status == DiscoverStatus.LOADING_MORE,
-                    onOpen = viewModel::openDetail,
-                    onLoadNext = viewModel::loadNextPage
-                )
+                DiscoverStatus.LOADED, DiscoverStatus.LOADING_MORE ->
+                    DiscoverResultsGrid(
+                        books = uiState.books,
+                        nextPage = uiState.nextPage,
+                        isLoadingMore = uiState.status == DiscoverStatus.LOADING_MORE,
+                        onOpen = viewModel::openDetail,
+                        onLoadNext = viewModel::loadNextPage,
+                    )
             }
         }
 
@@ -119,7 +123,7 @@ fun DiscoverSectionScreen(
             download = uiState.download,
             onDownload = viewModel::startDownload,
             onCancelDownload = viewModel::cancelDownload,
-            onDismiss = viewModel::dismissDetail
+            onDismiss = viewModel::dismissDetail,
         )
     }
 }
@@ -130,8 +134,9 @@ fun DiscoverSectionScreen(
  * header never claims "0 resultados".
  */
 @Composable
-private fun sectionSubtitle(uiState: DiscoverSectionUiState): String = when {
-    uiState.status == DiscoverStatus.LOADED || uiState.status == DiscoverStatus.LOADING_MORE ->
-        stringResource(R.string.discover_section_subtitle, uiState.sectionTitle, uiState.totalCount)
-    else -> uiState.sectionTitle
-}
+private fun sectionSubtitle(uiState: DiscoverSectionUiState): String =
+    when {
+        uiState.status == DiscoverStatus.LOADED || uiState.status == DiscoverStatus.LOADING_MORE ->
+            stringResource(R.string.discover_section_subtitle, uiState.sectionTitle, uiState.totalCount)
+        else -> uiState.sectionTitle
+    }

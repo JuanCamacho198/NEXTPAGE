@@ -27,5 +27,5 @@ data class ReaderLifecycleState(
     val previewText: String = "",
     val isLoading: Boolean = true,
     val loadTimeMs: Long? = null,
-    val error: String? = null
+    val error: String? = null,
 )

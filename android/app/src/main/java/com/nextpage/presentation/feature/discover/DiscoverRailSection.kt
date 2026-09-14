@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -50,7 +49,7 @@ sealed interface DiscoverRailState {
         val books: List<CatalogBook>,
         val totalCount: Int,
         /** Addon display name for a per-addon rail; null for featured rails. */
-        val addonName: String? = null
+        val addonName: String? = null,
     ) : DiscoverRailState
 }
 
@@ -72,39 +71,43 @@ fun DiscoverRailSection(
     onBookClick: (String) -> Unit,
     onSeeAll: (DiscoverRailState.Loaded, String) -> Unit,
     modifier: Modifier = Modifier,
-    attributionNames: Map<String, String> = emptyMap()
+    attributionNames: Map<String, String> = emptyMap(),
 ) {
     when (state) {
         DiscoverRailState.Hidden -> Unit
-        DiscoverRailState.Loading -> Column(modifier = modifier.fillMaxWidth()) {
-            NextPageSkeletonBox(
-                modifier = Modifier
-                    .width(180.dp)
-                    .height(20.dp),
-                radius = 4.dp
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(RAIL_PLACEHOLDER_COUNT) {
-                    NextPageSkeletonBox(
-                        modifier = Modifier
-                            .width(RAIL_CARD_WIDTH)
-                            .height(RAIL_COVER_HEIGHT),
-                        radius = 8.dp
-                    )
+        DiscoverRailState.Loading ->
+            Column(modifier = modifier.fillMaxWidth()) {
+                NextPageSkeletonBox(
+                    modifier =
+                        Modifier
+                            .width(180.dp)
+                            .height(20.dp),
+                    radius = 4.dp,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(RAIL_PLACEHOLDER_COUNT) {
+                        NextPageSkeletonBox(
+                            modifier =
+                                Modifier
+                                    .width(RAIL_CARD_WIDTH)
+                                    .height(RAIL_COVER_HEIGHT),
+                            radius = 8.dp,
+                        )
+                    }
                 }
             }
-        }
         is DiscoverRailState.Loaded -> {
-            val sectionTitle = if (state.sourceId != null && state.addonName != null) {
-                stringResource(R.string.discover_rail_from, state.addonName)
-            } else {
-                stringResource(state.sectionTitleRes)
-            }
+            val sectionTitle =
+                if (state.sourceId != null && state.addonName != null) {
+                    stringResource(R.string.discover_rail_from, state.addonName)
+                } else {
+                    stringResource(state.sectionTitleRes)
+                }
             Column(modifier = modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         text = sectionTitle,
@@ -113,25 +116,25 @@ fun DiscoverRailSection(
                         color = NextPageColors.textPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
                     )
                     TextButton(onClick = { onSeeAll(state, sectionTitle) }) {
                         Text(
                             text = stringResource(R.string.discover_view_all),
                             style = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp),
-                            color = NextPageColors.textAccent
+                            color = NextPageColors.textAccent,
                         )
                     }
                 }
                 LazyRow(
                     contentPadding = PaddingValues(end = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(state.books, key = { it.id }) { book ->
                         DiscoverRailCard(
                             book = book,
                             onOpen = onBookClick,
-                            attributionNames = attributionNames
+                            attributionNames = attributionNames,
                         )
                     }
                 }
@@ -145,32 +148,34 @@ fun DiscoverRailSection(
 private fun DiscoverRailCard(
     book: CatalogBook,
     onOpen: (String) -> Unit,
-    attributionNames: Map<String, String> = emptyMap()
+    attributionNames: Map<String, String> = emptyMap(),
 ) {
     Column(
-        modifier = Modifier
-            .width(RAIL_CARD_WIDTH)
-            .clickable { onOpen(book.id) },
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        modifier =
+            Modifier
+                .width(RAIL_CARD_WIDTH)
+                .clickable { onOpen(book.id) },
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         DiscoverBookCover(
             coverUrl = book.coverUrl,
             title = book.title,
             surface = "rail",
-            modifier = Modifier
-                .width(RAIL_CARD_WIDTH)
-                .height(RAIL_COVER_HEIGHT)
+            modifier =
+                Modifier
+                    .width(RAIL_CARD_WIDTH)
+                    .height(RAIL_COVER_HEIGHT),
         )
         Text(
             text = book.title,
             style = MaterialTheme.typography.bodySmall,
             color = NextPageColors.textPrimary,
             maxLines = 2,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
         )
         SourceAttributionBadge(
             provider = book.provider,
-            attributionNames = attributionNames
+            attributionNames = attributionNames,
         )
         AccessBadge(book = book)
     }
@@ -184,16 +189,16 @@ private fun DiscoverRailCard(
 @Composable
 fun DiscoverManageAddonsEntry(
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     TextButton(
         onClick = onClick,
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth(),
     ) {
         Text(
             text = stringResource(R.string.discover_manage_addons),
             style = MaterialTheme.typography.labelMedium.copy(fontSize = 14.sp),
-            color = NextPageColors.textAccent
+            color = NextPageColors.textAccent,
         )
     }
 }

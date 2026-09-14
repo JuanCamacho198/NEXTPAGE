@@ -43,7 +43,7 @@ import com.nextpage.ui.icons.NextPageIcons
 fun SettingsAccountScreen(
     authSession: AuthSession?,
     onLogout: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     var showLogoutDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -54,31 +54,34 @@ fun SettingsAccountScreen(
                 showLogoutDialog = false
                 onLogout()
             },
-            onDismiss = { showLogoutDialog = false }
+            onDismiss = { showLogoutDialog = false },
         )
     }
 
     NextPageSettingsSubPage(
         title = stringResource(R.string.settings_account_title),
-        onBack = onBack
+        onBack = onBack,
     ) {
         // Card with 24dp padding, avatar 56dp, email, chip Conectado Drive
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant
+            color = MaterialTheme.colorScheme.surfaceVariant,
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
-                verticalAlignment = Alignment.CenterVertically
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 NextPageAvatar(
                     imageUrl = authSession?.photoUrl,
-                    initials = (authSession?.displayName ?: stringResource(R.string.settings_user_default))
-                        .take(2).uppercase(),
-                    size = 56.dp
+                    initials =
+                        (authSession?.displayName ?: stringResource(R.string.settings_user_default))
+                            .take(2)
+                            .uppercase(),
+                    size = 56.dp,
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
@@ -86,12 +89,12 @@ fun SettingsAccountScreen(
                         text = authSession?.displayName ?: stringResource(R.string.settings_user_default),
                         style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
                         text = authSession?.email ?: stringResource(R.string.settings_email_placeholder),
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     AssistChip(
@@ -99,22 +102,23 @@ fun SettingsAccountScreen(
                         label = {
                             Text(
                                 text = stringResource(R.string.settings_account_connected_drive),
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp)
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
                             )
                         },
                         leadingIcon = {
                             Icon(
                                 imageVector = NextPageIcons.CloudSync,
                                 contentDescription = null,
-                                modifier = Modifier.size(14.dp)
+                                modifier = Modifier.size(14.dp),
                             )
                         },
-                        colors = AssistChipDefaults.assistChipColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                            leadingIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        ),
-                        border = null
+                        colors =
+                            AssistChipDefaults.assistChipColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                leadingIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            ),
+                        border = null,
                     )
                 }
             }
@@ -124,81 +128,87 @@ fun SettingsAccountScreen(
 
         // Lista con 2 filas: 16dp horizontal, 12dp entre filas, 24dp antes de Cerrar sesión
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // Exportar mis datos
             Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.settings_account_export_success),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            Toast
+                                .makeText(
+                                    context,
+                                    context.getString(R.string.settings_account_export_success),
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                        },
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant
+                color = MaterialTheme.colorScheme.surfaceVariant,
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     Icon(
                         imageVector = NextPageIcons.Upload,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(24.dp),
                     )
                     Text(
                         text = stringResource(R.string.settings_account_export_data),
                         style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
                     )
                     Icon(
                         imageVector = NextPageIcons.ArrowRight,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(20.dp),
                     )
                 }
             }
 
             // 24dp before Cerrar sesión: spacedBy 12dp + extra 12dp padding
             Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp)
-                    .clickable(onClick = { showLogoutDialog = true }),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp)
+                        .clickable(onClick = { showLogoutDialog = true }),
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.errorContainer
+                color = MaterialTheme.colorScheme.errorContainer,
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     Icon(
                         imageVector = NextPageIcons.SignOut,
                         contentDescription = stringResource(R.string.settings_logout),
                         tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(24.dp),
                     )
                     Text(
                         text = stringResource(R.string.settings_logout),
                         style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.error
+                        color = MaterialTheme.colorScheme.error,
                     )
                 }
             }
@@ -215,7 +225,7 @@ private fun SettingsAccountScreenDarkPreview() {
         SettingsAccountScreen(
             authSession = null,
             onLogout = {},
-            onBack = {}
+            onBack = {},
         )
     }
 }
@@ -227,7 +237,7 @@ private fun SettingsAccountScreenLightPreview() {
         SettingsAccountScreen(
             authSession = null,
             onLogout = {},
-            onBack = {}
+            onBack = {},
         )
     }
 }

@@ -33,7 +33,7 @@ import com.nextpage.presentation.theme.NextPageColors
 data class DiscoverChip(
     val label: String,
     val icon: ImageVector? = null,
-    val selected: Boolean = false
+    val selected: Boolean = false,
 )
 
 /**
@@ -52,38 +52,41 @@ fun DiscoverChipRow(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(horizontal = 0.dp),
     chipBackground: Color = NextPageColors.surface,
-    chipLabelColor: Color = NextPageColors.textSecondary
+    chipLabelColor: Color = NextPageColors.textSecondary,
 ) {
     LazyRow(
         modifier = modifier,
         contentPadding = contentPadding,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         itemsIndexed(chips, key = { index, chip -> "$index:${chip.label}" }) { index, chip ->
-            val background = if (chip.selected) {
-                NextPageColors.primary.copy(alpha = 0.18f)
-            } else {
-                chipBackground
-            }
-            val labelColor = if (chip.selected) {
-                NextPageColors.primary
-            } else {
-                chipLabelColor
-            }
+            val background =
+                if (chip.selected) {
+                    NextPageColors.primary.copy(alpha = 0.18f)
+                } else {
+                    chipBackground
+                }
+            val labelColor =
+                if (chip.selected) {
+                    NextPageColors.primary
+                } else {
+                    chipLabelColor
+                }
             Row(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(background)
-                    .clickable { onChipClick(index) }
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                modifier =
+                    Modifier
+                        .clip(CircleShape)
+                        .background(background)
+                        .clickable { onChipClick(index) }
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (chip.icon != null) {
                     Icon(
                         imageVector = chip.icon,
                         contentDescription = null,
                         modifier = Modifier.size(14.dp),
-                        tint = NextPageColors.primary
+                        tint = NextPageColors.primary,
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                 }
@@ -91,7 +94,7 @@ fun DiscoverChipRow(
                     text = chip.label,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
-                    color = labelColor
+                    color = labelColor,
                 )
             }
         }

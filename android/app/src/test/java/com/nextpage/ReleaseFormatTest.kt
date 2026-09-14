@@ -27,7 +27,6 @@ import org.junit.Test
  * fields — without touching the Sentry SDK itself.
  */
 class ReleaseFormatTest {
-
     companion object {
         // `android.util.Log` is mocked once for the class so `BuildConfig` /
         // static access to `Log` during `release` string composition does not
@@ -59,15 +58,14 @@ class ReleaseFormatTest {
     }
 
     /** Mirrors the composition in `NextPageApplication.SentryAndroid.init`. */
-    private fun composedRelease(): String =
-        "nextpage-android@${BuildConfig.VERSION_NAME}+${BuildConfig.GIT_SHA}"
+    private fun composedRelease(): String = "nextpage-android@${BuildConfig.VERSION_NAME}+${BuildConfig.GIT_SHA}"
 
     @Test
     fun release_startsWithPlatformAndVersion() {
         val release = composedRelease()
         assertTrue(
             "release `\$release` must start with `nextpage-android@<version>+`",
-            release.startsWith("nextpage-android@${BuildConfig.VERSION_NAME}+")
+            release.startsWith("nextpage-android@${BuildConfig.VERSION_NAME}+"),
         )
     }
 
@@ -77,7 +75,7 @@ class ReleaseFormatTest {
         val sha = release.substringAfterLast('+')
         assertTrue(
             "sha segment `\$sha` must be `unknown` fallback or exactly 12 chars",
-            sha == "unknown" || sha.length == 12
+            sha == "unknown" || sha.length == 12,
         )
     }
 
@@ -89,7 +87,7 @@ class ReleaseFormatTest {
         if (sha != "unknown") {
             assertTrue(
                 "sha `\$sha` must be lowercase hex",
-                sha.all { it.isDigit() || (it in 'a'..'f') }
+                sha.all { it.isDigit() || (it in 'a'..'f') },
             )
         }
     }
@@ -101,7 +99,7 @@ class ReleaseFormatTest {
         assertEquals(
             "release `\$release` must split into 3 parts on `@` and `+`",
             3,
-            parts.size
+            parts.size,
         )
         assertEquals("nextpage-android", parts[0])
         assertEquals(BuildConfig.VERSION_NAME, parts[1])

@@ -24,23 +24,23 @@ import com.nextpage.presentation.theme.NextPageColors
 @Composable
 fun AddonCapabilityBadges(
     capabilities: List<String>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     if (capabilities.isEmpty()) return
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
             text = stringResource(R.string.addon_capabilities_title),
             style = MaterialTheme.typography.labelSmall,
-            color = NextPageColors.textSecondary
+            color = NextPageColors.textSecondary,
         )
         DiscoverChipRow(
             chips = capabilities.map { DiscoverChip(label = capabilityLabel(it)) },
             onChipClick = { },
             chipBackground = NextPageColors.surfaceVariant,
-            chipLabelColor = NextPageColors.textSecondary
+            chipLabelColor = NextPageColors.textSecondary,
         )
     }
 }
@@ -53,37 +53,39 @@ fun AddonCapabilityBadges(
 @Composable
 fun AddonTrustNote(
     onViewPolicy: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(
             text = stringResource(R.string.addon_consent_trust_note),
             style = MaterialTheme.typography.bodySmall,
             color = NextPageColors.textSecondary,
-            modifier = Modifier.padding(top = 4.dp)
+            modifier = Modifier.padding(top = 4.dp),
         )
         Text(
             text = stringResource(R.string.legal_disclaimer_view_policy),
             style = MaterialTheme.typography.labelMedium,
             color = NextPageColors.textAccent,
-            modifier = Modifier
-                .padding(top = 2.dp)
-                .clickable(onClick = onViewPolicy)
+            modifier =
+                Modifier
+                    .padding(top = 2.dp)
+                    .clickable(onClick = onViewPolicy),
         )
     }
 }
 
 /** Localized label for a known capability id; unknown ids render raw. */
 @Composable
-internal fun capabilityLabel(capability: String): String = when (capability.trim().lowercase()) {
-    CAPABILITY_SEARCH -> stringResource(R.string.addon_capability_search)
-    CAPABILITY_DETAILS -> stringResource(R.string.addon_capability_details)
-    CAPABILITY_RESOLVE -> stringResource(R.string.addon_capability_resolve)
-    else -> capability
-}
+internal fun capabilityLabel(capability: String): String =
+    when (capability.trim().lowercase()) {
+        CAPABILITY_SEARCH -> stringResource(R.string.addon_capability_search)
+        CAPABILITY_DETAILS -> stringResource(R.string.addon_capability_details)
+        CAPABILITY_RESOLVE -> stringResource(R.string.addon_capability_resolve)
+        else -> capability
+    }
 
 /** Manifest capability: the addon serves catalog search results. */
 private const val CAPABILITY_SEARCH = "search"

@@ -19,16 +19,13 @@ import java.io.File
 class CacheRepositoryImpl(
     private val discoverCacheDao: DiscoverCacheDao,
     private val appContext: Context,
-    private val imageLoader: ImageLoader
+    private val imageLoader: ImageLoader,
 ) : CacheRepository {
-
     override suspend fun discoverCacheSizeBytes(): Long = discoverCacheDao.payloadBytes()
 
-    override suspend fun pruneDiscoverCache(): Int =
-        discoverCacheDao.deleteExpired(nowEpochSecs())
+    override suspend fun pruneDiscoverCache(): Int = discoverCacheDao.deleteExpired(nowEpochSecs())
 
-    override suspend fun purgeLegacyDiscoverCache(): Int =
-        discoverCacheDao.deleteLegacyNamespaces()
+    override suspend fun purgeLegacyDiscoverCache(): Int = discoverCacheDao.deleteLegacyNamespaces()
 
     override suspend fun clearDiscoverCache(): Int = discoverCacheDao.deleteAll()
 

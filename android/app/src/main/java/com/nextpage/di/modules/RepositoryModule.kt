@@ -23,7 +23,7 @@ class RepositoryModule(
     databaseModule: DatabaseModule,
     storageModule: StorageModule,
     @Suppress("UNUSED_PARAMETER") preferencesModule: PreferencesModule,
-    syncSettleGateProvider: () -> SyncSettleGate
+    syncSettleGateProvider: () -> SyncSettleGate,
 ) {
     companion object {
         private const val TAG = "RepositoryModule"
@@ -36,17 +36,18 @@ class RepositoryModule(
     val syncSettleGate: SyncSettleGate = SyncSettleGate { syncSettleGateProvider().awaitSettled() }
 
     private val epubImportStartTime = System.currentTimeMillis()
-    val libraryRepository: LibraryRepository = LibraryRepositoryImpl(
-        appContext = context.applicationContext,
-        bookDao = databaseModule.bookDao,
-        readingStatsDao = databaseModule.readingStatsDao,
-        epubParserService = storageModule.epubParserService,
-        pdfParserService = storageModule.pdfParserService,
-        coverStorage = storageModule.coverStorage,
-        readingProgressDao = databaseModule.readingProgressDao,
-        outboxDao = databaseModule.syncOutboxDao,
-        settleGate = syncSettleGate
-    )
+    val libraryRepository: LibraryRepository =
+        LibraryRepositoryImpl(
+            appContext = context.applicationContext,
+            bookDao = databaseModule.bookDao,
+            readingStatsDao = databaseModule.readingStatsDao,
+            epubParserService = storageModule.epubParserService,
+            pdfParserService = storageModule.pdfParserService,
+            coverStorage = storageModule.coverStorage,
+            readingProgressDao = databaseModule.readingProgressDao,
+            outboxDao = databaseModule.syncOutboxDao,
+            settleGate = syncSettleGate,
+        )
     val epubImportInitTimeMs: Long = System.currentTimeMillis() - epubImportStartTime
 
     init {
@@ -54,44 +55,50 @@ class RepositoryModule(
     }
 
     private val readerRepoStartTime = System.currentTimeMillis()
-    val readerRepository: ReaderRepository = ReaderRepositoryImpl(
-        readingProgressDao = databaseModule.readingProgressDao,
-        highlightDao = databaseModule.highlightDao,
-        bookmarkDao = databaseModule.bookmarkDao,
-        bookDao = databaseModule.bookDao,
-        outboxDao = databaseModule.syncOutboxDao
-    )
+    val readerRepository: ReaderRepository =
+        ReaderRepositoryImpl(
+            readingProgressDao = databaseModule.readingProgressDao,
+            highlightDao = databaseModule.highlightDao,
+            bookmarkDao = databaseModule.bookmarkDao,
+            bookDao = databaseModule.bookDao,
+            outboxDao = databaseModule.syncOutboxDao,
+        )
     val readerRepoInitTimeMs: Long = System.currentTimeMillis() - readerRepoStartTime
 
     init {
         Log.d(TAG, "ReaderRepository initialized in ${readerRepoInitTimeMs}ms")
     }
 
-    val readingStatsRepository: ReadingStatsRepository = ReadingStatsRepositoryImpl(
-        readingStatsDao = databaseModule.readingStatsDao,
-        readingSessionDao = databaseModule.readingSessionDao,
-        outboxDao = databaseModule.syncOutboxDao
-    )
+    val readingStatsRepository: ReadingStatsRepository =
+        ReadingStatsRepositoryImpl(
+            readingStatsDao = databaseModule.readingStatsDao,
+            readingSessionDao = databaseModule.readingSessionDao,
+            outboxDao = databaseModule.syncOutboxDao,
+        )
 
-    val homeRepository: HomeRepository = HomeRepositoryImpl(
-        bookDao = databaseModule.bookDao,
-        readingProgressDao = databaseModule.readingProgressDao,
-        readingSessionDao = databaseModule.readingSessionDao
-    )
+    val homeRepository: HomeRepository =
+        HomeRepositoryImpl(
+            bookDao = databaseModule.bookDao,
+            readingProgressDao = databaseModule.readingProgressDao,
+            readingSessionDao = databaseModule.readingSessionDao,
+        )
 
-    val dictionaryRepository: DictionaryRepository = DictionaryRepositoryImpl(
-        dao = databaseModule.dictionaryWordDao
-    )
+    val dictionaryRepository: DictionaryRepository =
+        DictionaryRepositoryImpl(
+            dao = databaseModule.dictionaryWordDao,
+        )
 
-    val cacheRepository: CacheRepository = CacheRepositoryImpl(
-        discoverCacheDao = databaseModule.discoverCacheDao,
-        appContext = context.applicationContext,
-        imageLoader = storageModule.coilImageLoader
-    )
+    val cacheRepository: CacheRepository =
+        CacheRepositoryImpl(
+            discoverCacheDao = databaseModule.discoverCacheDao,
+            appContext = context.applicationContext,
+            imageLoader = storageModule.coilImageLoader,
+        )
 
-    val storageRepository: StorageRepository = StorageRepositoryImpl(
-        appContext = context.applicationContext,
-        bookDao = databaseModule.bookDao,
-        settleGate = syncSettleGate
-    )
+    val storageRepository: StorageRepository =
+        StorageRepositoryImpl(
+            appContext = context.applicationContext,
+            bookDao = databaseModule.bookDao,
+            settleGate = syncSettleGate,
+        )
 }

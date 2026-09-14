@@ -1,6 +1,5 @@
 package com.nextpage.presentation.navigation
 
-import android.content.Context
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -11,8 +10,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.nextpage.R
 import com.nextpage.data.remote.drive.DriveAuthResult
@@ -42,7 +41,7 @@ fun DrivePromptHost(
     importEvents: SharedFlow<LibraryImportEvent>,
     snackbarHostState: SnackbarHostState,
     syncService: com.nextpage.data.remote.sync.SyncService,
-    onAuthSuccessPostPush: suspend () -> Unit = {}
+    onAuthSuccessPostPush: suspend () -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -55,21 +54,22 @@ fun DrivePromptHost(
             when (event) {
                 is LibraryImportEvent.Success -> {
                     snackbarHostState.showSnackbar(
-                        context.getString(R.string.library_import_success, event.title)
+                        context.getString(R.string.library_import_success, event.title),
                     )
                     scope.launch { syncService.schedulePush() }
-                    val shouldOfferPrompt = DriveConnectPromptGate.shouldShow(
-                        importSucceeded = true,
-                        driveEnabled = driveAuthHelper.isAuthorized(),
-                        providerIsGoogle = authSession?.provider == "google",
-                        declinedForUser = prefs.declinedForUser(),
-                        currentUser = authSession?.userId
-                    )
+                    val shouldOfferPrompt =
+                        DriveConnectPromptGate.shouldShow(
+                            importSucceeded = true,
+                            driveEnabled = driveAuthHelper.isAuthorized(),
+                            providerIsGoogle = authSession?.provider == "google",
+                            declinedForUser = prefs.declinedForUser(),
+                            currentUser = authSession?.userId,
+                        )
                     if (shouldOfferPrompt) showDriveConnectPrompt = true
                 }
                 is LibraryImportEvent.Failure -> {
                     snackbarHostState.showSnackbar(
-                        context.getString(R.string.library_import_failure, event.message)
+                        context.getString(R.string.library_import_failure, event.message),
                     )
                 }
             }
@@ -78,7 +78,7 @@ fun DrivePromptHost(
 
     val driveConnectAuthLauncher: ManagedActivityResultLauncher<android.content.Intent, androidx.activity.result.ActivityResult> =
         rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.StartActivityForResult()
+            contract = ActivityResultContracts.StartActivityForResult(),
         ) { result ->
             if (result.resultCode != android.app.Activity.RESULT_OK) {
                 drivePromptAuthInFlight = false
@@ -96,11 +96,12 @@ fun DrivePromptHost(
                     }
                     is DriveAuthResult.Failure -> {
                         if (drivePromptAuthInFlight) {
-                            android.widget.Toast.makeText(
-                                context,
-                                context.getString(R.string.settings_drive_error_oauth),
-                                android.widget.Toast.LENGTH_SHORT
-                            ).show()
+                            android.widget.Toast
+                                .makeText(
+                                    context,
+                                    context.getString(R.string.settings_drive_error_oauth),
+                                    android.widget.Toast.LENGTH_SHORT,
+                                ).show()
                         }
                     }
                     DriveAuthResult.Canceled -> Unit
@@ -131,11 +132,12 @@ fun DrivePromptHost(
                 showDriveConnectPrompt = false
                 val clientId = com.nextpage.BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID
                 if (clientId.isBlank()) {
-                    android.widget.Toast.makeText(
-                        context,
-                        context.getString(R.string.settings_drive_error_config),
-                        android.widget.Toast.LENGTH_SHORT
-                    ).show()
+                    android.widget.Toast
+                        .makeText(
+                            context,
+                            context.getString(R.string.settings_drive_error_config),
+                            android.widget.Toast.LENGTH_SHORT,
+                        ).show()
                     return@NextPageDialog
                 }
                 drivePromptAuthInFlight = true
@@ -147,7 +149,7 @@ fun DrivePromptHost(
                 DriveConnectPromptGate.markDeclined(userId)?.let {
                     prefs.persistDeclined(it)
                 }
-            }
+            },
         )
     }
 }

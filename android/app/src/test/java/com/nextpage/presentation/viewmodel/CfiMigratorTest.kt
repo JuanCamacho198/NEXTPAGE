@@ -20,9 +20,10 @@ class CfiMigratorTest {
 
     @Test
     fun progressionFor_usesRealTextOffset_notChapterStart() {
-        val progression = CfiMigrator.progressionFor(
-            CfiMigrator.TextMetric(charOffset = 47, chapterChars = 200),
-        )
+        val progression =
+            CfiMigrator.progressionFor(
+                CfiMigrator.TextMetric(charOffset = 47, chapterChars = 200),
+            )
 
         assertEquals(0.235, progression!!, 0.0001)
         assertTrue(progression > 0.0)
@@ -32,10 +33,11 @@ class CfiMigratorTest {
     fun preciseCfiToLocator_returnsNullWithoutTextMetric_insteadOfChapterStart() {
         val link = mockk<Link>(relaxed = true)
 
-        val locator = CfiMigrator.preciseCfiToLocator(
-            "epubcfi(/6/1!/4/2,/1:4,/1:8)",
-            listOf(link),
-        ) { _, _ -> null }
+        val locator =
+            CfiMigrator.preciseCfiToLocator(
+                "epubcfi(/6/1!/4/2,/1:4,/1:8)",
+                listOf(link),
+            ) { _, _ -> null }
 
         assertNull(locator)
     }

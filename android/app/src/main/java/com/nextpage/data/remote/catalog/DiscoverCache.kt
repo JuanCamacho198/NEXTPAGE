@@ -28,11 +28,17 @@ private const val DETAIL_KEY_PREFIX = "d:$DISCOVER_CACHE_VERSION:"
 private const val FEATURED_KEY_PREFIX = "f:$DISCOVER_CACHE_VERSION:"
 
 /** Page cache key: `p:v3:{sourceId}:{query}:{page}` (24h). Query is normalized. */
-fun pageCacheKey(sourceId: String, query: String, page: Int): String =
-    "$PAGE_KEY_PREFIX$sourceId:${query.trim().lowercase()}:$page"
+fun pageCacheKey(
+    sourceId: String,
+    query: String,
+    page: Int,
+): String = "$PAGE_KEY_PREFIX$sourceId:${query.trim().lowercase()}:$page"
 
 /** Detail cache key: `d:v3:{sourceId}:{id}` (7d). */
-fun detailCacheKey(sourceId: String, id: String): String = "$DETAIL_KEY_PREFIX$sourceId:$id"
+fun detailCacheKey(
+    sourceId: String,
+    id: String,
+): String = "$DETAIL_KEY_PREFIX$sourceId:$id"
 
 /**
  * Featured rail cache key: `f:v3:{sourceId}:{sort}:{page}` (6h featured TTL).
@@ -40,8 +46,11 @@ fun detailCacheKey(sourceId: String, id: String): String = "$DETAIL_KEY_PREFIX$s
  * Bumped to `v3` with the rest of the catalog namespace; stale `v2` rows
  * (search/detail/featured) are never served under the new prefixes.
  */
-fun featuredCacheKey(sourceId: String, sort: CatalogFeaturedSort, page: Int): String =
-    "$FEATURED_KEY_PREFIX$sourceId:${sort.name}:$page"
+fun featuredCacheKey(
+    sourceId: String,
+    sort: CatalogFeaturedSort,
+    page: Int,
+): String = "$FEATURED_KEY_PREFIX$sourceId:${sort.name}:$page"
 
 /**
  * TTL cache store for catalog pages/details.
@@ -49,49 +58,80 @@ fun featuredCacheKey(sourceId: String, sort: CatalogFeaturedSort, page: Int): St
  * Never touches user_books/outbox — separate table, separate DAO.
  */
 interface DiscoverCacheStore {
-    suspend fun get(key: String, nowEpochSecs: Long): String?
+    suspend fun get(
+        key: String,
+        nowEpochSecs: Long,
+    ): String?
 
     /**
      * Resident read that never mutates the store: returns the row even when it is
      * past its TTL, flagged with [DiscoverCacheRead.fresh] so the caller can serve
      * stale-while-revalidate. Returns null only when the key is absent.
      */
-    suspend fun read(key: String, nowEpochSecs: Long): DiscoverCacheRead?
+    suspend fun read(
+        key: String,
+        nowEpochSecs: Long,
+    ): DiscoverCacheRead?
 
-    suspend fun put(key: String, payload: String, fetchedAtEpochSecs: Long, ttlSecs: Long)
+    suspend fun put(
+        key: String,
+        payload: String,
+        fetchedAtEpochSecs: Long,
+        ttlSecs: Long,
+    )
 }
 
 /**
  * A resident cache row plus its freshness. [fresh] is false when the row is past
  * its TTL but still present (SWR serves it and refreshes behind it).
  */
-data class DiscoverCacheRead(val payload: String, val fresh: Boolean)
+data class DiscoverCacheRead(
+    val payload: String,
+    val fresh: Boolean,
+)
 
 /**
  * In-memory TTL store with lazy expiry: reads past TTL return null and
  * evict the row eagerly. Used by unit tests and as the offline fallback.
  */
 class InMemoryDiscoverCache : DiscoverCacheStore {
-    private data class Entry(val payload: String, val fetchedAt: Long, val ttlSecs: Long)
+    private data class Entry(
+        val payload: String,
+        val fetchedAt: Long,
+        val ttlSecs: Long,
+    )
 
     private val mutex = Mutex()
     private val entries = mutableMapOf<String, Entry>()
 
-    override suspend fun get(key: String, nowEpochSecs: Long): String? = mutex.withLock {
-        val entry = entries[key] ?: return@withLock null
-        if (nowEpochSecs - entry.fetchedAt > entry.ttlSecs) {
-            entries.remove(key)
-            return@withLock null
+    override suspend fun get(
+        key: String,
+        nowEpochSecs: Long,
+    ): String? =
+        mutex.withLock {
+            val entry = entries[key] ?: return@withLock null
+            if (nowEpochSecs - entry.fetchedAt > entry.ttlSecs) {
+                entries.remove(key)
+                return@withLock null
+            }
+            entry.payload
         }
-        entry.payload
-    }
 
-    override suspend fun read(key: String, nowEpochSecs: Long): DiscoverCacheRead? = mutex.withLock {
-        val entry = entries[key] ?: return@withLock null
-        DiscoverCacheRead(entry.payload, nowEpochSecs - entry.fetchedAt <= entry.ttlSecs)
-    }
+    override suspend fun read(
+        key: String,
+        nowEpochSecs: Long,
+    ): DiscoverCacheRead? =
+        mutex.withLock {
+            val entry = entries[key] ?: return@withLock null
+            DiscoverCacheRead(entry.payload, nowEpochSecs - entry.fetchedAt <= entry.ttlSecs)
+        }
 
-    override suspend fun put(key: String, payload: String, fetchedAtEpochSecs: Long, ttlSecs: Long) {
+    override suspend fun put(
+        key: String,
+        payload: String,
+        fetchedAtEpochSecs: Long,
+        ttlSecs: Long,
+    ) {
         mutex.withLock { entries[key] = Entry(payload, fetchedAtEpochSecs, ttlSecs) }
     }
 
@@ -101,9 +141,12 @@ class InMemoryDiscoverCache : DiscoverCacheStore {
 /** Room-backed store: SQL targets `discover_cache` only. */
 class RoomDiscoverCache(
     private val dao: DiscoverCacheDao,
-    private val maxBytes: Long = DISCOVER_CACHE_MAX_BYTES
+    private val maxBytes: Long = DISCOVER_CACHE_MAX_BYTES,
 ) : DiscoverCacheStore {
-    override suspend fun get(key: String, nowEpochSecs: Long): String? {
+    override suspend fun get(
+        key: String,
+        nowEpochSecs: Long,
+    ): String? {
         val row = dao.getByKey(key) ?: return null
         if (nowEpochSecs - row.fetchedAtEpochSecs > row.ttlSecs) {
             dao.deleteByKey(key)
@@ -112,7 +155,10 @@ class RoomDiscoverCache(
         return row.payloadJson
     }
 
-    override suspend fun read(key: String, nowEpochSecs: Long): DiscoverCacheRead? {
+    override suspend fun read(
+        key: String,
+        nowEpochSecs: Long,
+    ): DiscoverCacheRead? {
         val row = dao.getByKey(key) ?: return null
         val fresh = nowEpochSecs - row.fetchedAtEpochSecs <= row.ttlSecs
         return DiscoverCacheRead(row.payloadJson, fresh)
@@ -126,7 +172,12 @@ class RoomDiscoverCache(
      * 3. unexpired rows are NEVER evicted: if they alone would exceed the cap
      *    together with the new payload, the write is skipped (soft ceiling).
      */
-    override suspend fun put(key: String, payload: String, fetchedAtEpochSecs: Long, ttlSecs: Long) {
+    override suspend fun put(
+        key: String,
+        payload: String,
+        fetchedAtEpochSecs: Long,
+        ttlSecs: Long,
+    ) {
         val bytes = payload.toByteArray(Charsets.UTF_8).size.toLong()
         if (bytes > maxBytes) return
         dao.deleteExpired(fetchedAtEpochSecs)

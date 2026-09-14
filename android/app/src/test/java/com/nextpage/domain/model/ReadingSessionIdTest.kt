@@ -12,7 +12,6 @@ import org.junit.Test
  * - Different startTime per flush → distinct ids (no double count).
  */
 class ReadingSessionIdTest {
-
     @Test
     fun `readingSessionId is deterministic for identical inputs`() {
         val first = readingSessionId("user-1", "book-1", 1234L)

@@ -11,13 +11,13 @@ fun EditBookMetadataScreen(
     bookId: String,
     libraryRepository: LibraryRepository,
     coverStorage: CoverStorage,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
 ) {
     com.nextpage.presentation.feature.editmetadata.EditBookMetadataScreen(
         contentPadding = contentPadding,
         bookId = bookId,
         libraryRepository = libraryRepository,
         coverStorage = coverStorage,
-        onNavigateBack = onNavigateBack
+        onNavigateBack = onNavigateBack,
     )
 }

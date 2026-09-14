@@ -19,9 +19,8 @@ package com.nextpage.debug
  */
 internal class FeedbackQueue(
     private val initialQueue: List<FeedbackEvent.FeedbackEntry> = emptyList(),
-    private val initialDismissed: Set<String> = emptySet()
+    private val initialDismissed: Set<String> = emptySet(),
 ) {
-
     private val queue: ArrayDeque<FeedbackEvent.FeedbackEntry> =
         ArrayDeque(initialQueue)
     private val dismissed: MutableSet<String> =
@@ -74,8 +73,7 @@ internal class FeedbackQueue(
      * Build the offline queue + dismissed snapshot as a pair, ready for
      * persistence write-back.
      */
-    fun export(): Pair<List<FeedbackEvent.FeedbackEntry>, Set<String>> =
-        snapshot() to dismissedSnapshot()
+    fun export(): Pair<List<FeedbackEvent.FeedbackEntry>, Set<String>> = snapshot() to dismissedSnapshot()
 
     companion object {
         /**

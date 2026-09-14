@@ -14,7 +14,7 @@ import com.nextpage.ui.icons.NextPageIcons
 fun HighlightsSearchSection(
     showSearch: Boolean,
     searchQuery: String,
-    onSearchQueryChange: (String) -> Unit
+    onSearchQueryChange: (String) -> Unit,
 ) {
     if (showSearch) {
         NextPageTextField(
@@ -25,7 +25,7 @@ fun HighlightsSearchSection(
             shape = RoundedCornerShape(24.dp),
             modifier = Modifier.fillMaxWidth(),
             trailingIcon = NextPageIcons.Close,
-            trailingIconContentDescription = stringResource(R.string.reader_settings_close)
+            trailingIconContentDescription = stringResource(R.string.reader_settings_close),
         )
     }
 }

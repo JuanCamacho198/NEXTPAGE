@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,9 +32,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
+import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.ui.components.atoms.NextPageDivider
 import com.nextpage.ui.icons.NextPageIcons
-import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Plain-data model for a single row in [NotificationSheet].
@@ -57,7 +56,7 @@ data class NotificationItem(
     val icon: ImageVector,
     val title: String,
     val body: String,
-    val isUnread: Boolean = true
+    val isUnread: Boolean = true,
 )
 
 /**
@@ -84,59 +83,61 @@ data class NotificationItem(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationSheet(
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    val mockNotifications = listOf(
-        NotificationItem(
-            id = "1",
-            icon = NextPageIcons.Trophy,
-            title = stringResource(R.string.notifications_mock_welcome_title),
-            body = stringResource(R.string.notifications_mock_welcome_body)
-        ),
-        NotificationItem(
-            id = "2",
-            icon = NextPageIcons.ChartLine,
-            title = stringResource(R.string.notifications_mock_streak_title),
-            body = stringResource(R.string.notifications_mock_streak_body)
-        ),
-        NotificationItem(
-            id = "3",
-            icon = NextPageIcons.LibraryBooks,
-            title = stringResource(R.string.notifications_mock_library_title),
-            body = stringResource(R.string.notifications_mock_library_body)
+    val mockNotifications =
+        listOf(
+            NotificationItem(
+                id = "1",
+                icon = NextPageIcons.Trophy,
+                title = stringResource(R.string.notifications_mock_welcome_title),
+                body = stringResource(R.string.notifications_mock_welcome_body),
+            ),
+            NotificationItem(
+                id = "2",
+                icon = NextPageIcons.ChartLine,
+                title = stringResource(R.string.notifications_mock_streak_title),
+                body = stringResource(R.string.notifications_mock_streak_body),
+            ),
+            NotificationItem(
+                id = "3",
+                icon = NextPageIcons.LibraryBooks,
+                title = stringResource(R.string.notifications_mock_library_title),
+                body = stringResource(R.string.notifications_mock_library_body),
+            ),
         )
-    )
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 32.dp)
-                .verticalScroll(rememberScrollState())
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 32.dp)
+                    .verticalScroll(rememberScrollState()),
         ) {
             // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = stringResource(R.string.notifications_title),
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
                 IconButton(onClick = onDismiss) {
                     Icon(
                         imageVector = NextPageIcons.Close,
-                        contentDescription = stringResource(R.string.reader_settings_close)
+                        contentDescription = stringResource(R.string.reader_settings_close),
                     )
                 }
             }
@@ -150,14 +151,14 @@ fun NotificationSheet(
                     text = stringResource(R.string.notifications_empty),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 24.dp)
+                    modifier = Modifier.padding(vertical = 24.dp),
                 )
             } else {
                 mockNotifications.forEach { notification ->
                     NotificationRow(item = notification)
                     if (notification != mockNotifications.last()) {
                         NextPageDivider(
-                            modifier = Modifier.padding(vertical = 4.dp)
+                            modifier = Modifier.padding(vertical = 4.dp),
                         )
                     }
                 }
@@ -168,28 +169,30 @@ fun NotificationSheet(
 
 @Composable
 private fun NotificationRow(
-    item: NotificationItem
+    item: NotificationItem,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp, horizontal = 4.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         // Icon circle
         Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-            contentAlignment = Alignment.Center
+            modifier =
+                Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = item.icon,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier.size(22.dp),
             )
         }
 
@@ -200,7 +203,7 @@ private fun NotificationRow(
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = if (item.isUnread) FontWeight.SemiBold else FontWeight.Normal,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
@@ -208,18 +211,19 @@ private fun NotificationRow(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
         }
 
         // Unread dot
         if (item.isUnread) {
             Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary)
-                    .padding(top = 4.dp)
+                modifier =
+                    Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
+                        .padding(top = 4.dp),
             )
         }
     }

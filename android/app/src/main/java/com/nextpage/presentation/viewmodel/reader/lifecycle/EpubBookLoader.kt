@@ -9,7 +9,6 @@ import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.presentation.UiEvent
 import com.nextpage.presentation.viewmodel.CfiMigrator
 import com.nextpage.presentation.viewmodel.reader.ReaderLifecycleState
-import java.io.File
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +29,7 @@ import org.readium.r2.shared.util.asset.AssetRetriever
 import org.readium.r2.shared.util.http.DefaultHttpClient
 import org.readium.r2.streamer.PublicationOpener
 import org.readium.r2.streamer.parser.DefaultPublicationParser
+import java.io.File
 
 /**
  * EPUB loader via Readium PublicationOpener + AssetRetriever.
@@ -47,9 +47,9 @@ class EpubBookLoader(
     private val onErrorEvent: (UiEvent) -> Unit,
     private val onNavigateToLocator: (Locator) -> Unit,
     private val onBookLoaded: (String) -> Unit,
-    private val onProgressDisplay: () -> Unit
-) : BookLoader, Clearable {
-
+    private val onProgressDisplay: () -> Unit,
+) : BookLoader,
+    Clearable {
     private val _isLoading = MutableStateFlow(false)
     override val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
     private val _loadTimeMs = MutableStateFlow<Long?>(null)
@@ -67,38 +67,47 @@ class EpubBookLoader(
     override suspend fun open(
         bookId: String,
         filePath: String,
-        format: String
-    ): Result<Pair<Publication, Locator?>> {
-        return try {
+        format: String,
+    ): Result<Pair<Publication, Locator?>> =
+        try {
             val file = File(filePath)
-            val fileUri = android.net.Uri.fromFile(file).toString()
+            val fileUri =
+                android.net.Uri
+                    .fromFile(file)
+                    .toString()
             val httpClient = DefaultHttpClient()
             val assetRetriever = AssetRetriever(application.contentResolver, httpClient)
             val url = AbsoluteUrl(fileUri) ?: throw Exception("Invalid file URI: $fileUri")
             val retrieveResult = withContext(Dispatchers.IO) { assetRetriever.retrieve(url) }
             val asset = retrieveResult.getOrNull() ?: throw Exception("Failed to retrieve EPUB asset")
-            val parser = DefaultPublicationParser(
-                context = application,
-                httpClient = httpClient,
-                assetRetriever = assetRetriever,
-                pdfFactory = null
-            )
+            val parser =
+                DefaultPublicationParser(
+                    context = application,
+                    httpClient = httpClient,
+                    assetRetriever = assetRetriever,
+                    pdfFactory = null,
+                )
             val opener = PublicationOpener(parser)
             val openResult = withContext(Dispatchers.IO) { opener.open(asset, allowUserInteraction = false) }
-            val publication: Publication = openResult.fold(
-                onSuccess = { it },
-                onFailure = { throw Exception("Readium open failed: ${it.message}") }
-            )
+            val publication: Publication =
+                openResult.fold(
+                    onSuccess = { it },
+                    onFailure = { throw Exception("Readium open failed: ${it.message}") },
+                )
             val savedProgress = readerRepository.getProgressForBook(bookId)
-            val initialLocator: Locator? = savedProgress?.locatorJson
-                ?.let { CfiMigrator.jsonToLocator(it) }
+            val initialLocator: Locator? =
+                savedProgress
+                    ?.locatorJson
+                    ?.let { CfiMigrator.jsonToLocator(it) }
             Result.success(publication to initialLocator)
         } catch (e: Exception) {
             Result.failure(e)
         }
-    }
 
-    fun loadEpubBook(bookId: String, filePath: String) {
+    fun loadEpubBook(
+        bookId: String,
+        filePath: String,
+    ) {
         val epoch = ++loadEpoch
         val startTime = System.currentTimeMillis()
         DebugLog.info(TAG, "loadEpubBook start bookId=$bookId epoch=$epoch")
@@ -114,7 +123,7 @@ class EpubBookLoader(
                 readiumPublication = null,
                 readiumLocator = null,
                 progressPercent = 0f,
-                progressLabel = ""
+                progressLabel = "",
             )
         }
         _isLoading.value = true
@@ -130,30 +139,38 @@ class EpubBookLoader(
                     onErrorEvent(UiEvent.ShowSnackbar(message))
                     return@launch
                 }
-                val fileUri = android.net.Uri.fromFile(file).toString()
+                val fileUri =
+                    android.net.Uri
+                        .fromFile(file)
+                        .toString()
                 val httpClient = DefaultHttpClient()
                 val assetRetriever = AssetRetriever(application.contentResolver, httpClient)
-                val url = AbsoluteUrl(fileUri)
-                    ?: throw Exception("Invalid file URI: $fileUri")
-                val publication: Publication = withTimeout(EPUB_LOAD_TIMEOUT_MS) {
-                    val retrieveResult = withContext(Dispatchers.IO) { assetRetriever.retrieve(url) }
-                    val asset = retrieveResult.getOrNull()
-                        ?: throw Exception("Failed to retrieve EPUB asset")
-                    val parser = DefaultPublicationParser(
-                        context = application,
-                        httpClient = httpClient,
-                        assetRetriever = assetRetriever,
-                        pdfFactory = null
-                    )
-                    val opener = PublicationOpener(parser)
-                    val openResult = withContext(Dispatchers.IO) {
-                        opener.open(asset, allowUserInteraction = false)
+                val url =
+                    AbsoluteUrl(fileUri)
+                        ?: throw Exception("Invalid file URI: $fileUri")
+                val publication: Publication =
+                    withTimeout(EPUB_LOAD_TIMEOUT_MS) {
+                        val retrieveResult = withContext(Dispatchers.IO) { assetRetriever.retrieve(url) }
+                        val asset =
+                            retrieveResult.getOrNull()
+                                ?: throw Exception("Failed to retrieve EPUB asset")
+                        val parser =
+                            DefaultPublicationParser(
+                                context = application,
+                                httpClient = httpClient,
+                                assetRetriever = assetRetriever,
+                                pdfFactory = null,
+                            )
+                        val opener = PublicationOpener(parser)
+                        val openResult =
+                            withContext(Dispatchers.IO) {
+                                opener.open(asset, allowUserInteraction = false)
+                            }
+                        openResult.fold(
+                            onSuccess = { it },
+                            onFailure = { error -> throw Exception("Readium open failed: ${error.message}") },
+                        )
                     }
-                    openResult.fold(
-                        onSuccess = { it },
-                        onFailure = { error -> throw Exception("Readium open failed: ${error.message}") }
-                    )
-                }
                 if (epoch != loadEpoch) {
                     DebugLog.warn(TAG, "loadEpubBook stale completion ignored bookId=$bookId epoch=$epoch")
                     return@launch
@@ -162,23 +179,30 @@ class EpubBookLoader(
                 val loadTime = System.currentTimeMillis() - startTime
 
                 // A2/A3 - reader open + native TTFP (loadBook -> publication-ready).
-                val bucketedLoad = com.nextpage.debug.SentryMetrics.bucketDurationMs(loadTime)
-                val readerTags = mapOf(
-                    "source" to "reader",
-                    "engine" to "readium",
-                    "format" to "epub",
-                    "platform" to "android"
-                )
-                com.nextpage.debug.SentryMetrics.distribution("reader_open", bucketedLoad, readerTags)
-                com.nextpage.debug.SentryMetrics.distribution("reader_ttfp_native", bucketedLoad, readerTags)
+                val bucketedLoad =
+                    com.nextpage.debug.SentryMetrics
+                        .bucketDurationMs(loadTime)
+                val readerTags =
+                    mapOf(
+                        "source" to "reader",
+                        "engine" to "readium",
+                        "format" to "epub",
+                        "platform" to "android",
+                    )
+                com.nextpage.debug.SentryMetrics
+                    .distribution("reader_open", bucketedLoad, readerTags)
+                com.nextpage.debug.SentryMetrics
+                    .distribution("reader_ttfp_native", bucketedLoad, readerTags)
                 Log.d(TAG, "Readium loaded EPUB in ${loadTime}ms")
                 DebugLog.info(TAG, "loadEpubBook success bookId=$bookId epoch=$epoch loadTimeMs=$loadTime")
 
                 val chapters = TocBuilder.buildChaptersFromPublication(publication)
 
                 val savedProgress = readerRepository.getProgressForBook(bookId)
-                val initialLocator: Locator? = savedProgress?.locatorJson
-                    ?.let { CfiMigrator.jsonToLocator(it) }
+                val initialLocator: Locator? =
+                    savedProgress
+                        ?.locatorJson
+                        ?.let { CfiMigrator.jsonToLocator(it) }
 
                 state.update {
                     it.copy(
@@ -186,7 +210,7 @@ class EpubBookLoader(
                         chapters = chapters,
                         readiumLocator = initialLocator,
                         isLoading = false,
-                        loadTimeMs = loadTime
+                        loadTimeMs = loadTime,
                     )
                 }
                 _isLoading.value = false
@@ -234,36 +258,62 @@ class EpubBookLoader(
         }
     }
 
-    private fun resolveEpubCfi(cfi: String, readingOrderLinks: List<Link>): Locator? {
+    private fun resolveEpubCfi(
+        cfi: String,
+        readingOrderLinks: List<Link>,
+    ): Locator? {
         val parsed = CfiMigrator.parsePreciseCfi(cfi)
         if (parsed != null) {
             val link = readingOrderLinks.getOrNull(parsed.spineIndex - 1)
             if (link != null) {
                 val metric = CfiMigrator.TextMetric(charOffset = parsed.textOffset, chapterChars = 10000)
                 val prog = CfiMigrator.progressionFor(metric) ?: 0.0
-                val json = JSONObject().apply {
-                    put("href", link.href.toString())
-                    put("type", link.mediaType?.toString() ?: "application/xhtml+xml")
-                    put("locations", JSONObject().apply { put("progression", prog); put("fragment", cfi) })
-                }
+                val json =
+                    JSONObject().apply {
+                        put("href", link.href.toString())
+                        put("type", link.mediaType?.toString() ?: "application/xhtml+xml")
+                        put(
+                            "locations",
+                            JSONObject().apply {
+                                put("progression", prog)
+                                put("fragment", cfi)
+                            },
+                        )
+                    }
                 Locator.fromJSON(json)?.let { return it }
             }
         }
         CfiMigrator.migrateCfiToLocator(cfi, readingOrderLinks)?.let { return it }
-        val spineIdx = Regex("epubcfi\\(/6/(\\d+)").find(cfi)?.groupValues?.getOrNull(1)?.toIntOrNull()?.minus(1)
+        val spineIdx =
+            Regex("epubcfi\\(/6/(\\d+)")
+                .find(cfi)
+                ?.groupValues
+                ?.getOrNull(1)
+                ?.toIntOrNull()
+                ?.minus(1)
         if (spineIdx != null && spineIdx >= 0) {
             val link = readingOrderLinks.getOrNull(spineIdx) ?: return null
-            val json = JSONObject().apply {
-                put("href", link.href.toString())
-                put("type", link.mediaType?.toString() ?: "application/xhtml+xml")
-                put("locations", JSONObject().apply { put("progression", 0.0); put("fragment", cfi) })
-            }
+            val json =
+                JSONObject().apply {
+                    put("href", link.href.toString())
+                    put("type", link.mediaType?.toString() ?: "application/xhtml+xml")
+                    put(
+                        "locations",
+                        JSONObject().apply {
+                            put("progression", 0.0)
+                            put("fragment", cfi)
+                        },
+                    )
+                }
             return Locator.fromJSON(json)
         }
         return null
     }
 
-    private suspend fun migrateCfiDataForBook(bookId: String, readingOrder: List<Link>) {
+    private suspend fun migrateCfiDataForBook(
+        bookId: String,
+        readingOrder: List<Link>,
+    ) {
         val readingOrderLinks = readingOrder
         if (readingOrderLinks.isEmpty()) return
         val highlights = readerRepository.getHighlightsForBook(bookId)

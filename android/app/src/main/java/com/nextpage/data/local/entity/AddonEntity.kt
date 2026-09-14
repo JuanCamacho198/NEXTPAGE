@@ -12,7 +12,7 @@ import androidx.room.PrimaryKey
  */
 @Entity(
     tableName = "installed_addons",
-    indices = [Index(value = ["url"], unique = true)]
+    indices = [Index(value = ["url"], unique = true)],
 )
 data class AddonEntity(
     @PrimaryKey
@@ -24,5 +24,5 @@ data class AddonEntity(
     @ColumnInfo(name = "enabled")
     val enabled: Boolean,
     @ColumnInfo(name = "added_at")
-    val addedAt: Long
+    val addedAt: Long,
 )

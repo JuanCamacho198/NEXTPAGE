@@ -31,7 +31,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.domain.model.HighlightColor
-import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.ui.components.molecules.FilterTab
 import com.nextpage.ui.components.molecules.NextPageFilterTabs
 import com.nextpage.ui.components.molecules.NextPageSectionHeader
@@ -44,45 +43,47 @@ fun HighlightsFilterSection(
     onBookFilterClick: () -> Unit,
     onTagFilterClick: () -> Unit,
     onColorFilterChanged: (String) -> Unit,
-    onColorFilterReset: () -> Unit
+    onColorFilterReset: () -> Unit,
 ) {
-    val typeTabs = listOf(
-        FilterTab("all", R.string.highlights_tab_all, NextPageIcons.Sparkle),
-        FilterTab("quotes", R.string.highlights_tab_quotes, NextPageIcons.Quote),
-        FilterTab("ideas", R.string.highlights_tab_ideas, NextPageIcons.Lightbulb),
-        FilterTab("passages", R.string.highlights_tab_passages, NextPageIcons.Sparkle)
-    )
+    val typeTabs =
+        listOf(
+            FilterTab("all", R.string.highlights_tab_all, NextPageIcons.Sparkle),
+            FilterTab("quotes", R.string.highlights_tab_quotes, NextPageIcons.Quote),
+            FilterTab("ideas", R.string.highlights_tab_ideas, NextPageIcons.Lightbulb),
+            FilterTab("passages", R.string.highlights_tab_passages, NextPageIcons.Sparkle),
+        )
 
-    val filterBookTitle = remember(uiState.books, uiState.bookFilter) {
-        uiState.bookFilter?.let { bookId ->
-            uiState.books.find { it.id == bookId }?.title
+    val filterBookTitle =
+        remember(uiState.books, uiState.bookFilter) {
+            uiState.bookFilter?.let { bookId ->
+                uiState.books.find { it.id == bookId }?.title
+            }
         }
-    }
 
     NextPageFilterTabs(
         tabs = typeTabs,
         selectedTabId = uiState.typeFilter,
-        onTabSelected = onTypeFilterChanged
+        onTabSelected = onTypeFilterChanged,
     )
 
     FilterControlsRow(
         bookFilterTitle = filterBookTitle,
         tagFilter = uiState.tagFilter,
         onBookFilterClick = onBookFilterClick,
-        onTagFilterClick = onTagFilterClick
+        onTagFilterClick = onTagFilterClick,
     )
 
     ColorSwatchRow(
         selectedColors = uiState.colorFilter,
         highlightColors = HighlightColor.entries,
         onColorToggled = onColorFilterChanged,
-        onTodosSelected = onColorFilterReset
+        onTodosSelected = onColorFilterReset,
     )
 
     NextPageSectionHeader(
         title = stringResource(R.string.highlights_recent),
         actionLabel = stringResource(R.string.home_ver_todo),
-        onActionClick = { }
+        onActionClick = { },
     )
 }
 
@@ -91,29 +92,31 @@ private fun FilterControlsRow(
     bookFilterTitle: String?,
     tagFilter: String?,
     onBookFilterClick: () -> Unit,
-    onTagFilterClick: () -> Unit
+    onTagFilterClick: () -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         FilterChip(
             selected = bookFilterTitle != null,
             onClick = onBookFilterClick,
             label = { Text(bookFilterTitle ?: stringResource(R.string.highlights_filter_book)) },
-            colors = FilterChipDefaults.filterChipColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            ),
-            modifier = Modifier.weight(1f)
+            colors =
+                FilterChipDefaults.filterChipColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                ),
+            modifier = Modifier.weight(1f),
         )
         FilterChip(
             selected = tagFilter != null,
             onClick = onTagFilterClick,
             label = { Text(tagFilter ?: stringResource(R.string.highlights_filter_tag)) },
-            colors = FilterChipDefaults.filterChipColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            ),
-            modifier = Modifier.weight(1f)
+            colors =
+                FilterChipDefaults.filterChipColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                ),
+            modifier = Modifier.weight(1f),
         )
     }
 }
@@ -124,30 +127,32 @@ private fun ColorSwatchRow(
     highlightColors: List<HighlightColor>,
     onColorToggled: (String) -> Unit,
     onTodosSelected: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     LazyRow(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(horizontal = 4.dp)
+        contentPadding = PaddingValues(horizontal = 4.dp),
     ) {
         item {
             Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(CircleShape)
-                    .clickable { onTodosSelected() },
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .clickable { onTodosSelected() },
+                contentAlignment = Alignment.Center,
             ) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
-                    val stroke = Stroke(
-                        width = 2.dp.toPx(),
-                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 3f), 0f)
-                    )
+                    val stroke =
+                        Stroke(
+                            width = 2.dp.toPx(),
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 3f), 0f),
+                        )
                     drawCircle(
                         color = Color.Gray,
                         radius = size.minDimension / 2f - 2.dp.toPx() / 2f,
-                        style = stroke
+                        style = stroke,
                     )
                 }
             }
@@ -155,33 +160,35 @@ private fun ColorSwatchRow(
         items(highlightColors, key = { it.hex }) { highlightColor ->
             val isSelected = highlightColor.hex in selectedColors
             Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(CircleShape)
-                    .background(parseHighlightColorForFilter(highlightColor.hex))
-                    .clickable { onColorToggled(highlightColor.hex) }
-                    .then(
-                        if (isSelected) {
-                            Modifier.border(2.dp, Color.White, CircleShape)
-                        } else {
-                            Modifier
-                        }
-                    ),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(parseHighlightColorForFilter(highlightColor.hex))
+                        .clickable { onColorToggled(highlightColor.hex) }
+                        .then(
+                            if (isSelected) {
+                                Modifier.border(2.dp, Color.White, CircleShape)
+                            } else {
+                                Modifier
+                            },
+                        ),
+                contentAlignment = Alignment.Center,
             ) {
                 if (isSelected) {
                     Box(
-                        modifier = Modifier
-                            .size(20.dp)
-                            .clip(CircleShape)
-                            .background(Color.White),
-                        contentAlignment = Alignment.Center
+                        modifier =
+                            Modifier
+                                .size(20.dp)
+                                .clip(CircleShape)
+                                .background(Color.White),
+                        contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             imageVector = NextPageIcons.Check,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
-                            tint = Color.Black
+                            tint = Color.Black,
                         )
                     }
                 }
@@ -191,6 +198,4 @@ private fun ColorSwatchRow(
 }
 
 @Composable
-private fun parseHighlightColorForFilter(hex: String): Color {
-    return resolveHighlightColorHex(hex) ?: MaterialTheme.colorScheme.primary
-}
+private fun parseHighlightColorForFilter(hex: String): Color = resolveHighlightColorHex(hex) ?: MaterialTheme.colorScheme.primary

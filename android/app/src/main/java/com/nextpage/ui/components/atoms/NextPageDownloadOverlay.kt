@@ -82,7 +82,7 @@ fun NextPageDownloadOverlay(
     coverUrl: String?,
     isCompleted: Boolean,
     visible: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val progress = remember { Animatable(0f) }
 
@@ -102,41 +102,46 @@ fun NextPageDownloadOverlay(
 
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(animationSpec = tween(300)) +
-            scaleIn(
-                initialScale = 0.8f,
-                animationSpec = tween(300, easing = EaseOutCubic)
-            ),
-        exit = fadeOut(animationSpec = tween(200)) +
-            scaleOut(
-                targetScale = 0.8f,
-                animationSpec = tween(200, easing = EaseInCubic)
-            )
+        enter =
+            fadeIn(animationSpec = tween(300)) +
+                scaleIn(
+                    initialScale = 0.8f,
+                    animationSpec = tween(300, easing = EaseOutCubic),
+                ),
+        exit =
+            fadeOut(animationSpec = tween(200)) +
+                scaleOut(
+                    targetScale = 0.8f,
+                    animationSpec = tween(200, easing = EaseInCubic),
+                ),
     ) {
         Box(
-            modifier = modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.5f))
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = { /* consume touches — no dismiss */ }
-                ),
-            contentAlignment = Alignment.Center
+            modifier =
+                modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = { /* consume touches — no dismiss */ },
+                    ),
+            contentAlignment = Alignment.Center,
         ) {
             // ── Centered card ───────────────────────────────────────────
             Card(
-                modifier = Modifier
-                    .widthIn(min = 200.dp, max = 300.dp),
+                modifier =
+                    Modifier
+                        .widthIn(min = 200.dp, max = 300.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                    ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
             ) {
                 Column(
                     modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     // Book cover, or pulsing icon when no cover is available.
                     if (!coverUrl.isNullOrBlank()) {
@@ -144,9 +149,10 @@ fun NextPageDownloadOverlay(
                             model = coverUrl,
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .size(width = 64.dp, height = 96.dp)
-                                .clip(RoundedCornerShape(8.dp))
+                            modifier =
+                                Modifier
+                                    .size(width = 64.dp, height = 96.dp)
+                                    .clip(RoundedCornerShape(8.dp)),
                         )
                     } else {
                         PulsingDownloadIcon()
@@ -160,29 +166,30 @@ fun NextPageDownloadOverlay(
                         color = MaterialTheme.colorScheme.onSurface,
                         textAlign = TextAlign.Center,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Stage label (only meaningful while downloading).
-                    val stageText = if (isCompleted) {
-                        stringResource(R.string.download_overlay_done)
-                    } else {
-                        when {
-                            progress.value < 0.6f ->
-                                stringResource(R.string.download_overlay_stage_downloading)
-                            progress.value < 0.85f ->
-                                stringResource(R.string.download_overlay_stage_processing)
-                            else ->
-                                stringResource(R.string.download_overlay_stage_saving)
+                    val stageText =
+                        if (isCompleted) {
+                            stringResource(R.string.download_overlay_done)
+                        } else {
+                            when {
+                                progress.value < 0.6f ->
+                                    stringResource(R.string.download_overlay_stage_downloading)
+                                progress.value < 0.85f ->
+                                    stringResource(R.string.download_overlay_stage_processing)
+                                else ->
+                                    stringResource(R.string.download_overlay_stage_saving)
+                            }
                         }
-                    }
                     Text(
                         text = stageText,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -190,23 +197,25 @@ fun NextPageDownloadOverlay(
                     // Progress bar
                     LinearProgressIndicator(
                         progress = { progress.value },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(4.dp)),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(4.dp)),
                         color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     // Percent readout makes the fake progress feel real.
                     Text(
-                        text = stringResource(
-                            R.string.download_overlay_percent,
-                            (progress.value * 100).toInt()
-                        ),
+                        text =
+                            stringResource(
+                                R.string.download_overlay_percent,
+                                (progress.value * 100).toInt(),
+                            ),
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -223,20 +232,22 @@ private fun PulsingDownloadIcon() {
     val pulseScale by infiniteTransition.animateFloat(
         initialValue = 0.9f,
         targetValue = 1.1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 800, easing = EaseInOutCubic),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulseScale"
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(durationMillis = 800, easing = EaseInOutCubic),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "pulseScale",
     )
 
     Icon(
         imageVector = NextPageIcons.CloudDownload,
         contentDescription = null,
-        modifier = Modifier
-            .size(48.dp)
-            .graphicsLayer(scaleX = pulseScale, scaleY = pulseScale),
-        tint = MaterialTheme.colorScheme.primary
+        modifier =
+            Modifier
+                .size(48.dp)
+                .graphicsLayer(scaleX = pulseScale, scaleY = pulseScale),
+        tint = MaterialTheme.colorScheme.primary,
     )
 }
 
@@ -248,7 +259,7 @@ private fun NextPageDownloadOverlayDarkPreview() {
             bookTitle = "Sample book",
             coverUrl = null,
             isCompleted = false,
-            visible = true
+            visible = true,
         )
     }
 }
@@ -261,7 +272,7 @@ private fun NextPageDownloadOverlayLightPreview() {
             bookTitle = "Sample book",
             coverUrl = null,
             isCompleted = false,
-            visible = true
+            visible = true,
         )
     }
 }

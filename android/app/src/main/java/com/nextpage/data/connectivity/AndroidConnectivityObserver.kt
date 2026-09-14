@@ -23,9 +23,8 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 class AndroidConnectivityObserver(
     context: Context,
-    @Suppress("UNUSED_PARAMETER") mainDispatcher: CoroutineDispatcher = Dispatchers.Main
+    @Suppress("UNUSED_PARAMETER") mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
 ) : ConnectivityObserver {
-
     private val connectivityManager: ConnectivityManager? =
         context.applicationContext
             .getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
@@ -34,28 +33,34 @@ class AndroidConnectivityObserver(
 
     override val isOnline: StateFlow<Boolean> = online.asStateFlow()
 
-    private val callback = object : ConnectivityManager.NetworkCallback() {
-        override fun onAvailable(network: Network) {
-            online.value = true
-        }
+    private val callback =
+        object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                online.value = true
+            }
 
-        override fun onLost(network: Network) {
-            online.value = connectivityManager?.isCurrentlyOnline() ?: false
-        }
+            override fun onLost(network: Network) {
+                online.value = connectivityManager?.isCurrentlyOnline() ?: false
+            }
 
-        override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
-            online.value = capabilities.hasInternet()
+            override fun onCapabilitiesChanged(
+                network: Network,
+                capabilities: NetworkCapabilities,
+            ) {
+                online.value = capabilities.hasInternet()
+            }
         }
-    }
 
     init {
         connectivityManager?.let { manager ->
-            val request = NetworkRequest.Builder()
-                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-                .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
-                .addTransportType(NetworkCapabilities.TRANSPORT_ETHERNET)
-                .build()
+            val request =
+                NetworkRequest
+                    .Builder()
+                    .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                    .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                    .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+                    .addTransportType(NetworkCapabilities.TRANSPORT_ETHERNET)
+                    .build()
             // Degrade to "assume online" rather than crash when registration is
             // rejected (e.g. missing permission on a custom/rooted ROM).
             runCatching { manager.registerNetworkCallback(request, callback) }

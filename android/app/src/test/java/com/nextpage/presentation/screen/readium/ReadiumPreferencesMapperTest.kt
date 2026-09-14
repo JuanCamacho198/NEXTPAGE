@@ -11,15 +11,15 @@ import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 class ReadiumPreferencesMapperTest {
-
     @Test
     fun toEpubPreferences_mapsFontScaleAndTheme() {
-        val settings = ReaderSettings(
-            fontSize = FontSizePreset.L,
-            lineHeight = LineHeightPreset.COMFORTABLE,
-            fontName = "serif",
-            theme = ReaderTheme.SEPIA
-        )
+        val settings =
+            ReaderSettings(
+                fontSize = FontSizePreset.L,
+                lineHeight = LineHeightPreset.COMFORTABLE,
+                fontName = "serif",
+                theme = ReaderTheme.SEPIA,
+            )
         val prefs = settings.toEpubPreferences()
         assertNotNull(prefs)
     }
@@ -35,6 +35,7 @@ class ReadiumPreferencesMapperTest {
     fun deprecatedShim_delegatesToMapper() {
         val settings = ReaderSettings(fontSize = FontSizePreset.XS)
         val viaMapper = settings.toEpubPreferences()
+
         @Suppress("DEPRECATION")
         val config = buildNavigatorConfig(settings)
         assertNotNull(config)

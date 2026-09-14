@@ -12,7 +12,6 @@ import org.junit.Test
  * session, or are we still looking at the previous (stale) session?"
  */
 class IsSignUpNewSessionTest {
-
     @Test
     fun returnsFalse_whenNoFreshSession() {
         assertFalse(isSignUpNewSession(priorUserId = null, freshUserId = null))

@@ -22,5 +22,9 @@ interface CatalogFileDownloader {
      * [CatalogErrorCode.NETWORK_ERROR] (transport) or
      * [CatalogErrorCode.UPSTREAM_ERROR] (non-2xx HTTP status).
      */
-    suspend fun download(url: String, destination: File, onProgress: (Long, Long?) -> Unit)
+    suspend fun download(
+        url: String,
+        destination: File,
+        onProgress: (Long, Long?) -> Unit,
+    )
 }

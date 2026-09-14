@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -40,16 +39,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.nextpage.R
 import com.nextpage.debug.DebugPrefs
@@ -99,20 +94,26 @@ fun ReaderChrome(
 ) {
     // Dual log chrome visibility changes without causing recomposition churn
     androidx.compose.runtime.LaunchedEffect(controlsVisible) {
-        com.nextpage.debug.DebugDual.log(com.nextpage.debug.DebugEvent.ChromeToggled(controlsVisible))
+        com.nextpage.debug.DebugDual
+            .log(
+                com.nextpage.debug.DebugEvent
+                    .ChromeToggled(controlsVisible),
+            )
     }
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(READER_BG)
-            .padding(contentPadding)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(READER_BG)
+                .padding(contentPadding),
     ) {
         // Content fills entire Box with stable constraints — never resized by chrome
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .zIndex(0f)
-                .then(contentModifier)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .zIndex(0f)
+                    .then(contentModifier),
         ) {
             content()
         }
@@ -120,17 +121,20 @@ fun ReaderChrome(
         // Header overlay top
         AnimatedVisibility(
             visible = controlsVisible,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .zIndex(1f),
-            enter = slideInVertically(
-                animationSpec = tween(CHROME_ANIM_MS, easing = FastOutSlowInEasing),
-                initialOffsetY = { -it }
-            ) + fadeIn(animationSpec = tween(CHROME_ANIM_MS)),
-            exit = slideOutVertically(
-                animationSpec = tween(CHROME_ANIM_MS, easing = FastOutSlowInEasing),
-                targetOffsetY = { -it }
-            ) + fadeOut(animationSpec = tween(CHROME_ANIM_MS))
+            modifier =
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .zIndex(1f),
+            enter =
+                slideInVertically(
+                    animationSpec = tween(CHROME_ANIM_MS, easing = FastOutSlowInEasing),
+                    initialOffsetY = { -it },
+                ) + fadeIn(animationSpec = tween(CHROME_ANIM_MS)),
+            exit =
+                slideOutVertically(
+                    animationSpec = tween(CHROME_ANIM_MS, easing = FastOutSlowInEasing),
+                    targetOffsetY = { -it },
+                ) + fadeOut(animationSpec = tween(CHROME_ANIM_MS)),
         ) {
             header()
         }
@@ -138,22 +142,26 @@ fun ReaderChrome(
         // Footer overlay bottom — needs solid background to be visible over white WebView
         AnimatedVisibility(
             visible = controlsVisible,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .zIndex(1f),
-            enter = slideInVertically(
-                animationSpec = tween(CHROME_ANIM_MS, easing = FastOutSlowInEasing),
-                initialOffsetY = { it }
-            ) + fadeIn(animationSpec = tween(CHROME_ANIM_MS)),
-            exit = slideOutVertically(
-                animationSpec = tween(CHROME_ANIM_MS, easing = FastOutSlowInEasing),
-                targetOffsetY = { it }
-            ) + fadeOut(animationSpec = tween(CHROME_ANIM_MS))
+            modifier =
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .zIndex(1f),
+            enter =
+                slideInVertically(
+                    animationSpec = tween(CHROME_ANIM_MS, easing = FastOutSlowInEasing),
+                    initialOffsetY = { it },
+                ) + fadeIn(animationSpec = tween(CHROME_ANIM_MS)),
+            exit =
+                slideOutVertically(
+                    animationSpec = tween(CHROME_ANIM_MS, easing = FastOutSlowInEasing),
+                    targetOffsetY = { it },
+                ) + fadeOut(animationSpec = tween(CHROME_ANIM_MS)),
         ) {
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(READER_BG)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(READER_BG),
             ) {
                 footer()
             }
@@ -175,49 +183,51 @@ fun ReaderHeader(
     onToggleSplitSettings: () -> Unit = {},
     onToggleToc: () -> Unit = {},
     onToggleDebugPanel: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(READER_BG)
-            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)
-            .height(48.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .background(READER_BG)
+                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)
+                .height(48.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         // Back button
         IconButton(
             onClick = onNavigateBack,
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
+            modifier =
+                Modifier
+                    .size(40.dp)
+                    .clip(CircleShape),
         ) {
             Icon(
                 imageVector = NextPageIcons.ArrowBack,
                 contentDescription = stringResource(R.string.reader_back),
                 tint = HEADER_FG,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(20.dp),
             )
         }
 
         // Action buttons row
         Row(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             // Search
             HeaderActionButton(
                 icon = NextPageIcons.Search,
                 contentDescription = stringResource(R.string.search_label),
-                onClick = onToggleSearch
+                onClick = onToggleSearch,
             )
 
             // aA Typography
             HeaderActionButton(
                 icon = NextPageIcons.TextSize,
                 contentDescription = stringResource(R.string.reader_typography),
-                onClick = onToggleSplitSettings
+                onClick = onToggleSplitSettings,
             )
 
             // Index / TOC — hidden for books with no chapter list
@@ -225,7 +235,7 @@ fun ReaderHeader(
                 HeaderActionButton(
                     icon = NextPageIcons.ListBullets,
                     contentDescription = stringResource(R.string.reader_toc),
-                    onClick = onToggleToc
+                    onClick = onToggleToc,
                 )
             }
 
@@ -238,7 +248,7 @@ fun ReaderHeader(
             HeaderActionButton(
                 icon = NextPageIcons.Pencil,
                 contentDescription = stringResource(R.string.reader_highlights_button),
-                onClick = onToggleHighlights
+                onClick = onToggleHighlights,
             )
 
             // Bookmark — outline→filled pulse on press (visual feedback only;
@@ -263,16 +273,16 @@ fun ReaderHeader(
                             (fadeIn(tween(120)) + scaleIn(tween(120)))
                                 .togetherWith(fadeOut(tween(120)) + scaleOut(tween(120)))
                         },
-                        label = "bookmarkToggle"
+                        label = "bookmarkToggle",
                     ) { filled ->
                         Icon(
                             imageVector = if (filled) NextPageIcons.BookmarkFilled else NextPageIcons.Bookmark,
                             contentDescription = stringResource(R.string.reader_add_bookmark),
                             tint = HEADER_FG,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(18.dp),
                         )
                     }
-                }
+                },
             )
 
             // Debug panel toggle — gated on runtime DebugPrefs so it works
@@ -281,7 +291,7 @@ fun ReaderHeader(
                 HeaderActionButton(
                     icon = NextPageIcons.BugReport,
                     contentDescription = stringResource(R.string.debug_panel_title),
-                    onClick = onToggleDebugPanel
+                    onClick = onToggleDebugPanel,
                 )
             }
         }
@@ -296,13 +306,14 @@ fun HeaderActionButton(
     contentDescription: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    animatedIcon: (@Composable () -> Unit)? = null
+    animatedIcon: (@Composable () -> Unit)? = null,
 ) {
     IconButton(
         onClick = onClick,
-        modifier = modifier
-            .size(36.dp)
-            .clip(CircleShape)
+        modifier =
+            modifier
+                .size(36.dp)
+                .clip(CircleShape),
     ) {
         if (animatedIcon != null) {
             animatedIcon()
@@ -311,7 +322,7 @@ fun HeaderActionButton(
                 imageVector = icon,
                 contentDescription = contentDescription,
                 tint = HEADER_FG,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(18.dp),
             )
         }
     }
@@ -335,27 +346,29 @@ fun HeaderActionButton(
 @Composable
 internal fun ChromeEdgeTapZones(
     onShowChrome: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val edgeHeight = maxHeight * 0.05f
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(edgeHeight)
-                .align(Alignment.TopCenter)
-                .pointerInput(onShowChrome) {
-                    detectTapGestures(onTap = { onShowChrome() })
-                }
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(edgeHeight)
+                    .align(Alignment.TopCenter)
+                    .pointerInput(onShowChrome) {
+                        detectTapGestures(onTap = { onShowChrome() })
+                    },
         )
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(edgeHeight)
-                .align(Alignment.BottomCenter)
-                .pointerInput(onShowChrome) {
-                    detectTapGestures(onTap = { onShowChrome() })
-                }
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(edgeHeight)
+                    .align(Alignment.BottomCenter)
+                    .pointerInput(onShowChrome) {
+                        detectTapGestures(onTap = { onShowChrome() })
+                    },
         )
     }
 }
@@ -371,30 +384,31 @@ private fun ReaderChromeDarkPreview() {
                 Text(
                     text = "NextPage Reader",
                     color = HEADER_FG,
-                    style = MaterialTheme.typography.titleSmall
+                    style = MaterialTheme.typography.titleSmall,
                 )
             },
             footer = {
                 Text(
                     text = "42%",
                     color = HEADER_FG,
-                    style = MaterialTheme.typography.labelSmall
+                    style = MaterialTheme.typography.labelSmall,
                 )
             },
             content = {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(READER_BG),
-                    contentAlignment = Alignment.Center
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .background(READER_BG),
+                    contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = "Reader content",
                         color = HEADER_FG,
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-            }
+            },
         )
     }
 }

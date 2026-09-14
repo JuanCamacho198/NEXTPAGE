@@ -5,7 +5,7 @@ data class PdfMetadata(
     val author: String?,
     val pageCount: Int,
     val fileSizeBytes: Long,
-    val coverBytes: ByteArray? = null
+    val coverBytes: ByteArray? = null,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

@@ -44,8 +44,8 @@ class OutboxCommit(
     suspend fun commit(
         item: SyncOutboxEntity,
         apply: suspend () -> ApplyOutcome,
-    ): CommitOutcome {
-        return when (val outcome = apply()) {
+    ): CommitOutcome =
+        when (val outcome = apply()) {
             is ApplyOutcome.Ok -> {
                 outboxDao.deleteById(item.id)
                 CommitOutcome.Acked
@@ -69,7 +69,6 @@ class OutboxCommit(
                 CommitOutcome.Poison(outcome.cause)
             }
         }
-    }
 
     /**
      * Stream helper: pulls pending items via [items], invokes [commit] for
@@ -80,34 +79,37 @@ class OutboxCommit(
     fun processOutboxStream(
         items: Flow<List<SyncOutboxEntity>>,
         apply: suspend (SyncOutboxEntity) -> ApplyOutcome,
-    ): Flow<CommitEvent> = flow {
-        items.collect { batch ->
-            for (item in batch) {
-                when (val outcome = commit(item) { apply(item) }) {
-                    is CommitOutcome.Acked ->
-                        emit(CommitEvent.Acked(itemId = item.id))
+    ): Flow<CommitEvent> =
+        flow {
+            items.collect { batch ->
+                for (item in batch) {
+                    when (val outcome = commit(item) { apply(item) }) {
+                        is CommitOutcome.Acked ->
+                            emit(CommitEvent.Acked(itemId = item.id))
 
-                    is CommitOutcome.Retryable -> {
-                        val error = outcome.cause.message
-                            ?: outcome.cause::class.simpleName.orEmpty()
-                        emit(
-                            CommitEvent.Retried(
-                                itemId = item.id,
-                                retryCount = item.retryCount + 1,
-                                error = error,
+                        is CommitOutcome.Retryable -> {
+                            val error =
+                                outcome.cause.message
+                                    ?: outcome.cause::class.simpleName.orEmpty()
+                            emit(
+                                CommitEvent.Retried(
+                                    itemId = item.id,
+                                    retryCount = item.retryCount + 1,
+                                    error = error,
+                                ),
                             )
-                        )
-                    }
+                        }
 
-                    is CommitOutcome.Poison -> {
-                        val error = outcome.cause.message
-                            ?: outcome.cause::class.simpleName.orEmpty()
-                        emit(CommitEvent.Pruned(itemId = item.id, error = error))
+                        is CommitOutcome.Poison -> {
+                            val error =
+                                outcome.cause.message
+                                    ?: outcome.cause::class.simpleName.orEmpty()
+                            emit(CommitEvent.Pruned(itemId = item.id, error = error))
+                        }
                     }
                 }
             }
         }
-    }
 
     companion object {
         const val DEFAULT_MAX_RETRIES: Int = 3
@@ -118,23 +120,33 @@ class OutboxCommit(
 sealed interface ApplyOutcome {
     data object Ok : ApplyOutcome
 
-    data class Retryable(val cause: Throwable) : ApplyOutcome
+    data class Retryable(
+        val cause: Throwable,
+    ) : ApplyOutcome
 
-    data class Poison(val cause: Throwable) : ApplyOutcome
+    data class Poison(
+        val cause: Throwable,
+    ) : ApplyOutcome
 }
 
 /** Outcome [OutboxCommit] returns to the caller (already persisted in DAO). */
 sealed interface CommitOutcome {
     data object Acked : CommitOutcome
 
-    data class Retryable(val cause: Throwable) : CommitOutcome
+    data class Retryable(
+        val cause: Throwable,
+    ) : CommitOutcome
 
-    data class Poison(val cause: Throwable) : CommitOutcome
+    data class Poison(
+        val cause: Throwable,
+    ) : CommitOutcome
 }
 
 /** Per-item event emitted by [OutboxCommit.processOutboxStream]. */
 sealed interface CommitEvent {
-    data class Acked(val itemId: String) : CommitEvent
+    data class Acked(
+        val itemId: String,
+    ) : CommitEvent
 
     data class Retried(
         val itemId: String,

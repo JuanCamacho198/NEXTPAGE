@@ -23,10 +23,12 @@ import org.json.JSONException
  * is lock-free. We never expose the SharedPreferences editor directly to
  * keep mutation sites auditable.
  */
-class FeedbackPersistence(context: Context) {
-
-    private val prefs: SharedPreferences = context.applicationContext
-        .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+class FeedbackPersistence(
+    context: Context,
+) {
+    private val prefs: SharedPreferences =
+        context.applicationContext
+            .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     /** Persist the last Sentry eventId of a captured crash (CrashDetailActivity path). */
     fun recordLastEventId(eventId: String) {
@@ -60,7 +62,8 @@ class FeedbackPersistence(context: Context) {
      * cap invariants via [FeedbackQueue]).
      */
     fun writeQueue(entries: List<FeedbackEvent.FeedbackEntry>) {
-        prefs.edit()
+        prefs
+            .edit()
             .putString(KEY_FEEDBACK_QUEUE, FeedbackEvent.entriesToJsonArray(entries).toString())
             .apply()
     }
@@ -110,8 +113,9 @@ class FeedbackPersistence(context: Context) {
 
 /** Convenience: detect a JSON parse error from a raw string without leaking JSONException types. */
 @Suppress("unused")
-internal fun String.toJsonArrayOrNull(): JSONArray? = try {
-    JSONArray(this)
-} catch (_: JSONException) {
-    null
-}
+internal fun String.toJsonArrayOrNull(): JSONArray? =
+    try {
+        JSONArray(this)
+    } catch (_: JSONException) {
+        null
+    }

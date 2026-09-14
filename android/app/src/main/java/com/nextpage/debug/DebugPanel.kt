@@ -1,5 +1,6 @@
 package com.nextpage.debug
 
+import android.os.SystemClock
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,10 +20,8 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,11 +32,11 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nextpage.R
 import com.nextpage.presentation.viewmodel.reader.AnnotationUiState
 import com.nextpage.presentation.viewmodel.reader.ReaderSelectionState
 import com.nextpage.ui.icons.NextPageIcons
-import android.os.SystemClock
 
 /**
  * Full-screen debug panel for the reader.
@@ -76,7 +75,7 @@ fun DebugPanel(
     onCopyLog: () -> Unit,
     onInspectHighlightsHtml: () -> Unit = {},
     onLogWebViewTree: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     if (!visible) return
 
@@ -89,39 +88,42 @@ fun DebugPanel(
     val activeHighlightId =
         (annotation.selectionState as? ReaderSelectionState.Existing)?.highlight?.id
 
-    val debounceRemainingMs = run {
-        val until = highlightTapDebounceUntil
-        if (until <= 0L) 0L else (until - SystemClock.elapsedRealtime()).coerceAtLeast(0L)
-    }
+    val debounceRemainingMs =
+        run {
+            val until = highlightTapDebounceUntil
+            if (until <= 0L) 0L else (until - SystemClock.elapsedRealtime()).coerceAtLeast(0L)
+        }
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.92f))
+        modifier =
+            modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.92f)),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
         ) {
             // ── Header ────────────────────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(
                     text = stringResource(R.string.debug_panel_title),
                     color = Color(0xFFEF4444),
                     fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp
+                    fontSize = 20.sp,
                 )
                 IconButton(onClick = onClose) {
                     Icon(
                         imageVector = NextPageIcons.Close,
                         contentDescription = stringResource(R.string.debug_close),
-                        tint = Color(0xFFDDE2F8)
+                        tint = Color(0xFFDDE2F8),
                     )
                 }
             }
@@ -130,50 +132,74 @@ fun DebugPanel(
 
             // ── Selection state ───────────────────────────────────
             DebugSectionCard(title = stringResource(R.string.debug_section_selection)) {
-                DebugKeyValue(stringResource(R.string.debug_kv_selected_text),
-                    annotation.selectedText?.take(50) ?: "—")
-                DebugKeyValue(stringResource(R.string.debug_kv_selection_rect),
-                    annotation.selectionRect?.toString() ?: "—")
+                DebugKeyValue(
+                    stringResource(R.string.debug_kv_selected_text),
+                    annotation.selectedText?.take(50) ?: "—",
+                )
+                DebugKeyValue(
+                    stringResource(R.string.debug_kv_selection_rect),
+                    annotation.selectionRect?.toString() ?: "—",
+                )
                 DebugKeyValue(
                     "selectionState",
-                    annotation.selectionState::class.simpleName ?: "—"
+                    annotation.selectionState::class.simpleName ?: "—",
                 )
                 DebugKeyValue(
                     "showColorPickerPopover",
-                    annotation.showColorPickerPopover.toString()
+                    annotation.showColorPickerPopover.toString(),
                 )
-                DebugKeyValue(stringResource(R.string.debug_kv_active_highlight_id),
-                    activeHighlightId ?: "—")
-                DebugKeyValue(stringResource(R.string.debug_kv_debounce_remaining_ms),
-                    "${debounceRemainingMs} ms")
+                DebugKeyValue(
+                    stringResource(R.string.debug_kv_active_highlight_id),
+                    activeHighlightId ?: "—",
+                )
+                DebugKeyValue(
+                    stringResource(R.string.debug_kv_debounce_remaining_ms),
+                    "$debounceRemainingMs ms",
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
             // ── ActionMode ────────────────────────────────────────
             DebugSectionCard(title = stringResource(R.string.debug_section_action_mode)) {
-                DebugKeyValue(stringResource(R.string.debug_kv_am_installed),
-                    actionMode.installed.toString())
-                DebugKeyValue(stringResource(R.string.debug_kv_am_last_event),
-                    actionMode.lastEvent)
-                DebugKeyValue(stringResource(R.string.debug_kv_am_last_type),
-                    actionMode.lastType)
-                DebugKeyValue(stringResource(R.string.debug_kv_am_suppressed),
-                    actionMode.suppressedCount.toString())
+                DebugKeyValue(
+                    stringResource(R.string.debug_kv_am_installed),
+                    actionMode.installed.toString(),
+                )
+                DebugKeyValue(
+                    stringResource(R.string.debug_kv_am_last_event),
+                    actionMode.lastEvent,
+                )
+                DebugKeyValue(
+                    stringResource(R.string.debug_kv_am_last_type),
+                    actionMode.lastType,
+                )
+                DebugKeyValue(
+                    stringResource(R.string.debug_kv_am_suppressed),
+                    actionMode.suppressedCount.toString(),
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
             // ── Highlight tap ─────────────────────────────────────
             DebugSectionCard(title = stringResource(R.string.debug_section_highlight)) {
-                DebugKeyValue(stringResource(R.string.debug_kv_hl_registered),
-                    highlight.listenerRegistered.toString())
-                DebugKeyValue(stringResource(R.string.debug_kv_hl_last_id),
-                    highlight.lastEventId)
-                DebugKeyValue(stringResource(R.string.debug_kv_hl_last_rect),
-                    highlight.lastEventRect)
-                DebugKeyValue(stringResource(R.string.debug_kv_hl_activations),
-                    highlight.activationCount.toString())
+                DebugKeyValue(
+                    stringResource(R.string.debug_kv_hl_registered),
+                    highlight.listenerRegistered.toString(),
+                )
+                DebugKeyValue(
+                    stringResource(R.string.debug_kv_hl_last_id),
+                    highlight.lastEventId,
+                )
+                DebugKeyValue(
+                    stringResource(R.string.debug_kv_hl_last_rect),
+                    highlight.lastEventRect,
+                )
+                DebugKeyValue(
+                    stringResource(R.string.debug_kv_hl_activations),
+                    highlight.activationCount.toString(),
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -183,20 +209,32 @@ fun DebugPanel(
                 DebugKeyValueColored(
                     key = stringResource(R.string.debug_decorations_listener_registered),
                     value = if (decoration.listenerRegistered) "yes" else "no",
-                    isPositive = decoration.listenerRegistered
+                    isPositive = decoration.listenerRegistered,
                 )
-                DebugKeyValue(stringResource(R.string.debug_decorations_activation_count),
-                    decoration.activationCount.toString())
-                DebugKeyValue(stringResource(R.string.debug_decorations_last_id),
-                    decoration.lastEventId)
-                DebugKeyValue(stringResource(R.string.debug_decorations_last_rect),
-                    decoration.lastEventRect)
-                DebugKeyValue(stringResource(R.string.debug_decorations_last_group),
-                    decoration.lastEventGroup)
-                DebugKeyValue(stringResource(R.string.debug_decorations_last_applied),
-                    decoration.lastAppliedCount.toString())
-                DebugKeyValue(stringResource(R.string.debug_decorations_active),
-                    decoration.activeCount.toString())
+                DebugKeyValue(
+                    stringResource(R.string.debug_decorations_activation_count),
+                    decoration.activationCount.toString(),
+                )
+                DebugKeyValue(
+                    stringResource(R.string.debug_decorations_last_id),
+                    decoration.lastEventId,
+                )
+                DebugKeyValue(
+                    stringResource(R.string.debug_decorations_last_rect),
+                    decoration.lastEventRect,
+                )
+                DebugKeyValue(
+                    stringResource(R.string.debug_decorations_last_group),
+                    decoration.lastEventGroup,
+                )
+                DebugKeyValue(
+                    stringResource(R.string.debug_decorations_last_applied),
+                    decoration.lastAppliedCount.toString(),
+                )
+                DebugKeyValue(
+                    stringResource(R.string.debug_decorations_active),
+                    decoration.activeCount.toString(),
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -204,40 +242,40 @@ fun DebugPanel(
             // ── Actions ───────────────────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Button(onClick = onForceColorPicker, modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.debug_action_force_color),
                         fontSize = 11.sp,
-                        maxLines = 1
+                        maxLines = 1,
                     )
                 }
                 Button(onClick = onForceContextMenu, modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.debug_action_force_context),
                         fontSize = 11.sp,
-                        maxLines = 1
+                        maxLines = 1,
                     )
                 }
             }
             Spacer(modifier = Modifier.height(4.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Button(onClick = onSimulateHighlightTap, modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.debug_action_simulate_tap),
                         fontSize = 11.sp,
-                        maxLines = 1
+                        maxLines = 1,
                     )
                 }
                 Button(onClick = onClearLog, modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.debug_action_clear_log),
                         fontSize = 11.sp,
-                        maxLines = 1
+                        maxLines = 1,
                     )
                 }
             }
@@ -246,26 +284,26 @@ fun DebugPanel(
                 Text(
                     text = stringResource(R.string.debug_action_copy_log),
                     fontSize = 11.sp,
-                    maxLines = 1
+                    maxLines = 1,
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Button(onClick = onInspectHighlightsHtml, modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.debug_action_inspect_html),
                         fontSize = 11.sp,
-                        maxLines = 1
+                        maxLines = 1,
                     )
                 }
                 Button(onClick = onLogWebViewTree, modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.debug_action_log_webview),
                         fontSize = 11.sp,
-                        maxLines = 1
+                        maxLines = 1,
                     )
                 }
             }
@@ -278,43 +316,47 @@ fun DebugPanel(
                 color = Color(0xFFADC6FF),
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp,
-                modifier = Modifier.padding(bottom = 4.dp)
+                modifier = Modifier.padding(bottom = 4.dp),
             )
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF161F33))
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF161F33)),
             ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(280.dp)
-                        .verticalScroll(rememberScrollState())
-                        .padding(8.dp)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(280.dp)
+                            .verticalScroll(rememberScrollState())
+                            .padding(8.dp),
                 ) {
                     if (events.isEmpty()) {
                         Text(
                             text = "—",
-                            style = TextStyle(
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 11.sp
-                            ),
-                            color = Color(0xFF8A8FA3)
+                            style =
+                                TextStyle(
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 11.sp,
+                                ),
+                            color = Color(0xFF8A8FA3),
                         )
                     } else {
                         for (e in events.take(50)) {
-                            val color = when (e.level) {
-                                DebugLog.Level.INFO -> Color(0xFFDDE2F8)
-                                DebugLog.Level.WARN -> Color(0xFFFFB454)
-                                DebugLog.Level.ERROR -> Color(0xFFEF4444)
-                                DebugLog.Level.SUCCESS -> Color(0xFF6EE7B7)
-                            }
+                            val color =
+                                when (e.level) {
+                                    DebugLog.Level.INFO -> Color(0xFFDDE2F8)
+                                    DebugLog.Level.WARN -> Color(0xFFFFB454)
+                                    DebugLog.Level.ERROR -> Color(0xFFEF4444)
+                                    DebugLog.Level.SUCCESS -> Color(0xFF6EE7B7)
+                                }
                             Text(
                                 text = "[${e.level.name}] ${e.tag}: ${e.message}",
-                                style = TextStyle(
-                                    fontFamily = FontFamily.Monospace,
-                                    fontSize = 11.sp
-                                ),
-                                color = color
+                                style =
+                                    TextStyle(
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 11.sp,
+                                    ),
+                                color = color,
                             )
                         }
                     }
@@ -328,12 +370,12 @@ fun DebugPanel(
 @Composable
 private fun DebugSectionCard(
     title: String,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF161F33)),
-        shape = RoundedCornerShape(8.dp)
+        shape = RoundedCornerShape(8.dp),
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
@@ -341,7 +383,7 @@ private fun DebugSectionCard(
                 color = Color(0xFFADC6FF),
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 13.sp,
-                modifier = Modifier.padding(bottom = 4.dp)
+                modifier = Modifier.padding(bottom = 4.dp),
             )
             content()
         }
@@ -349,61 +391,74 @@ private fun DebugSectionCard(
 }
 
 @Composable
-private fun DebugKeyValue(key: String, value: String) {
+private fun DebugKeyValue(
+    key: String,
+    value: String,
+) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
-        verticalAlignment = Alignment.Top
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.Top,
     ) {
         Text(
             text = key,
-            style = TextStyle(
-                fontFamily = FontFamily.Monospace,
-                fontSize = 11.sp
-            ),
+            style =
+                TextStyle(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 11.sp,
+                ),
             color = Color(0xFF8A8FA3),
-            modifier = Modifier.width(140.dp)
+            modifier = Modifier.width(140.dp),
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = value,
-            style = TextStyle(
-                fontFamily = FontFamily.Monospace,
-                fontSize = 11.sp
-            ),
+            style =
+                TextStyle(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 11.sp,
+                ),
             color = Color(0xFFDDE2F8),
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
         )
     }
 }
 
 @Composable
-private fun DebugKeyValueColored(key: String, value: String, isPositive: Boolean) {
+private fun DebugKeyValueColored(
+    key: String,
+    value: String,
+    isPositive: Boolean,
+) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
-        verticalAlignment = Alignment.Top
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.Top,
     ) {
         Text(
             text = key,
-            style = TextStyle(
-                fontFamily = FontFamily.Monospace,
-                fontSize = 11.sp
-            ),
+            style =
+                TextStyle(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 11.sp,
+                ),
             color = Color(0xFF8A8FA3),
-            modifier = Modifier.width(140.dp)
+            modifier = Modifier.width(140.dp),
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = value,
-            style = TextStyle(
-                fontFamily = FontFamily.Monospace,
-                fontSize = 11.sp
-            ),
+            style =
+                TextStyle(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 11.sp,
+                ),
             color = if (isPositive) Color(0xFF6EE7B7) else Color(0xFFEF4444),
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
         )
     }
 }

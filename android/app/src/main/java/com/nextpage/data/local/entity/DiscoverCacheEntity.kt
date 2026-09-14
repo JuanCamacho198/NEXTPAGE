@@ -14,7 +14,7 @@ import androidx.room.PrimaryKey
  */
 @Entity(
     tableName = "discover_cache",
-    indices = [Index(value = ["fetched_at"])]
+    indices = [Index(value = ["fetched_at"])],
 )
 data class DiscoverCacheEntity(
     @PrimaryKey
@@ -24,5 +24,5 @@ data class DiscoverCacheEntity(
     @ColumnInfo(name = "fetched_at")
     val fetchedAtEpochSecs: Long,
     @ColumnInfo(name = "ttl_s")
-    val ttlSecs: Long
+    val ttlSecs: Long,
 )

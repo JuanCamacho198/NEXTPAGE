@@ -9,7 +9,7 @@ import com.nextpage.presentation.theme.CoilModule
 
 class StorageModule(
     context: Context,
-    @Suppress("UNUSED_PARAMETER") databaseModule: DatabaseModule
+    @Suppress("UNUSED_PARAMETER") databaseModule: DatabaseModule,
 ) {
     val coverStorage: AppInternalCoverStorage = AppInternalCoverStorage(context.applicationContext)
 

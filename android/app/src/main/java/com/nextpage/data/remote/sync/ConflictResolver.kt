@@ -1,7 +1,10 @@
 package com.nextpage.data.remote.sync
 
 interface ConflictResolver<T> {
-    fun resolve(local: T?, remote: T): T
+    fun resolve(
+        local: T?,
+        remote: T,
+    ): T
 }
 
 interface VersionedSyncRecord {
@@ -19,7 +22,10 @@ interface VersionedSyncRecord {
  * deleted → later deletedAt wins, tie → local.
  */
 class LastWriteWinsConflictResolver<T : VersionedSyncRecord> : ConflictResolver<T> {
-    override fun resolve(local: T?, remote: T): T {
+    override fun resolve(
+        local: T?,
+        remote: T,
+    ): T {
         val localRecord = local ?: return remote
 
         if (localRecord.deletedAtEpochMillis != null || remote.deletedAtEpochMillis != null) {
@@ -29,7 +35,10 @@ class LastWriteWinsConflictResolver<T : VersionedSyncRecord> : ConflictResolver<
         return chooseLatest(localRecord, remote)
     }
 
-    private fun resolveTombstone(local: T, remote: T): T {
+    private fun resolveTombstone(
+        local: T,
+        remote: T,
+    ): T {
         val localDeletedAt = local.deletedAtEpochMillis
         val remoteDeletedAt = remote.deletedAtEpochMillis
 
@@ -41,7 +50,10 @@ class LastWriteWinsConflictResolver<T : VersionedSyncRecord> : ConflictResolver<
         return chooseLatest(local, remote)
     }
 
-    private fun chooseLatest(local: T, remote: T): T {
+    private fun chooseLatest(
+        local: T,
+        remote: T,
+    ): T {
         if (remote.updatedAtEpochMillis > local.updatedAtEpochMillis) return remote
         if (remote.updatedAtEpochMillis < local.updatedAtEpochMillis) return local
         return if (remote.recordId > local.recordId) remote else local

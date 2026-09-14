@@ -27,7 +27,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SheetState
@@ -86,7 +85,7 @@ fun FeedbackSheet(
     viewModel: FeedbackViewModel,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
-    sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
 ) {
     val state by viewModel.state.collectAsState()
     val charCount by viewModel.charCount.collectAsState()
@@ -104,15 +103,16 @@ fun FeedbackSheet(
         modifier = modifier,
         containerColor = FeedbackTokens.BgCanvas,
         scrimColor = FeedbackTokens.Scrim,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .windowInsetsPadding(WindowInsets.navigationBars)
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 16.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 16.dp),
         ) {
             FeedbackCard(
                 state = state,
@@ -124,7 +124,7 @@ fun FeedbackSheet(
                 onDismiss = {
                     viewModel.dismiss()
                     onDismiss()
-                }
+                },
             )
         }
     }
@@ -138,7 +138,7 @@ private fun FeedbackCard(
     canSubmit: Boolean,
     onTextChanged: (String) -> Unit,
     onSubmit: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     val editing = state as? FeedbackEvent.FeedbackSheetState.Editing
     val editingText = editing?.text ?: ""
@@ -147,25 +147,27 @@ private fun FeedbackCard(
     val error = state as? FeedbackEvent.FeedbackSheetState.Error
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(FeedbackTokens.BgCard)
-            .padding(20.dp)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(FeedbackTokens.BgCard)
+                .padding(20.dp),
     ) {
         // 1. Icon wrap 64x64 (peach tint + Favorite)
         Box(
-            modifier = Modifier
-                .size(64.dp)
-                .clip(RoundedCornerShape(32.dp))
-                .background(FeedbackTokens.AccentPeach.copy(alpha = 0.18f)),
-            contentAlignment = Alignment.Center
+            modifier =
+                Modifier
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(32.dp))
+                    .background(FeedbackTokens.AccentPeach.copy(alpha = 0.18f)),
+            contentAlignment = Alignment.Center,
         ) {
             Icon(
                 imageVector = Icons.Outlined.Favorite,
                 contentDescription = null,
                 tint = FeedbackTokens.AccentPeach,
-                modifier = Modifier.size(32.dp)
+                modifier = Modifier.size(32.dp),
             )
         }
 
@@ -178,7 +180,7 @@ private fun FeedbackCard(
             fontWeight = FontWeight.Bold,
             color = FeedbackTokens.TextPrimary,
             textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -190,7 +192,7 @@ private fun FeedbackCard(
             fontWeight = FontWeight.Normal,
             color = FeedbackTokens.TextSecondary,
             textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -205,7 +207,7 @@ private fun FeedbackCard(
             text = editingText,
             charCount = charCount,
             isSending = isSending,
-            onTextChanged = onTextChanged
+            onTextChanged = onTextChanged,
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -213,19 +215,19 @@ private fun FeedbackCard(
         // 6. Privacy shield-check
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Icon(
                 imageVector = Icons.Outlined.Shield,
                 contentDescription = null,
                 tint = FeedbackTokens.TextTertiary,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(16.dp),
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = stringResource(R.string.feedback_mobile_privacy),
                 fontSize = 12.sp,
-                color = FeedbackTokens.TextTertiary
+                color = FeedbackTokens.TextTertiary,
             )
         }
 
@@ -234,45 +236,50 @@ private fun FeedbackCard(
         // 7. Action row (Cerrar + Enviar reporte)
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             OutlinedButton(
                 onClick = onDismiss,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp),
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .height(48.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
-                    containerColor = FeedbackTokens.BgInput,
-                    contentColor = FeedbackTokens.TextPrimary
-                )
+                colors =
+                    androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                        containerColor = FeedbackTokens.BgInput,
+                        contentColor = FeedbackTokens.TextPrimary,
+                    ),
             ) {
                 Text(
                     text = stringResource(R.string.feedback_mobile_close),
                     fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
                 )
             }
             Button(
                 onClick = onSubmit,
                 enabled = canSubmit && !isSending && !isSent,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp),
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .height(48.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = FeedbackTokens.AccentPeach,
-                    contentColor = FeedbackTokens.OnPrimary
-                )
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = FeedbackTokens.AccentPeach,
+                        contentColor = FeedbackTokens.OnPrimary,
+                    ),
             ) {
                 Text(
-                    text = when {
-                        isSending -> stringResource(R.string.feedback_mobile_sending)
-                        isSent -> stringResource(R.string.feedback_mobile_sent)
-                        else -> stringResource(R.string.feedback_mobile_send)
-                    },
+                    text =
+                        when {
+                            isSending -> stringResource(R.string.feedback_mobile_sending)
+                            isSent -> stringResource(R.string.feedback_mobile_sent)
+                            else -> stringResource(R.string.feedback_mobile_send)
+                        },
                     fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
                 )
             }
         }
@@ -284,7 +291,7 @@ private fun FeedbackCard(
                 fontSize = 12.sp,
                 color = FeedbackTokens.TextTertiary,
                 modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
             )
         }
     }
@@ -293,18 +300,19 @@ private fun FeedbackCard(
 @Composable
 private fun FeedbackAutoContextCard(book: FeedbackEvent.BookMeta) {
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(FeedbackTokens.BgCardAccent)
-            .padding(14.dp)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(FeedbackTokens.BgCardAccent)
+                .padding(14.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = Icons.Outlined.AutoAwesome,
                 contentDescription = null,
                 tint = FeedbackTokens.AccentPeach,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(18.dp),
             )
             Spacer(modifier = Modifier.width(8.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -312,7 +320,7 @@ private fun FeedbackAutoContextCard(book: FeedbackEvent.BookMeta) {
                     text = stringResource(R.string.feedback_mobile_auto_context_label),
                     fontSize = 11.sp,
                     color = FeedbackTokens.TextSecondary,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 val title = book.title ?: stringResource(R.string.feedback_mobile_sample_book)
@@ -320,23 +328,24 @@ private fun FeedbackAutoContextCard(book: FeedbackEvent.BookMeta) {
                     text = title,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = FeedbackTokens.TextPrimary
+                    color = FeedbackTokens.TextPrimary,
                 )
                 val page = book.page
                 val chapter = book.chapterLabel
-                val chapterText = if (chapter != null && page != null) {
-                    "$chapter · página $page de 318"
-                } else if (chapter != null) {
-                    chapter
-                } else if (page != null) {
-                    "página $page"
-                } else {
-                    stringResource(R.string.feedback_mobile_sample_chapter)
-                }
+                val chapterText =
+                    if (chapter != null && page != null) {
+                        "$chapter · página $page de 318"
+                    } else if (chapter != null) {
+                        chapter
+                    } else if (page != null) {
+                        "página $page"
+                    } else {
+                        stringResource(R.string.feedback_mobile_sample_chapter)
+                    }
                 Text(
                     text = chapterText,
                     fontSize = 12.sp,
-                    color = FeedbackTokens.TextTertiary
+                    color = FeedbackTokens.TextTertiary,
                 )
             }
             Spacer(modifier = Modifier.width(12.dp))
@@ -344,17 +353,19 @@ private fun FeedbackAutoContextCard(book: FeedbackEvent.BookMeta) {
             // a small placeholder gradient block since the design sample is "La Odisea"
             // and we don't have cover art bound at runtime in this path).
             Box(
-                modifier = Modifier
-                    .size(width = 44.dp, height = 60.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                FeedbackTokens.CoverTop,
-                                FeedbackTokens.CoverBottom
-                            )
-                        )
-                    )
+                modifier =
+                    Modifier
+                        .size(width = 44.dp, height = 60.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                colors =
+                                    listOf(
+                                        FeedbackTokens.CoverTop,
+                                        FeedbackTokens.CoverBottom,
+                                    ),
+                            ),
+                        ),
             )
         }
     }
@@ -365,7 +376,7 @@ private fun FeedbackTextArea(
     text: String,
     charCount: Int,
     isSending: Boolean,
-    onTextChanged: (String) -> Unit
+    onTextChanged: (String) -> Unit,
 ) {
     val cursorColor = FeedbackTokens.AccentPeach
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -373,43 +384,48 @@ private fun FeedbackTextArea(
             value = text,
             onValueChange = onTextChanged,
             enabled = !isSending,
-            textStyle = TextStyle(
-                color = FeedbackTokens.TextPrimary,
-                fontSize = 14.sp
-            ),
+            textStyle =
+                TextStyle(
+                    color = FeedbackTokens.TextPrimary,
+                    fontSize = 14.sp,
+                ),
             cursorBrush = SolidColor(cursorColor),
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 96.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(FeedbackTokens.BgInput)
-                .padding(14.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 96.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(FeedbackTokens.BgInput)
+                    .padding(14.dp),
         )
         // Placeholder + counter via a DecorationBox so we can render label + count.
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = stringResource(R.string.feedback_mobile_helper),
                 fontSize = 11.sp,
                 color = FeedbackTokens.TextTertiary,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
             Text(
-                text = stringResource(
-                    R.string.feedback_mobile_counter,
-                    charCount,
-                    FeedbackViewModel.MAX_CHARS
-                ),
+                text =
+                    stringResource(
+                        R.string.feedback_mobile_counter,
+                        charCount,
+                        FeedbackViewModel.MAX_CHARS,
+                    ),
                 fontSize = 11.sp,
-                color = if (charCount >= FeedbackViewModel.MAX_CHARS) {
-                    FeedbackTokens.AccentPeach
-                } else {
-                    FeedbackTokens.TextTertiary
-                }
+                color =
+                    if (charCount >= FeedbackViewModel.MAX_CHARS) {
+                        FeedbackTokens.AccentPeach
+                    } else {
+                        FeedbackTokens.TextTertiary
+                    },
             )
         }
     }
@@ -444,21 +460,23 @@ private object FeedbackTokens {
 private fun FeedbackSheetPreview() {
     NextPageTheme(darkTheme = true) {
         // Preview-only — the real ViewModel is constructed by the host activity.
-        val previewVm = remember {
-            FeedbackViewModel(
-                initialQueue = emptyList(),
-                initialDismissed = emptySet(),
-                initialBook = FeedbackEvent.BookMeta(
-                    bookId = "odisea",
-                    title = "La Odisea",
-                    chapterLabel = "Capítulo IX",
-                    chapterIndex = 9,
-                    page = 142
-                ),
-                initialEventId = "abc123def456",
-                captureFn = { null }
-            )
-        }
+        val previewVm =
+            remember {
+                FeedbackViewModel(
+                    initialQueue = emptyList(),
+                    initialDismissed = emptySet(),
+                    initialBook =
+                        FeedbackEvent.BookMeta(
+                            bookId = "odisea",
+                            title = "La Odisea",
+                            chapterLabel = "Capítulo IX",
+                            chapterIndex = 9,
+                            page = 142,
+                        ),
+                    initialEventId = "abc123def456",
+                    captureFn = { null },
+                )
+            }
         FeedbackSheet(viewModel = previewVm, onDismiss = {})
     }
 }

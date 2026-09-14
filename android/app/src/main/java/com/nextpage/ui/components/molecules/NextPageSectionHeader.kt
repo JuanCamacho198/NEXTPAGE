@@ -40,17 +40,17 @@ fun NextPageSectionHeader(
     title: String,
     modifier: Modifier = Modifier,
     actionLabel: String? = null,
-    onActionClick: (() -> Unit)? = null
+    onActionClick: (() -> Unit)? = null,
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.SemiBold,
         )
         if (actionLabel != null && onActionClick != null) {
             TextButton(onClick = onActionClick) {
@@ -68,7 +68,7 @@ private fun NextPageSectionHeaderDarkPreview() {
             title = "Recently added",
             modifier = Modifier.padding(16.dp),
             actionLabel = "See all",
-            onActionClick = {}
+            onActionClick = {},
         )
     }
 }
@@ -81,7 +81,7 @@ private fun NextPageSectionHeaderLightPreview() {
             title = "Recently added",
             modifier = Modifier.padding(16.dp),
             actionLabel = "See all",
-            onActionClick = {}
+            onActionClick = {},
         )
     }
 }

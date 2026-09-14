@@ -33,8 +33,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
-import com.nextpage.presentation.viewmodel.reader.BookChapter
 import com.nextpage.presentation.theme.NextPageTheme
+import com.nextpage.presentation.viewmodel.reader.BookChapter
 
 /**
  * Modal bottom sheet that lists the book's chapters as a
@@ -80,7 +80,7 @@ fun ChaptersSheet(
     currentChapterIndex: Int,
     onChapterSelected: (Int) -> Unit,
     onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -88,22 +88,24 @@ fun ChaptersSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = Color(0xFF161F33),
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
     ) {
         Column(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 32.dp)
+            modifier =
+                modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 32.dp),
         ) {
             // ── Drag Handle ────────────────────────────────────────
             Box(
-                modifier = Modifier
-                    .width(40.dp)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(Color(0xFF4A5568))
-                    .align(Alignment.CenterHorizontally)
+                modifier =
+                    Modifier
+                        .width(40.dp)
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(Color(0xFF4A5568))
+                        .align(Alignment.CenterHorizontally),
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -113,7 +115,7 @@ fun ChaptersSheet(
                 text = stringResource(R.string.reader_chapters_title),
                 style = MaterialTheme.typography.titleLarge,
                 color = Color(0xFFDDE2F8),
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -125,23 +127,25 @@ fun ChaptersSheet(
             // ── Chapters List ──────────────────────────────────────
             if (chapters.isEmpty()) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp),
-                    contentAlignment = Alignment.Center
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(120.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         text = stringResource(R.string.highlights_empty),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF718096)
+                        color = Color(0xFF718096),
                     )
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(420.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .height(420.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
                     itemsIndexed(chapters) { listPosition, chapter ->
                         ChapterRow(
@@ -151,7 +155,7 @@ fun ChaptersSheet(
                             onClick = {
                                 onChapterSelected(listPosition)
                                 onDismiss()
-                            }
+                            },
                         )
                     }
                 }
@@ -166,7 +170,7 @@ private fun ChapterRow(
     depth: Int,
     isCurrent: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val titleColor = if (isCurrent) Color(0xFFADC6FF) else Color(0xFFDDE2F8)
     val weight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal
@@ -176,34 +180,37 @@ private fun ChapterRow(
     val indent = (depth * 20).coerceAtMost(80).dp
 
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(rowBg)
-            .clickable(onClick = onClick)
-            .padding(start = 14.dp + indent, end = 14.dp, top = 14.dp, bottom = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(rowBg)
+                .clickable(onClick = onClick)
+                .padding(start = 14.dp + indent, end = 14.dp, top = 14.dp, bottom = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         // Current chapter indicator dot
         Box(
-            modifier = Modifier
-                .padding(end = 12.dp)
-                .size(if (isCurrent) 8.dp else 0.dp)
-                .clip(CircleShape)
-                .background(if (isCurrent) Color(0xFFADC6FF) else Color.Transparent)
+            modifier =
+                Modifier
+                    .padding(end = 12.dp)
+                    .size(if (isCurrent) 8.dp else 0.dp)
+                    .clip(CircleShape)
+                    .background(if (isCurrent) Color(0xFFADC6FF) else Color.Transparent),
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title.ifBlank { stringResource(R.string.reader_chapter_fallback, depth + 1) },
-                style = if (depth > 0) {
-                    MaterialTheme.typography.bodySmall
-                } else {
-                    MaterialTheme.typography.bodyMedium
-                },
+                style =
+                    if (depth > 0) {
+                        MaterialTheme.typography.bodySmall
+                    } else {
+                        MaterialTheme.typography.bodyMedium
+                    },
                 color = titleColor,
                 fontWeight = weight,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
@@ -214,16 +221,17 @@ private fun ChapterRow(
 private fun ChaptersSheetDarkPreview() {
     NextPageTheme(darkTheme = true) {
         ChaptersSheet(
-            chapters = listOf(
-                BookChapter(index = 0, id = "c0", title = "Capítulo 1", href = "ch1.xhtml", depth = 0),
-                BookChapter(index = 0, id = "c0a", title = "Sección 1.1", href = "ch1.xhtml#s1", depth = 1),
-                BookChapter(index = 0, id = "c0b", title = "Sección 1.1.1", href = "ch1.xhtml#s1a", depth = 2),
-                BookChapter(index = 1, id = "c1", title = "Capítulo 2", href = "ch2.xhtml", depth = 0),
-                BookChapter(index = 2, id = "c2", title = "Capítulo 3", href = "ch3.xhtml", depth = 0)
-            ),
+            chapters =
+                listOf(
+                    BookChapter(index = 0, id = "c0", title = "Capítulo 1", href = "ch1.xhtml", depth = 0),
+                    BookChapter(index = 0, id = "c0a", title = "Sección 1.1", href = "ch1.xhtml#s1", depth = 1),
+                    BookChapter(index = 0, id = "c0b", title = "Sección 1.1.1", href = "ch1.xhtml#s1a", depth = 2),
+                    BookChapter(index = 1, id = "c1", title = "Capítulo 2", href = "ch2.xhtml", depth = 0),
+                    BookChapter(index = 2, id = "c2", title = "Capítulo 3", href = "ch3.xhtml", depth = 0),
+                ),
             currentChapterIndex = 1,
             onChapterSelected = {},
-            onDismiss = {}
+            onDismiss = {},
         )
     }
 }
@@ -234,15 +242,16 @@ private fun ChaptersSheetDarkPreview() {
 private fun ChaptersSheetLightPreview() {
     NextPageTheme(darkTheme = false) {
         ChaptersSheet(
-            chapters = listOf(
-                BookChapter(index = 0, id = "c0", title = "Capítulo 1", href = "ch1.xhtml", depth = 0),
-                BookChapter(index = 0, id = "c0a", title = "Sección 1.1", href = "ch1.xhtml#s1", depth = 1),
-                BookChapter(index = 1, id = "c1", title = "Capítulo 2", href = "ch2.xhtml", depth = 0),
-                BookChapter(index = 2, id = "c2", title = "Capítulo 3", href = "ch3.xhtml", depth = 0)
-            ),
+            chapters =
+                listOf(
+                    BookChapter(index = 0, id = "c0", title = "Capítulo 1", href = "ch1.xhtml", depth = 0),
+                    BookChapter(index = 0, id = "c0a", title = "Sección 1.1", href = "ch1.xhtml#s1", depth = 1),
+                    BookChapter(index = 1, id = "c1", title = "Capítulo 2", href = "ch2.xhtml", depth = 0),
+                    BookChapter(index = 2, id = "c2", title = "Capítulo 3", href = "ch3.xhtml", depth = 0),
+                ),
             currentChapterIndex = 1,
             onChapterSelected = {},
-            onDismiss = {}
+            onDismiss = {},
         )
     }
 }

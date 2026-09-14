@@ -34,8 +34,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nextpage.R
-import com.nextpage.ui.icons.NextPageIcons
 import com.nextpage.presentation.theme.NextPageTheme
+import com.nextpage.ui.icons.NextPageIcons
 
 /**
  * Plain-data model for a sleep-timer duration preset.
@@ -54,7 +54,7 @@ import com.nextpage.presentation.theme.NextPageTheme
 data class SleepTimerPreset(
     val label: String,
     val minutes: Int,
-    val isEndOfChapter: Boolean = false
+    val isEndOfChapter: Boolean = false,
 )
 
 /**
@@ -107,7 +107,7 @@ fun SleepTimerSheet(
     presets: List<SleepTimerPreset>,
     onPresetSelected: (Int) -> Unit,
     onCancel: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -115,30 +115,31 @@ fun SleepTimerSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 32.dp)
-                .verticalScroll(rememberScrollState())
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 32.dp)
+                    .verticalScroll(rememberScrollState()),
         ) {
             // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = stringResource(R.string.reader_sleep_timer_sheet_title),
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
                 IconButton(onClick = onDismiss) {
                     Icon(
                         imageVector = NextPageIcons.Close,
-                        contentDescription = stringResource(R.string.reader_settings_close)
+                        contentDescription = stringResource(R.string.reader_settings_close),
                     )
                 }
             }
@@ -154,11 +155,12 @@ fun SleepTimerSheet(
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
-                        .padding(vertical = 16.dp, horizontal = 20.dp)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+                            .padding(vertical = 16.dp, horizontal = 20.dp),
                 )
                 Spacer(modifier = Modifier.height(20.dp))
             }
@@ -168,7 +170,7 @@ fun SleepTimerSheet(
                 text = if (isActive) stringResource(R.string.reader_sleep_timer_change_duration) else stringResource(R.string.reader_sleep_timer_choose_duration),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
             )
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -180,14 +182,14 @@ fun SleepTimerSheet(
                 if (timePresets.isNotEmpty()) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         timePresets.forEach { preset ->
                             TimerPresetChip(
                                 label = preset.label,
                                 showUnit = true,
                                 onClick = { onPresetSelected(preset.minutes) },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
                             )
                         }
                     }
@@ -198,7 +200,7 @@ fun SleepTimerSheet(
                     EndOfChapterChip(
                         label = preset.label,
                         description = stringResource(R.string.reader_sleep_timer_end_of_chapter_desc),
-                        onClick = { onPresetSelected(preset.minutes) }
+                        onClick = { onPresetSelected(preset.minutes) },
                     )
                 }
             }
@@ -210,13 +212,14 @@ fun SleepTimerSheet(
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.error,
                     fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable { onCancel() }
-                        .background(MaterialTheme.colorScheme.error.copy(alpha = 0.08f))
-                        .padding(vertical = 14.dp, horizontal = 20.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onCancel() }
+                            .background(MaterialTheme.colorScheme.error.copy(alpha = 0.08f))
+                            .padding(vertical = 14.dp, horizontal = 20.dp),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 )
             }
         }
@@ -228,29 +231,30 @@ private fun TimerPresetChip(
     label: String,
     showUnit: Boolean = true,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .border(1.5.dp, Color.Transparent, RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .padding(vertical = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .border(1.5.dp, Color.Transparent, RoundedCornerShape(12.dp))
+                .clickable(onClick = onClick)
+                .padding(vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
             text = label,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.primary,
         )
         if (showUnit) {
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = "min",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -261,42 +265,44 @@ private fun EndOfChapterChip(
     label: String,
     description: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-        tonalElevation = 0.dp
+        tonalElevation = 0.dp,
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // Chapter icon
             Icon(
                 imageVector = NextPageIcons.ArrowForward,
                 contentDescription = label,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(24.dp),
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = label,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
                 )
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -310,16 +316,17 @@ private fun SleepTimerSheetDarkPreview() {
         SleepTimerSheet(
             isActive = true,
             remainingFormatted = "04:32",
-            presets = listOf(
-                SleepTimerPreset(label = "5", minutes = 5),
-                SleepTimerPreset(label = "10", minutes = 10),
-                SleepTimerPreset(label = "15", minutes = 15),
-                SleepTimerPreset(label = "30", minutes = 30),
-                SleepTimerPreset(label = "End of chapter", minutes = 0, isEndOfChapter = true)
-            ),
+            presets =
+                listOf(
+                    SleepTimerPreset(label = "5", minutes = 5),
+                    SleepTimerPreset(label = "10", minutes = 10),
+                    SleepTimerPreset(label = "15", minutes = 15),
+                    SleepTimerPreset(label = "30", minutes = 30),
+                    SleepTimerPreset(label = "End of chapter", minutes = 0, isEndOfChapter = true),
+                ),
             onPresetSelected = {},
             onCancel = {},
-            onDismiss = {}
+            onDismiss = {},
         )
     }
 }
@@ -331,16 +338,17 @@ private fun SleepTimerSheetLightPreview() {
         SleepTimerSheet(
             isActive = true,
             remainingFormatted = "04:32",
-            presets = listOf(
-                SleepTimerPreset(label = "5", minutes = 5),
-                SleepTimerPreset(label = "10", minutes = 10),
-                SleepTimerPreset(label = "15", minutes = 15),
-                SleepTimerPreset(label = "30", minutes = 30),
-                SleepTimerPreset(label = "End of chapter", minutes = 0, isEndOfChapter = true)
-            ),
+            presets =
+                listOf(
+                    SleepTimerPreset(label = "5", minutes = 5),
+                    SleepTimerPreset(label = "10", minutes = 10),
+                    SleepTimerPreset(label = "15", minutes = 15),
+                    SleepTimerPreset(label = "30", minutes = 30),
+                    SleepTimerPreset(label = "End of chapter", minutes = 0, isEndOfChapter = true),
+                ),
             onPresetSelected = {},
             onCancel = {},
-            onDismiss = {}
+            onDismiss = {},
         )
     }
 }

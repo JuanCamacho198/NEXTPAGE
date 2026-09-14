@@ -17,7 +17,6 @@ import java.io.FileOutputStream
  * - Graceful failure on nonexistent files
  */
 class ContentHashTest {
-
     @Test
     fun computeSha256_returnsCorrectHashForKnownContent() {
         val file = createTempFileWithContent("Hello, World!")
@@ -29,7 +28,7 @@ class ContentHashTest {
         // dffd6021bb2bd5b0af676290809ec3a53191dd81c7f70a4b28688a362182986f
         assertEquals(
             "sha256:dffd6021bb2bd5b0af676290809ec3a53191dd81c7f70a4b28688a362182986f",
-            hash
+            hash,
         )
     }
 
@@ -77,7 +76,7 @@ class ContentHashTest {
         assertNotNull(hash2)
         assertTrue(
             "Different content should produce different hash",
-            hash1 != hash2
+            hash1 != hash2,
         )
     }
 

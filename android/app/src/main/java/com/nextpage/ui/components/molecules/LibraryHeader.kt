@@ -22,10 +22,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
+import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.ui.components.atoms.NextPageAvatar
 import com.nextpage.ui.components.atoms.NextPageTextField
 import com.nextpage.ui.icons.NextPageIcons
-import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Top header for the library screen: user avatar + large title on the
@@ -72,15 +72,16 @@ fun LibraryHeader(
     avatarImageUrl: String? = null,
     avatarInitials: String = "NP",
     onAvatarClick: (() -> Unit)? = null,
-    avatarContentDescription: String? = null
+    avatarContentDescription: String? = null,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 24.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 24.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 NextPageAvatar(
@@ -88,13 +89,13 @@ fun LibraryHeader(
                     initials = avatarInitials,
                     size = 40.dp,
                     onClick = onAvatarClick,
-                    contentDescription = avatarContentDescription
+                    contentDescription = avatarContentDescription,
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
                     text = stringResource(R.string.nav_library),
                     style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -102,13 +103,13 @@ fun LibraryHeader(
                     Icon(
                         imageVector = NextPageIcons.Search,
                         contentDescription = stringResource(R.string.library_search_placeholder),
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(20.dp),
                     )
                 }
                 IconButton(onClick = onFilterToggle) {
                     Icon(
                         imageVector = NextPageIcons.FilterList,
-                        contentDescription = stringResource(R.string.library_filter_label)
+                        contentDescription = stringResource(R.string.library_filter_label),
                     )
                 }
             }
@@ -120,9 +121,10 @@ fun LibraryHeader(
                 placeholder = stringResource(R.string.library_search_placeholder),
                 singleLine = true,
                 shape = RoundedCornerShape(24.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
             )
             Spacer(modifier = Modifier.height(8.dp))
         }
@@ -138,7 +140,7 @@ private fun LibraryHeaderDarkPreview() {
             onSearchToggle = {},
             searchQuery = "",
             onSearchQueryChange = {},
-            onFilterToggle = {}
+            onFilterToggle = {},
         )
     }
 }
@@ -152,7 +154,7 @@ private fun LibraryHeaderLightPreview() {
             onSearchToggle = {},
             searchQuery = "",
             onSearchQueryChange = {},
-            onFilterToggle = {}
+            onFilterToggle = {},
         )
     }
 }

@@ -44,9 +44,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
+import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.presentation.viewmodel.library.BookImportState
 import com.nextpage.ui.icons.NextPageIcons
-import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Animated full-screen import overlay that covers the content area
@@ -64,7 +64,7 @@ import com.nextpage.presentation.theme.NextPageTheme
 @Composable
 fun NextPageImportOverlay(
     importState: BookImportState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val visible = importState !is BookImportState.Idle
 
@@ -73,93 +73,103 @@ fun NextPageImportOverlay(
     val pulseScale by infiniteTransition.animateFloat(
         initialValue = 0.9f,
         targetValue = 1.1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 800, easing = androidx.compose.animation.core.EaseInOutCubic),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulseScale"
+        animationSpec =
+            infiniteRepeatable(
+                animation = tween(durationMillis = 800, easing = androidx.compose.animation.core.EaseInOutCubic),
+                repeatMode = RepeatMode.Reverse,
+            ),
+        label = "pulseScale",
     )
 
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(animationSpec = tween(300)) +
-            scaleIn(
-                initialScale = 0.8f,
-                animationSpec = tween(300, easing = EaseOutCubic)
-            ),
-        exit = fadeOut(animationSpec = tween(200)) +
-            scaleOut(
-                targetScale = 0.8f,
-                animationSpec = tween(200, easing = EaseInCubic)
-            )
+        enter =
+            fadeIn(animationSpec = tween(300)) +
+                scaleIn(
+                    initialScale = 0.8f,
+                    animationSpec = tween(300, easing = EaseOutCubic),
+                ),
+        exit =
+            fadeOut(animationSpec = tween(200)) +
+                scaleOut(
+                    targetScale = 0.8f,
+                    animationSpec = tween(200, easing = EaseInCubic),
+                ),
     ) {
         Box(
-            modifier = modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.5f))
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = { /* consume touches — no dismiss */ }
-                ),
-            contentAlignment = Alignment.Center
+            modifier =
+                modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = { /* consume touches — no dismiss */ },
+                    ),
+            contentAlignment = Alignment.Center,
         ) {
             // ── Centered card ───────────────────────────────────────────
             Card(
-                modifier = Modifier
-                    .widthIn(min = 200.dp, max = 300.dp),
+                modifier =
+                    Modifier
+                        .widthIn(min = 200.dp, max = 300.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                    ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
             ) {
                 Column(
                     modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     // Pulsing upload icon
                     Icon(
                         imageVector = NextPageIcons.Upload,
                         contentDescription = stringResource(R.string.import_overlay_icon_desc),
-                        modifier = Modifier
-                            .size(48.dp)
-                            .graphicsLayer(scaleX = pulseScale, scaleY = pulseScale),
-                        tint = MaterialTheme.colorScheme.primary
+                        modifier =
+                            Modifier
+                                .size(48.dp)
+                                .graphicsLayer(scaleX = pulseScale, scaleY = pulseScale),
+                        tint = MaterialTheme.colorScheme.primary,
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Stage label
-                    val stageText = when (importState) {
-                        is BookImportState.Extracting -> stringResource(R.string.import_state_extracting)
-                        is BookImportState.Analyzing -> stringResource(R.string.import_state_analyzing)
-                        is BookImportState.Saving -> stringResource(R.string.import_state_saving)
-                        else -> ""
-                    }
+                    val stageText =
+                        when (importState) {
+                            is BookImportState.Extracting -> stringResource(R.string.import_state_extracting)
+                            is BookImportState.Analyzing -> stringResource(R.string.import_state_analyzing)
+                            is BookImportState.Saving -> stringResource(R.string.import_state_saving)
+                            else -> ""
+                        }
                     Text(
                         text = stageText,
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Progress bar
-                    val progress = when (importState) {
-                        is BookImportState.Extracting -> importState.progress
-                        is BookImportState.Analyzing -> importState.progress
-                        is BookImportState.Saving -> importState.progress
-                        else -> 0f
-                    }
+                    val progress =
+                        when (importState) {
+                            is BookImportState.Extracting -> importState.progress
+                            is BookImportState.Analyzing -> importState.progress
+                            is BookImportState.Saving -> importState.progress
+                            else -> 0f
+                        }
                     LinearProgressIndicator(
                         progress = { progress },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(4.dp)),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(4.dp)),
                         color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
                     )
                 }
             }
@@ -172,7 +182,7 @@ fun NextPageImportOverlay(
 private fun NextPageImportOverlayDarkPreview() {
     NextPageTheme(darkTheme = true) {
         NextPageImportOverlay(
-            importState = BookImportState.Extracting(progress = 0.6f)
+            importState = BookImportState.Extracting(progress = 0.6f),
         )
     }
 }
@@ -182,7 +192,7 @@ private fun NextPageImportOverlayDarkPreview() {
 private fun NextPageImportOverlayLightPreview() {
     NextPageTheme(darkTheme = false) {
         NextPageImportOverlay(
-            importState = BookImportState.Extracting(progress = 0.6f)
+            importState = BookImportState.Extracting(progress = 0.6f),
         )
     }
 }

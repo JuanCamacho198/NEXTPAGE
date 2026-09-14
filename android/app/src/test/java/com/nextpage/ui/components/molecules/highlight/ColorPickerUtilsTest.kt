@@ -6,7 +6,6 @@ import org.junit.Test
 import kotlin.math.roundToInt
 
 class ColorPickerUtilsTest {
-
     @Test
     fun spectrumColorAt_hue0_blackAtZero() {
         // lightness 0 => black regardless of hue

@@ -17,7 +17,6 @@ import org.junit.Test
  * - locatorFromCfi / locatorToJson / locatorFromJson round-trip
  */
 class LocatorCodecGoldenTest {
-
     @Test
     fun normalizeHref_convertsBackslashes_parityWithTs() {
         assertEquals("a/b/c", LocatorCodec.normalizeHref("a\\b\\c"))
@@ -78,13 +77,14 @@ class LocatorCodecGoldenTest {
 
     @Test
     fun roundTrip_spineHrefs_golden_HistoriaOffset2() {
-        val spineHrefs = listOf(
-            "OEBPS/Text/cover.xhtml",
-            "OEBPS/Text/toc.xhtml",
-            "OEBPS/Text/HM-colombia-1.html",
-            "OEBPS/Text/HM-colombia-2.html",
-            "OEBPS/Text/HM-colombia-3.html"
-        )
+        val spineHrefs =
+            listOf(
+                "OEBPS/Text/cover.xhtml",
+                "OEBPS/Text/toc.xhtml",
+                "OEBPS/Text/HM-colombia-1.html",
+                "OEBPS/Text/HM-colombia-2.html",
+                "OEBPS/Text/HM-colombia-3.html",
+            )
         val cfiForToc0 = "epubcfi(/6/3!/4/2,/1:0,/1:5)"
         val loc = LocatorCodec.locatorFromCfi(spineHrefs, cfiForToc0, LocatorChapterMetric(chapterChars = 1000, charOffset = 250))
         assertNotNull(loc)

@@ -20,7 +20,6 @@ import org.junit.Test
  * is unavailable in local unit tests.
  */
 class BuiltInSourcesTest {
-
     @Test
     fun builtInSources_listsGutendexAndOpenLibrary() {
         assertEquals(2, builtInSources.size)
@@ -58,12 +57,13 @@ class BuiltInSourcesTest {
  * AddonSettingsViewModel.toggle behavior in the same test class family.
  */
 class AddonToggleUnregressedTest {
-
     @Test
     fun addonSettingsUiState_defaultsHaveNoBuiltInRows() {
         // Built-in sources live outside AddonSettingsUiState: no registry row
         // merges into installed addons, so the section can never write state.
-        val state = com.nextpage.presentation.viewmodel.AddonSettingsUiState()
+        val state =
+            com.nextpage.presentation.viewmodel
+                .AddonSettingsUiState()
         assertTrue(state.installed.isEmpty())
         assertTrue(state.consentedIds.isEmpty())
     }

@@ -4,7 +4,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class LastWriteWinsConflictResolverTest {
-
     private val resolver = LastWriteWinsConflictResolver<TestRecord>()
 
     @Test
@@ -111,6 +110,6 @@ class LastWriteWinsConflictResolverTest {
     private data class TestRecord(
         override val recordId: String,
         override val updatedAtEpochMillis: Long,
-        override val deletedAtEpochMillis: Long?
+        override val deletedAtEpochMillis: Long?,
     ) : VersionedSyncRecord
 }

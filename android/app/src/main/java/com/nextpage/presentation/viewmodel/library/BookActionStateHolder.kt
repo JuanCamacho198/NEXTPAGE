@@ -39,7 +39,7 @@ class BookActionStateHolder(
     private val scope: CoroutineScope,
     private val onUiEvent: (UiEvent) -> Unit,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
-    private val onStateChanged: (BookActionState) -> Unit = {}
+    private val onStateChanged: (BookActionState) -> Unit = {},
 ) {
     private val _state = MutableStateFlow(BookActionState())
     val state: StateFlow<BookActionState> = _state.asStateFlow()
@@ -83,7 +83,7 @@ class BookActionStateHolder(
                 },
                 onFailure = { error ->
                     onUiEvent(UiEvent.ShowSnackbar(error.message ?: "Failed to delete book"))
-                }
+                },
             )
         }
     }
@@ -103,7 +103,7 @@ class BookActionStateHolder(
                 },
                 onFailure = { error ->
                     onUiEvent(UiEvent.ShowSnackbar(error.message ?: "Failed to delete book"))
-                }
+                },
             )
         }
     }
@@ -120,7 +120,11 @@ class BookActionStateHolder(
         updateBookStatus(book, BookStatus.PLAN_TO_READ, R.string.library_snackbar_marked_plan_to_read)
     }
 
-    private fun updateBookStatus(book: Book, status: String, successMessageRes: Int) {
+    private fun updateBookStatus(
+        book: Book,
+        status: String,
+        successMessageRes: Int,
+    ) {
         scope.launch(mainDispatcher) {
             val result = libraryRepository.updateBookStatus(book.id, status)
             result.fold(
@@ -129,7 +133,7 @@ class BookActionStateHolder(
                 },
                 onFailure = { error ->
                     onUiEvent(UiEvent.ShowSnackbar(error.message ?: "Failed to update status"))
-                }
+                },
             )
         }
     }
@@ -141,11 +145,12 @@ class BookActionStateHolder(
         _state.update { it.copy(bookToShare = book) }
         onStateChanged(_state.value)
 
-        val mimeType = when (book.format.lowercase()) {
-            "pdf" -> "application/pdf"
-            "epub" -> "application/epub+zip"
-            else -> "*/*"
-        }
+        val mimeType =
+            when (book.format.lowercase()) {
+                "pdf" -> "application/pdf"
+                "epub" -> "application/epub+zip"
+                else -> "*/*"
+            }
         scope.launch(mainDispatcher) {
             onUiEvent(UiEvent.ShareFile(filePath = book.filePath, mimeType = mimeType))
             _state.update { it.copy(bookToShare = null) }

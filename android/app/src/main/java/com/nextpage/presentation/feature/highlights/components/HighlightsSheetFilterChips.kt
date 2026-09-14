@@ -21,14 +21,15 @@ fun HighlightsSheetFilterChips(
     colorFilterLabels: List<Pair<String?, String>>,
     selectedColorFilter: String?,
     onFilterSelected: (String?) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         colorFilterLabels.forEach { (filterValue, label) ->
             val isSelected = selectedColorFilter == filterValue
@@ -38,15 +39,16 @@ fun HighlightsSheetFilterChips(
                 label = {
                     ColorFilterCircle(
                         filterValue = filterValue,
-                        isSelected = isSelected
+                        isSelected = isSelected,
                     )
                 },
-                colors = FilterChipDefaults.filterChipColors(
-                    containerColor = Color.Transparent,
-                    selectedContainerColor = Color.Transparent
-                ),
+                colors =
+                    FilterChipDefaults.filterChipColors(
+                        containerColor = Color.Transparent,
+                        selectedContainerColor = Color.Transparent,
+                    ),
                 shape = RoundedCornerShape(20.dp),
-                modifier = Modifier.semantics { contentDescription = label }
+                modifier = Modifier.semantics { contentDescription = label },
             )
         }
     }

@@ -17,37 +17,39 @@ interface AddonHttpTransport {
     suspend fun fetch(url: String): AddonResource
 }
 
-data class AddonResource(val status: Int, val contentType: String?, val body: ByteArray)
+data class AddonResource(
+    val status: Int,
+    val contentType: String?,
+    val body: ByteArray,
+)
 
 class KtorAddonHttpTransport(
     private val client: HttpClient,
-    private val userAgent: String = ANDROID_USER_AGENT
+    private val userAgent: String = ANDROID_USER_AGENT,
 ) : AddonHttpTransport {
-
-    override suspend fun fetch(url: String): AddonResource {
-        return try {
-            val response = client.get(url) {
-                header(HttpHeaders.UserAgent, userAgent)
-                header(HttpHeaders.Accept, "application/json")
-            }
+    override suspend fun fetch(url: String): AddonResource =
+        try {
+            val response =
+                client.get(url) {
+                    header(HttpHeaders.UserAgent, userAgent)
+                    header(HttpHeaders.Accept, "application/json")
+                }
             AddonResource(
                 status = response.status.value,
                 contentType = response.headers[HttpHeaders.ContentType],
-                body = response.bodyAsBytes()
+                body = response.bodyAsBytes(),
             )
         } catch (err: Throwable) {
             if (err is AddonFetchException) throw err
             throw AddonFetchException(AddonFetchErrorCode.NETWORK, "addon request failed")
         }
-    }
 }
 
 /** Fake for offline tests: returns canned results or throws the given error. */
 class FakeAddonHttpTransport(
     private val result: AddonResource? = null,
-    private val error: Exception? = null
+    private val error: Exception? = null,
 ) : AddonHttpTransport {
-
     var calls = 0
         private set
 

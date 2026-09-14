@@ -50,7 +50,7 @@ fun AuthScreen(
     onAuthenticated: () -> Unit,
     onContinueLocal: () -> Unit,
     onNavigateToRegister: () -> Unit,
-    onNavigateToForgot: () -> Unit
+    onNavigateToForgot: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     LoginScreenContent(
@@ -61,7 +61,7 @@ fun AuthScreen(
         onNavigateToForgot = onNavigateToForgot,
         onGoogleIdToken = viewModel::handleGoogleIdToken,
         onSetError = viewModel::setError,
-        onSignIn = viewModel::signIn
+        onSignIn = viewModel::signIn,
     )
 }
 
@@ -74,7 +74,7 @@ internal fun LoginScreenContent(
     onNavigateToForgot: () -> Unit,
     onGoogleIdToken: (String) -> Unit,
     onSetError: (String) -> Unit,
-    onSignIn: (email: String, password: String) -> Unit
+    onSignIn: (email: String, password: String) -> Unit,
 ) {
     val buttonDisabledReason = resolveGoogleButtonDisabledReason(uiState)
     var email by remember { mutableStateOf("") }
@@ -89,13 +89,18 @@ internal fun LoginScreenContent(
         AuthLogo()
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = buildAnnotatedString {
-                append(stringResource(R.string.auth_welcome_back_prefix))
-                withStyle(SpanStyle(color = NextPageTheme.colors.welcomeBrandBlue)) {
-                    append(" "); append(stringResource(R.string.auth_welcome_back_accent))
-                }
-            },
-            fontSize = 32.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground, textAlign = TextAlign.Center
+            text =
+                buildAnnotatedString {
+                    append(stringResource(R.string.auth_welcome_back_prefix))
+                    withStyle(SpanStyle(color = NextPageTheme.colors.welcomeBrandBlue)) {
+                        append(" ")
+                        append(stringResource(R.string.auth_welcome_back_accent))
+                    }
+                },
+            fontSize = 32.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+            textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(text = stringResource(R.string.auth_login_subtitle), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
@@ -124,13 +129,24 @@ internal fun LoginScreenContent(
 }
 
 @Composable
-fun RegisterScreen(viewModel: AuthViewModel, onAuthenticated: () -> Unit, onNavigateBack: () -> Unit) {
+fun RegisterScreen(
+    viewModel: AuthViewModel,
+    onAuthenticated: () -> Unit,
+    onNavigateBack: () -> Unit,
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     RegisterScreenContent(uiState = uiState, onAuthenticated = onAuthenticated, onNavigateBack = onNavigateBack, onGoogleIdToken = viewModel::handleGoogleIdToken, onSetError = viewModel::setError, onSignUp = viewModel::signUp)
 }
 
 @Composable
-internal fun RegisterScreenContent(uiState: AuthUiState, onAuthenticated: () -> Unit, onNavigateBack: () -> Unit, onGoogleIdToken: (String) -> Unit, onSetError: (String) -> Unit, onSignUp: (email: String, password: String, fullName: String) -> Unit) {
+internal fun RegisterScreenContent(
+    uiState: AuthUiState,
+    onAuthenticated: () -> Unit,
+    onNavigateBack: () -> Unit,
+    onGoogleIdToken: (String) -> Unit,
+    onSetError: (String) -> Unit,
+    onSignUp: (email: String, password: String, fullName: String) -> Unit,
+) {
     var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -157,13 +173,22 @@ internal fun RegisterScreenContent(uiState: AuthUiState, onAuthenticated: () -> 
 }
 
 @Composable
-fun ForgotScreen(viewModel: AuthViewModel, onAuthenticated: () -> Unit, onNavigateBack: () -> Unit) {
+fun ForgotScreen(
+    viewModel: AuthViewModel,
+    onAuthenticated: () -> Unit,
+    onNavigateBack: () -> Unit,
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     ForgotScreenContent(uiState = uiState, onAuthenticated = onAuthenticated, onNavigateBack = onNavigateBack, onResetPassword = viewModel::resetPassword)
 }
 
 @Composable
-internal fun ForgotScreenContent(uiState: AuthUiState, onAuthenticated: () -> Unit, onNavigateBack: () -> Unit, onResetPassword: (email: String) -> Unit) {
+internal fun ForgotScreenContent(
+    uiState: AuthUiState,
+    onAuthenticated: () -> Unit,
+    onNavigateBack: () -> Unit,
+    onResetPassword: (email: String) -> Unit,
+) {
     var email by remember { mutableStateOf("") }
     LaunchedEffect(uiState.currentSession) { if (uiState.currentSession != null) onAuthenticated() }
     AuthScreenScaffold(showBackArrow = true, onNavigateBack = onNavigateBack) {

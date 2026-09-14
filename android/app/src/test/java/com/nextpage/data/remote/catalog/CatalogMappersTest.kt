@@ -10,7 +10,6 @@ import org.junit.Test
 
 /** Offline mirror of the desktop `catalog.test.ts` mapper suite (same fixtures). */
 class CatalogMappersTest {
-
     private val json = Json { ignoreUnknownKeys = true }
 
     private val gutendexRecords: List<GutendexRecord> by lazy {
@@ -31,18 +30,20 @@ class CatalogMappersTest {
     // ── resolveDownloadUrl ──────────────────────────────────────────
 
     @Test fun resolveDownloadUrl_prefersEpubWhenRequested() {
-        val formats = mapOf(
-            "application/epub+zip" to "https://example.com/book.epub",
-            "text/plain" to "https://example.com/book.txt"
-        )
+        val formats =
+            mapOf(
+                "application/epub+zip" to "https://example.com/book.epub",
+                "text/plain" to "https://example.com/book.txt",
+            )
         assertEquals("https://example.com/book.epub", resolveDownloadUrl(formats, true))
     }
 
     @Test fun resolveDownloadUrl_fallsBackToTxtFirstWhenEpubNotPreferred() {
-        val formats = mapOf(
-            "application/epub+zip" to "https://example.com/book.epub",
-            "text/plain" to "https://example.com/book.txt"
-        )
+        val formats =
+            mapOf(
+                "application/epub+zip" to "https://example.com/book.epub",
+                "text/plain" to "https://example.com/book.txt",
+            )
         assertEquals("https://example.com/book.txt", resolveDownloadUrl(formats, false))
     }
 

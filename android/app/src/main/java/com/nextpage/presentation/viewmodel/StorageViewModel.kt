@@ -32,7 +32,7 @@ data class StorageUiState(
     val cache: CacheUsage = CacheUsage(),
     val books: List<BookStorageItem> = emptyList(),
     val bookToDelete: Book? = null,
-    val isClearingCache: Boolean = false
+    val isClearingCache: Boolean = false,
 ) {
     /** Total bytes held by the library books. */
     val booksTotalBytes: Long get() = books.sumOf { it.sizeBytes }
@@ -57,9 +57,8 @@ class StorageViewModel(
     private val storageRepository: StorageRepository,
     private val cacheRepository: CacheRepository,
     private val libraryRepository: LibraryRepository,
-    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
+    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
 ) : ViewModel() {
-
     private val mutableUiState = MutableStateFlow(StorageUiState())
 
     /** Raw [StorageUiState] for the Storage screen. */
@@ -140,9 +139,10 @@ class StorageViewModel(
         }
     }
 
-    private suspend fun loadCache(): CacheUsage = CacheUsage(
-        discoverCacheBytes = cacheRepository.discoverCacheSizeBytes(),
-        imageCacheBytes = cacheRepository.imageCacheSizeBytes(),
-        readerCacheBytes = cacheRepository.readerCacheSizeBytes()
-    )
+    private suspend fun loadCache(): CacheUsage =
+        CacheUsage(
+            discoverCacheBytes = cacheRepository.discoverCacheSizeBytes(),
+            imageCacheBytes = cacheRepository.imageCacheSizeBytes(),
+            readerCacheBytes = cacheRepository.readerCacheSizeBytes(),
+        )
 }

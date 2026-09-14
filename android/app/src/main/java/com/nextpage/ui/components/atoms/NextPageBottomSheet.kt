@@ -55,27 +55,29 @@ fun NextPageBottomSheet(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-    content: @Composable ColumnScope.() -> Unit
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        modifier = modifier
+        modifier = modifier,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 24.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 24.dp),
         ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
                 textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp)
-                    .align(Alignment.CenterHorizontally)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
+                        .align(Alignment.CenterHorizontally),
             )
             content()
         }
@@ -89,11 +91,11 @@ private fun NextPageBottomSheetDarkPreview() {
     NextPageTheme(darkTheme = true) {
         NextPageBottomSheet(
             title = "Sort library",
-            onDismiss = {}
+            onDismiss = {},
         ) {
             Text(
                 text = "Recently added\nTitle A-Z\nAuthor",
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }
@@ -106,11 +108,11 @@ private fun NextPageBottomSheetLightPreview() {
     NextPageTheme(darkTheme = false) {
         NextPageBottomSheet(
             title = "Sort library",
-            onDismiss = {}
+            onDismiss = {},
         ) {
             Text(
                 text = "Recently added\nTitle A-Z\nAuthor",
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }

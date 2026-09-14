@@ -24,9 +24,8 @@ class DriveCoordinator(
     private val context: Context,
     private val tokenStore: DriveTokenStore,
     private val tokenApi: DriveTokenApi,
-    private val clientId: String
+    private val clientId: String,
 ) {
-
     private val credentialInitializer: com.google.api.client.http.HttpRequestInitializer =
         com.google.api.client.http.HttpRequestInitializer { request ->
             val token = tokenStore.accessToken()
@@ -46,9 +45,11 @@ class DriveCoordinator(
     fun buildDataSource(): GoogleDriveStorageRemoteDataSource {
         val transport = GoogleNetHttpTransport.newTrustedTransport()
         val jsonFactory = GsonFactory.getDefaultInstance()
-        val driveService = Drive.Builder(transport, jsonFactory, credentialInitializer)
-            .setApplicationName("NextPage")
-            .build()
+        val driveService =
+            Drive
+                .Builder(transport, jsonFactory, credentialInitializer)
+                .setApplicationName("NextPage")
+                .build()
         return GoogleDriveStorageRemoteDataSource(driveService)
     }
 
@@ -66,8 +67,8 @@ class DriveCoordinator(
                     category = ErrorCategory.AUTH,
                     code = "DRIVE_NO_REFRESH_TOKEN",
                     message = "Drive refresh token is missing. Re-authorize Drive.",
-                    component = COMPONENT
-                )
+                    component = COMPONENT,
+                ),
             )
         }
         return tokenApi.refresh(clientId, refreshToken).map { pair ->

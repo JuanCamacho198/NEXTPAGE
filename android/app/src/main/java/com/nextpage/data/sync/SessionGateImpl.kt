@@ -29,20 +29,20 @@ import kotlinx.coroutines.flow.asSharedFlow
 class SessionGateImpl(
     private val sessionManager: SessionManager,
 ) : SessionGate {
-
     @Volatile
     private var live: Boolean = false
 
-    private val _sessionEvents = MutableSharedFlow<SessionEvent>(
-        replay = 0,
-        extraBufferCapacity = 8,
-        onBufferOverflow = BufferOverflow.DROP_OLDEST,
-    )
+    private val _sessionEvents =
+        MutableSharedFlow<SessionEvent>(
+            replay = 0,
+            extraBufferCapacity = 8,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
 
     override fun hasLiveSession(): Boolean = live
 
-    override suspend fun ensureFreshSession(): Result<AuthSession> {
-        return try {
+    override suspend fun ensureFreshSession(): Result<AuthSession> =
+        try {
             val result = sessionManager.ensureFreshSession()
             if (result.isSuccess) {
                 live = true
@@ -58,7 +58,6 @@ class SessionGateImpl(
             _sessionEvents.tryEmit(SessionEvent.Expired(t.message ?: t::class.simpleName.orEmpty()))
             Result.failure(t)
         }
-    }
 
     override fun sessionEvents(): Flow<SessionEvent> = _sessionEvents.asSharedFlow()
 

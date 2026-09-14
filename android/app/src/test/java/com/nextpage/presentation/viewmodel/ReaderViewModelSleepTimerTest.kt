@@ -10,7 +10,6 @@ import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -26,55 +25,59 @@ import org.junit.Test
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReaderViewModelSleepTimerTest {
-
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
     @Test
-    fun `timer start lands on the slice flow`() = runTest {
-        val viewModel = createViewModel(testScheduler)
+    fun `timer start lands on the slice flow`() =
+        runTest {
+            val viewModel = createViewModel(testScheduler)
 
-        viewModel.sleepTimerManager.startTimer(SleepTimerManager.END_OF_CHAPTER)
+            viewModel.sleepTimerManager.startTimer(SleepTimerManager.END_OF_CHAPTER)
 
-        val slice = viewModel.sleepTimerUiState.value
-        assertTrue(slice.isActive)
-        assertTrue(slice.isEndOfChapter)
-    }
-
-    @Test
-    fun `chapter change reaches the timer through the glue line`() = runTest {
-        val viewModel = createViewModel(testScheduler)
-        viewModel.lifecycleHolder.setEpubStateForTest(
-            chapters = listOf(
-                BookChapter(0, "c1", "Ch 1", "ch1.xhtml"),
-                BookChapter(1, "c2", "Ch 2", "ch2.xhtml"),
-                BookChapter(2, "c3", "Ch 3", "ch3.xhtml")
-            ),
-            currentChapterIndex = 0
-        )
-        viewModel.sleepTimerManager.startTimer(SleepTimerManager.END_OF_CHAPTER)
-
-        // Session-owned navigation; the glue forwards the chapter event.
-        viewModel.lifecycleHolder.goToChapter(1)
-
-        assertTrue(viewModel.sleepTimerUiState.value.isFinished)
-    }
+            val slice = viewModel.sleepTimerUiState.value
+            assertTrue(slice.isActive)
+            assertTrue(slice.isEndOfChapter)
+        }
 
     @Test
-    fun `chapter change without an active timer is a no-op`() = runTest {
-        val viewModel = createViewModel(testScheduler)
-        viewModel.lifecycleHolder.setEpubStateForTest(
-            chapters = listOf(
-                BookChapter(0, "c1", "Ch 1", "ch1.xhtml"),
-                BookChapter(1, "c2", "Ch 2", "ch2.xhtml")
-            ),
-            currentChapterIndex = 0
-        )
+    fun `chapter change reaches the timer through the glue line`() =
+        runTest {
+            val viewModel = createViewModel(testScheduler)
+            viewModel.lifecycleHolder.setEpubStateForTest(
+                chapters =
+                    listOf(
+                        BookChapter(0, "c1", "Ch 1", "ch1.xhtml"),
+                        BookChapter(1, "c2", "Ch 2", "ch2.xhtml"),
+                        BookChapter(2, "c3", "Ch 3", "ch3.xhtml"),
+                    ),
+                currentChapterIndex = 0,
+            )
+            viewModel.sleepTimerManager.startTimer(SleepTimerManager.END_OF_CHAPTER)
 
-        viewModel.lifecycleHolder.goToChapter(1)
+            // Session-owned navigation; the glue forwards the chapter event.
+            viewModel.lifecycleHolder.goToChapter(1)
 
-        assertFalse(viewModel.sleepTimerUiState.value.isFinished)
-    }
+            assertTrue(viewModel.sleepTimerUiState.value.isFinished)
+        }
+
+    @Test
+    fun `chapter change without an active timer is a no-op`() =
+        runTest {
+            val viewModel = createViewModel(testScheduler)
+            viewModel.lifecycleHolder.setEpubStateForTest(
+                chapters =
+                    listOf(
+                        BookChapter(0, "c1", "Ch 1", "ch1.xhtml"),
+                        BookChapter(1, "c2", "Ch 2", "ch2.xhtml"),
+                    ),
+                currentChapterIndex = 0,
+            )
+
+            viewModel.lifecycleHolder.goToChapter(1)
+
+            assertFalse(viewModel.sleepTimerUiState.value.isFinished)
+        }
 
     @Test
     fun `timer pass-through delegates are deleted`() {
@@ -96,7 +99,7 @@ class ReaderViewModelSleepTimerTest {
             readingStatsRepository = FakeReadingStatsRepository(),
             updateReadingProgressUseCase = UpdateReadingProgressUseCase(fake),
             defaultBookId = null,
-            mainDispatcher = dispatcher
+            mainDispatcher = dispatcher,
         )
     }
 }

@@ -13,7 +13,6 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Locator
-import org.readium.r2.shared.publication.Publication
 
 /**
  * Chapter/PDF navigation: goToChapter, goToNext/Previous, goToPdfPage, onTapZone,
@@ -28,9 +27,8 @@ class ReadingNavigator(
     private val onChapterChanged: () -> Unit = {},
     private val onNavigateToLocator: (Locator) -> Unit = {},
     private val onSelectionCleared: () -> Unit = {},
-    private val onProgressDisplay: () -> Unit = {}
+    private val onProgressDisplay: () -> Unit = {},
 ) : Clearable {
-
     companion object {
         private const val MAX_PROGRESS_PERCENT = 99f
     }
@@ -68,7 +66,10 @@ class ReadingNavigator(
         }
     }
 
-    fun spineIndexToListPosition(spineIndex: Int, chapters: List<BookChapter>): Int? {
+    fun spineIndexToListPosition(
+        spineIndex: Int,
+        chapters: List<BookChapter>,
+    ): Int? {
         chapters.indexOfFirst { it.index == spineIndex }.takeIf { it >= 0 }?.let { return it }
         return null
     }
@@ -77,17 +78,23 @@ class ReadingNavigator(
         val currentState = state.value
         val publication = currentState.readiumPublication ?: return
         val chapters = currentState.chapters
-        val link: Link? = when {
-            listPosition in chapters.indices -> {
-                val chapter = chapters[listPosition]
-                val hrefBase = chapter.href.substringBefore('#').substringBefore('?')
-                val normFile = hrefBase.substringAfterLast('/').lowercase()
-                publication.readingOrder.firstOrNull {
-                    it.href.toString().substringAfterLast('/').substringBefore('#').substringBefore('?').lowercase() == normFile
-                } ?: publication.readingOrder.getOrNull(chapter.index)
-            }
-            else -> publication.readingOrder.getOrNull(listPosition)
-        } ?: return
+        val link: Link? =
+            when {
+                listPosition in chapters.indices -> {
+                    val chapter = chapters[listPosition]
+                    val hrefBase = chapter.href.substringBefore('#').substringBefore('?')
+                    val normFile = hrefBase.substringAfterLast('/').lowercase()
+                    publication.readingOrder.firstOrNull {
+                        it.href
+                            .toString()
+                            .substringAfterLast('/')
+                            .substringBefore('#')
+                            .substringBefore('?')
+                            .lowercase() == normFile
+                    } ?: publication.readingOrder.getOrNull(chapter.index)
+                }
+                else -> publication.readingOrder.getOrNull(listPosition)
+            } ?: return
         val roIndex = publication.readingOrder.indexOf(link).takeIf { it >= 0 } ?: listPosition
         val total = publication.readingOrder.size.coerceAtLeast(1)
         val totalProgression = (roIndex.toFloat() / total).coerceIn(0f, 1f)
@@ -154,35 +161,48 @@ class ReadingNavigator(
             }
             else -> {
                 val chapters = currentState.chapters
-                val link: Link = when {
-                    currentState.currentChapterIndex in chapters.indices -> {
-                        val chapter = chapters[currentState.currentChapterIndex]
-                        val hrefBase = chapter.href.substringBefore('#').substringBefore('?')
-                        val normFile = hrefBase.substringAfterLast('/').lowercase()
-                        publication.readingOrder.firstOrNull {
-                            it.href.toString().substringAfterLast('/').substringBefore('#').substringBefore('?').lowercase() == normFile
-                        } ?: publication.readingOrder.getOrNull(chapter.index)
-                        ?: publication.readingOrder.getOrNull(currentState.currentChapterIndex)
-                    }
-                    else -> publication.readingOrder.getOrNull(currentState.currentChapterIndex)
-                } ?: return
+                val link: Link =
+                    when {
+                        currentState.currentChapterIndex in chapters.indices -> {
+                            val chapter = chapters[currentState.currentChapterIndex]
+                            val hrefBase = chapter.href.substringBefore('#').substringBefore('?')
+                            val normFile = hrefBase.substringAfterLast('/').lowercase()
+                            publication.readingOrder.firstOrNull {
+                                it.href
+                                    .toString()
+                                    .substringAfterLast('/')
+                                    .substringBefore('#')
+                                    .substringBefore('?')
+                                    .lowercase() == normFile
+                            } ?: publication.readingOrder.getOrNull(chapter.index)
+                                ?: publication.readingOrder.getOrNull(currentState.currentChapterIndex)
+                        }
+                        else -> publication.readingOrder.getOrNull(currentState.currentChapterIndex)
+                    } ?: return
                 val roIndex = publication.readingOrder.indexOf(link).takeIf { it >= 0 } ?: currentState.currentChapterIndex
-                val totalProgression = if (publication.readingOrder.isNotEmpty()) {
-                    roIndex.toFloat() / publication.readingOrder.size
-                } else 0f
+                val totalProgression =
+                    if (publication.readingOrder.isNotEmpty()) {
+                        roIndex.toFloat() / publication.readingOrder.size
+                    } else {
+                        0f
+                    }
                 emitEpubNavigateLocator(currentState.currentChapterIndex, totalProgression, link)
             }
         }
     }
 
-    private fun emitPdfNavigateLocator(pageIndex: Int, link: Link? = null) {
+    private fun emitPdfNavigateLocator(
+        pageIndex: Int,
+        link: Link? = null,
+    ) {
         val publication = state.value.readiumPublication ?: return
         val resolvedLink = link ?: publication.readingOrder.getOrNull(pageIndex) ?: return
-        val json = JSONObject().apply {
-            put("href", resolvedLink.href.toString())
-            put("mediaType", resolvedLink.mediaType?.toString() ?: "application/pdf")
-            put("locations", JSONObject().apply { put("position", pageIndex + 1) })
-        }
+        val json =
+            JSONObject().apply {
+                put("href", resolvedLink.href.toString())
+                put("mediaType", resolvedLink.mediaType?.toString() ?: "application/pdf")
+                put("locations", JSONObject().apply { put("position", pageIndex + 1) })
+            }
         val locator = Locator.fromJSON(json) ?: return
         scope.launch(mainDispatcher) { onNavigateToLocator(locator) }
     }
@@ -190,23 +210,30 @@ class ReadingNavigator(
     private fun emitEpubNavigateLocator(
         chapterIndex: Int,
         totalProgression: Float,
-        link: Link? = null
+        link: Link? = null,
     ) {
         val publication = state.value.readiumPublication ?: return
         val resolvedLink = link ?: publication.readingOrder.getOrNull(chapterIndex) ?: return
-        val json = JSONObject().apply {
-            put("href", resolvedLink.href.toString())
-            put("type", resolvedLink.mediaType?.toString() ?: "application/xhtml+xml")
-            put("locations", JSONObject().apply {
-                put("progression", 0.0)
-                put("totalProgression", totalProgression.toDouble().coerceIn(0.0, 1.0))
-            })
-        }
+        val json =
+            JSONObject().apply {
+                put("href", resolvedLink.href.toString())
+                put("type", resolvedLink.mediaType?.toString() ?: "application/xhtml+xml")
+                put(
+                    "locations",
+                    JSONObject().apply {
+                        put("progression", 0.0)
+                        put("totalProgression", totalProgression.toDouble().coerceIn(0.0, 1.0))
+                    },
+                )
+            }
         val locator = Locator.fromJSON(json) ?: return
         scope.launch(mainDispatcher) { onNavigateToLocator(locator) }
     }
 
-    private fun updatePdfProgress(currentPage: Int, totalPages: Int) {
+    private fun updatePdfProgress(
+        currentPage: Int,
+        totalPages: Int,
+    ) {
         val bookId = state.value.selectedBookId ?: return
         if (totalPages > 0) {
             val percentage = (((currentPage + 1).toFloat() / totalPages) * 100f).coerceIn(0f, 100f)
@@ -282,7 +309,12 @@ class ReadingNavigator(
             if (page != null) goToPdfPage(page)
         } else {
             val chapterMatch = Regex("/6/(\\d+)").find(cfiRange)
-            val spineIndex = chapterMatch?.groupValues?.getOrNull(1)?.toIntOrNull()?.minus(1)
+            val spineIndex =
+                chapterMatch
+                    ?.groupValues
+                    ?.getOrNull(1)
+                    ?.toIntOrNull()
+                    ?.minus(1)
             if (spineIndex != null) {
                 val chapters = state.value.chapters
                 val listPos = chapters.indexOfFirst { it.index == spineIndex }.takeIf { it >= 0 }

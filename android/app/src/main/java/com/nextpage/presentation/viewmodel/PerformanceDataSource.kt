@@ -6,7 +6,10 @@ package com.nextpage.presentation.viewmodel
  */
 interface PerformanceDataSource {
     fun generateTimings(): List<PerformanceTiming>
+
     suspend fun loadResources(): PerformanceResources
+
     fun loadSyncStatus(): PerformanceSyncStatus
+
     fun loadDiagnostics(): PerformanceDiagnostics
 }

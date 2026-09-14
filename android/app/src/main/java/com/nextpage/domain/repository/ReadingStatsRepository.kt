@@ -18,7 +18,10 @@ interface ReadingStatsRepository {
      */
     suspend fun getDailyActivity(userId: String? = null): List<DailyReadingActivity>
 
-    suspend fun updateReadingTime(bookId: String, additionalMinutes: Long)
+    suspend fun updateReadingTime(
+        bookId: String,
+        additionalMinutes: Long,
+    )
 
     suspend fun deleteStats(bookId: String)
 
@@ -31,7 +34,7 @@ interface ReadingStatsRepository {
         bookId: String,
         startTimeEpochMillis: Long,
         durationMinutes: Int,
-        userId: String = ""
+        userId: String = "",
     ) = Unit
 }
 
@@ -39,5 +42,5 @@ data class ReadingStatsData(
     val bookId: String,
     val totalMinutesRead: Long,
     val lastReadDateEpochMillis: Long,
-    val sessionsCount: Int
+    val sessionsCount: Int,
 )

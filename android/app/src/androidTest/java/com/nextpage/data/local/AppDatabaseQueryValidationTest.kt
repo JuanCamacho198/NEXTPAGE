@@ -16,9 +16,9 @@ import com.nextpage.data.local.entity.ReadingSessionEntity
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
-import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -36,13 +36,13 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class AppDatabaseQueryValidationTest {
-
     @get:Rule
-    val migrationHelper = MigrationTestHelper(
-        InstrumentationRegistry.getInstrumentation(),
-        AppDatabase::class.java.canonicalName,
-        FrameworkSQLiteOpenHelperFactory()
-    )
+    val migrationHelper =
+        MigrationTestHelper(
+            InstrumentationRegistry.getInstrumentation(),
+            AppDatabase::class.java.canonicalName,
+            FrameworkSQLiteOpenHelperFactory(),
+        )
 
     private lateinit var db: AppDatabase
 
@@ -65,58 +65,61 @@ class AppDatabaseQueryValidationTest {
      * FTS5 virtual table + triggers are created in the RoomDatabase.Callback
      * because the FTS5 content= link + triggers are not part of the Room schema.
      */
-    private fun createInMemoryDb(): AppDatabase {
-        return Room.inMemoryDatabaseBuilder(
-            InstrumentationRegistry.getInstrumentation().targetContext,
-            AppDatabase::class.java
-        )
-            .allowMainThreadQueries()
-            .addCallback(object : RoomDatabase.Callback() {
-                override fun onCreate(connection: SupportSQLiteDatabase) {
-                    super.onCreate(connection)
-                    connection.execSQL(
-                        """
-                        CREATE VIRTUAL TABLE IF NOT EXISTS dictionary_words_fts USING fts5(
-                            word, definition, content=dictionary_words, content_rowid=rowid
+    private fun createInMemoryDb(): AppDatabase =
+        Room
+            .inMemoryDatabaseBuilder(
+                InstrumentationRegistry.getInstrumentation().targetContext,
+                AppDatabase::class.java,
+            ).allowMainThreadQueries()
+            .addCallback(
+                object : RoomDatabase.Callback() {
+                    override fun onCreate(connection: SupportSQLiteDatabase) {
+                        super.onCreate(connection)
+                        connection.execSQL(
+                            """
+                            CREATE VIRTUAL TABLE IF NOT EXISTS dictionary_words_fts USING fts5(
+                                word, definition, content=dictionary_words, content_rowid=rowid
+                            )
+                            """.trimIndent(),
                         )
-                        """.trimIndent()
-                    )
-                    connection.execSQL(
-                        """
-                        CREATE TRIGGER IF NOT EXISTS dict_ai AFTER INSERT ON dictionary_words BEGIN
-                            INSERT INTO dictionary_words_fts(rowid, word, definition)
-                            VALUES (new.rowid, new.word, new.definition);
-                        END
-                        """.trimIndent()
-                    )
-                    connection.execSQL(
-                        """
-                        CREATE TRIGGER IF NOT EXISTS dict_ad AFTER DELETE ON dictionary_words BEGIN
-                            INSERT INTO dictionary_words_fts(dictionary_words_fts, rowid, word, definition)
-                            VALUES ('delete', old.rowid, old.word, old.definition);
-                        END
-                        """.trimIndent()
-                    )
-                    connection.execSQL(
-                        """
-                        CREATE TRIGGER IF NOT EXISTS dict_au AFTER UPDATE ON dictionary_words BEGIN
-                            INSERT INTO dictionary_words_fts(dictionary_words_fts, rowid, word, definition)
-                            VALUES ('delete', old.rowid, old.word, old.definition);
-                            INSERT INTO dictionary_words_fts(rowid, word, definition)
-                            VALUES (new.rowid, new.word, new.definition);
-                        END
-                        """.trimIndent()
-                    )
-                }
-            })
-            .build()
-    }
+                        connection.execSQL(
+                            """
+                            CREATE TRIGGER IF NOT EXISTS dict_ai AFTER INSERT ON dictionary_words BEGIN
+                                INSERT INTO dictionary_words_fts(rowid, word, definition)
+                                VALUES (new.rowid, new.word, new.definition);
+                            END
+                            """.trimIndent(),
+                        )
+                        connection.execSQL(
+                            """
+                            CREATE TRIGGER IF NOT EXISTS dict_ad AFTER DELETE ON dictionary_words BEGIN
+                                INSERT INTO dictionary_words_fts(dictionary_words_fts, rowid, word, definition)
+                                VALUES ('delete', old.rowid, old.word, old.definition);
+                            END
+                            """.trimIndent(),
+                        )
+                        connection.execSQL(
+                            """
+                            CREATE TRIGGER IF NOT EXISTS dict_au AFTER UPDATE ON dictionary_words BEGIN
+                                INSERT INTO dictionary_words_fts(dictionary_words_fts, rowid, word, definition)
+                                VALUES ('delete', old.rowid, old.word, old.definition);
+                                INSERT INTO dictionary_words_fts(rowid, word, definition)
+                                VALUES (new.rowid, new.word, new.definition);
+                            END
+                            """.trimIndent(),
+                        )
+                    }
+                },
+            ).build()
 
     /**
      * Asserts that EXPLAIN QUERY PLAN for [query] uses [expectedIndex] in its detail column.
      * Uses substring match on `USING INDEX <expectedIndex>` to be robust to formatting variations.
      */
-    private fun assertUsesIndex(query: String, expectedIndex: String) {
+    private fun assertUsesIndex(
+        query: String,
+        expectedIndex: String,
+    ) {
         val details = mutableListOf<String>()
         db.openHelper.writableDatabase.query("EXPLAIN QUERY PLAN $query").use { cursor ->
             val detailCol = cursor.getColumnIndex("detail")
@@ -130,358 +133,418 @@ class AppDatabaseQueryValidationTest {
         assertTrue(
             "Expected EXPLAIN QUERY PLAN to contain '$needle' for query:\n  $query\n" +
                 "but got plan:\n$planOutput",
-            details.any { it.contains(needle) }
+            details.any { it.contains(needle) },
         )
     }
 
     // ────────────────────── Phase 2: Composite Indexes ──────────────────────
 
     @Test
-    fun explainQueryPlan_books_usesIndex() = runTest {
-        // Seed 2 books with distinct updated_at timestamps
-        db.bookDao().upsert(
-            BookEntity(
-                id = "b-1", title = "B1", author = "A1", coverPath = null,
-                filePath = "/b1.epub", format = "epub",
-                updatedAtEpochMillis = 100L
+    fun explainQueryPlan_books_usesIndex() =
+        runTest {
+            // Seed 2 books with distinct updated_at timestamps
+            db.bookDao().upsert(
+                BookEntity(
+                    id = "b-1",
+                    title = "B1",
+                    author = "A1",
+                    coverPath = null,
+                    filePath = "/b1.epub",
+                    format = "epub",
+                    updatedAtEpochMillis = 100L,
+                ),
             )
-        )
-        db.bookDao().upsert(
-            BookEntity(
-                id = "b-2", title = "B2", author = "A2", coverPath = null,
-                filePath = "/b2.epub", format = "epub",
-                updatedAtEpochMillis = 200L
+            db.bookDao().upsert(
+                BookEntity(
+                    id = "b-2",
+                    title = "B2",
+                    author = "A2",
+                    coverPath = null,
+                    filePath = "/b2.epub",
+                    format = "epub",
+                    updatedAtEpochMillis = 200L,
+                ),
             )
-        )
 
-        // R1: observeAllBooks query
-        assertUsesIndex(
-            query = "SELECT * FROM books WHERE deleted_at IS NULL ORDER BY updated_at DESC",
-            expectedIndex = "index_books_deleted_at_updated_at"
-        )
-    }
-
-    @Test
-    fun explainQueryPlan_highlights_usesIndex() = runTest {
-        // Seed 3 highlights for the same book with distinct updated_at
-        val bookId = "b-h"
-        db.bookDao().upsert(
-            BookEntity(
-                id = bookId, title = "HB", author = null, coverPath = null,
-                filePath = "/hb.epub", format = "epub",
-                updatedAtEpochMillis = 100L
-            )
-        )
-        for (i in 1..3) {
-            db.highlightDao().upsert(
-                HighlightEntity(
-                    id = "h-$i",
-                    bookId = bookId,
-                    cfiRange = "cfi-$i",
-                    textContent = "highlight $i",
-                    note = null,
-                    color = "yellow",
-                    updatedAtEpochMillis = i.toLong() * 100L,
-                    deletedAtEpochMillis = null
-                )
+            // R1: observeAllBooks query
+            assertUsesIndex(
+                query = "SELECT * FROM books WHERE deleted_at IS NULL ORDER BY updated_at DESC",
+                expectedIndex = "index_books_deleted_at_updated_at",
             )
         }
 
-        // R2: observeAllHighlights
-        assertUsesIndex(
-            query = "SELECT * FROM highlights WHERE deleted_at IS NULL ORDER BY updated_at DESC",
-            expectedIndex = "index_highlights_book_id_deleted_at"
-        )
-
-        // R3: observeHighlightsForBook (per-book query)
-        assertUsesIndex(
-            query = "SELECT * FROM highlights WHERE book_id = '$bookId' " +
-                "AND deleted_at IS NULL ORDER BY updated_at DESC",
-            expectedIndex = "index_highlights_book_id_deleted_at"
-        )
-    }
-
     @Test
-    fun explainQueryPlan_bookmarks_usesIndex() = runTest {
-        val bookId = "b-bm"
-        db.bookDao().upsert(
-            BookEntity(
-                id = bookId, title = "BMB", author = null, coverPath = null,
-                filePath = "/bmb.epub", format = "epub",
-                updatedAtEpochMillis = 100L
+    fun explainQueryPlan_highlights_usesIndex() =
+        runTest {
+            // Seed 3 highlights for the same book with distinct updated_at
+            val bookId = "b-h"
+            db.bookDao().upsert(
+                BookEntity(
+                    id = bookId,
+                    title = "HB",
+                    author = null,
+                    coverPath = null,
+                    filePath = "/hb.epub",
+                    format = "epub",
+                    updatedAtEpochMillis = 100L,
+                ),
             )
-        )
-        for (i in 1..3) {
-            db.bookmarkDao().upsert(
-                BookmarkEntity(
-                    id = "bm-$i",
-                    bookId = bookId,
-                    cfiLocation = "cfi-$i",
-                    titleOrSnippet = "bookmark $i",
-                    updatedAtEpochMillis = i.toLong() * 100L,
-                    deletedAtEpochMillis = null
+            for (i in 1..3) {
+                db.highlightDao().upsert(
+                    HighlightEntity(
+                        id = "h-$i",
+                        bookId = bookId,
+                        cfiRange = "cfi-$i",
+                        textContent = "highlight $i",
+                        note = null,
+                        color = "yellow",
+                        updatedAtEpochMillis = i.toLong() * 100L,
+                        deletedAtEpochMillis = null,
+                    ),
                 )
+            }
+
+            // R2: observeAllHighlights
+            assertUsesIndex(
+                query = "SELECT * FROM highlights WHERE deleted_at IS NULL ORDER BY updated_at DESC",
+                expectedIndex = "index_highlights_book_id_deleted_at",
+            )
+
+            // R3: observeHighlightsForBook (per-book query)
+            assertUsesIndex(
+                query =
+                    "SELECT * FROM highlights WHERE book_id = '$bookId' " +
+                        "AND deleted_at IS NULL ORDER BY updated_at DESC",
+                expectedIndex = "index_highlights_book_id_deleted_at",
             )
         }
 
-        // R4: observeAllBookmarks
-        assertUsesIndex(
-            query = "SELECT * FROM bookmarks WHERE deleted_at IS NULL ORDER BY updated_at DESC",
-            expectedIndex = "index_bookmarks_book_id_deleted_at"
-        )
-
-        // R5: observeBookmarksForBook
-        assertUsesIndex(
-            query = "SELECT * FROM bookmarks WHERE book_id = '$bookId' " +
-                "AND deleted_at IS NULL ORDER BY updated_at DESC",
-            expectedIndex = "index_bookmarks_book_id_deleted_at"
-        )
-    }
-
     @Test
-    fun explainQueryPlan_readingSessions_usesIndex() = runTest {
-        // Seed 3 reading_sessions with mixed userId (one empty, one specific)
-        val bookId = "b-rs"
-        db.bookDao().upsert(
-            BookEntity(
-                id = bookId, title = "RSB", author = null, coverPath = null,
-                filePath = "/rsb.epub", format = "epub",
-                updatedAtEpochMillis = 100L
+    fun explainQueryPlan_bookmarks_usesIndex() =
+        runTest {
+            val bookId = "b-bm"
+            db.bookDao().upsert(
+                BookEntity(
+                    id = bookId,
+                    title = "BMB",
+                    author = null,
+                    coverPath = null,
+                    filePath = "/bmb.epub",
+                    format = "epub",
+                    updatedAtEpochMillis = 100L,
+                ),
             )
-        )
-        val date = 20240101L
-        for (i in 1..3) {
-            db.readingSessionDao().insert(
-                ReadingSessionEntity(
-                    id = "rs-$i",
-                    bookId = bookId,
-                    startTimeEpochMillis = 500L + i,
-                    durationMinutes = 10 + i,
-                    date = date,
-                    userId = if (i == 1) "" else "user-$i"
+            for (i in 1..3) {
+                db.bookmarkDao().upsert(
+                    BookmarkEntity(
+                        id = "bm-$i",
+                        bookId = bookId,
+                        cfiLocation = "cfi-$i",
+                        titleOrSnippet = "bookmark $i",
+                        updatedAtEpochMillis = i.toLong() * 100L,
+                        deletedAtEpochMillis = null,
+                    ),
                 )
+            }
+
+            // R4: observeAllBookmarks
+            assertUsesIndex(
+                query = "SELECT * FROM bookmarks WHERE deleted_at IS NULL ORDER BY updated_at DESC",
+                expectedIndex = "index_bookmarks_book_id_deleted_at",
+            )
+
+            // R5: observeBookmarksForBook
+            assertUsesIndex(
+                query =
+                    "SELECT * FROM bookmarks WHERE book_id = '$bookId' " +
+                        "AND deleted_at IS NULL ORDER BY updated_at DESC",
+                expectedIndex = "index_bookmarks_book_id_deleted_at",
             )
         }
 
-        // R6: OR-pattern query on date + userId
-        assertUsesIndex(
-            query = "SELECT COALESCE(SUM(duration_minutes), 0) FROM reading_sessions " +
-                "WHERE date = $date AND (userId = 'user-2' OR userId = '')",
-            expectedIndex = "index_reading_sessions_date_userId"
-        )
-    }
+    @Test
+    fun explainQueryPlan_readingSessions_usesIndex() =
+        runTest {
+            // Seed 3 reading_sessions with mixed userId (one empty, one specific)
+            val bookId = "b-rs"
+            db.bookDao().upsert(
+                BookEntity(
+                    id = bookId,
+                    title = "RSB",
+                    author = null,
+                    coverPath = null,
+                    filePath = "/rsb.epub",
+                    format = "epub",
+                    updatedAtEpochMillis = 100L,
+                ),
+            )
+            val date = 20240101L
+            for (i in 1..3) {
+                db.readingSessionDao().insert(
+                    ReadingSessionEntity(
+                        id = "rs-$i",
+                        bookId = bookId,
+                        startTimeEpochMillis = 500L + i,
+                        durationMinutes = 10 + i,
+                        date = date,
+                        userId = if (i == 1) "" else "user-$i",
+                    ),
+                )
+            }
+
+            // R6: OR-pattern query on date + userId
+            assertUsesIndex(
+                query =
+                    "SELECT COALESCE(SUM(duration_minutes), 0) FROM reading_sessions " +
+                        "WHERE date = $date AND (userId = 'user-2' OR userId = '')",
+                expectedIndex = "index_reading_sessions_date_userId",
+            )
+        }
 
     // ──────────────────────── Phase 3: FTS5 Search ────────────────────────
 
     @Test
-    fun fts5_search_returnsCorrectResults() = runTest {
-        db.dictionaryWordDao().insert(
-            DictionaryWordEntity(
-                id = "dw-1", word = "hello",
-                addedAtEpochMillis = 100L, definition = "a greeting"
+    fun fts5_search_returnsCorrectResults() =
+        runTest {
+            db.dictionaryWordDao().insert(
+                DictionaryWordEntity(
+                    id = "dw-1",
+                    word = "hello",
+                    addedAtEpochMillis = 100L,
+                    definition = "a greeting",
+                ),
             )
-        )
 
-        // R7a: MATCH on inserted word returns 1
-        val helloResults = db.dictionaryWordDao().searchFts("hello")
-        assertEquals(1, helloResults.size)
-        assertEquals("hello", helloResults[0].word)
+            // R7a: MATCH on inserted word returns 1
+            val helloResults = db.dictionaryWordDao().searchFts("hello")
+            assertEquals(1, helloResults.size)
+            assertEquals("hello", helloResults[0].word)
 
-        // R7b: MATCH on missing word returns 0
-        val missResults = db.dictionaryWordDao().searchFts("xyz")
-        assertTrue("Expected no matches for 'xyz' but got ${missResults.size}", missResults.isEmpty())
-    }
+            // R7b: MATCH on missing word returns 0
+            val missResults = db.dictionaryWordDao().searchFts("xyz")
+            assertTrue("Expected no matches for 'xyz' but got ${missResults.size}", missResults.isEmpty())
+        }
 
     @Test
-    fun fts5_triggers_syncOnInsert() = runTest {
-        // R8: insert via DAO, then raw-query the FTS5 table to confirm trigger populated it
-        db.dictionaryWordDao().insert(
-            DictionaryWordEntity(
-                id = "dw-ins", word = "triggerInsert",
-                addedAtEpochMillis = 200L, definition = "insert trigger test"
+    fun fts5_triggers_syncOnInsert() =
+        runTest {
+            // R8: insert via DAO, then raw-query the FTS5 table to confirm trigger populated it
+            db.dictionaryWordDao().insert(
+                DictionaryWordEntity(
+                    id = "dw-ins",
+                    word = "triggerInsert",
+                    addedAtEpochMillis = 200L,
+                    definition = "insert trigger test",
+                ),
             )
-        )
 
-        var found = false
-        db.openHelper.writableDatabase.query(
-            "SELECT word FROM dictionary_words_fts WHERE dictionary_words_fts MATCH 'triggerInsert'"
-        ).use { cursor ->
-            while (cursor.moveToNext()) {
-                if ("triggerInsert" == cursor.getString(0)) {
-                    found = true
+            var found = false
+            db.openHelper.writableDatabase
+                .query(
+                    "SELECT word FROM dictionary_words_fts WHERE dictionary_words_fts MATCH 'triggerInsert'",
+                ).use { cursor ->
+                    while (cursor.moveToNext()) {
+                        if ("triggerInsert" == cursor.getString(0)) {
+                            found = true
+                        }
+                    }
                 }
-            }
+            assertTrue("dict_ai trigger should populate dictionary_words_fts on INSERT", found)
         }
-        assertTrue("dict_ai trigger should populate dictionary_words_fts on INSERT", found)
-    }
 
     @Test
-    fun fts5_triggers_syncOnDelete() = runTest {
-        val wordId = "dw-del"
-        val word = "triggerDelete"
-        db.dictionaryWordDao().insert(
-            DictionaryWordEntity(
-                id = wordId, word = word,
-                addedAtEpochMillis = 300L, definition = "delete trigger test"
+    fun fts5_triggers_syncOnDelete() =
+        runTest {
+            val wordId = "dw-del"
+            val word = "triggerDelete"
+            db.dictionaryWordDao().insert(
+                DictionaryWordEntity(
+                    id = wordId,
+                    word = word,
+                    addedAtEpochMillis = 300L,
+                    definition = "delete trigger test",
+                ),
             )
-        )
 
-        // Sanity: present in FTS5 after insert
-        var presentAfterInsert = false
-        db.openHelper.writableDatabase.query(
-            "SELECT word FROM dictionary_words_fts WHERE dictionary_words_fts MATCH '$word'"
-        ).use { cursor ->
-            if (cursor.moveToFirst()) presentAfterInsert = true
+            // Sanity: present in FTS5 after insert
+            var presentAfterInsert = false
+            db.openHelper.writableDatabase
+                .query(
+                    "SELECT word FROM dictionary_words_fts WHERE dictionary_words_fts MATCH '$word'",
+                ).use { cursor ->
+                    if (cursor.moveToFirst()) presentAfterInsert = true
+                }
+            assertTrue("Word should be present in FTS5 after insert", presentAfterInsert)
+
+            // R9: delete via DAO, then verify the FTS5 row is gone
+            db.dictionaryWordDao().delete(wordId)
+
+            var presentAfterDelete = false
+            db.openHelper.writableDatabase
+                .query(
+                    "SELECT word FROM dictionary_words_fts WHERE dictionary_words_fts MATCH '$word'",
+                ).use { cursor ->
+                    if (cursor.moveToFirst()) presentAfterDelete = true
+                }
+            assertFalse("dict_ad trigger should remove word from FTS5 on DELETE", presentAfterDelete)
         }
-        assertTrue("Word should be present in FTS5 after insert", presentAfterInsert)
-
-        // R9: delete via DAO, then verify the FTS5 row is gone
-        db.dictionaryWordDao().delete(wordId)
-
-        var presentAfterDelete = false
-        db.openHelper.writableDatabase.query(
-            "SELECT word FROM dictionary_words_fts WHERE dictionary_words_fts MATCH '$word'"
-        ).use { cursor ->
-            if (cursor.moveToFirst()) presentAfterDelete = true
-        }
-        assertFalse("dict_ad trigger should remove word from FTS5 on DELETE", presentAfterDelete)
-    }
 
     @Test
-    fun fts5_triggers_syncOnUpdate() = runTest {
-        val wordId = "dw-upd"
-        db.dictionaryWordDao().insert(
-            DictionaryWordEntity(
-                id = wordId, word = "oldword",
-                addedAtEpochMillis = 400L, definition = "old def"
+    fun fts5_triggers_syncOnUpdate() =
+        runTest {
+            val wordId = "dw-upd"
+            db.dictionaryWordDao().insert(
+                DictionaryWordEntity(
+                    id = wordId,
+                    word = "oldword",
+                    addedAtEpochMillis = 400L,
+                    definition = "old def",
+                ),
             )
-        )
 
-        // R10: update word column, assert old value gone, new value present
-        db.openHelper.writableDatabase.execSQL(
-            "UPDATE dictionary_words SET word = 'newword' WHERE id = '$wordId'"
-        )
+            // R10: update word column, assert old value gone, new value present
+            db.openHelper.writableDatabase.execSQL(
+                "UPDATE dictionary_words SET word = 'newword' WHERE id = '$wordId'",
+            )
 
-        var oldFound = false
-        db.openHelper.writableDatabase.query(
-            "SELECT word FROM dictionary_words_fts WHERE dictionary_words_fts MATCH 'oldword'"
-        ).use { cursor ->
-            if (cursor.moveToFirst()) oldFound = true
+            var oldFound = false
+            db.openHelper.writableDatabase
+                .query(
+                    "SELECT word FROM dictionary_words_fts WHERE dictionary_words_fts MATCH 'oldword'",
+                ).use { cursor ->
+                    if (cursor.moveToFirst()) oldFound = true
+                }
+            assertFalse("dict_au trigger should remove old value from FTS5 on UPDATE", oldFound)
+
+            var newFound = false
+            db.openHelper.writableDatabase
+                .query(
+                    "SELECT word FROM dictionary_words_fts WHERE dictionary_words_fts MATCH 'newword'",
+                ).use { cursor ->
+                    if (cursor.moveToFirst()) newFound = true
+                }
+            assertTrue("dict_au trigger should add new value to FTS5 on UPDATE", newFound)
         }
-        assertFalse("dict_au trigger should remove old value from FTS5 on UPDATE", oldFound)
-
-        var newFound = false
-        db.openHelper.writableDatabase.query(
-            "SELECT word FROM dictionary_words_fts WHERE dictionary_words_fts MATCH 'newword'"
-        ).use { cursor ->
-            if (cursor.moveToFirst()) newFound = true
-        }
-        assertTrue("dict_au trigger should add new value to FTS5 on UPDATE", newFound)
-    }
 
     // ─────────────────────── Phase 4: PagingSource ───────────────────────
 
     @Test
-    fun pagingSource_books_returnsCorrectPage() = runTest {
-        // R11: seed 10 books with distinct updated_at
-        val books = (1..10).map { i ->
-            BookEntity(
-                id = "pb-$i", title = "Paged Book $i", author = "A$i",
-                coverPath = null, filePath = "/pb$i.epub", format = "epub",
-                updatedAtEpochMillis = i.toLong() * 1000L
-            )
+    fun pagingSource_books_returnsCorrectPage() =
+        runTest {
+            // R11: seed 10 books with distinct updated_at
+            val books =
+                (1..10).map { i ->
+                    BookEntity(
+                        id = "pb-$i",
+                        title = "Paged Book $i",
+                        author = "A$i",
+                        coverPath = null,
+                        filePath = "/pb$i.epub",
+                        format = "epub",
+                        updatedAtEpochMillis = i.toLong() * 1000L,
+                    )
+                }
+            db.bookDao().upsertAll(books)
+
+            val pagingSource = db.bookDao().observeAllBooksPaged()
+
+            // Refresh with loadSize=5 — Room's PagingSource interprets null key as start
+            val refreshResult =
+                pagingSource.load(
+                    PagingSource.LoadParams.Refresh(
+                        key = null,
+                        loadSize = 5,
+                        placeholdersEnabled = false,
+                    ),
+                )
+            assertTrue("Expected LoadResult.Page", refreshResult is PagingSource.LoadResult.Page)
+            val firstPage = refreshResult as PagingSource.LoadResult.Page
+            assertEquals("First page should contain 5 items", 5, firstPage.data.size)
+            assertEquals("nextKey should be 5", 5, firstPage.nextKey)
+
+            // Append with key=5, loadSize=5 — second page should contain the remaining 5
+            val appendResult =
+                pagingSource.load(
+                    PagingSource.LoadParams.Append(
+                        key = 5,
+                        loadSize = 5,
+                        placeholdersEnabled = false,
+                    ),
+                )
+            assertTrue("Expected LoadResult.Page", appendResult is PagingSource.LoadResult.Page)
+            val secondPage = appendResult as PagingSource.LoadResult.Page
+            assertEquals("Second page should contain 5 items", 5, secondPage.data.size)
+            // Room's RoomPagingSource marks nextKey=null when there are no more items
+            assertEquals(null, secondPage.nextKey)
+
+            // Items in the two pages must be disjoint and together cover all 10
+            val allIds = firstPage.data.map { it.id } + secondPage.data.map { it.id }
+            assertEquals("Both pages should cover all 10 books", 10, allIds.size)
+            assertEquals("No duplicate ids across pages", 10, allIds.toSet().size)
         }
-        db.bookDao().upsertAll(books)
-
-        val pagingSource = db.bookDao().observeAllBooksPaged()
-
-        // Refresh with loadSize=5 — Room's PagingSource interprets null key as start
-        val refreshResult = pagingSource.load(
-            PagingSource.LoadParams.Refresh(
-                key = null,
-                loadSize = 5,
-                placeholdersEnabled = false
-            )
-        )
-        assertTrue("Expected LoadResult.Page", refreshResult is PagingSource.LoadResult.Page)
-        val firstPage = refreshResult as PagingSource.LoadResult.Page
-        assertEquals("First page should contain 5 items", 5, firstPage.data.size)
-        assertEquals("nextKey should be 5", 5, firstPage.nextKey)
-
-        // Append with key=5, loadSize=5 — second page should contain the remaining 5
-        val appendResult = pagingSource.load(
-            PagingSource.LoadParams.Append(
-                key = 5,
-                loadSize = 5,
-                placeholdersEnabled = false
-            )
-        )
-        assertTrue("Expected LoadResult.Page", appendResult is PagingSource.LoadResult.Page)
-        val secondPage = appendResult as PagingSource.LoadResult.Page
-        assertEquals("Second page should contain 5 items", 5, secondPage.data.size)
-        // Room's RoomPagingSource marks nextKey=null when there are no more items
-        assertEquals(null, secondPage.nextKey)
-
-        // Items in the two pages must be disjoint and together cover all 10
-        val allIds = firstPage.data.map { it.id } + secondPage.data.map { it.id }
-        assertEquals("Both pages should cover all 10 books", 10, allIds.size)
-        assertEquals("No duplicate ids across pages", 10, allIds.toSet().size)
-    }
 
     @Test
-    fun pagingSource_highlights_returnsCorrectPage() = runTest {
-        // R12: seed 10 highlights for the same book
-        val bookId = "b-hp"
-        db.bookDao().upsert(
-            BookEntity(
-                id = bookId, title = "HPB", author = null, coverPath = null,
-                filePath = "/hpb.epub", format = "epub",
-                updatedAtEpochMillis = 1L
+    fun pagingSource_highlights_returnsCorrectPage() =
+        runTest {
+            // R12: seed 10 highlights for the same book
+            val bookId = "b-hp"
+            db.bookDao().upsert(
+                BookEntity(
+                    id = bookId,
+                    title = "HPB",
+                    author = null,
+                    coverPath = null,
+                    filePath = "/hpb.epub",
+                    format = "epub",
+                    updatedAtEpochMillis = 1L,
+                ),
             )
-        )
-        val highlights = (1..10).map { i ->
-            HighlightEntity(
-                id = "ph-$i",
-                bookId = bookId,
-                cfiRange = "cfi-$i",
-                textContent = "highlight $i",
-                note = null,
-                color = "yellow",
-                updatedAtEpochMillis = i.toLong() * 1000L,
-                deletedAtEpochMillis = null
-            )
+            val highlights =
+                (1..10).map { i ->
+                    HighlightEntity(
+                        id = "ph-$i",
+                        bookId = bookId,
+                        cfiRange = "cfi-$i",
+                        textContent = "highlight $i",
+                        note = null,
+                        color = "yellow",
+                        updatedAtEpochMillis = i.toLong() * 1000L,
+                        deletedAtEpochMillis = null,
+                    )
+                }
+            db.highlightDao().upsertAll(highlights)
+
+            val pagingSource = db.highlightDao().observeAllHighlightsPaged()
+
+            val refreshResult =
+                pagingSource.load(
+                    PagingSource.LoadParams.Refresh(
+                        key = null,
+                        loadSize = 5,
+                        placeholdersEnabled = false,
+                    ),
+                )
+            assertTrue(refreshResult is PagingSource.LoadResult.Page)
+            val firstPage = refreshResult as PagingSource.LoadResult.Page
+            assertEquals(5, firstPage.data.size)
+            assertEquals(5, firstPage.nextKey)
+
+            val appendResult =
+                pagingSource.load(
+                    PagingSource.LoadParams.Append(
+                        key = 5,
+                        loadSize = 5,
+                        placeholdersEnabled = false,
+                    ),
+                )
+            assertTrue(appendResult is PagingSource.LoadResult.Page)
+            val secondPage = appendResult as PagingSource.LoadResult.Page
+            assertEquals(5, secondPage.data.size)
+            assertEquals(null, secondPage.nextKey)
+
+            val allIds = firstPage.data.map { it.id } + secondPage.data.map { it.id }
+            assertEquals(10, allIds.toSet().size)
         }
-        db.highlightDao().upsertAll(highlights)
-
-        val pagingSource = db.highlightDao().observeAllHighlightsPaged()
-
-        val refreshResult = pagingSource.load(
-            PagingSource.LoadParams.Refresh(
-                key = null,
-                loadSize = 5,
-                placeholdersEnabled = false
-            )
-        )
-        assertTrue(refreshResult is PagingSource.LoadResult.Page)
-        val firstPage = refreshResult as PagingSource.LoadResult.Page
-        assertEquals(5, firstPage.data.size)
-        assertEquals(5, firstPage.nextKey)
-
-        val appendResult = pagingSource.load(
-            PagingSource.LoadParams.Append(
-                key = 5,
-                loadSize = 5,
-                placeholdersEnabled = false
-            )
-        )
-        assertTrue(appendResult is PagingSource.LoadResult.Page)
-        val secondPage = appendResult as PagingSource.LoadResult.Page
-        assertEquals(5, secondPage.data.size)
-        assertEquals(null, secondPage.nextKey)
-
-        val allIds = firstPage.data.map { it.id } + secondPage.data.map { it.id }
-        assertEquals(10, allIds.toSet().size)
-    }
 
     // ──────────────────── Phase 5: Migration + Query ─────────────────────
 
@@ -514,11 +577,11 @@ class AppDatabaseQueryValidationTest {
                     status TEXT,
                     PRIMARY KEY(id)
                 )
-                """.trimIndent()
+                """.trimIndent(),
             )
             execSQL(
                 "INSERT INTO books (id, title, file_path, format, updated_at, deleted_at) " +
-                    "VALUES ('mb-1', 'Migrated B1', '/mb1.epub', 'epub', 1000, NULL)"
+                    "VALUES ('mb-1', 'Migrated B1', '/mb1.epub', 'epub', 1000, NULL)",
             )
 
             execSQL(
@@ -533,7 +596,7 @@ class AppDatabaseQueryValidationTest {
                     locator_json TEXT,
                     PRIMARY KEY(id)
                 )
-                """.trimIndent()
+                """.trimIndent(),
             )
 
             execSQL(
@@ -546,7 +609,7 @@ class AppDatabaseQueryValidationTest {
                     userId TEXT NOT NULL,
                     PRIMARY KEY(bookId)
                 )
-                """.trimIndent()
+                """.trimIndent(),
             )
             execSQL("INSERT INTO reading_stats VALUES ('mb-1', 30, 2000, 2, '')")
 
@@ -560,7 +623,7 @@ class AppDatabaseQueryValidationTest {
                     updated_at INTEGER NOT NULL,
                     PRIMARY KEY(drive_file_id)
                 )
-                """.trimIndent()
+                """.trimIndent(),
             )
             execSQL("INSERT INTO sync_file_mappings VALUES ('d-1', 'u1', 'mb-1', '/p', 3000)")
 
@@ -577,7 +640,7 @@ class AppDatabaseQueryValidationTest {
                     last_error TEXT,
                     PRIMARY KEY(id)
                 )
-                """.trimIndent()
+                """.trimIndent(),
             )
             execSQL("INSERT INTO sync_outbox VALUES ('o-1', 'BOOK', 'mb-1', 'UPDATE', '{}', 4000, 0, NULL)")
 
@@ -592,7 +655,7 @@ class AppDatabaseQueryValidationTest {
                     userId TEXT NOT NULL,
                     PRIMARY KEY(id)
                 )
-                """.trimIndent()
+                """.trimIndent(),
             )
             execSQL("INSERT INTO reading_sessions VALUES ('ms-1', 'mb-1', 5000, 15, 20240101, '')")
 
@@ -615,7 +678,7 @@ class AppDatabaseQueryValidationTest {
                     tag TEXT,
                     PRIMARY KEY(id)
                 )
-                """.trimIndent()
+                """.trimIndent(),
             )
             execSQL(
                 """
@@ -629,7 +692,7 @@ class AppDatabaseQueryValidationTest {
                     locator_json TEXT,
                     PRIMARY KEY(id)
                 )
-                """.trimIndent()
+                """.trimIndent(),
             )
 
             execSQL(
@@ -641,22 +704,26 @@ class AppDatabaseQueryValidationTest {
                     definition TEXT,
                     PRIMARY KEY(id)
                 )
-                """.trimIndent()
+                """.trimIndent(),
             )
             execSQL("INSERT INTO dictionary_words VALUES ('md-1', 'migrated', 6000, 'post-migration word')")
 
             close()
         }
 
-        val migrated = migrationHelper.runMigrationsAndValidate(
-            dbName,
-            16,
-            true,
-            AppDatabaseMigrations.MIGRATION_15_16
-        )
+        val migrated =
+            migrationHelper.runMigrationsAndValidate(
+                dbName,
+                16,
+                true,
+                AppDatabaseMigrations.MIGRATION_15_16,
+            )
 
         // Helper local to the test: run EXPLAIN QUERY PLAN on the migrated DB
-        fun assertMigratedIndex(query: String, expectedIndex: String) {
+        fun assertMigratedIndex(
+            query: String,
+            expectedIndex: String,
+        ) {
             val details = mutableListOf<String>()
             migrated.query("EXPLAIN QUERY PLAN $query").use { cursor ->
                 val detailCol = cursor.getColumnIndex("detail")
@@ -669,27 +736,27 @@ class AppDatabaseQueryValidationTest {
             assertTrue(
                 "On migrated v16 DB, expected '$needle' for query:\n  $query\n" +
                     "but got plan:\n${details.joinToString("\n")}",
-                details.any { it.contains(needle) }
+                details.any { it.contains(needle) },
             )
         }
 
         // All 4 index plan assertions on the LIVE migrated data
         assertMigratedIndex(
             "SELECT * FROM books WHERE deleted_at IS NULL ORDER BY updated_at DESC",
-            "index_books_deleted_at_updated_at"
+            "index_books_deleted_at_updated_at",
         )
         assertMigratedIndex(
             "SELECT * FROM highlights WHERE deleted_at IS NULL ORDER BY updated_at DESC",
-            "index_highlights_book_id_deleted_at"
+            "index_highlights_book_id_deleted_at",
         )
         assertMigratedIndex(
             "SELECT * FROM bookmarks WHERE deleted_at IS NULL ORDER BY updated_at DESC",
-            "index_bookmarks_book_id_deleted_at"
+            "index_bookmarks_book_id_deleted_at",
         )
         assertMigratedIndex(
             "SELECT COALESCE(SUM(duration_minutes), 0) FROM reading_sessions " +
                 "WHERE date = 20240101 AND (userId = 'u1' OR userId = '')",
-            "index_reading_sessions_date_userId"
+            "index_reading_sessions_date_userId",
         )
 
         // FTS5 sanity check on migrated data — the trigger only fires on NEW writes,
@@ -697,18 +764,19 @@ class AppDatabaseQueryValidationTest {
         // We INSERT a fresh word post-migration and verify the trigger populates FTS5.
         migrated.execSQL(
             "INSERT INTO dictionary_words (id, word, addedAtEpochMillis, definition) " +
-                "VALUES ('md-2', 'postmigration', 7000, 'inserted after migration')"
+                "VALUES ('md-2', 'postmigration', 7000, 'inserted after migration')",
         )
 
         var ftsFound = false
-        migrated.query(
-            "SELECT word FROM dictionary_words_fts WHERE dictionary_words_fts MATCH 'postmigration'"
-        ).use { cursor ->
-            if (cursor.moveToFirst()) ftsFound = true
-        }
+        migrated
+            .query(
+                "SELECT word FROM dictionary_words_fts WHERE dictionary_words_fts MATCH 'postmigration'",
+            ).use { cursor ->
+                if (cursor.moveToFirst()) ftsFound = true
+            }
         assertTrue(
             "After migration, FTS5 triggers should fire on new INSERTs into dictionary_words",
-            ftsFound
+            ftsFound,
         )
 
         migrated.close()

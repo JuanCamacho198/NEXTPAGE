@@ -8,19 +8,23 @@ import org.junit.Test
 
 /** Endpoint-template parsing parity with desktop validate-manifest.test.ts. */
 class ManifestEndpointTest {
-
     private fun manifest(vararg pairs: Pair<String, Any?>): ByteArray {
-        val obj = org.json.JSONObject()
-            .put("id", "example-books")
-            .put("name", "Example Books")
-            .put("version", "1.0.0")
-            .put(
-                "catalogs",
-                org.json.JSONArray().put(
-                    org.json.JSONObject().put("type", "book").put("id", "main").put("name", "Main catalog")
-                )
-            )
-            .put("resources", org.json.JSONArray().put("catalog"))
+        val obj =
+            org.json
+                .JSONObject()
+                .put("id", "example-books")
+                .put("name", "Example Books")
+                .put("version", "1.0.0")
+                .put(
+                    "catalogs",
+                    org.json.JSONArray().put(
+                        org.json
+                            .JSONObject()
+                            .put("type", "book")
+                            .put("id", "main")
+                            .put("name", "Main catalog"),
+                    ),
+                ).put("resources", org.json.JSONArray().put("catalog"))
         for ((key, value) in pairs) {
             if (value != null) obj.put(key, value)
         }
@@ -29,13 +33,14 @@ class ManifestEndpointTest {
 
     @Test
     fun `parses https searchUrl and detailsUrl templates when present`() {
-        val parsed = ManifestValidator.validate(
-            manifest(
-                "searchUrl" to "https://example.com/search?q={query}&page={page}",
-                "detailsUrl" to "https://example.com/book/{bookId}"
-            ),
-            "application/json"
-        )
+        val parsed =
+            ManifestValidator.validate(
+                manifest(
+                    "searchUrl" to "https://example.com/search?q={query}&page={page}",
+                    "detailsUrl" to "https://example.com/book/{bookId}",
+                ),
+                "application/json",
+            )
         assertEquals("https://example.com/search?q={query}&page={page}", parsed.searchUrl)
         assertEquals("https://example.com/book/{bookId}", parsed.detailsUrl)
     }
@@ -72,10 +77,11 @@ class ManifestEndpointTest {
 
     @Test
     fun `unknown top-level fields are still ignored alongside endpoints`() {
-        val parsed = ManifestValidator.validate(
-            manifest("searchUrl" to "https://example.com/s?q={query}", "futureField" to mapOf("nested" to true)),
-            "application/json"
-        )
+        val parsed =
+            ManifestValidator.validate(
+                manifest("searchUrl" to "https://example.com/s?q={query}", "futureField" to mapOf("nested" to true)),
+                "application/json",
+            )
         assertEquals("https://example.com/s?q={query}", parsed.searchUrl)
         assertTrue(parsed.catalogs.isNotEmpty())
     }

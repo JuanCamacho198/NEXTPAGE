@@ -23,19 +23,19 @@ fun TimingRow(timing: PerformanceTiming) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = timing.labelFallback,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
             if (timing.samples.isEmpty()) {
                 Text(
                     text = stringResource(R.string.performance_no_data),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
                 Sparkline(samples = timing.samples, modifier = Modifier.width(72.dp).height(24.dp))
@@ -45,12 +45,12 @@ fun TimingRow(timing: PerformanceTiming) {
             Text(
                 text = stringResource(R.string.performance_no_data_hint),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 MetricChip(label = "avg", value = "${timing.avgMs} ms")
                 MetricChip(label = "p95", value = "${timing.p95Ms} ms")
@@ -61,17 +61,20 @@ fun TimingRow(timing: PerformanceTiming) {
 }
 
 @Composable
-private fun MetricChip(label: String, value: String) {
+private fun MetricChip(
+    label: String,
+    value: String,
+) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
             text = value,
             style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.SemiBold,
         )
     }
 }

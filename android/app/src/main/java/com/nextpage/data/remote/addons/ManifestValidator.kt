@@ -13,17 +13,24 @@ enum class AddonFetchErrorCode {
     TOO_LARGE,
     BAD_CONTENT_TYPE,
     INVALID_MANIFEST,
-    NETWORK;
+    NETWORK,
+    ;
 
     /** Stable additive wire code (ADDON_FETCH_*), shared with desktop TS/Rust. */
     val wireCode: String
         get() = "ADDON_FETCH_$name"
 }
 
-class AddonFetchException(val code: AddonFetchErrorCode, detail: String? = null) :
-    Exception("${code.name}: ${detail ?: code.name}")
+class AddonFetchException(
+    val code: AddonFetchErrorCode,
+    detail: String? = null,
+) : Exception("${code.name}: ${detail ?: code.name}")
 
-data class AddonCatalogEntry(val type: String, val id: String, val name: String)
+data class AddonCatalogEntry(
+    val type: String,
+    val id: String,
+    val name: String,
+)
 
 data class AddonManifest(
     val id: String,
@@ -45,7 +52,7 @@ data class AddonManifest(
      * Optional v2 capability list (e.g. `"resolve"`). Absent ⇒ empty;
      * disclosed to the user before consent is recorded (U5 UI).
      */
-    val capabilities: List<String> = emptyList()
+    val capabilities: List<String> = emptyList(),
 )
 
 /**
@@ -56,12 +63,11 @@ data class AddonManifest(
 enum class AddonAccessType {
     FREE,
     BUY,
-    SUBSCRIBE
+    SUBSCRIBE,
 }
 
 /** Rules and codes mirror desktop validateManifest.ts byte-for-byte. */
 object ManifestValidator {
-
     const val MAX_MANIFEST_BYTES = 64 * 1024
     private const val MAX_CATALOGS = 16
     private const val MAX_CATALOG_ENTRY_CHARS = 512
@@ -85,7 +91,13 @@ object ManifestValidator {
 
     /** HTTPS-only install URLs: reject before any network I/O. */
     fun assertHttpsInstallUrl(url: String): Boolean {
-        val scheme = runCatching { java.net.URI(url).scheme?.lowercase() }.getOrNull()
+        val scheme =
+            runCatching {
+                java.net
+                    .URI(url)
+                    .scheme
+                    ?.lowercase()
+            }.getOrNull()
         if (scheme != "https") {
             throw AddonFetchException(AddonFetchErrorCode.HTTPS_REQUIRED, "install URL must be https: $url")
         }
@@ -109,23 +121,22 @@ object ManifestValidator {
         return value
     }
 
-    private fun nonEmptyString(value: Any?): Boolean =
-        value is String && value.isNotEmpty()
+    private fun nonEmptyString(value: Any?): Boolean = value is String && value.isNotEmpty()
 
     /**
      * U4: parse a v2 per-item `accessType` wire value. Unknown or missing
      * values return null so resolve callers fail closed (never free).
      */
-    fun parseAccessType(raw: String?): AddonAccessType? = when (raw?.trim()?.lowercase()) {
-        ACCESS_TYPE_FREE -> AddonAccessType.FREE
-        ACCESS_TYPE_BUY -> AddonAccessType.BUY
-        ACCESS_TYPE_SUBSCRIBE -> AddonAccessType.SUBSCRIBE
-        else -> null
-    }
+    fun parseAccessType(raw: String?): AddonAccessType? =
+        when (raw?.trim()?.lowercase()) {
+            ACCESS_TYPE_FREE -> AddonAccessType.FREE
+            ACCESS_TYPE_BUY -> AddonAccessType.BUY
+            ACCESS_TYPE_SUBSCRIBE -> AddonAccessType.SUBSCRIBE
+            else -> null
+        }
 
     /** U4: true only for license tokens in the closed cleared set (case-insensitive). */
-    fun isLicenseCleared(license: String?): Boolean =
-        license?.trim()?.lowercase() in LICENSE_CLEARED_TOKENS
+    fun isLicenseCleared(license: String?): Boolean = license?.trim()?.lowercase() in LICENSE_CLEARED_TOKENS
 
     /** U4: optional endpoint — absent/null ⇒ skipped (no validation); present ⇒ https rules. */
     private fun parseOptionalEndpoint(value: Any?): String? {
@@ -158,7 +169,7 @@ object ManifestValidator {
         return AddonCatalogEntry(
             type = entry.getString("type"),
             id = entry.getString("id"),
-            name = entry.getString("name")
+            name = entry.getString("name"),
         )
         // unknown entry fields ignored
     }
@@ -192,7 +203,7 @@ object ManifestValidator {
             searchUrl = parseEndpoint(value.opt("searchUrl")),
             detailsUrl = parseEndpoint(value.opt("detailsUrl")),
             resolveUrl = parseOptionalEndpoint(value.opt("resolveUrl")),
-            capabilities = parseCapabilities(value.opt("capabilities"))
+            capabilities = parseCapabilities(value.opt("capabilities")),
         )
     }
 
@@ -200,18 +211,22 @@ object ManifestValidator {
      * Validate manifest bytes + upstream content type.
      * Order: size cap (pre-parse) → content type → JSON parse → shape.
      */
-    fun validate(bytes: ByteArray, contentType: String?): AddonManifest {
+    fun validate(
+        bytes: ByteArray,
+        contentType: String?,
+    ): AddonManifest {
         if (bytes.size > MAX_MANIFEST_BYTES) {
             throw AddonFetchException(AddonFetchErrorCode.TOO_LARGE, "manifest exceeds $MAX_MANIFEST_BYTES bytes")
         }
         if (!isJsonContentType(contentType)) {
             throw AddonFetchException(AddonFetchErrorCode.BAD_CONTENT_TYPE, "content type is not JSON: $contentType")
         }
-        val parsed = try {
-            JSONObject(String(bytes, Charsets.UTF_8))
-        } catch (_: Exception) {
-            invalid("manifest is not valid JSON")
-        }
+        val parsed =
+            try {
+                JSONObject(String(bytes, Charsets.UTF_8))
+            } catch (_: Exception) {
+                invalid("manifest is not valid JSON")
+            }
         return parseManifestObject(parsed)
     }
 }

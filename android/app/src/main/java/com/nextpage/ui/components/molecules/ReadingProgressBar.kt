@@ -36,12 +36,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
-import com.nextpage.ui.icons.NextPageIcons
 import com.nextpage.presentation.theme.NextPageTheme
+import com.nextpage.ui.icons.NextPageIcons
 
 /**
  * Reader's progress bar with a draggable thumb and a row of
@@ -97,7 +96,7 @@ fun ReadingProgressBar(
     label: String,
     onProgressChange: ((Float) -> Unit)? = null,
     onRotateScreen: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val clampedProgress = progressPercent.coerceIn(0f, 100f)
     val progressFraction = clampedProgress / 100f
@@ -105,78 +104,83 @@ fun ReadingProgressBar(
     // Animate the fill smoothly
     val animatedProgress by animateFloatAsState(
         targetValue = progressFraction,
-        label = "progressFill"
+        label = "progressFill",
     )
 
     var trackWidth by remember { mutableStateOf(0) }
     val density = LocalDensity.current
 
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, bottom = 20.dp, top = 20.dp)
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, bottom = 20.dp, top = 20.dp),
     ) {
         // ── Progress bar track + thumb ─────────────────────────────
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(12.dp) // extra height for touch target
-                .onSizeChanged { trackWidth = it.width }
-                .pointerInput(Unit) {
-                    // Drag handler is wired on the OUTER track Box (not the
-                    // thumb) so that `change.position.x` is measured in the
-                    // track's local coordinate space (0..trackWidth). This
-                    // makes the drag work in BOTH directions, anywhere on
-                    // the track, and the formula below is correct.
-                    //
-                    // detectDragGestures's onDragStart captures the initial
-                    // touch position; without it the first drag delta is
-                    // relative to an unknown origin and the thumb jumps when
-                    // dragging backwards. We track the last reported fraction
-                    // and update it from the ABSOLUTE pointer x each move so
-                    // the thumb follows the finger exactly in both directions.
-                    if (onProgressChange != null) {
-                        var dragFraction by androidx.compose.runtime.mutableFloatStateOf(-1f)
-                        detectDragGestures(
-                            onDragStart = { offset ->
-                                dragFraction = if (trackWidth > 0) {
-                                    (offset.x / trackWidth).coerceIn(0f, 1f)
-                                } else {
-                                    0f
-                                }
-                                onProgressChange(dragFraction * 100f)
-                            },
-                            onDrag = { change, _ ->
-                                change.consume()
-                                if (trackWidth <= 0) return@detectDragGestures
-                                val newFraction =
-                                    (change.position.x / trackWidth).coerceIn(0f, 1f)
-                                dragFraction = newFraction
-                                onProgressChange(newFraction * 100f)
-                            }
-                        )
-                    }
-                }
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(12.dp) // extra height for touch target
+                    .onSizeChanged { trackWidth = it.width }
+                    .pointerInput(Unit) {
+                        // Drag handler is wired on the OUTER track Box (not the
+                        // thumb) so that `change.position.x` is measured in the
+                        // track's local coordinate space (0..trackWidth). This
+                        // makes the drag work in BOTH directions, anywhere on
+                        // the track, and the formula below is correct.
+                        //
+                        // detectDragGestures's onDragStart captures the initial
+                        // touch position; without it the first drag delta is
+                        // relative to an unknown origin and the thumb jumps when
+                        // dragging backwards. We track the last reported fraction
+                        // and update it from the ABSOLUTE pointer x each move so
+                        // the thumb follows the finger exactly in both directions.
+                        if (onProgressChange != null) {
+                            var dragFraction by androidx.compose.runtime.mutableFloatStateOf(-1f)
+                            detectDragGestures(
+                                onDragStart = { offset ->
+                                    dragFraction =
+                                        if (trackWidth > 0) {
+                                            (offset.x / trackWidth).coerceIn(0f, 1f)
+                                        } else {
+                                            0f
+                                        }
+                                    onProgressChange(dragFraction * 100f)
+                                },
+                                onDrag = { change, _ ->
+                                    change.consume()
+                                    if (trackWidth <= 0) return@detectDragGestures
+                                    val newFraction =
+                                        (change.position.x / trackWidth).coerceIn(0f, 1f)
+                                    dragFraction = newFraction
+                                    onProgressChange(newFraction * 100f)
+                                },
+                            )
+                        }
+                    },
         ) {
             // Track background
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(4.dp)
-                    .align(Alignment.CenterStart)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(Color(0xFF2F3445))
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(4.dp)
+                        .align(Alignment.CenterStart)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(Color(0xFF2F3445)),
             )
 
             // Fill
             if (trackWidth > 0) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth(animatedProgress)
-                        .height(4.dp)
-                        .align(Alignment.CenterStart)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(Color(0xFFADC6FF))
+                    modifier =
+                        Modifier
+                            .fillMaxWidth(animatedProgress)
+                            .height(4.dp)
+                            .align(Alignment.CenterStart)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(Color(0xFFADC6FF)),
                 )
             }
 
@@ -186,20 +190,22 @@ fun ReadingProgressBar(
             // with a bar-color border so it reads as a handle instead of
             // a same-color dot fused to the end of the fill.
             Box(
-                modifier = Modifier
-                    .size(12.dp)
-                    .align(Alignment.CenterStart)
-                    .offset(
-                        x = with(density) {
-                            (trackWidth * animatedProgress).toFloat()
-                                .coerceIn(0f, trackWidth.toFloat())
-                                .toDp()
-                        } - 6.dp // center the 12dp thumb on the position
-                    )
-                    .shadow(4.dp, CircleShape)
-                    .clip(CircleShape)
-                    .background(Color(0xFFF2F4F8))
-                    .border(2.dp, Color(0xFFADC6FF), CircleShape)
+                modifier =
+                    Modifier
+                        .size(12.dp)
+                        .align(Alignment.CenterStart)
+                        .offset(
+                            x =
+                                with(density) {
+                                    (trackWidth * animatedProgress)
+                                        .toFloat()
+                                        .coerceIn(0f, trackWidth.toFloat())
+                                        .toDp()
+                                } - 6.dp, // center the 12dp thumb on the position
+                        ).shadow(4.dp, CircleShape)
+                        .clip(CircleShape)
+                        .background(Color(0xFFF2F4F8))
+                        .border(2.dp, Color(0xFFADC6FF), CircleShape),
             )
         }
 
@@ -209,19 +215,19 @@ fun ReadingProgressBar(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             // Rotation button
             if (onRotateScreen != null) {
                 IconButton(
                     onClick = onRotateScreen,
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(36.dp),
                 ) {
                     Icon(
                         imageVector = NextPageIcons.ScreenRotation,
                         contentDescription = stringResource(R.string.reader_rotate_screen),
                         tint = Color(0xFF718096),
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(18.dp),
                     )
                 }
             } else {
@@ -237,9 +243,10 @@ fun ReadingProgressBar(
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 8.dp)
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .padding(horizontal = 8.dp),
             )
 
             // Percentage
@@ -248,7 +255,7 @@ fun ReadingProgressBar(
                 style = MaterialTheme.typography.labelMedium,
                 color = Color(0xFFADC6FF),
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(start = 8.dp)
+                modifier = Modifier.padding(start = 8.dp),
             )
         }
     }
@@ -262,7 +269,7 @@ private fun ReadingProgressBarDarkPreview() {
             progressPercent = 35f,
             label = "45 / 200",
             onProgressChange = {},
-            onRotateScreen = {}
+            onRotateScreen = {},
         )
     }
 }
@@ -276,7 +283,7 @@ private fun ReadingProgressBarLightPreview() {
             progressPercent = 35f,
             label = "45 / 200",
             onProgressChange = {},
-            onRotateScreen = {}
+            onRotateScreen = {},
         )
     }
 }

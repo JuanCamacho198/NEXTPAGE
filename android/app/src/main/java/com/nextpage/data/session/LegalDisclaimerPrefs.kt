@@ -11,8 +11,9 @@ import android.content.Context
  * [hasAccepted] stays true across restarts so [LegalNoticeDialog] shows
  * exactly once per install.
  */
-class LegalDisclaimerPrefs(context: Context) {
-
+class LegalDisclaimerPrefs(
+    context: Context,
+) {
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     /** True once the user accepted the one-time legal disclaimer. */

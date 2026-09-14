@@ -17,8 +17,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import com.nextpage.R
 import com.nextpage.data.session.AppLanguagePreferences
@@ -28,63 +28,66 @@ import com.nextpage.ui.icons.NextPageIcons
 
 private data class LanguageOption(
     val code: String?,
-    val labelRes: Int
+    val labelRes: Int,
 )
 
 @Composable
 fun SettingsLanguageScreen(
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val langPrefs = AppLanguagePreferences(context = context)
     val currentCode = langPrefs.load()
 
-    val options = listOf(
-        LanguageOption("es", R.string.settings_language_spanish),
-        LanguageOption("en", R.string.settings_language_english),
-        LanguageOption(null, R.string.settings_language_system)
-    )
+    val options =
+        listOf(
+            LanguageOption("es", R.string.settings_language_spanish),
+            LanguageOption("en", R.string.settings_language_english),
+            LanguageOption(null, R.string.settings_language_system),
+        )
 
     NextPageSettingsSubPage(
         title = stringResource(R.string.settings_language_title),
-        onBack = onBack
+        onBack = onBack,
     ) {
         options.forEach { option ->
             val selected = currentCode == option.code
             Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        langPrefs.save(option.code)
-                        if (option.code != null) {
-                            AppCompatDelegate.setApplicationLocales(
-                                LocaleListCompat.forLanguageTags(option.code)
-                            )
-                        } else {
-                            AppCompatDelegate.setApplicationLocales(
-                                LocaleListCompat.getEmptyLocaleList()
-                            )
-                        }
-                    },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            langPrefs.save(option.code)
+                            if (option.code != null) {
+                                AppCompatDelegate.setApplicationLocales(
+                                    LocaleListCompat.forLanguageTags(option.code),
+                                )
+                            } else {
+                                AppCompatDelegate.setApplicationLocales(
+                                    LocaleListCompat.getEmptyLocaleList(),
+                                )
+                            }
+                        },
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant
+                color = MaterialTheme.colorScheme.surfaceVariant,
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
                 ) {
                     Text(
                         text = stringResource(option.labelRes),
-                        style = MaterialTheme.typography.bodyLarge
+                        style = MaterialTheme.typography.bodyLarge,
                     )
                     if (selected) {
                         Icon(
                             imageVector = NextPageIcons.Check,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = MaterialTheme.colorScheme.primary,
                         )
                     }
                 }

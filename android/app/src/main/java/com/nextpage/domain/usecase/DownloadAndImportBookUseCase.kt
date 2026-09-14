@@ -8,13 +8,13 @@ import com.nextpage.domain.model.Book
 import com.nextpage.domain.model.BookImportRequest
 import com.nextpage.domain.model.DuplicateBookException
 import com.nextpage.domain.repository.LibraryRepository
-import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.withContext
+import java.io.File
 
 /**
  * Observable lifecycle of a catalog "download → import" run.
@@ -24,15 +24,27 @@ import kotlinx.coroutines.withContext
  */
 sealed interface DownloadImportState {
     data object Idle : DownloadImportState
-    data class Downloading(val bytesSoFar: Long, val totalBytes: Long?) : DownloadImportState
+
+    data class Downloading(
+        val bytesSoFar: Long,
+        val totalBytes: Long?,
+    ) : DownloadImportState
+
     data object Importing : DownloadImportState
-    data class Success(val book: Book) : DownloadImportState
+
+    data class Success(
+        val book: Book,
+    ) : DownloadImportState
 
     /** The book already exists in the library; no download was performed. */
-    data class Duplicate(val message: String) : DownloadImportState
+    data class Duplicate(
+        val message: String,
+    ) : DownloadImportState
 
     /** [error] is the downloader's typed code, or `null` for import failures. */
-    data class Failure(val error: CatalogErrorCode?) : DownloadImportState
+    data class Failure(
+        val error: CatalogErrorCode?,
+    ) : DownloadImportState
 }
 
 /**
@@ -55,83 +67,84 @@ class DownloadAndImportBookUseCase(
     private val importEpubBookUseCase: ImportEpubBookUseCase,
     private val libraryRepository: LibraryRepository,
     private val tempDir: File,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
+    suspend operator fun invoke(book: CatalogBook): Flow<DownloadImportState> =
+        channelFlow {
+            send(DownloadImportState.Idle)
 
-    suspend operator fun invoke(book: CatalogBook): Flow<DownloadImportState> = channelFlow {
-        send(DownloadImportState.Idle)
-
-        val url = book.downloadUrl
-        if (url.isNullOrBlank()) {
-            send(DownloadImportState.Failure(CatalogErrorCode.UNAVAILABLE_DOWNLOAD))
-            return@channelFlow
-        }
-
-        // Cheap pre-check: never touch the network for a book already owned.
-        val existing = withContext(ioDispatcher) {
-            libraryRepository.findBookByTitleAndAuthor(book.title, book.authors.firstOrNull())
-        }
-        if (existing != null) {
-            send(DownloadImportState.Duplicate(DUPLICATE_MESSAGE))
-            return@channelFlow
-        }
-
-        tempDir.mkdirs()
-        val key = sanitize(book.id)
-        val partFile = File(tempDir, "$key.part")
-        val finalFile = File(tempDir, "$key.epub")
-        var committed = false
-
-        try {
-            // Deterministic name: a leftover partial from a previous attempt is
-            // overwritten, never appended to.
-            partFile.delete()
-            send(DownloadImportState.Downloading(0L, null))
-            downloader.download(url, partFile) { bytesSoFar, totalBytes ->
-                trySend(DownloadImportState.Downloading(bytesSoFar, totalBytes))
+            val url = book.downloadUrl
+            if (url.isNullOrBlank()) {
+                send(DownloadImportState.Failure(CatalogErrorCode.UNAVAILABLE_DOWNLOAD))
+                return@channelFlow
             }
 
-            // Atomic same-volume move (`<id>.part` → `<id>.epub`).
-            if (finalFile.exists()) finalFile.delete()
-            if (!partFile.renameTo(finalFile)) {
-                throw CatalogException(CatalogErrorCode.UPSTREAM_ERROR, "atomic rename failed")
-            }
-
-            send(DownloadImportState.Importing)
-            val result = importEpubBookUseCase(
-                request = BookImportRequest(sourcePath = finalFile.path, fallbackTitle = book.title),
-                inputStreamProvider = { finalFile.inputStream() }
-            )
-            result.fold(
-                onSuccess = { imported ->
-                    committed = true
-                    send(DownloadImportState.Success(imported))
-                },
-                onFailure = { error ->
-                    if (error is DuplicateBookException) {
-                        send(DownloadImportState.Duplicate(DUPLICATE_MESSAGE))
-                    } else {
-                        send(DownloadImportState.Failure(null))
-                    }
+            // Cheap pre-check: never touch the network for a book already owned.
+            val existing =
+                withContext(ioDispatcher) {
+                    libraryRepository.findBookByTitleAndAuthor(book.title, book.authors.firstOrNull())
                 }
-            )
-        } catch (err: CancellationException) {
-            throw err
-        } catch (err: CatalogException) {
-            send(DownloadImportState.Failure(err.code))
-        } catch (err: Throwable) {
-            send(DownloadImportState.Failure(null))
-        } finally {
-            partFile.delete()
-            if (!committed) finalFile.delete()
+            if (existing != null) {
+                send(DownloadImportState.Duplicate(DUPLICATE_MESSAGE))
+                return@channelFlow
+            }
+
+            tempDir.mkdirs()
+            val key = sanitize(book.id)
+            val partFile = File(tempDir, "$key.part")
+            val finalFile = File(tempDir, "$key.epub")
+            var committed = false
+
+            try {
+                // Deterministic name: a leftover partial from a previous attempt is
+                // overwritten, never appended to.
+                partFile.delete()
+                send(DownloadImportState.Downloading(0L, null))
+                downloader.download(url, partFile) { bytesSoFar, totalBytes ->
+                    trySend(DownloadImportState.Downloading(bytesSoFar, totalBytes))
+                }
+
+                // Atomic same-volume move (`<id>.part` → `<id>.epub`).
+                if (finalFile.exists()) finalFile.delete()
+                if (!partFile.renameTo(finalFile)) {
+                    throw CatalogException(CatalogErrorCode.UPSTREAM_ERROR, "atomic rename failed")
+                }
+
+                send(DownloadImportState.Importing)
+                val result =
+                    importEpubBookUseCase(
+                        request = BookImportRequest(sourcePath = finalFile.path, fallbackTitle = book.title),
+                        inputStreamProvider = { finalFile.inputStream() },
+                    )
+                result.fold(
+                    onSuccess = { imported ->
+                        committed = true
+                        send(DownloadImportState.Success(imported))
+                    },
+                    onFailure = { error ->
+                        if (error is DuplicateBookException) {
+                            send(DownloadImportState.Duplicate(DUPLICATE_MESSAGE))
+                        } else {
+                            send(DownloadImportState.Failure(null))
+                        }
+                    },
+                )
+            } catch (err: CancellationException) {
+                throw err
+            } catch (err: CatalogException) {
+                send(DownloadImportState.Failure(err.code))
+            } catch (err: Throwable) {
+                send(DownloadImportState.Failure(null))
+            } finally {
+                partFile.delete()
+                if (!committed) finalFile.delete()
+            }
         }
-    }
 
     private companion object {
         const val DUPLICATE_MESSAGE = "Book already in the library"
 
         /** Filesystem-safe, deterministic per-book id used for the temp names. */
-        fun sanitize(raw: String): String =
-            raw.replace(Regex("[^A-Za-z0-9._-]"), "_")
+        fun sanitize(raw: String): String = raw.replace(Regex("[^A-Za-z0-9._-]"), "_")
     }
 }

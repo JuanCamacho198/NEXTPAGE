@@ -27,95 +27,111 @@ import org.junit.Test
  * under test is what prunes the stale/duplicate signals.
  */
 class HomeRepositoryImplFilterTest {
-
     // CR1 — explicit `status='completed'` wins over a stale `reading_state='reading'`.
     @Test
-    fun explicitCompletedStatus_excluded() = runBlocking {
-        val books = currentBooksFor(
-            listOf(book("completed", status = BookStatus.COMPLETED, cachedProgress = 40f))
-        )
+    fun explicitCompletedStatus_excluded() =
+        runBlocking {
+            val books =
+                currentBooksFor(
+                    listOf(book("completed", status = BookStatus.COMPLETED, cachedProgress = 40f)),
+                )
 
-        assertTrue("completed book must not appear in Continue Reading", books.isEmpty())
-    }
+            assertTrue("completed book must not appear in Continue Reading", books.isEmpty())
+        }
 
     // CR2 — canonical `reading_progress.percentage == 100` with null status.
     @Test
-    fun canonicalProgress100WithNullStatus_excluded() = runBlocking {
-        val books = currentBooksFor(
-            books = listOf(book("finished-canonically", status = null, cachedProgress = 40f)),
-            progresses = listOf(canonical("finished-canonically", percentage = 100f))
-        )
+    fun canonicalProgress100WithNullStatus_excluded() =
+        runBlocking {
+            val books =
+                currentBooksFor(
+                    books = listOf(book("finished-canonically", status = null, cachedProgress = 40f)),
+                    progresses = listOf(canonical("finished-canonically", percentage = 100f)),
+                )
 
-        assertTrue("canonical 100% must exclude the book", books.isEmpty())
-    }
+            assertTrue("canonical 100% must exclude the book", books.isEmpty())
+        }
 
     // CR3 — explicit `status='plan_to_read'`.
     @Test
-    fun planToReadStatus_excluded() = runBlocking {
-        val books = currentBooksFor(
-            listOf(book("planned", status = BookStatus.PLAN_TO_READ, cachedProgress = 30f))
-        )
+    fun planToReadStatus_excluded() =
+        runBlocking {
+            val books =
+                currentBooksFor(
+                    listOf(book("planned", status = BookStatus.PLAN_TO_READ, cachedProgress = 30f)),
+                )
 
-        assertTrue("plan-to-read book must not appear in Continue Reading", books.isEmpty())
-    }
+            assertTrue("plan-to-read book must not appear in Continue Reading", books.isEmpty())
+        }
 
     // CR4 — explicit `status='reading'`, canonical progress < 100.
     @Test
-    fun pureReadingStatus_included() = runBlocking {
-        val books = currentBooksFor(
-            listOf(book("reading", status = BookStatus.READING, cachedProgress = 40f))
-        )
+    fun pureReadingStatus_included() =
+        runBlocking {
+            val books =
+                currentBooksFor(
+                    listOf(book("reading", status = BookStatus.READING, cachedProgress = 40f)),
+                )
 
-        assertEquals(listOf("reading"), books.map { it.id })
-    }
+            assertEquals(listOf("reading"), books.map { it.id })
+        }
 
     // CR4 — null status, canonical progress < 100, no completed signal.
     @Test
-    fun nullStatusWithCanonicalProgress_included() = runBlocking {
-        val books = currentBooksFor(
-            books = listOf(book("in-progress", status = null, cachedProgress = 15f)),
-            progresses = listOf(canonical("in-progress", percentage = 55f))
-        )
+    fun nullStatusWithCanonicalProgress_included() =
+        runBlocking {
+            val books =
+                currentBooksFor(
+                    books = listOf(book("in-progress", status = null, cachedProgress = 15f)),
+                    progresses = listOf(canonical("in-progress", percentage = 55f)),
+                )
 
-        assertEquals(listOf("in-progress"), books.map { it.id })
-    }
+            assertEquals(listOf("in-progress"), books.map { it.id })
+        }
 
     // CR5 — explicit `status='plan_to_read'` is authoritative over canonical progress 100.
     @Test
-    fun explicitStatusBeatsCanonicalProgress_excluded() = runBlocking {
-        val books = currentBooksFor(
-            books = listOf(book("stale-status", status = BookStatus.PLAN_TO_READ, cachedProgress = 20f)),
-            progresses = listOf(canonical("stale-status", percentage = 100f))
-        )
+    fun explicitStatusBeatsCanonicalProgress_excluded() =
+        runBlocking {
+            val books =
+                currentBooksFor(
+                    books = listOf(book("stale-status", status = BookStatus.PLAN_TO_READ, cachedProgress = 20f)),
+                    progresses = listOf(canonical("stale-status", percentage = 100f)),
+                )
 
-        assertTrue("explicit status must win over canonical progress", books.isEmpty())
-    }
+            assertTrue("explicit status must win over canonical progress", books.isEmpty())
+        }
 
     // CR6 — canonical progress 100 overrides a stale `reading_state='reading'` with null status.
     @Test
-    fun canonicalProgressBeatsStaleReadingState_excluded() = runBlocking {
-        val books = currentBooksFor(
-            books = listOf(book("stale-state", status = null, cachedProgress = 10f)),
-            progresses = listOf(canonical("stale-state", percentage = 100f))
-        )
+    fun canonicalProgressBeatsStaleReadingState_excluded() =
+        runBlocking {
+            val books =
+                currentBooksFor(
+                    books = listOf(book("stale-state", status = null, cachedProgress = 10f)),
+                    progresses = listOf(canonical("stale-state", percentage = 100f)),
+                )
 
-        assertTrue("canonical progress must win over stale reading state", books.isEmpty())
-    }
+            assertTrue("canonical progress must win over stale reading state", books.isEmpty())
+        }
 
     @Test
-    fun mixedShelf_returnsOnlyActiveReadingCandidates() = runBlocking {
-        val books = currentBooksFor(
-            books = listOf(
-                book("completed", status = BookStatus.COMPLETED, cachedProgress = 50f),
-                book("planned", status = BookStatus.PLAN_TO_READ, cachedProgress = 50f),
-                book("canonical-100", status = null, cachedProgress = 50f),
-                book("active", status = BookStatus.READING, cachedProgress = 50f)
-            ),
-            progresses = listOf(canonical("canonical-100", percentage = 100f))
-        )
+    fun mixedShelf_returnsOnlyActiveReadingCandidates() =
+        runBlocking {
+            val books =
+                currentBooksFor(
+                    books =
+                        listOf(
+                            book("completed", status = BookStatus.COMPLETED, cachedProgress = 50f),
+                            book("planned", status = BookStatus.PLAN_TO_READ, cachedProgress = 50f),
+                            book("canonical-100", status = null, cachedProgress = 50f),
+                            book("active", status = BookStatus.READING, cachedProgress = 50f),
+                        ),
+                    progresses = listOf(canonical("canonical-100", percentage = 100f)),
+                )
 
-        assertEquals(listOf("active"), books.map { it.id })
-    }
+            assertEquals(listOf("active"), books.map { it.id })
+        }
 
     // Pure predicate truth table — branches the DAO query can never emit.
 
@@ -138,7 +154,7 @@ class HomeRepositoryImplFilterTest {
     fun predicate_completedReadingStateWithoutStatus_false() {
         assertFalse(
             domainBook(status = null, readingState = ReadingState.COMPLETED, progressPercentage = 50f)
-                .isActiveReadingCandidate()
+                .isActiveReadingCandidate(),
         )
     }
 
@@ -146,7 +162,7 @@ class HomeRepositoryImplFilterTest {
     fun predicate_readingStateReading_included() {
         assertTrue(
             domainBook(status = null, readingState = ReadingState.READING, progressPercentage = 25f)
-                .isActiveReadingCandidate()
+                .isActiveReadingCandidate(),
         )
     }
 
@@ -154,7 +170,7 @@ class HomeRepositoryImplFilterTest {
     fun predicate_nullStatusZeroProgressToRead_false() {
         assertFalse(
             domainBook(status = null, readingState = ReadingState.TO_READ, progressPercentage = 0f)
-                .isActiveReadingCandidate()
+                .isActiveReadingCandidate(),
         )
     }
 
@@ -162,13 +178,13 @@ class HomeRepositoryImplFilterTest {
     fun predicate_explicitReadingStatusWithStaleState_included() {
         assertTrue(
             domainBook(status = BookStatus.READING, readingState = ReadingState.TO_READ, progressPercentage = 25f)
-                .isActiveReadingCandidate()
+                .isActiveReadingCandidate(),
         )
     }
 
     private suspend fun currentBooksFor(
         books: List<BookEntity>,
-        progresses: List<ReadingProgressEntity> = emptyList()
+        progresses: List<ReadingProgressEntity> = emptyList(),
     ): List<Book> {
         val bookDao = mockk<BookDao>()
         every { bookDao.observeReadingBooks() } returns flowOf(books)
@@ -177,50 +193,55 @@ class HomeRepositoryImplFilterTest {
         return HomeRepositoryImpl(
             bookDao = bookDao,
             readingProgressDao = readingProgressDao,
-            readingSessionDao = mockk<ReadingSessionDao>()
+            readingSessionDao = mockk<ReadingSessionDao>(),
         ).observeCurrentBooks().first()
     }
 
     private fun book(
         id: String,
         status: String? = null,
-        cachedProgress: Float = 0f
-    ): BookEntity = BookEntity(
-        id = id,
-        title = "Book $id",
-        author = null,
-        coverPath = null,
-        filePath = "/tmp/$id.epub",
-        format = "epub",
-        updatedAtEpochMillis = 1_000L,
-        status = status,
-        readingState = ReadingState.READING,
-        progressPercentage = cachedProgress
-    )
+        cachedProgress: Float = 0f,
+    ): BookEntity =
+        BookEntity(
+            id = id,
+            title = "Book $id",
+            author = null,
+            coverPath = null,
+            filePath = "/tmp/$id.epub",
+            format = "epub",
+            updatedAtEpochMillis = 1_000L,
+            status = status,
+            readingState = ReadingState.READING,
+            progressPercentage = cachedProgress,
+        )
 
-    private fun canonical(bookId: String, percentage: Float): ReadingProgressEntity =
+    private fun canonical(
+        bookId: String,
+        percentage: Float,
+    ): ReadingProgressEntity =
         ReadingProgressEntity(
             id = "progress-$bookId",
             bookId = bookId,
             cfiLocation = "epubcfi(/6/2)",
             percentage = percentage,
-            updatedAtEpochMillis = 2_000L
+            updatedAtEpochMillis = 2_000L,
         )
 
     private fun domainBook(
         status: String? = null,
         readingState: String = ReadingState.READING,
-        progressPercentage: Float = 0f
-    ): Book = Book(
-        id = "book-1",
-        title = "Test Book",
-        author = null,
-        coverPath = null,
-        filePath = "/tmp/book-1.epub",
-        format = "epub",
-        updatedAtEpochMillis = 0L,
-        status = status,
-        readingState = readingState,
-        progressPercentage = progressPercentage
-    )
+        progressPercentage: Float = 0f,
+    ): Book =
+        Book(
+            id = "book-1",
+            title = "Test Book",
+            author = null,
+            coverPath = null,
+            filePath = "/tmp/book-1.epub",
+            format = "epub",
+            updatedAtEpochMillis = 0L,
+            status = status,
+            readingState = readingState,
+            progressPercentage = progressPercentage,
+        )
 }

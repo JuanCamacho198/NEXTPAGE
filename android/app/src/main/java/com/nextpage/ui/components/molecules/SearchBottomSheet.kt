@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -15,9 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -39,12 +36,11 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.nextpage.R
 import com.nextpage.domain.model.HighlightColor
 import com.nextpage.domain.model.SearchResult
-import com.nextpage.ui.icons.NextPageIcons
 import com.nextpage.presentation.theme.NextPageTheme
+import com.nextpage.ui.icons.NextPageIcons
 
 /**
  * Modal bottom sheet for full-text search inside the current book.
@@ -102,7 +98,7 @@ fun SearchBottomSheet(
     onClearQuery: () -> Unit,
     onResultSelected: (SearchResult) -> Unit,
     onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -110,22 +106,24 @@ fun SearchBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = Color(0xFF161F33),
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
     ) {
         Column(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 32.dp)
+            modifier =
+                modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 32.dp),
         ) {
             // ── Drag Handle ────────────────────────────────────────
             Box(
-                modifier = Modifier
-                    .width(40.dp)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(Color(0xFF4A5568))
-                    .align(Alignment.CenterHorizontally)
+                modifier =
+                    Modifier
+                        .width(40.dp)
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(Color(0xFF4A5568))
+                        .align(Alignment.CenterHorizontally),
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -138,14 +136,14 @@ fun SearchBottomSheet(
                 placeholder = {
                     Text(
                         text = stringResource(R.string.search_input_hint),
-                        color = Color(0xFF718096)
+                        color = Color(0xFF718096),
                     )
                 },
                 leadingIcon = {
                     Icon(
                         imageVector = NextPageIcons.Search,
                         contentDescription = null,
-                        tint = Color(0xFF718096)
+                        tint = Color(0xFF718096),
                     )
                 },
                 trailingIcon = {
@@ -154,7 +152,7 @@ fun SearchBottomSheet(
                             Icon(
                                 imageVector = NextPageIcons.Close,
                                 contentDescription = stringResource(R.string.search_clear),
-                                tint = Color(0xFF718096)
+                                tint = Color(0xFF718096),
                             )
                         }
                     }
@@ -162,12 +160,13 @@ fun SearchBottomSheet(
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
                 textStyle = MaterialTheme.typography.bodyLarge.copy(color = Color(0xFFDDE2F8)),
-                colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFFADC6FF),
-                    unfocusedBorderColor = Color(0xFF2F3445),
-                    cursorColor = Color(0xFFADC6FF)
-                ),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search)
+                colors =
+                    androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFFADC6FF),
+                        unfocusedBorderColor = Color(0xFF2F3445),
+                        cursorColor = Color(0xFFADC6FF),
+                    ),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -178,7 +177,7 @@ fun SearchBottomSheet(
                     text = stringResource(R.string.search_results_count, results.size),
                     style = MaterialTheme.typography.labelMedium,
                     color = Color(0xFF718096),
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -188,29 +187,31 @@ fun SearchBottomSheet(
             when {
                 isSearching -> {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(120.dp),
-                        contentAlignment = Alignment.Center
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(120.dp),
+                        contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator(
                             color = Color(0xFFADC6FF),
-                            strokeWidth = 3.dp
+                            strokeWidth = 3.dp,
                         )
                     }
                 }
 
                 query.isNotEmpty() && results.isEmpty() && !isSearching -> {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(120.dp),
-                        contentAlignment = Alignment.Center
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(120.dp),
+                        contentAlignment = Alignment.Center,
                     ) {
                         Text(
                             text = stringResource(R.string.search_no_results),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFF718096)
+                            color = Color(0xFF718096),
                         )
                     }
                 }
@@ -218,36 +219,40 @@ fun SearchBottomSheet(
                 else -> {
                     // ── Results List ───────────────────────────────
                     LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(320.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(320.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        val colorMarkers = listOf(
-                            HighlightColor.YELLOW.hex,
-                            HighlightColor.GREEN.hex,
-                            HighlightColor.BLUE.hex,
-                            HighlightColor.ORANGE.hex,
-                            HighlightColor.RED.hex
-                        )
+                        val colorMarkers =
+                            listOf(
+                                HighlightColor.YELLOW.hex,
+                                HighlightColor.GREEN.hex,
+                                HighlightColor.BLUE.hex,
+                                HighlightColor.ORANGE.hex,
+                                HighlightColor.RED.hex,
+                            )
 
                         items(results, key = { "${it.chapterIndex}-${it.offset}" }) { result ->
                             val markerColor = colorMarkers[result.chapterIndex % colorMarkers.size]
 
                             Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .clickable { onResultSelected(result) }
-                                    .padding(vertical = 8.dp, horizontal = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable { onResultSelected(result) }
+                                        .padding(vertical = 8.dp, horizontal = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 // Color marker
                                 Box(
-                                    modifier = Modifier
-                                        .size(4.dp, 32.dp)
-                                        .clip(RoundedCornerShape(2.dp))
-                                        .background(parseColorHex(markerColor))
+                                    modifier =
+                                        Modifier
+                                            .size(4.dp, 32.dp)
+                                            .clip(RoundedCornerShape(2.dp))
+                                            .background(parseColorHex(markerColor)),
                                 )
 
                                 Spacer(modifier = Modifier.width(12.dp))
@@ -258,13 +263,13 @@ fun SearchBottomSheet(
                                         style = MaterialTheme.typography.bodySmall,
                                         color = Color(0xFFDDE2F8),
                                         maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
+                                        overflow = TextOverflow.Ellipsis,
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
                                         text = stringResource(R.string.search_result_chapter, result.chapterIndex + 1),
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = Color(0xFF718096)
+                                        color = Color(0xFF718096),
                                     )
                                 }
                             }
@@ -276,19 +281,19 @@ fun SearchBottomSheet(
     }
 }
 
-private fun parseColorHex(hex: String): Color {
-    return try {
+private fun parseColorHex(hex: String): Color =
+    try {
         val sanitized = hex.removePrefix("#")
-        val longHex = when (sanitized.length) {
-            6 -> "FF$sanitized"
-            8 -> sanitized
-            else -> "FF000000"
-        }
+        val longHex =
+            when (sanitized.length) {
+                6 -> "FF$sanitized"
+                8 -> sanitized
+                else -> "FF000000"
+            }
         Color(longHex.toLong(16))
     } catch (_: Exception) {
         Color.Magenta
     }
-}
 
 @Preview(showBackground = true)
 @Composable
@@ -296,25 +301,26 @@ private fun SearchBottomSheetDarkPreview() {
     NextPageTheme(darkTheme = true) {
         SearchBottomSheet(
             query = "times",
-            results = listOf(
-                SearchResult(
-                    text = "It was the best of times, it was the worst of times.",
-                    offset = 12,
-                    chapterIndex = 0,
-                    chapterTitle = "Book I — Chapter 1"
+            results =
+                listOf(
+                    SearchResult(
+                        text = "It was the best of times, it was the worst of times.",
+                        offset = 12,
+                        chapterIndex = 0,
+                        chapterTitle = "Book I — Chapter 1",
+                    ),
+                    SearchResult(
+                        text = "In the ensuing silence, the word hung in the air.",
+                        offset = 8,
+                        chapterIndex = 1,
+                        chapterTitle = "Book I — Chapter 2",
+                    ),
                 ),
-                SearchResult(
-                    text = "In the ensuing silence, the word hung in the air.",
-                    offset = 8,
-                    chapterIndex = 1,
-                    chapterTitle = "Book I — Chapter 2"
-                )
-            ),
             isSearching = false,
             onQueryChange = {},
             onClearQuery = {},
             onResultSelected = {},
-            onDismiss = {}
+            onDismiss = {},
         )
     }
 }
@@ -326,25 +332,26 @@ private fun SearchBottomSheetLightPreview() {
     NextPageTheme(darkTheme = false) {
         SearchBottomSheet(
             query = "times",
-            results = listOf(
-                SearchResult(
-                    text = "It was the best of times, it was the worst of times.",
-                    offset = 12,
-                    chapterIndex = 0,
-                    chapterTitle = "Book I — Chapter 1"
+            results =
+                listOf(
+                    SearchResult(
+                        text = "It was the best of times, it was the worst of times.",
+                        offset = 12,
+                        chapterIndex = 0,
+                        chapterTitle = "Book I — Chapter 1",
+                    ),
+                    SearchResult(
+                        text = "In the ensuing silence, the word hung in the air.",
+                        offset = 8,
+                        chapterIndex = 1,
+                        chapterTitle = "Book I — Chapter 2",
+                    ),
                 ),
-                SearchResult(
-                    text = "In the ensuing silence, the word hung in the air.",
-                    offset = 8,
-                    chapterIndex = 1,
-                    chapterTitle = "Book I — Chapter 2"
-                )
-            ),
             isSearching = false,
             onQueryChange = {},
             onClearQuery = {},
             onResultSelected = {},
-            onDismiss = {}
+            onDismiss = {},
         )
     }
 }

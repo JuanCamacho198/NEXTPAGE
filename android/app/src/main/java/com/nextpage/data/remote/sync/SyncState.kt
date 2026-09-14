@@ -33,13 +33,17 @@ sealed interface SyncState {
      * Session lost / refresh failed. [reason] carries the most recent
      * per-domain gate-reason string verbatim (DebugViewModel contract).
      */
-    data class Gated(val reason: String) : SyncState
+    data class Gated(
+        val reason: String,
+    ) : SyncState
 
     /**
      * At least one domain errored and no domain is currently Running.
      * [message] is the first non-gated domain error message.
      */
-    data class Error(val message: String) : SyncState
+    data class Error(
+        val message: String,
+    ) : SyncState
 
     /** Terminal after [SyncOrchestrator.stop]; lifts on the next `start()`. */
     data object Disabled : SyncState

@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
  * CatalogProvider port — identical contract on Android (Kotlin) and desktop (TS).
  * Gutendex is metadata/download authority; Open Library enriches + cover fallback.
  */
+
 /** addonId = sha256(url) first 16 hex chars (design A6) — lowercase only. */
 private val ADDON_ID_RE = Regex("^[0-9a-f]{16}$")
 
@@ -83,7 +84,7 @@ data class CatalogBook(
     val isbn10: String? = null,
     val openLibraryWorkId: String? = null,
     val internetArchiveId: String? = null,
-    val googleBooksId: String? = null
+    val googleBooksId: String? = null,
 )
 
 @Serializable
@@ -91,7 +92,7 @@ data class PagedResult(
     val results: List<CatalogBook>,
     /** Next 1-based page, or null when the last page was reached. */
     val nextPage: Int?,
-    val totalCount: Int
+    val totalCount: Int,
 )
 
 /**
@@ -104,33 +105,40 @@ enum class CatalogErrorCode {
     NOT_FOUND,
     RATE_LIMITED,
     UPSTREAM_ERROR,
-    NETWORK_ERROR
+    NETWORK_ERROR,
 }
 
 class CatalogException(
     val code: CatalogErrorCode,
     message: String,
-    val retryable: Boolean = code == CatalogErrorCode.RATE_LIMITED ||
-        code == CatalogErrorCode.NETWORK_ERROR
+    val retryable: Boolean =
+        code == CatalogErrorCode.RATE_LIMITED ||
+            code == CatalogErrorCode.NETWORK_ERROR,
 ) : Exception("$code: $message")
 
 /** Build a typed catalog error without leaking upstream details. */
-fun catalogError(code: CatalogErrorCode, detail: String? = null): CatalogException =
-    CatalogException(code, detail ?: code.name)
+fun catalogError(
+    code: CatalogErrorCode,
+    detail: String? = null,
+): CatalogException = CatalogException(code, detail ?: code.name)
 
 fun isCatalogError(err: Throwable): Boolean = err is CatalogException
 
 /** Map an upstream HTTP status to a stable contract code. */
-fun mapHttpStatusToCode(status: Int): CatalogErrorCode = when (status) {
-    HTTP_NOT_FOUND -> CatalogErrorCode.NOT_FOUND
-    HTTP_TOO_MANY_REQUESTS -> CatalogErrorCode.RATE_LIMITED
-    in HTTP_SERVER_ERROR_MIN..HTTP_SERVER_ERROR_MAX -> CatalogErrorCode.UPSTREAM_ERROR
-    else -> CatalogErrorCode.UPSTREAM_ERROR
-}
+fun mapHttpStatusToCode(status: Int): CatalogErrorCode =
+    when (status) {
+        HTTP_NOT_FOUND -> CatalogErrorCode.NOT_FOUND
+        HTTP_TOO_MANY_REQUESTS -> CatalogErrorCode.RATE_LIMITED
+        in HTTP_SERVER_ERROR_MIN..HTTP_SERVER_ERROR_MAX -> CatalogErrorCode.UPSTREAM_ERROR
+        else -> CatalogErrorCode.UPSTREAM_ERROR
+    }
 
 interface CatalogProvider {
     /** [page] is 1-based; `page < 1` rejects with INVALID_PAGE before any I/O. */
-    suspend fun search(query: String, page: Int): PagedResult
+    suspend fun search(
+        query: String,
+        page: Int,
+    ): PagedResult
 
     /** Unknown id rejects with NOT_FOUND. */
     suspend fun getDetails(id: String): CatalogBook
@@ -139,7 +147,10 @@ interface CatalogProvider {
      * Pure function (no I/O): pick a download URL from a Gutendex `formats` map.
      * Throws UNAVAILABLE_DOWNLOAD when no usable URL exists.
      */
-    fun resolveDownloadUrl(formats: Map<String, String>, preferEpub: Boolean): String
+    fun resolveDownloadUrl(
+        formats: Map<String, String>,
+        preferEpub: Boolean,
+    ): String
 
     /** Pure function (no I/O): the sources this provider can serve, in order. */
     fun listSources(): List<CatalogSourceInfo>
@@ -151,8 +162,10 @@ interface CatalogProvider {
      * empty page, so its rail auto-hides instead of surfacing an error or a
      * placeholder section.
      */
-    suspend fun featured(sort: CatalogFeaturedSort, page: Int): PagedResult =
-        PagedResult(emptyList(), null, 0)
+    suspend fun featured(
+        sort: CatalogFeaturedSort,
+        page: Int,
+    ): PagedResult = PagedResult(emptyList(), null, 0)
 
     /** Fail-closed capability probe: false means "do not build a featured rail". */
     fun supportsFeatured(): Boolean = false
@@ -161,18 +174,21 @@ interface CatalogProvider {
      * Per-source search scoped to one [sourceId]. Fail-closed default: an
      * unsupported id yields an empty page rather than a crash.
      */
-    suspend fun searchSource(sourceId: String, query: String, page: Int): PagedResult =
-        PagedResult(emptyList(), null, 0)
+    suspend fun searchSource(
+        sourceId: String,
+        query: String,
+        page: Int,
+    ): PagedResult = PagedResult(emptyList(), null, 0)
 }
 
 enum class CatalogSourceKind {
     BUILTIN,
     CURATED,
-    ADDON
+    ADDON,
 }
 
 data class CatalogSourceInfo(
     val sourceId: String,
     val name: String,
-    val kind: CatalogSourceKind
+    val kind: CatalogSourceKind,
 )

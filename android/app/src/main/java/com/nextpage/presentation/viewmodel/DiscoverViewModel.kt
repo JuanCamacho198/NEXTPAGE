@@ -15,16 +15,16 @@ import com.nextpage.data.remote.catalog.CatalogSources
 import com.nextpage.data.remote.catalog.addonSource
 import com.nextpage.debug.DebugLog
 import com.nextpage.debug.SentryMetrics
-import com.nextpage.domain.connectivity.AlwaysOnlineConnectivityObserver
-import com.nextpage.domain.access.resolveAccess
 import com.nextpage.domain.access.LegalAccess
-import com.nextpage.presentation.feature.discover.AccessResolverState
-import com.nextpage.presentation.feature.discover.AddonReadState
-import com.nextpage.presentation.feature.discover.mapAccessState
+import com.nextpage.domain.access.resolveAccess
+import com.nextpage.domain.connectivity.AlwaysOnlineConnectivityObserver
+import com.nextpage.domain.connectivity.ConnectivityObserver
 import com.nextpage.domain.usecase.DownloadAndImportBookUseCase
 import com.nextpage.domain.usecase.DownloadImportState
-import com.nextpage.domain.connectivity.ConnectivityObserver
+import com.nextpage.presentation.feature.discover.AccessResolverState
+import com.nextpage.presentation.feature.discover.AddonReadState
 import com.nextpage.presentation.feature.discover.DiscoverRailState
+import com.nextpage.presentation.feature.discover.mapAccessState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -47,7 +47,7 @@ enum class DiscoverStatus {
     LOADED,
     EMPTY,
     ERROR,
-    OFFLINE
+    OFFLINE,
 }
 
 /** Detail pane status, independent from the search-list status. */
@@ -56,7 +56,7 @@ enum class DiscoverDetailStatus {
     LOADING,
     LOADED,
     NOT_FOUND,
-    ERROR
+    ERROR,
 }
 
 /**
@@ -68,7 +68,9 @@ enum class DiscoverDetailStatus {
 sealed interface DiscoverSourceFilter {
     data object AllSources : DiscoverSourceFilter
 
-    data class Source(val sourceId: String) : DiscoverSourceFilter
+    data class Source(
+        val sourceId: String,
+    ) : DiscoverSourceFilter
 }
 
 /** Immutable UI state exposed by [DiscoverViewModel]. */
@@ -113,14 +115,15 @@ data class DiscoverUiState(
     /** Active source filter; [DiscoverSourceFilter.AllSources] is the default. */
     val sourceFilter: DiscoverSourceFilter = DiscoverSourceFilter.AllSources,
     /** addonId → display name, resolved from [sources] via the injected lookup. */
-    val attributionNames: Map<String, String> = emptyMap()
+    val attributionNames: Map<String, String> = emptyMap(),
 ) {
     /** [books] narrowed in memory by the active [sourceFilter]. */
     val visibleBooks: List<CatalogBook>
-        get() = when (val filter = sourceFilter) {
-            DiscoverSourceFilter.AllSources -> books
-            is DiscoverSourceFilter.Source -> books.filter { it.provider == filter.sourceId }
-        }
+        get() =
+            when (val filter = sourceFilter) {
+                DiscoverSourceFilter.AllSources -> books
+                is DiscoverSourceFilter.Source -> books.filter { it.provider == filter.sourceId }
+            }
 }
 
 class DiscoverViewModel(
@@ -157,17 +160,17 @@ class DiscoverViewModel(
      * an ephemeral provider over the installed manifest; null (tests, or
      * uninstalled addon) resolves to [AddonReadState.Empty].
      */
-    private val addonResolve: (suspend (addonId: String, book: CatalogBook) -> LegalAccess)? = null
+    private val addonResolve: (suspend (addonId: String, book: CatalogBook) -> LegalAccess)? = null,
 ) : ViewModel() {
-
     private val initialOnline = connectivityObserver.current()
 
-    private val _uiState = MutableStateFlow(
-        DiscoverUiState(
-            status = if (initialOnline) DiscoverStatus.IDLE else DiscoverStatus.OFFLINE,
-            isOnline = initialOnline
+    private val _uiState =
+        MutableStateFlow(
+            DiscoverUiState(
+                status = if (initialOnline) DiscoverStatus.IDLE else DiscoverStatus.OFFLINE,
+                isOnline = initialOnline,
+            ),
         )
-    )
     val uiState: StateFlow<DiscoverUiState> = _uiState.asStateFlow()
 
     private var lastAttemptedPage = 0
@@ -214,10 +217,11 @@ class DiscoverViewModel(
         // A new query supersedes any in-flight search: cancel it so stale
         // results can never render, then schedule the debounced latest search.
         cancelInFlightSearch()
-        debounceJob = viewModelScope.launch(mainDispatcher) {
-            delay(debounceMillis)
-            beginSearch(page = 1, append = false)
-        }
+        debounceJob =
+            viewModelScope.launch(mainDispatcher) {
+                delay(debounceMillis)
+                beginSearch(page = 1, append = false)
+            }
     }
 
     /** Immediate search (IME action, trending/suggestion chip, or retry). */
@@ -259,7 +263,7 @@ class DiscoverViewModel(
                 it.copy(
                     detailStatus = DiscoverDetailStatus.LOADING,
                     detail = null,
-                    accessState = AccessResolverState.Loading
+                    accessState = AccessResolverState.Loading,
                 )
             }
             try {
@@ -269,13 +273,14 @@ class DiscoverViewModel(
                     it.copy(
                         detailStatus = DiscoverDetailStatus.LOADED,
                         detail = detail,
-                        accessState = mapAccessState(
-                            isOnline = it.isOnline,
-                            consentRequiredAddonId = addonId,
-                            hasConsent = addonId?.let(addonConsent) ?: true,
-                            access = resolveAccess(detail),
-                            failed = false
-                        )
+                        accessState =
+                            mapAccessState(
+                                isOnline = it.isOnline,
+                                consentRequiredAddonId = addonId,
+                                hasConsent = addonId?.let(addonConsent) ?: true,
+                                access = resolveAccess(detail),
+                                failed = false,
+                            ),
                     )
                 }
             } catch (err: CancellationException) {
@@ -284,19 +289,21 @@ class DiscoverViewModel(
                 val code = codeOf(err)
                 _uiState.update {
                     it.copy(
-                        detailStatus = if (code == CatalogErrorCode.NOT_FOUND) {
-                            DiscoverDetailStatus.NOT_FOUND
-                        } else {
-                            DiscoverDetailStatus.ERROR
-                        },
+                        detailStatus =
+                            if (code == CatalogErrorCode.NOT_FOUND) {
+                                DiscoverDetailStatus.NOT_FOUND
+                            } else {
+                                DiscoverDetailStatus.ERROR
+                            },
                         detail = null,
-                        accessState = mapAccessState(
-                            isOnline = it.isOnline,
-                            consentRequiredAddonId = null,
-                            hasConsent = true,
-                            access = null,
-                            failed = true
-                        )
+                        accessState =
+                            mapAccessState(
+                                isOnline = it.isOnline,
+                                consentRequiredAddonId = null,
+                                hasConsent = true,
+                                access = null,
+                                failed = true,
+                            ),
                     )
                 }
             }
@@ -310,7 +317,7 @@ class DiscoverViewModel(
                 detailStatus = DiscoverDetailStatus.CLOSED,
                 accessState = AccessResolverState.Loading,
                 addonRead = AddonReadState.Hidden,
-                addonReadName = ""
+                addonReadName = "",
             )
         }
     }
@@ -323,7 +330,10 @@ class DiscoverViewModel(
      * provider resolve runs and maps to Loaded/Empty/Error. A null
      * [addonResolve] (tests) resolves consented books to Empty.
      */
-    fun openAddonRead(addonId: String, addonName: String) {
+    fun openAddonRead(
+        addonId: String,
+        addonName: String,
+    ) {
         val book = _uiState.value.detail ?: return
         if (book.provider != addonSource(addonId)) return
         pendingAddonReadId = addonId
@@ -358,13 +368,14 @@ class DiscoverViewModel(
         if (book != null) {
             _uiState.update {
                 it.copy(
-                    accessState = mapAccessState(
-                        isOnline = it.isOnline,
-                        consentRequiredAddonId = CatalogSources.addonIdOf(book.provider),
-                        hasConsent = true,
-                        access = resolveAccess(book),
-                        failed = false
-                    )
+                    accessState =
+                        mapAccessState(
+                            isOnline = it.isOnline,
+                            consentRequiredAddonId = CatalogSources.addonIdOf(book.provider),
+                            hasConsent = true,
+                            access = resolveAccess(book),
+                            failed = false,
+                        ),
                 )
             }
             if (_uiState.value.addonRead == AddonReadState.ConsentRequired &&
@@ -391,20 +402,24 @@ class DiscoverViewModel(
         pendingAddonReadId = null
         _uiState.update {
             it.copy(
-                accessState = if (it.accessState is AccessResolverState.ConsentRequired) {
-                    AccessResolverState.Empty
-                } else {
-                    it.accessState
-                },
+                accessState =
+                    if (it.accessState is AccessResolverState.ConsentRequired) {
+                        AccessResolverState.Empty
+                    } else {
+                        it.accessState
+                    },
                 addonRead = AddonReadState.Hidden,
-                addonReadName = ""
+                addonReadName = "",
             )
         }
     }
 
     private var pendingAddonReadId: String? = null
 
-    private fun resolveAddonRead(addonId: String, book: CatalogBook) {
+    private fun resolveAddonRead(
+        addonId: String,
+        book: CatalogBook,
+    ) {
         val resolve = addonResolve
         if (resolve == null) {
             _uiState.update { it.copy(addonRead = AddonReadState.Empty) }
@@ -416,11 +431,12 @@ class DiscoverViewModel(
                 val access = resolve(addonId, book)
                 _uiState.update {
                     it.copy(
-                        addonRead = if (access.options.isEmpty() && !access.canDownloadInApp) {
-                            AddonReadState.Empty
-                        } else {
-                            AddonReadState.Loaded(access)
-                        }
+                        addonRead =
+                            if (access.options.isEmpty() && !access.canDownloadInApp) {
+                                AddonReadState.Empty
+                            } else {
+                                AddonReadState.Loaded(access)
+                            },
                     )
                 }
             } catch (err: CancellationException) {
@@ -463,20 +479,21 @@ class DiscoverViewModel(
         downloadingBookId = book.id
         SentryMetrics.count(
             "discover_download_start",
-            mapOf("provider" to book.provider)
+            mapOf("provider" to book.provider),
         )
         // Synchronous Idle → Downloading so the progress UI appears on tap,
         // before the use-case flow emits its first value.
         _uiState.update { it.copy(download = DownloadImportState.Downloading(0L, null)) }
-        downloadJob = viewModelScope.launch(mainDispatcher) {
-            useCase(book).collect { state ->
-                // The synchronous preset above already rendered progress; the
-                // flow's leading Idle would flicker back, so skip it.
-                if (state is DownloadImportState.Idle) return@collect
-                emitDownloadTerminal(state, book.provider)
-                _uiState.update { it.copy(download = state) }
+        downloadJob =
+            viewModelScope.launch(mainDispatcher) {
+                useCase(book).collect { state ->
+                    // The synchronous preset above already rendered progress; the
+                    // flow's leading Idle would flicker back, so skip it.
+                    if (state is DownloadImportState.Idle) return@collect
+                    emitDownloadTerminal(state, book.provider)
+                    _uiState.update { it.copy(download = state) }
+                }
             }
-        }
     }
 
     /**
@@ -484,14 +501,21 @@ class DiscoverViewModel(
      * Attributes stay {provider[, code]} from CatalogErrorCode; NEVER book id,
      * title, query, or user id. Duplicate/Idle/Downloading/Importing emit nothing.
      */
-    private fun emitDownloadTerminal(state: DownloadImportState, provider: String) {
+    private fun emitDownloadTerminal(
+        state: DownloadImportState,
+        provider: String,
+    ) {
         when (state) {
             is DownloadImportState.Success ->
                 SentryMetrics.count("discover_download_complete", mapOf("provider" to provider))
             is DownloadImportState.Failure -> {
                 val code = state.error?.name
-                val tags = if (code != null) mapOf("provider" to provider, "code" to code)
-                    else mapOf("provider" to provider)
+                val tags =
+                    if (code != null) {
+                        mapOf("provider" to provider, "code" to code)
+                    } else {
+                        mapOf("provider" to provider)
+                    }
                 SentryMetrics.count("discover_download_fail", tags)
             }
             else -> Unit
@@ -515,7 +539,10 @@ class DiscoverViewModel(
         }
     }
 
-    private fun beginSearch(page: Int, append: Boolean) {
+    private fun beginSearch(
+        page: Int,
+        append: Boolean,
+    ) {
         searchJob?.cancel()
         val searchId = ++activeSearchId
         lastAttemptedPage = page
@@ -528,55 +555,57 @@ class DiscoverViewModel(
             return
         }
 
-        searchJob = viewModelScope.launch(mainDispatcher) {
-            _uiState.update {
-                it.copy(
-                    status = if (append) DiscoverStatus.LOADING_MORE else DiscoverStatus.LOADING,
-                    errorCode = null,
-                    isSearching = true
-                )
-            }
-            try {
-                val result = catalogProvider.search(_uiState.value.query, page)
-                _uiState.update { state ->
-                    if (append) {
-                        val merged = ArrayList(state.books)
-                        val seen = HashSet(merged.map { it.id })
-                        for (book in result.results) {
-                            if (seen.add(book.id)) merged.add(book)
+        searchJob =
+            viewModelScope.launch(mainDispatcher) {
+                _uiState.update {
+                    it.copy(
+                        status = if (append) DiscoverStatus.LOADING_MORE else DiscoverStatus.LOADING,
+                        errorCode = null,
+                        isSearching = true,
+                    )
+                }
+                try {
+                    val result = catalogProvider.search(_uiState.value.query, page)
+                    _uiState.update { state ->
+                        if (append) {
+                            val merged = ArrayList(state.books)
+                            val seen = HashSet(merged.map { it.id })
+                            for (book in result.results) {
+                                if (seen.add(book.id)) merged.add(book)
+                            }
+                            state.copy(
+                                status = DiscoverStatus.LOADED,
+                                books = merged,
+                                totalCount = result.totalCount,
+                                nextPage = result.nextPage,
+                                activePage = page,
+                            )
+                        } else {
+                            state.copy(
+                                status =
+                                    if (result.results.isEmpty()) {
+                                        DiscoverStatus.EMPTY
+                                    } else {
+                                        DiscoverStatus.LOADED
+                                    },
+                                books = result.results,
+                                totalCount = result.totalCount,
+                                nextPage = result.nextPage,
+                                activePage = page,
+                            )
                         }
-                        state.copy(
-                            status = DiscoverStatus.LOADED,
-                            books = merged,
-                            totalCount = result.totalCount,
-                            nextPage = result.nextPage,
-                            activePage = page
-                        )
-                    } else {
-                        state.copy(
-                            status = if (result.results.isEmpty()) {
-                                DiscoverStatus.EMPTY
-                            } else {
-                                DiscoverStatus.LOADED
-                            },
-                            books = result.results,
-                            totalCount = result.totalCount,
-                            nextPage = result.nextPage,
-                            activePage = page
-                        )
+                    }
+                } catch (err: CancellationException) {
+                    throw err
+                } catch (err: Throwable) {
+                    val code = codeOf(err)
+                    _uiState.update { it.copy(status = effectiveStatusFor(code), errorCode = code) }
+                } finally {
+                    if (searchId == activeSearchId) {
+                        _uiState.update { it.copy(isSearching = false) }
                     }
                 }
-            } catch (err: CancellationException) {
-                throw err
-            } catch (err: Throwable) {
-                val code = codeOf(err)
-                _uiState.update { it.copy(status = effectiveStatusFor(code), errorCode = code) }
-            } finally {
-                if (searchId == activeSearchId) {
-                    _uiState.update { it.copy(isSearching = false) }
-                }
             }
-        }
     }
 
     private fun cancelInFlightSearch() {
@@ -604,15 +633,16 @@ class DiscoverViewModel(
 
     private fun resetToIdle() {
         val current = _uiState.value
-        _uiState.value = DiscoverUiState(
-            query = current.query,
-            status = if (current.isOnline) DiscoverStatus.IDLE else DiscoverStatus.OFFLINE,
-            isOnline = current.isOnline,
-            // Keep the source catalog and its derived chips across a cleared query.
-            sources = current.sources,
-            sourceFilter = current.sourceFilter,
-            attributionNames = current.attributionNames
-        )
+        _uiState.value =
+            DiscoverUiState(
+                query = current.query,
+                status = if (current.isOnline) DiscoverStatus.IDLE else DiscoverStatus.OFFLINE,
+                isOnline = current.isOnline,
+                // Keep the source catalog and its derived chips across a cleared query.
+                sources = current.sources,
+                sourceFilter = current.sourceFilter,
+                attributionNames = current.attributionNames,
+            )
         refreshRails()
     }
 
@@ -630,15 +660,16 @@ class DiscoverViewModel(
         _uiState.update { state ->
             val knownIds = sources.map { it.sourceId }.toSet()
             val filter = state.sourceFilter
-            val nextFilter = if (filter is DiscoverSourceFilter.Source && filter.sourceId !in knownIds) {
-                DiscoverSourceFilter.AllSources
-            } else {
-                filter
-            }
+            val nextFilter =
+                if (filter is DiscoverSourceFilter.Source && filter.sourceId !in knownIds) {
+                    DiscoverSourceFilter.AllSources
+                } else {
+                    filter
+                }
             state.copy(
                 sources = sources,
                 sourceFilter = nextFilter,
-                attributionNames = resolveAttributionNames(sources)
+                attributionNames = resolveAttributionNames(sources),
             )
         }
     }
@@ -649,11 +680,12 @@ class DiscoverViewModel(
      * advertised name is used. Non-addon sources contribute nothing.
      */
     private fun resolveAttributionNames(sources: List<CatalogSourceInfo>): Map<String, String> =
-        sources.mapNotNull { info ->
-            CatalogSources.addonIdOf(info.sourceId)?.let { addonId ->
-                addonId to (addonNames(addonId) ?: info.name)
-            }
-        }.toMap()
+        sources
+            .mapNotNull { info ->
+                CatalogSources.addonIdOf(info.sourceId)?.let { addonId ->
+                    addonId to (addonNames(addonId) ?: info.name)
+                }
+            }.toMap()
 
     /**
      * Starts the IDLE rails without ever blocking the shell: both rails are
@@ -676,23 +708,27 @@ class DiscoverViewModel(
             return
         }
         _uiState.update { it.copy(rails = RAIL_SPECS.map { DiscoverRailState.Loading }) }
-        railsJob = viewModelScope.launch(mainDispatcher) {
-            val loaded = coroutineScope {
-                RAIL_SPECS.map { spec -> async { loadRail(spec) } }.awaitAll()
+        railsJob =
+            viewModelScope.launch(mainDispatcher) {
+                val loaded =
+                    coroutineScope {
+                        RAIL_SPECS.map { spec -> async { loadRail(spec) } }.awaitAll()
+                    }
+                // The composite is only inspectable after the first featured call
+                // (LiveCatalogProvider.listSources() reads the already-built
+                // composite), so the source set is re-read here and per-addon rails
+                // are derived from it.
+                val sources = catalogProvider.listSources()
+                val addonRails =
+                    coroutineScope {
+                        sources
+                            .filter { it.kind == CatalogSourceKind.ADDON }
+                            .map { source -> async { loadAddonRail(source) } }
+                            .awaitAll()
+                    }
+                applySources(sources)
+                _uiState.update { it.copy(rails = loaded + addonRails) }
             }
-            // The composite is only inspectable after the first featured call
-            // (LiveCatalogProvider.listSources() reads the already-built
-            // composite), so the source set is re-read here and per-addon rails
-            // are derived from it.
-            val sources = catalogProvider.listSources()
-            val addonRails = coroutineScope {
-                sources.filter { it.kind == CatalogSourceKind.ADDON }
-                    .map { source -> async { loadAddonRail(source) } }
-                    .awaitAll()
-            }
-            applySources(sources)
-            _uiState.update { it.copy(rails = loaded + addonRails) }
-        }
     }
 
     /**
@@ -700,24 +736,25 @@ class DiscoverViewModel(
      * [DiscoverRailState.Hidden], so the section is skipped entirely instead of
      * rendering an empty rail or a placeholder header.
      */
-    private suspend fun loadRail(spec: RailSpec): DiscoverRailState = try {
-        val result = catalogProvider.featured(spec.sort, page = 1)
-        if (result.results.isEmpty()) {
+    private suspend fun loadRail(spec: RailSpec): DiscoverRailState =
+        try {
+            val result = catalogProvider.featured(spec.sort, page = 1)
+            if (result.results.isEmpty()) {
+                DiscoverRailState.Hidden
+            } else {
+                DiscoverRailState.Loaded(
+                    sectionTitleRes = spec.sectionTitleRes,
+                    sort = spec.sort,
+                    sourceId = null,
+                    books = result.results,
+                    totalCount = result.totalCount,
+                )
+            }
+        } catch (err: CancellationException) {
+            throw err
+        } catch (err: Throwable) {
             DiscoverRailState.Hidden
-        } else {
-            DiscoverRailState.Loaded(
-                sectionTitleRes = spec.sectionTitleRes,
-                sort = spec.sort,
-                sourceId = null,
-                books = result.results,
-                totalCount = result.totalCount
-            )
         }
-    } catch (err: CancellationException) {
-        throw err
-    } catch (err: Throwable) {
-        DiscoverRailState.Hidden
-    }
 
     /**
      * Per-addon rail: `searchSource(sourceId, ADDON_RAIL_TERM, 1)`. Empty,
@@ -725,27 +762,31 @@ class DiscoverViewModel(
      * [DiscoverRailState.Hidden] — an addon never crowds the IDLE shell with an
      * empty or placeholder section.
      */
-    private suspend fun loadAddonRail(source: CatalogSourceInfo): DiscoverRailState = try {
-        val result = catalogProvider.searchSource(source.sourceId, ADDON_RAIL_TERM, page = 1)
-        if (result.results.isEmpty()) {
+    private suspend fun loadAddonRail(source: CatalogSourceInfo): DiscoverRailState =
+        try {
+            val result = catalogProvider.searchSource(source.sourceId, ADDON_RAIL_TERM, page = 1)
+            if (result.results.isEmpty()) {
+                DiscoverRailState.Hidden
+            } else {
+                DiscoverRailState.Loaded(
+                    sectionTitleRes = R.string.discover_rail_from,
+                    sort = null,
+                    sourceId = source.sourceId,
+                    addonName = source.name,
+                    books = result.results,
+                    totalCount = result.totalCount,
+                )
+            }
+        } catch (err: CancellationException) {
+            throw err
+        } catch (err: Throwable) {
             DiscoverRailState.Hidden
-        } else {
-            DiscoverRailState.Loaded(
-                sectionTitleRes = R.string.discover_rail_from,
-                sort = null,
-                sourceId = source.sourceId,
-                addonName = source.name,
-                books = result.results,
-                totalCount = result.totalCount
-            )
         }
-    } catch (err: CancellationException) {
-        throw err
-    } catch (err: Throwable) {
-        DiscoverRailState.Hidden
-    }
 
-    private data class RailSpec(val sectionTitleRes: Int, val sort: CatalogFeaturedSort)
+    private data class RailSpec(
+        val sectionTitleRes: Int,
+        val sort: CatalogFeaturedSort,
+    )
 
     /**
      * OFFLINE precedence (design PART 1 Decision 4): the pre-emptive observer
@@ -754,14 +795,14 @@ class DiscoverViewModel(
      * and every other upstream failure stay ERROR, so a single flaky socket is
      * never misreported as "no connection".
      */
-    private fun effectiveStatusFor(code: CatalogErrorCode): DiscoverStatus = when {
-        !_uiState.value.isOnline -> DiscoverStatus.OFFLINE
-        code == CatalogErrorCode.NETWORK_ERROR -> DiscoverStatus.ERROR
-        else -> DiscoverStatus.ERROR
-    }
+    private fun effectiveStatusFor(code: CatalogErrorCode): DiscoverStatus =
+        when {
+            !_uiState.value.isOnline -> DiscoverStatus.OFFLINE
+            code == CatalogErrorCode.NETWORK_ERROR -> DiscoverStatus.ERROR
+            else -> DiscoverStatus.ERROR
+        }
 
-    private fun codeOf(err: Throwable): CatalogErrorCode =
-        (err as? CatalogException)?.code ?: CatalogErrorCode.UPSTREAM_ERROR
+    private fun codeOf(err: Throwable): CatalogErrorCode = (err as? CatalogException)?.code ?: CatalogErrorCode.UPSTREAM_ERROR
 
     companion object {
         /** Log tag for the guarded download entry points (never silent). */
@@ -784,10 +825,11 @@ class DiscoverViewModel(
          * only exposes newest-by-id and all-time download count, never a
          * week-scoped popularity window.
          */
-        private val RAIL_SPECS = listOf(
-            RailSpec(R.string.discover_rail_newest, CatalogFeaturedSort.NEWEST),
-            RailSpec(R.string.discover_rail_popular, CatalogFeaturedSort.POPULAR)
-        )
+        private val RAIL_SPECS =
+            listOf(
+                RailSpec(R.string.discover_rail_newest, CatalogFeaturedSort.NEWEST),
+                RailSpec(R.string.discover_rail_popular, CatalogFeaturedSort.POPULAR),
+            )
     }
 }
 
@@ -801,7 +843,7 @@ class DiscoverViewModelFactory(
     private val registerAddonChangeListener: (((Int) -> Unit) -> Unit)? = null,
     private val addonConsent: (String) -> Boolean = { true },
     private val onAddonConsentChange: (String, Boolean) -> Unit = { _, _ -> },
-    private val addonResolve: (suspend (String, CatalogBook) -> LegalAccess)? = null
+    private val addonResolve: (suspend (String, CatalogBook) -> LegalAccess)? = null,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -816,7 +858,7 @@ class DiscoverViewModelFactory(
                 registerAddonChangeListener = registerAddonChangeListener,
                 addonConsent = addonConsent,
                 onAddonConsentChange = onAddonConsentChange,
-                addonResolve = addonResolve
+                addonResolve = addonResolve,
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

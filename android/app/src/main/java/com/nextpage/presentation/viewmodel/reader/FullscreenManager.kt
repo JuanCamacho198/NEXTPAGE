@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 data class FullscreenState(
-    val isFullscreen: Boolean = false
+    val isFullscreen: Boolean = false,
 )
 
 /**

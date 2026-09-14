@@ -14,7 +14,7 @@ import com.google.gson.annotations.SerializedName
 data class BookStateJson(
     val progress: ProgressStateJson? = null,
     val highlights: List<HighlightStateJson> = emptyList(),
-    val bookmarks: List<BookmarkStateJson> = emptyList()
+    val bookmarks: List<BookmarkStateJson> = emptyList(),
 )
 
 data class ProgressStateJson(
@@ -27,7 +27,7 @@ data class ProgressStateJson(
     @SerializedName("current_page")
     val currentPage: Int? = null,
     @SerializedName("updated_at")
-    val updatedAtEpochMillis: Long
+    val updatedAtEpochMillis: Long,
 )
 
 data class HighlightStateJson(
@@ -44,7 +44,7 @@ data class HighlightStateJson(
     override val updatedAtEpochMillis: Long,
     @SerializedName("deleted_at")
     override val deletedAtEpochMillis: Long? = null,
-    val tag: String? = null
+    val tag: String? = null,
 ) : VersionedSyncRecord {
     override val recordId: String get() = id
 }
@@ -60,7 +60,7 @@ data class BookmarkStateJson(
     @SerializedName("updated_at")
     override val updatedAtEpochMillis: Long,
     @SerializedName("deleted_at")
-    override val deletedAtEpochMillis: Long? = null
+    override val deletedAtEpochMillis: Long? = null,
 ) : VersionedSyncRecord {
     override val recordId: String get() = id
 }
@@ -79,7 +79,7 @@ class GoogleDriveJsonStateSync(
         @Suppress("UNUSED_PARAMETER") bookId: String,
         @Suppress("UNUSED_PARAMETER") progress: com.nextpage.domain.model.ReadingProgress?,
         @Suppress("UNUSED_PARAMETER") highlights: List<com.nextpage.domain.model.Highlight>,
-        @Suppress("UNUSED_PARAMETER") bookmarks: List<com.nextpage.domain.model.Bookmark>
+        @Suppress("UNUSED_PARAMETER") bookmarks: List<com.nextpage.domain.model.Bookmark>,
     ): Result<ByteArray> = Result.success(ByteArray(0))
 
     @Deprecated("Hot pull retired — Drive is cold only")
@@ -88,15 +88,16 @@ class GoogleDriveJsonStateSync(
         @Suppress("UNUSED_PARAMETER") bookId: String,
         @Suppress("UNUSED_PARAMETER") localProgress: com.nextpage.domain.model.ReadingProgress?,
         @Suppress("UNUSED_PARAMETER") localHighlights: List<com.nextpage.domain.model.Highlight>,
-        @Suppress("UNUSED_PARAMETER") localBookmarks: List<com.nextpage.domain.model.Bookmark>
-    ): Result<PullResult> = Result.success(
-        PullResult(progress = localProgress, highlights = localHighlights, bookmarks = localBookmarks)
-    )
+        @Suppress("UNUSED_PARAMETER") localBookmarks: List<com.nextpage.domain.model.Bookmark>,
+    ): Result<PullResult> =
+        Result.success(
+            PullResult(progress = localProgress, highlights = localHighlights, bookmarks = localBookmarks),
+        )
 
     data class PullResult(
         val progress: com.nextpage.domain.model.ReadingProgress?,
         val highlights: List<com.nextpage.domain.model.Highlight>,
-        val bookmarks: List<com.nextpage.domain.model.Bookmark>
+        val bookmarks: List<com.nextpage.domain.model.Bookmark>,
     )
 
     companion object {

@@ -11,5 +11,7 @@ import android.text.format.Formatter
  * unit or a number. Kept in one place so the storage screen never formats
  * sizes inline.
  */
-fun formatFileSize(context: Context, bytes: Long): String =
-    Formatter.formatFileSize(context, bytes)
+fun formatFileSize(
+    context: Context,
+    bytes: Long,
+): String = Formatter.formatFileSize(context, bytes)

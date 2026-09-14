@@ -34,36 +34,40 @@ internal fun BookHeroSection(
     book: Book,
     rating: Int?,
     onRatingChanged: (Int?) -> Unit,
-    onContinueReading: (String, String?, String) -> Unit
+    onContinueReading: (String, String?, String) -> Unit,
 ) {
-    val headerBrush = Brush.verticalGradient(
-        colors = listOf(
-            MaterialTheme.colorScheme.primary,
-            MaterialTheme.colorScheme.surface
+    val headerBrush =
+        Brush.verticalGradient(
+            colors =
+                listOf(
+                    MaterialTheme.colorScheme.primary,
+                    MaterialTheme.colorScheme.surface,
+                ),
         )
-    )
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(headerBrush)
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(headerBrush)
+                .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.Top
+            verticalAlignment = Alignment.Top,
         ) {
             CoverThumbnail(
                 coverPath = book.coverPath,
-                modifier = Modifier
-                    .width(110.dp)
-                    .height(165.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                modifier =
+                    Modifier
+                        .width(110.dp)
+                        .height(165.dp)
+                        .clip(RoundedCornerShape(12.dp)),
             )
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(
                     text = book.title,
@@ -71,38 +75,38 @@ internal fun BookHeroSection(
                     color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                     maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = book.author ?: stringResource(R.string.library_author_unknown),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = stringResource(R.string.book_detail_my_rating),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     StarRating(
                         rating = rating,
-                        onRatingChanged = onRatingChanged
+                        onRatingChanged = onRatingChanged,
                     )
                     if (rating != null) {
                         Surface(
                             shape = RoundedCornerShape(999.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         ) {
                             Text(
                                 text = stringResource(R.string.book_detail_rating_value, rating / 2.0),
                                 style = MaterialTheme.typography.labelMedium,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                             )
                         }
                     }
@@ -114,16 +118,18 @@ internal fun BookHeroSection(
             onClick = { onContinueReading(book.id, book.filePath, book.format) },
             variant = NextPageButtonVariant.FILLED,
             shape = RoundedCornerShape(NextPageDimens.cardCornerRadius),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
         ) {
             Text(
-                text = if (book.progressPercentage > 0f) {
-                    stringResource(R.string.book_detail_continue_reading)
-                } else {
-                    stringResource(R.string.book_detail_start_reading)
-                }
+                text =
+                    if (book.progressPercentage > 0f) {
+                        stringResource(R.string.book_detail_continue_reading)
+                    } else {
+                        stringResource(R.string.book_detail_start_reading)
+                    },
             )
         }
     }

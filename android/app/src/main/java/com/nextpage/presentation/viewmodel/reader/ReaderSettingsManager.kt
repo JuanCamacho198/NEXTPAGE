@@ -1,8 +1,8 @@
 package com.nextpage.presentation.viewmodel.reader
 
+import com.nextpage.data.session.ReaderPreferences
 import com.nextpage.domain.model.HighlightColor
 import com.nextpage.domain.model.ReaderSettings
-import com.nextpage.data.session.ReaderPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.update
 
 data class ReaderSettingsState(
     val readerSettings: ReaderSettings = ReaderSettings(),
-    val showSplitSettings: Boolean = false
+    val showSplitSettings: Boolean = false,
 )
 
 /**
@@ -21,7 +21,7 @@ data class ReaderSettingsState(
 typealias SettingsUiState = ReaderSettingsState
 
 class ReaderSettingsManager(
-    private val readerPreferences: ReaderPreferences?
+    private val readerPreferences: ReaderPreferences?,
 ) {
     private val _state = MutableStateFlow(ReaderSettingsState())
     val state: StateFlow<ReaderSettingsState> = _state.asStateFlow()
@@ -42,24 +42,31 @@ class ReaderSettingsManager(
         _state.update { it.copy(showSplitSettings = !it.showSplitSettings) }
     }
 
-    fun onUpdateCustomHighlightColor(index: Int, hex: String) {
+    fun onUpdateCustomHighlightColor(
+        index: Int,
+        hex: String,
+    ) {
         _state.update { state ->
-            val current = state.readerSettings.customHighlightColors
-                ?: HighlightColor.defaultHexList()
+            val current =
+                state.readerSettings.customHighlightColors
+                    ?: HighlightColor.defaultHexList()
             val colors = current.toMutableList()
             if (index in colors.indices) {
                 colors[index] = hex
                 val updated = state.readerSettings.copy(customHighlightColors = colors)
                 readerPreferences?.save(updated)
                 state.copy(readerSettings = updated)
-            } else state
+            } else {
+                state
+            }
         }
     }
 
     fun onAddCustomHighlightColor() {
         _state.update { state ->
-            val current = state.readerSettings.customHighlightColors
-                ?: HighlightColor.defaultHexList()
+            val current =
+                state.readerSettings.customHighlightColors
+                    ?: HighlightColor.defaultHexList()
             if (current.size >= 5) return@update state
             val colors = current.toMutableList()
             colors.add(HighlightColor.YELLOW.hex)
@@ -71,8 +78,9 @@ class ReaderSettingsManager(
 
     fun onDeleteCustomHighlightColor(index: Int) {
         _state.update { state ->
-            val current = state.readerSettings.customHighlightColors
-                ?: HighlightColor.defaultHexList()
+            val current =
+                state.readerSettings.customHighlightColors
+                    ?: HighlightColor.defaultHexList()
             if (current.size <= 3) return@update state
             val colors = current.toMutableList()
             colors.removeAt(index)

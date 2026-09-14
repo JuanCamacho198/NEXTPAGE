@@ -14,14 +14,17 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class AppDatabaseMigrationTest {
-
     @get:Rule
-    val helper = MigrationTestHelper(
-        InstrumentationRegistry.getInstrumentation(),
-        AppDatabase::class.java
-    )
+    val helper =
+        MigrationTestHelper(
+            InstrumentationRegistry.getInstrumentation(),
+            AppDatabase::class.java,
+        )
 
-    private fun query(db: SupportSQLiteDatabase, sql: String): Long {
+    private fun query(
+        db: SupportSQLiteDatabase,
+        sql: String,
+    ): Long {
         db.query(sql).use { cursor ->
             cursor.moveToFirst()
             return cursor.getLong(0)
@@ -29,7 +32,8 @@ class AppDatabaseMigrationTest {
     }
 
     private fun testDbPath(): String =
-        InstrumentationRegistry.getInstrumentation()
+        InstrumentationRegistry
+            .getInstrumentation()
             .targetContext
             .getDatabasePath("migration-26-27")
             .absolutePath
@@ -41,7 +45,7 @@ class AppDatabaseMigrationTest {
         helper.createDatabase(dbPath, 26).use { db ->
             db.execSQL(
                 "INSERT INTO discover_cache (key, payload, fetched_at, ttl_s) " +
-                    "VALUES ('p:test:q:1', '{\"n\":1}', 1000, 86400)"
+                    "VALUES ('p:test:q:1', '{\"n\":1}', 1000, 86400)",
             )
             outboxBefore = query(db, "SELECT COUNT(*) FROM sync_outbox")
         }

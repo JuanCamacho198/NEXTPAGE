@@ -12,12 +12,16 @@ import com.nextpage.data.remote.sync.DriveSyncState
 import com.nextpage.ui.components.atoms.SyncStatusIndicator
 
 @Composable
-fun LibrarySyncStatus(syncError: String?, isSyncing: Boolean) {
-    val syncState = when {
-        syncError != null -> DriveSyncState.Error(syncError)
-        isSyncing -> DriveSyncState.Running
-        else -> DriveSyncState.Idle
-    }
+fun LibrarySyncStatus(
+    syncError: String?,
+    isSyncing: Boolean,
+) {
+    val syncState =
+        when {
+            syncError != null -> DriveSyncState.Error(syncError)
+            isSyncing -> DriveSyncState.Running
+            else -> DriveSyncState.Idle
+        }
     Box(modifier = Modifier.fillMaxSize()) {
         SyncStatusIndicator(syncState = syncState, modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 8.dp, end = 16.dp))
     }

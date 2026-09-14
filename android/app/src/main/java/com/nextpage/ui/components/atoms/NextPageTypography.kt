@@ -53,7 +53,7 @@ fun NextPageTypography(
     style: TextStyle = LocalTextStyle.current,
     textAlign: TextAlign? = null,
     maxLines: Int = Int.MAX_VALUE,
-    overflow: TextOverflow = TextOverflow.Clip
+    overflow: TextOverflow = TextOverflow.Clip,
 ) {
     Text(
         text = text,
@@ -62,7 +62,7 @@ fun NextPageTypography(
         style = style,
         textAlign = textAlign,
         maxLines = maxLines,
-        overflow = overflow
+        overflow = overflow,
     )
 }
 
@@ -71,22 +71,23 @@ fun NextPageTypography(
 private fun NextPageTypographyDarkPreview() {
     NextPageTheme(darkTheme = true) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             NextPageTypography(
                 text = "The quick brown fox jumps over the lazy dog",
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium,
             )
             NextPageTypography(
                 text = "Body copy rendered with the default bodyMedium reading style.",
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
             )
             NextPageTypography(
                 text = "Label small — captions and metadata",
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall,
             )
         }
     }
@@ -97,22 +98,23 @@ private fun NextPageTypographyDarkPreview() {
 private fun NextPageTypographyLightPreview() {
     NextPageTheme(darkTheme = false) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             NextPageTypography(
                 text = "The quick brown fox jumps over the lazy dog",
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium,
             )
             NextPageTypography(
                 text = "Body copy rendered with the default bodyMedium reading style.",
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
             )
             NextPageTypography(
                 text = "Label small — captions and metadata",
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall,
             )
         }
     }

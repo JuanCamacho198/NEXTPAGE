@@ -8,8 +8,8 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.nextpage.data.remote.drive.GoogleDriveAuthHelper
 import com.nextpage.domain.model.AuthSession
-import com.nextpage.presentation.navigation.NextPageDestination
 import com.nextpage.presentation.feature.library.LibraryScreen
+import com.nextpage.presentation.navigation.NextPageDestination
 import com.nextpage.presentation.viewmodel.LibraryViewModel
 
 /**
@@ -25,14 +25,14 @@ fun NavGraphBuilder.libraryGraph(
     currentSession: AuthSession?,
     contentPadding: PaddingValues,
     onSelectBook: (String, String?, String) -> Unit,
-    onSettingsInitialRoute: (String) -> Unit
+    onSettingsInitialRoute: (String) -> Unit,
 ) {
     composable(
         route = NextPageDestination.Library.route,
         enterTransition = { fadeIn() },
         exitTransition = { fadeOut() },
         popEnterTransition = { fadeIn() },
-        popExitTransition = { fadeOut() }
+        popExitTransition = { fadeOut() },
     ) {
         LibraryScreen(
             contentPadding = contentPadding,
@@ -49,7 +49,7 @@ fun NavGraphBuilder.libraryGraph(
             },
             onEditBook = { bookId ->
                 navController.navigate("book_edit/$bookId")
-            }
+            },
         )
     }
 }

@@ -13,7 +13,6 @@ import org.junit.Test
 /** Offline mirror of the desktop `catalog.test.ts` policy suite. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class CatalogPolicyTest {
-
     @Test fun clampPageSize_keepsContractualWindowWithDefault24() {
         assertEquals(24, clampPageSize(24))
         assertEquals(20, clampPageSize(4))
@@ -38,30 +37,33 @@ class CatalogPolicyTest {
         assertEquals("NextPage/Android (contact: TBD)", buildUserAgent("Android"))
     }
 
-    @Test fun searchDebouncer_onlyLatestBurstQueryHitsIo() = runTest {
-        val executed = mutableListOf<String>()
-        val debouncer = SearchDebouncer(backgroundScope, 350L) { query: String, _: Int ->
-            executed.add(query)
-            "result:$query"
+    @Test fun searchDebouncer_onlyLatestBurstQueryHitsIo() =
+        runTest {
+            val executed = mutableListOf<String>()
+            val debouncer =
+                SearchDebouncer(backgroundScope, 350L) { query: String, _: Int ->
+                    executed.add(query)
+                    "result:$query"
+                }
+            val results = mutableListOf<String>()
+            val j1 = launch { results.add(debouncer.search("first", 1)) }
+            val j2 = launch { results.add(debouncer.search("second", 1)) }
+            val j3 = launch { results.add(debouncer.search("third", 1)) }
+            runCurrent()
+            advanceTimeBy(400)
+            j1.join()
+            j2.join()
+            j3.join()
+            assertEquals(listOf("third"), executed)
+            assertEquals(listOf("result:third", "result:third", "result:third"), results)
         }
-        val results = mutableListOf<String>()
-        val j1 = launch { results.add(debouncer.search("first", 1)) }
-        val j2 = launch { results.add(debouncer.search("second", 1)) }
-        val j3 = launch { results.add(debouncer.search("third", 1)) }
-        runCurrent()
-        advanceTimeBy(400)
-        j1.join()
-        j2.join()
-        j3.join()
-        assertEquals(listOf("third"), executed)
-        assertEquals(listOf("result:third", "result:third", "result:third"), results)
-    }
 
-    @Test fun rateLimiter_enforcesOneSecondOlGap() = runTest {
-        val limiter = RateLimiter(OL_MIN_GAP_MS) { testScheduler.currentTime }
-        limiter.waitForSlot()
-        limiter.waitForSlot()
-        // Each slot waited out the 1s courtesy gap in virtual time.
-        assertEquals(2000L, testScheduler.currentTime)
-    }
+    @Test fun rateLimiter_enforcesOneSecondOlGap() =
+        runTest {
+            val limiter = RateLimiter(OL_MIN_GAP_MS) { testScheduler.currentTime }
+            limiter.waitForSlot()
+            limiter.waitForSlot()
+            // Each slot waited out the 1s courtesy gap in virtual time.
+            assertEquals(2000L, testScheduler.currentTime)
+        }
 }

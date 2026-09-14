@@ -30,7 +30,7 @@ import com.nextpage.presentation.theme.NextPageColors
 fun SourceAttributionBadge(
     provider: String,
     attributionNames: Map<String, String>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     if (provider == BUILTIN_GOOGLEBOOKS) {
         Text(
@@ -38,25 +38,28 @@ fun SourceAttributionBadge(
             style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
             fontWeight = FontWeight.Medium,
             color = NextPageColors.textSecondary,
-            modifier = modifier
-                .clip(RoundedCornerShape(4.dp))
-                .background(NextPageColors.surface)
-                .padding(horizontal = 6.dp, vertical = 2.dp)
+            modifier =
+                modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(NextPageColors.surface)
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
         )
         return
     }
     val addonId = CatalogSources.addonIdOf(provider) ?: return
-    val label = attributionNames[addonId]
-        ?: stringResource(R.string.discover_source_addon_fallback)
+    val label =
+        attributionNames[addonId]
+            ?: stringResource(R.string.discover_source_addon_fallback)
 
     Text(
         text = label,
         style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
         fontWeight = FontWeight.Medium,
         color = NextPageColors.textSecondary,
-        modifier = modifier
-            .clip(RoundedCornerShape(4.dp))
-            .background(NextPageColors.surface)
-            .padding(horizontal = 6.dp, vertical = 2.dp)
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(4.dp))
+                .background(NextPageColors.surface)
+                .padding(horizontal = 6.dp, vertical = 2.dp),
     )
 }

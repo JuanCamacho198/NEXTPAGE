@@ -54,39 +54,39 @@ fun BookContextMenu(
     onMarkCompleted: () -> Unit,
     onMarkPlanToRead: () -> Unit,
     onShare: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
 ) {
     DropdownMenu(
         expanded = expanded,
-        onDismissRequest = onDismissRequest
+        onDismissRequest = onDismissRequest,
     ) {
         DropdownMenuItem(
             leadingIcon = {
                 Icon(
                     imageVector = NextPageIcons.Pencil,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             },
             text = { Text(stringResource(R.string.library_menu_edit_metadata)) },
             onClick = {
                 onDismissRequest()
                 onEdit()
-            }
+            },
         )
         DropdownMenuItem(
             leadingIcon = {
                 Icon(
                     imageVector = NextPageIcons.Check,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             },
             text = { Text(stringResource(R.string.library_menu_mark_completed)) },
             onClick = {
                 onDismissRequest()
                 onMarkCompleted()
-            }
+            },
         )
         if (showPlanToRead) {
             DropdownMenuItem(
@@ -94,14 +94,14 @@ fun BookContextMenu(
                     Icon(
                         imageVector = NextPageIcons.Star,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 },
                 text = { Text(stringResource(R.string.library_menu_mark_plan_to_read)) },
                 onClick = {
                     onDismissRequest()
                     onMarkPlanToRead()
-                }
+                },
             )
         }
         DropdownMenuItem(
@@ -109,14 +109,14 @@ fun BookContextMenu(
                 Icon(
                     imageVector = NextPageIcons.Share,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             },
             text = { Text(stringResource(R.string.library_menu_share)) },
             onClick = {
                 onDismissRequest()
                 onShare()
-            }
+            },
         )
         HorizontalDivider()
         DropdownMenuItem(
@@ -124,19 +124,19 @@ fun BookContextMenu(
                 Icon(
                     imageVector = NextPageIcons.Trash,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error
+                    tint = MaterialTheme.colorScheme.error,
                 )
             },
             text = {
                 Text(
                     stringResource(R.string.library_menu_remove),
-                    color = MaterialTheme.colorScheme.error
+                    color = MaterialTheme.colorScheme.error,
                 )
             },
             onClick = {
                 onDismissRequest()
                 onDelete()
-            }
+            },
         )
     }
 }
@@ -152,7 +152,7 @@ private fun BookContextMenuDarkPreview() {
             onMarkCompleted = {},
             onMarkPlanToRead = {},
             onShare = {},
-            onDelete = {}
+            onDelete = {},
         )
     }
 }
@@ -168,7 +168,7 @@ private fun BookContextMenuLightPreview() {
             onMarkCompleted = {},
             onMarkPlanToRead = {},
             onShare = {},
-            onDelete = {}
+            onDelete = {},
         )
     }
 }

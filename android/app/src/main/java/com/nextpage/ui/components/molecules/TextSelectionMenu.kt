@@ -1,7 +1,6 @@
 package com.nextpage.ui.components.molecules
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,8 +24,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.domain.model.HighlightColor
-import com.nextpage.ui.icons.NextPageIcons
 import com.nextpage.presentation.theme.NextPageTheme
+import com.nextpage.ui.icons.NextPageIcons
 
 /**
  * Floating action menu shown when the user makes a NEW text
@@ -83,28 +82,30 @@ fun TextSelectionMenu(
     onCopy: () -> Unit,
     onDictionary: () -> Unit,
     onShare: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val containerColor = MaterialTheme.colorScheme.surface
     val contentColor = contentColorFor(containerColor)
     val dividerColor = MaterialTheme.colorScheme.outlineVariant
 
     Row(
-        modifier = modifier
-            .shadow(8.dp, RoundedCornerShape(50))
-            .background(containerColor, RoundedCornerShape(50))
-            .padding(6.dp),
+        modifier =
+            modifier
+                .shadow(8.dp, RoundedCornerShape(50))
+                .background(containerColor, RoundedCornerShape(50))
+                .padding(6.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         // ── 5 color swatches (direct selection) ─────────────────
         paletteColors.take(5).forEach { hex ->
             Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .clip(CircleShape)
-                    .background(parseColorHex(hex))
-                    .clickable { onColorSelected(hex) }
+                modifier =
+                    Modifier
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(parseColorHex(hex))
+                        .clickable { onColorSelected(hex) },
             )
         }
 
@@ -115,21 +116,21 @@ fun TextSelectionMenu(
             icon = NextPageIcons.Copy,
             contentDescription = stringResource(R.string.text_selection_copy),
             tint = contentColor,
-            onClick = onCopy
+            onClick = onCopy,
         )
 
         SelectionMenuIcon(
             icon = NextPageIcons.BookOpen,
             contentDescription = stringResource(R.string.context_menu_dictionary),
             tint = contentColor,
-            onClick = onDictionary
+            onClick = onDictionary,
         )
 
         SelectionMenuIcon(
             icon = NextPageIcons.Share,
             contentDescription = stringResource(R.string.context_menu_share),
             tint = contentColor,
-            onClick = onShare
+            onClick = onShare,
         )
     }
 }
@@ -141,20 +142,21 @@ internal fun SelectionMenuIcon(
     onClick: () -> Unit,
     tint: Color,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true
+    enabled: Boolean = true,
 ) {
     Box(
-        modifier = modifier
-            .size(40.dp)
-            .clip(CircleShape)
-            .clickable(enabled = enabled, onClick = onClick),
-        contentAlignment = Alignment.Center
+        modifier =
+            modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .clickable(enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
             tint = tint,
-            modifier = Modifier.size(22.dp)
+            modifier = Modifier.size(22.dp),
         )
     }
 }
@@ -162,27 +164,28 @@ internal fun SelectionMenuIcon(
 @Composable
 internal fun MenuVerticalDivider(color: Color) {
     Box(
-        modifier = Modifier
-            .padding(horizontal = 2.dp)
-            .width(1.dp)
-            .size(20.dp)
-            .background(color)
+        modifier =
+            Modifier
+                .padding(horizontal = 2.dp)
+                .width(1.dp)
+                .size(20.dp)
+                .background(color),
     )
 }
 
-private fun parseColorHex(hex: String): Color {
-    return try {
+private fun parseColorHex(hex: String): Color =
+    try {
         val sanitized = hex.removePrefix("#")
-        val longHex = when (sanitized.length) {
-            6 -> "FF$sanitized"
-            8 -> sanitized
-            else -> "FF000000"
-        }
+        val longHex =
+            when (sanitized.length) {
+                6 -> "FF$sanitized"
+                8 -> sanitized
+                else -> "FF000000"
+            }
         Color(longHex.toLong(16))
     } catch (_: Exception) {
         Color.Magenta
     }
-}
 
 @Preview(showBackground = true)
 @Composable
@@ -194,7 +197,7 @@ private fun TextSelectionMenuDarkPreview() {
             onColorSelected = {},
             onCopy = {},
             onDictionary = {},
-            onShare = {}
+            onShare = {},
         )
     }
 }
@@ -209,7 +212,7 @@ private fun TextSelectionMenuLightPreview() {
             onColorSelected = {},
             onCopy = {},
             onDictionary = {},
-            onShare = {}
+            onShare = {},
         )
     }
 }

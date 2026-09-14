@@ -14,9 +14,8 @@ import kotlinx.coroutines.withTimeoutOrNull
  */
 class SyncOrchestratorSettleGate(
     private val orchestrator: SyncOrchestrator,
-    private val timeoutMillis: Long = DEFAULT_TIMEOUT_MILLIS
+    private val timeoutMillis: Long = DEFAULT_TIMEOUT_MILLIS,
 ) : SyncSettleGate {
-
     override suspend fun awaitSettled(): Boolean =
         withTimeoutOrNull(timeoutMillis) {
             orchestrator.state.first { it !is SyncState.Active }

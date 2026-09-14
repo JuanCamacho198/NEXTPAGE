@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -37,11 +38,10 @@ import androidx.compose.ui.unit.dp
 import com.nextpage.R
 import com.nextpage.domain.model.Device
 import com.nextpage.presentation.theme.NextPageTheme
+import com.nextpage.presentation.viewmodel.SettingsDevicesUiState
 import com.nextpage.ui.components.atoms.NextPageDialog
 import com.nextpage.ui.components.atoms.NextPageDialogVariant
 import com.nextpage.ui.icons.NextPageIcons
-import androidx.compose.foundation.layout.size
-import com.nextpage.presentation.viewmodel.SettingsDevicesUiState
 import java.time.Duration
 import java.time.Instant
 
@@ -50,7 +50,7 @@ import java.time.Instant
 fun SettingsDevicesScreen(
     uiState: SettingsDevicesUiState,
     onRemove: (String) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     Scaffold(
         topBar = {
@@ -60,9 +60,9 @@ fun SettingsDevicesScreen(
                     IconButton(onClick = onBack) {
                         Icon(NextPageIcons.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
             )
-        }
+        },
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             when {
@@ -73,20 +73,20 @@ fun SettingsDevicesScreen(
                     Text(
                         text = uiState.errorMessage,
                         color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(16.dp)
+                        modifier = Modifier.padding(16.dp),
                     )
                 }
                 else -> {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         item {
                             Text(
                                 text = stringResource(R.string.settings_devices_count, uiState.deviceCount),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
 
@@ -94,7 +94,7 @@ fun SettingsDevicesScreen(
                             DeviceItem(
                                 device = device,
                                 isCurrent = device.id == uiState.currentDeviceId,
-                                onRemove = { onRemove(device.id) }
+                                onRemove = { onRemove(device.id) },
                             )
                         }
                     }
@@ -108,27 +108,28 @@ fun SettingsDevicesScreen(
 private fun DeviceItem(
     device: Device,
     isCurrent: Boolean,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
 ) {
     var showRemoveDialog by remember { mutableStateOf(false) }
 
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
             modifier = Modifier.padding(16.dp).fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
-                imageVector = when {
-                    device.os.contains("Android") -> NextPageIcons.Smartphone
-                    device.os.contains("Windows") -> NextPageIcons.Monitor
-                    device.os.contains("macOS") || device.os.contains("Darwin") -> NextPageIcons.Laptop
-                    else -> NextPageIcons.Devices
-                },
+                imageVector =
+                    when {
+                        device.os.contains("Android") -> NextPageIcons.Smartphone
+                        device.os.contains("Windows") -> NextPageIcons.Monitor
+                        device.os.contains("macOS") || device.os.contains("Darwin") -> NextPageIcons.Laptop
+                        else -> NextPageIcons.Devices
+                    },
                 contentDescription = null,
                 modifier = Modifier.size(28.dp),
-                tint = MaterialTheme.colorScheme.primary
+                tint = MaterialTheme.colorScheme.primary,
             )
 
             Spacer(Modifier.width(12.dp))
@@ -138,7 +139,7 @@ private fun DeviceItem(
                     Text(
                         text = device.name,
                         style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
                     )
                     if (isCurrent) {
                         Spacer(Modifier.width(8.dp))
@@ -147,16 +148,16 @@ private fun DeviceItem(
                             label = {
                                 Text(
                                     stringResource(R.string.settings_devices_this_device),
-                                    style = MaterialTheme.typography.labelSmall
+                                    style = MaterialTheme.typography.labelSmall,
                                 )
-                            }
+                            },
                         )
                     }
                 }
                 Text(
                     text = "${device.os} \u00B7 ${formatRelativeTime(device.lastActive)}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
@@ -164,7 +165,7 @@ private fun DeviceItem(
                 TextButton(onClick = { showRemoveDialog = true }) {
                     Text(
                         stringResource(R.string.settings_devices_remove),
-                        color = MaterialTheme.colorScheme.error
+                        color = MaterialTheme.colorScheme.error,
                     )
                 }
             }
@@ -177,15 +178,18 @@ private fun DeviceItem(
             body = "",
             confirmText = stringResource(R.string.settings_devices_remove),
             dismissText = stringResource(android.R.string.cancel),
-            onConfirm = { onRemove(); showRemoveDialog = false },
+            onConfirm = {
+                onRemove()
+                showRemoveDialog = false
+            },
             onDismiss = { showRemoveDialog = false },
-            variant = NextPageDialogVariant.DESTRUCTIVE
+            variant = NextPageDialogVariant.DESTRUCTIVE,
         )
     }
 }
 
-private fun formatRelativeTime(lastActive: String): String {
-    return try {
+private fun formatRelativeTime(lastActive: String): String =
+    try {
         val instant = Instant.parse(lastActive)
         val duration = Duration.between(instant, Instant.now())
         when {
@@ -197,39 +201,40 @@ private fun formatRelativeTime(lastActive: String): String {
     } catch (e: Exception) {
         lastActive
     }
-}
 
 // ─── Previews ─────────────────────────────────────────────────────────
 
-private val PreviewDevices = listOf(
-    Device(
-        id = "device-1",
-        name = "Pixel 8",
-        os = "Android 15",
-        lastActive = "2024-01-01T00:00:00Z"
-    ),
-    Device(
-        id = "device-2",
-        name = "Work Laptop",
-        os = "Windows 11",
-        lastActive = "2024-01-01T00:00:00Z"
+private val PreviewDevices =
+    listOf(
+        Device(
+            id = "device-1",
+            name = "Pixel 8",
+            os = "Android 15",
+            lastActive = "2024-01-01T00:00:00Z",
+        ),
+        Device(
+            id = "device-2",
+            name = "Work Laptop",
+            os = "Windows 11",
+            lastActive = "2024-01-01T00:00:00Z",
+        ),
     )
-)
 
 @Preview(showBackground = true)
 @Composable
 private fun SettingsDevicesScreenDarkPreview() {
     NextPageTheme(darkTheme = true) {
         SettingsDevicesScreen(
-            uiState = SettingsDevicesUiState(
-                devices = PreviewDevices,
-                currentDeviceId = "device-1",
-                isLoading = false,
-                errorMessage = null,
-                deviceCount = PreviewDevices.size
-            ),
+            uiState =
+                SettingsDevicesUiState(
+                    devices = PreviewDevices,
+                    currentDeviceId = "device-1",
+                    isLoading = false,
+                    errorMessage = null,
+                    deviceCount = PreviewDevices.size,
+                ),
             onRemove = {},
-            onBack = {}
+            onBack = {},
         )
     }
 }
@@ -239,15 +244,16 @@ private fun SettingsDevicesScreenDarkPreview() {
 private fun SettingsDevicesScreenLightPreview() {
     NextPageTheme(darkTheme = false) {
         SettingsDevicesScreen(
-            uiState = SettingsDevicesUiState(
-                devices = PreviewDevices,
-                currentDeviceId = "device-1",
-                isLoading = false,
-                errorMessage = null,
-                deviceCount = PreviewDevices.size
-            ),
+            uiState =
+                SettingsDevicesUiState(
+                    devices = PreviewDevices,
+                    currentDeviceId = "device-1",
+                    isLoading = false,
+                    errorMessage = null,
+                    deviceCount = PreviewDevices.size,
+                ),
             onRemove = {},
-            onBack = {}
+            onBack = {},
         )
     }
 }

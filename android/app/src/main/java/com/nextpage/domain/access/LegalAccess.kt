@@ -10,7 +10,7 @@ package com.nextpage.domain.access
 enum class AccessGroup {
     FREE,
     BUY,
-    SUBSCRIBE
+    SUBSCRIBE,
 }
 
 /**
@@ -21,7 +21,7 @@ data class AccessOption(
     val group: AccessGroup,
     val title: String,
     val url: String,
-    val opensInApp: Boolean = false
+    val opensInApp: Boolean = false,
 )
 
 /**
@@ -32,5 +32,5 @@ data class LegalAccess(
     val bookId: String,
     val canDownloadInApp: Boolean,
     val downloadUrl: String?,
-    val options: List<AccessOption>
+    val options: List<AccessOption>,
 )

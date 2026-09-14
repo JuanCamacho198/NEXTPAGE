@@ -21,17 +21,17 @@ import com.nextpage.domain.model.ReaderSettings
 fun FontSizeSection(
     settings: ReaderSettings,
     onSettingsChanged: (ReaderSettings) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(
             text = "A-",
             color = Color(0xFF718096),
-            fontSize = 12.sp
+            fontSize = 12.sp,
         )
 
         Slider(
@@ -43,18 +43,19 @@ fun FontSizeSection(
             valueRange = 0f..(FontSizePreset.entries.size - 1).toFloat(),
             steps = FontSizePreset.entries.size - 2,
             modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
-            colors = SliderDefaults.colors(
-                thumbColor = Color(0xFFADC6FF),
-                activeTrackColor = Color(0xFFADC6FF),
-                inactiveTrackColor = Color(0xFF2F3445)
-            )
+            colors =
+                SliderDefaults.colors(
+                    thumbColor = Color(0xFFADC6FF),
+                    activeTrackColor = Color(0xFFADC6FF),
+                    inactiveTrackColor = Color(0xFF2F3445),
+                ),
         )
 
         Text(
             text = "A+",
             color = Color(0xFF718096),
             fontSize = 16.sp,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
         )
     }
 }

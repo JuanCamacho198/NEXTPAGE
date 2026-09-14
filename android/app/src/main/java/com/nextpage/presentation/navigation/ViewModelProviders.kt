@@ -5,8 +5,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nextpage.di.AppContainer
-import com.nextpage.presentation.viewmodel.AuthViewModel
 import com.nextpage.presentation.debug.DebugViewModel
+import com.nextpage.presentation.viewmodel.AuthViewModel
 import com.nextpage.presentation.viewmodel.DiscoverViewModel
 import com.nextpage.presentation.viewmodel.DiscoverViewModelFactory
 import com.nextpage.presentation.viewmodel.HighlightsViewModel
@@ -32,7 +32,7 @@ internal data class ViewModelProviders(
     val auth: AuthViewModel,
     val home: HomeViewModel,
     val debug: DebugViewModel,
-    val discover: DiscoverViewModel
+    val discover: DiscoverViewModel,
 )
 
 /**
@@ -45,25 +45,27 @@ internal data class ViewModelProviders(
 @Composable
 internal fun rememberNavHostViewModels(
     appContainer: AppContainer,
-    selectedBookId: String
+    selectedBookId: String,
 ): ViewModelProviders {
     val context = LocalContext.current
     val application = context.applicationContext as android.app.Application
 
     val libraryViewModel: LibraryViewModel = hiltViewModel()
 
-    val readerViewModel: ReaderViewModel = viewModel(
-        factory = ReaderViewModelFactory(
-            application = application,
-            readerRepository = appContainer.readerRepository,
-            readingStatsRepository = appContainer.readingStatsRepository,
-            readerPreferences = appContainer.readerPreferences,
-            defaultBookId = selectedBookId,
-            dictionaryRepository = appContainer.dictionaryRepository,
-            libraryRepository = appContainer.libraryRepository,
-            supabaseProgressSync = appContainer.supabaseProgressSync
+    val readerViewModel: ReaderViewModel =
+        viewModel(
+            factory =
+                ReaderViewModelFactory(
+                    application = application,
+                    readerRepository = appContainer.readerRepository,
+                    readingStatsRepository = appContainer.readingStatsRepository,
+                    readerPreferences = appContainer.readerPreferences,
+                    defaultBookId = selectedBookId,
+                    dictionaryRepository = appContainer.dictionaryRepository,
+                    libraryRepository = appContainer.libraryRepository,
+                    supabaseProgressSync = appContainer.supabaseProgressSync,
+                ),
         )
-    )
 
     val highlightsViewModel: HighlightsViewModel = hiltViewModel()
 
@@ -75,35 +77,36 @@ internal fun rememberNavHostViewModels(
 
     val debugViewModel: DebugViewModel = hiltViewModel()
 
-    val discoverViewModel: DiscoverViewModel = viewModel(
-        factory = DiscoverViewModelFactory(
-            catalogProvider = appContainer.catalogProvider,
-            connectivityObserver = appContainer.connectivityObserver,
-            downloadAndImportBookUseCase = appContainer.downloadAndImportBookUseCase,
-            registerAddonChangeListener = { listener ->
-                appContainer.addonRegistry.addOnChangedListener(listener)
-            },
-            addonConsent = { addonId -> appContainer.addonRegistry.hasAddonConsent(addonId) },
-            onAddonConsentChange = { addonId, granted ->
-                if (granted) {
-                    appContainer.addonRegistry.recordAddonConsent(addonId)
-                } else {
-                    appContainer.addonRegistry.revokeAddonConsent(addonId)
-                }
-            },
-            addonResolve = { addonId, book -> appContainer.addonResolveForBook(addonId, book) }
+    val discoverViewModel: DiscoverViewModel =
+        viewModel(
+            factory =
+                DiscoverViewModelFactory(
+                    catalogProvider = appContainer.catalogProvider,
+                    connectivityObserver = appContainer.connectivityObserver,
+                    downloadAndImportBookUseCase = appContainer.downloadAndImportBookUseCase,
+                    registerAddonChangeListener = { listener ->
+                        appContainer.addonRegistry.addOnChangedListener(listener)
+                    },
+                    addonConsent = { addonId -> appContainer.addonRegistry.hasAddonConsent(addonId) },
+                    onAddonConsentChange = { addonId, granted ->
+                        if (granted) {
+                            appContainer.addonRegistry.recordAddonConsent(addonId)
+                        } else {
+                            appContainer.addonRegistry.revokeAddonConsent(addonId)
+                        }
+                    },
+                    addonResolve = { addonId, book -> appContainer.addonResolveForBook(addonId, book) },
+                ),
         )
-    )
 
     return ViewModelProviders(
-            library = libraryViewModel,
-            reader = readerViewModel,
-            highlights = highlightsViewModel,
-            statistics = statisticsViewModel,
-            auth = authViewModel,
-            home = homeViewModel,
-            debug = debugViewModel,
-            discover = discoverViewModel
-        )
-
+        library = libraryViewModel,
+        reader = readerViewModel,
+        highlights = highlightsViewModel,
+        statistics = statisticsViewModel,
+        auth = authViewModel,
+        home = homeViewModel,
+        debug = debugViewModel,
+        discover = discoverViewModel,
+    )
 }

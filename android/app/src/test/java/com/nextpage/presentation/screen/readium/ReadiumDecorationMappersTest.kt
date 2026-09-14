@@ -9,38 +9,39 @@ import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 class ReadiumDecorationMappersTest {
-
     private fun makeHighlight(
         id: String = "h1",
         color: String = "#FF0000",
         locatorJson: String? = """{"href":"OEBPS/chapter1.xhtml","type":"application/xhtml+xml","locations":{"progression":0.5}}""",
         cfiRange: String = "",
-        textContent: String = "sample highlight text"
-    ): Highlight = Highlight(
-        id = id,
-        bookId = "book1",
-        cfiRange = cfiRange,
-        textContent = textContent,
-        color = color,
-        note = null,
-        locatorJson = locatorJson,
-        updatedAtEpochMillis = 0L,
-        deletedAtEpochMillis = null
-    )
+        textContent: String = "sample highlight text",
+    ): Highlight =
+        Highlight(
+            id = id,
+            bookId = "book1",
+            cfiRange = cfiRange,
+            textContent = textContent,
+            color = color,
+            note = null,
+            locatorJson = locatorJson,
+            updatedAtEpochMillis = 0L,
+            deletedAtEpochMillis = null,
+        )
 
     @Test
     fun tint_computedAsOpaqueMaskOrAlpha() {
-        val highlight = Highlight(
-            id = "t1",
-            bookId = "b1",
-            cfiRange = "readium:chapter.xhtml",
-            textContent = "text",
-            color = "#FF112233",
-            note = null,
-            locatorJson = null,
-            updatedAtEpochMillis = 0L,
-            deletedAtEpochMillis = null
-        )
+        val highlight =
+            Highlight(
+                id = "t1",
+                bookId = "b1",
+                cfiRange = "readium:chapter.xhtml",
+                textContent = "text",
+                color = "#FF112233",
+                note = null,
+                locatorJson = null,
+                updatedAtEpochMillis = 0L,
+                deletedAtEpochMillis = null,
+            )
         val decorations = highlightsToDecorations(listOf(highlight), emptyList(), null)
         assertEquals(1, decorations.size)
         val tint = (decorations[0].style as org.readium.r2.navigator.Decoration.Style.Highlight).tint
@@ -53,9 +54,42 @@ class ReadiumDecorationMappersTest {
     fun sort_byProgression() {
         // Use readium fallback cfi with different hrefs but same progression 0.0 -> stable order
         // Just verify that 3 highlights produce 3 decorations (sort not crashing)
-        val h1 = Highlight(id = "h1", bookId = "b1", cfiRange = "readium:a.xhtml", textContent = "t", color = "#FF0000", note = null, locatorJson = null, updatedAtEpochMillis = 0L, deletedAtEpochMillis = null)
-        val h2 = Highlight(id = "h2", bookId = "b1", cfiRange = "readium:b.xhtml", textContent = "t", color = "#FF0000", note = null, locatorJson = null, updatedAtEpochMillis = 0L, deletedAtEpochMillis = null)
-        val h3 = Highlight(id = "h3", bookId = "b1", cfiRange = "readium:c.xhtml", textContent = "t", color = "#FF0000", note = null, locatorJson = null, updatedAtEpochMillis = 0L, deletedAtEpochMillis = null)
+        val h1 =
+            Highlight(
+                id = "h1",
+                bookId = "b1",
+                cfiRange = "readium:a.xhtml",
+                textContent = "t",
+                color = "#FF0000",
+                note = null,
+                locatorJson = null,
+                updatedAtEpochMillis = 0L,
+                deletedAtEpochMillis = null,
+            )
+        val h2 =
+            Highlight(
+                id = "h2",
+                bookId = "b1",
+                cfiRange = "readium:b.xhtml",
+                textContent = "t",
+                color = "#FF0000",
+                note = null,
+                locatorJson = null,
+                updatedAtEpochMillis = 0L,
+                deletedAtEpochMillis = null,
+            )
+        val h3 =
+            Highlight(
+                id = "h3",
+                bookId = "b1",
+                cfiRange = "readium:c.xhtml",
+                textContent = "t",
+                color = "#FF0000",
+                note = null,
+                locatorJson = null,
+                updatedAtEpochMillis = 0L,
+                deletedAtEpochMillis = null,
+            )
         val decorations = highlightsToDecorations(listOf(h1, h2, h3), emptyList(), null)
         assertEquals(3, decorations.size)
     }
@@ -78,7 +112,18 @@ class ReadiumDecorationMappersTest {
 
     @Test
     fun colorParseException_defaultsToYellow() {
-        val h = Highlight(id = "c1", bookId = "b1", cfiRange = "readium:chapter.xhtml", textContent = "t", color = "not-a-color", note = null, locatorJson = null, updatedAtEpochMillis = 0L, deletedAtEpochMillis = null)
+        val h =
+            Highlight(
+                id = "c1",
+                bookId = "b1",
+                cfiRange = "readium:chapter.xhtml",
+                textContent = "t",
+                color = "not-a-color",
+                note = null,
+                locatorJson = null,
+                updatedAtEpochMillis = 0L,
+                deletedAtEpochMillis = null,
+            )
         val decorations = highlightsToDecorations(listOf(h), emptyList(), null)
         assertEquals(1, decorations.size)
         val tint = (decorations[0].style as org.readium.r2.navigator.Decoration.Style.Highlight).tint

@@ -36,7 +36,10 @@ interface AddonDao {
     }
 
     @Query("UPDATE installed_addons SET enabled = :enabled WHERE id = :id")
-    suspend fun setEnabled(id: String, enabled: Boolean)
+    suspend fun setEnabled(
+        id: String,
+        enabled: Boolean,
+    )
 
     @Query("DELETE FROM installed_addons WHERE id = :id")
     suspend fun delete(id: String)

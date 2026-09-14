@@ -11,13 +11,19 @@ sealed interface BookImportState {
     data object Idle : BookImportState
 
     /** Copying / extracting the file. */
-    data class Extracting(val progress: Float = 0f) : BookImportState
+    data class Extracting(
+        val progress: Float = 0f,
+    ) : BookImportState
 
     /** Analyzing metadata and content. */
-    data class Analyzing(val progress: Float = 0f) : BookImportState
+    data class Analyzing(
+        val progress: Float = 0f,
+    ) : BookImportState
 
     /** Saving to the local library. */
-    data class Saving(val progress: Float = 0f) : BookImportState
+    data class Saving(
+        val progress: Float = 0f,
+    ) : BookImportState
 }
 
 /** Convenience property for backward-compat with [LibraryUiState.isImporting]. */

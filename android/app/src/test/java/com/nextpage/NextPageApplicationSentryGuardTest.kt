@@ -1,10 +1,10 @@
 package com.nextpage
 
+import com.nextpage.debug.SentryInitGuard
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
 import io.sentry.Sentry
-import com.nextpage.debug.SentryInitGuard
 import org.junit.Assert.assertFalse
 import org.junit.Rule
 import org.junit.Test
@@ -27,7 +27,6 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(application = HiltTestApplication::class, sdk = [34])
 class NextPageApplicationSentryGuardTest {
-
     @get:Rule val hiltRule = HiltAndroidRule(this)
 
     @Test
@@ -36,7 +35,7 @@ class NextPageApplicationSentryGuardTest {
 
         assertFalse(
             "Sentry must stay disabled while running unit tests",
-            Sentry.isEnabled()
+            Sentry.isEnabled(),
         )
     }
 }

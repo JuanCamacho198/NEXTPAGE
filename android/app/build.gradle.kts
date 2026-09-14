@@ -1,7 +1,7 @@
-import java.util.Properties
 import java.text.SimpleDateFormat
-import java.util.Locale
 import java.util.Date
+import java.util.Locale
+import java.util.Properties
 
 plugins {
     id("com.android.application")
@@ -41,26 +41,27 @@ spotless {
     }
 }
 
-val localProperties = Properties().apply {
-    val file = rootProject.file("local.properties")
-    if (file.exists()) {
-        file.inputStream().use { load(it) }
-    }
-}
-
-val releaseMinifyEnabled = providers.gradleProperty("releaseMinify")
-    .map { value ->
-        when (value.trim().lowercase()) {
-            "true" -> true
-            "false" -> false
-            else -> throw GradleException("Invalid -PreleaseMinify value '$value'. Use true or false.")
+val localProperties =
+    Properties().apply {
+        val file = rootProject.file("local.properties")
+        if (file.exists()) {
+            file.inputStream().use { load(it) }
         }
     }
-    .orElse(true)
-    .get()
 
-fun String.escapeForBuildConfig(): String =
-    replace("\\", "\\\\").replace("\"", "\\\"")
+val releaseMinifyEnabled =
+    providers
+        .gradleProperty("releaseMinify")
+        .map { value ->
+            when (value.trim().lowercase()) {
+                "true" -> true
+                "false" -> false
+                else -> throw GradleException("Invalid -PreleaseMinify value '$value'. Use true or false.")
+            }
+        }.orElse(true)
+        .get()
+
+fun String.escapeForBuildConfig(): String = replace("\\", "\\\\").replace("\"", "\\\"")
 
 android {
     namespace = "com.nextpage"
@@ -119,10 +120,16 @@ android {
         // (`nextpage-android@<VERSION_NAME>+<sha12>`). Truncated to 12 chars if a
         // shallow clone returns a shorter SHA; falls back to `unknown` on git
         // failure so debug builds never block.
-        val gitSha = providers.exec {
-            commandLine("git", "rev-parse", "--short=12", "HEAD")
-            workingDir = rootProject.projectDir
-        }.standardOutput.asText.get().trim().take(12).ifEmpty { "unknown" }
+        val gitSha =
+            providers
+                .exec {
+                    commandLine("git", "rev-parse", "--short=12", "HEAD")
+                    workingDir = rootProject.projectDir
+                }.standardOutput.asText
+                .get()
+                .trim()
+                .take(12)
+                .ifEmpty { "unknown" }
 
         buildConfigField("String", "GIT_SHA", "\"$gitSha\"")
         val buildTime = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
@@ -135,7 +142,7 @@ android {
             isShrinkResources = releaseMinifyEnabled
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
             signingConfig = signingConfigs.getByName("debug")
         }
@@ -328,9 +335,10 @@ tasks.register("verifyAuthScreenNoHardcodedStrings") {
 
     // Resolve the file at configuration time; RegularFile is a supported
     // configuration-cache type (Project.file() would capture the script).
-    val authScreenFile = layout.projectDirectory.file(
-        "src/main/java/com/nextpage/presentation/screen/AuthScreen.kt"
-    )
+    val authScreenFile =
+        layout.projectDirectory.file(
+            "src/main/java/com/nextpage/presentation/screen/AuthScreen.kt",
+        )
 
     doLast {
         if (!authScreenFile.asFile.exists()) {
@@ -340,16 +348,17 @@ tasks.register("verifyAuthScreenNoHardcodedStrings") {
         val textCallLiteralPattern = Regex("\\bText\\(\\s*\"[^\"]+")
         val textArgLiteralPattern = Regex("\\btext\\s*=\\s*\"[^\"]+")
 
-        val violations = authScreenFile.asFile.readLines().mapIndexedNotNull { index, line ->
-            val hasViolation =
-                textCallLiteralPattern.containsMatchIn(line) ||
-                    textArgLiteralPattern.containsMatchIn(line)
-            if (hasViolation) "${index + 1}: ${line.trim()}" else null
-        }
+        val violations =
+            authScreenFile.asFile.readLines().mapIndexedNotNull { index, line ->
+                val hasViolation =
+                    textCallLiteralPattern.containsMatchIn(line) ||
+                        textArgLiteralPattern.containsMatchIn(line)
+                if (hasViolation) "${index + 1}: ${line.trim()}" else null
+            }
 
         if (violations.isNotEmpty()) {
             throw GradleException(
-                "Hardcoded user-facing strings found in AuthScreen.kt:\n" + violations.joinToString("\n")
+                "Hardcoded user-facing strings found in AuthScreen.kt:\n" + violations.joinToString("\n"),
             )
         }
     }
@@ -369,9 +378,13 @@ tasks.register("verifyStringParity") {
         // names differ per locale inside a plural/array and are not resources.
         val namePattern = Regex("<(?:string|plurals|string-array)\\s+name=\"([^\"]+)\"")
 
-        fun namesIn(file: java.io.File, label: String): Set<String> {
+        fun namesIn(
+            file: java.io.File,
+            label: String,
+        ): Set<String> {
             if (!file.exists()) throw GradleException("$label not found: ${file.path}")
-            return namePattern.findAll(file.readText())
+            return namePattern
+                .findAll(file.readText())
                 .map { it.groupValues[1] }
                 .toSet()
         }
@@ -394,7 +407,7 @@ tasks.register("verifyStringParity") {
                         append("Missing from values/strings.xml (${missingInEnglish.size}):\n")
                         missingInEnglish.forEach { append("  - $it\n") }
                     }
-                }
+                },
             )
         }
     }
@@ -416,15 +429,16 @@ tasks.register("verifyNoReaderUiStateResidue") {
     //    reader half takes a `session: SessionUiState?` param (no member
     //    access possible) and its only `.uiState` read belongs to
     //    AuthViewModel.
-    val readerRoots = listOf(
-        "src/main/java/com/nextpage/presentation/viewmodel/ReaderViewModel.kt",
-        "src/main/java/com/nextpage/presentation/viewmodel/reader",
-        "src/main/java/com/nextpage/presentation/screen/reader",
-        "src/main/java/com/nextpage/presentation/screen/ReaderScreen.kt",
-        "src/main/java/com/nextpage/presentation/screen/ReadiumPdfReaderContent.kt",
-        "src/main/java/com/nextpage/presentation/screen/readium",
-        "src/main/java/com/nextpage/debug/DebugPanel.kt"
-    )
+    val readerRoots =
+        listOf(
+            "src/main/java/com/nextpage/presentation/viewmodel/ReaderViewModel.kt",
+            "src/main/java/com/nextpage/presentation/viewmodel/reader",
+            "src/main/java/com/nextpage/presentation/screen/reader",
+            "src/main/java/com/nextpage/presentation/screen/ReaderScreen.kt",
+            "src/main/java/com/nextpage/presentation/screen/ReadiumPdfReaderContent.kt",
+            "src/main/java/com/nextpage/presentation/screen/readium",
+            "src/main/java/com/nextpage/debug/DebugPanel.kt",
+        )
     val typeBanPattern = Regex("\\bReaderUiState\\b")
     val memberPattern = Regex("\\.uiState\\b")
 
@@ -439,7 +453,8 @@ tasks.register("verifyNoReaderUiStateResidue") {
         val violations = mutableListOf<String>()
 
         // 1. Global type ban: no ReaderUiState anywhere in main sources.
-        mainSrcDir.walkTopDown()
+        mainSrcDir
+            .walkTopDown()
             .filter { it.isFile && it.extension == "kt" }
             .forEach { file ->
                 file.readLines().forEachIndexed { index, line ->
@@ -452,8 +467,15 @@ tasks.register("verifyNoReaderUiStateResidue") {
         // 2. Scoped member ban: no `.uiState` access in reader-owned sources.
         readerBases.forEach { base ->
             if (!base.exists()) return@forEach
-            val files = if (base.isFile) listOf(base) else base.walkTopDown()
-                .filter { it.isFile && it.extension == "kt" }.toList()
+            val files =
+                if (base.isFile) {
+                    listOf(base)
+                } else {
+                    base
+                        .walkTopDown()
+                        .filter { it.isFile && it.extension == "kt" }
+                        .toList()
+                }
             files.forEach { file ->
                 file.readLines().forEachIndexed { index, line ->
                     if (memberPattern.containsMatchIn(line)) {
@@ -466,7 +488,7 @@ tasks.register("verifyNoReaderUiStateResidue") {
         if (violations.isNotEmpty()) {
             throw GradleException(
                 "Deleted Reader uiState aggregate resurfaced (SDD reader-uiState-cleanup S7 gate):\n" +
-                    violations.joinToString("\n")
+                    violations.joinToString("\n"),
             )
         }
         logger.lifecycle("verifyNoReaderUiStateResidue: no residue found")
@@ -519,9 +541,8 @@ tasks.register("verifySentryMappingUpload") {
         if (sentryToken.isEmpty()) {
             throw GradleException(
                 "SENTRY_AUTH_TOKEN is not set. Release builds require Sentry mapping upload. " +
-                    "Set it as an env var or in gradle.properties (gitignored)."
+                    "Set it as an env var or in gradle.properties (gitignored).",
             )
         }
     }
 }
-

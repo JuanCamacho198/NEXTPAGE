@@ -24,11 +24,10 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object HiltFoundationModule {
-
     @Provides
     @Singleton
     fun provideConnectivityObserver(
-        @ApplicationContext context: Context
+        @ApplicationContext context: Context,
     ): ConnectivityObserver = createConnectivityObserver(context)
 }
 
@@ -40,5 +39,4 @@ object HiltFoundationModule {
  * both graphs construct the identical instance type from the identical input.
  * Network callbacks are process-global; the singleton has no cleanup hook.
  */
-fun createConnectivityObserver(context: Context): ConnectivityObserver =
-    AndroidConnectivityObserver(context)
+fun createConnectivityObserver(context: Context): ConnectivityObserver = AndroidConnectivityObserver(context)

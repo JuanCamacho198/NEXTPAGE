@@ -14,9 +14,8 @@ import java.io.File
  */
 class CrashLogStore(
     private val logDir: File,
-    private val maxFileSize: Long = DEFAULT_MAX_FILE_SIZE
+    private val maxFileSize: Long = DEFAULT_MAX_FILE_SIZE,
 ) : LogWriter {
-
     private companion object {
         const val DEFAULT_MAX_FILE_SIZE = 200L * 1024L
         const val SNAPSHOT_LINE_LIMIT = 200
@@ -30,7 +29,12 @@ class CrashLogStore(
     }
 
     @Synchronized
-    override fun write(level: String, tag: String, message: String, timestamp: Long) {
+    override fun write(
+        level: String,
+        tag: String,
+        message: String,
+        timestamp: Long,
+    ) {
         runCatching {
             val line = "$timestamp $level $tag: $message\n"
             currentFile.appendText(line)
@@ -83,12 +87,17 @@ class CrashLogStore(
      * Deletes oldest crash files in [crashDir] (matching `crash_*.txt`)
      * when count exceeds [maxFiles].
      */
-    fun cleanup(crashDir: File, maxFiles: Int = 10) {
+    fun cleanup(
+        crashDir: File,
+        maxFiles: Int = 10,
+    ) {
         runCatching {
-            val files = crashDir.listFiles()
-                ?.filter { it.name.startsWith("crash_") && it.name.endsWith(".txt") }
-                ?.sortedBy { it.lastModified() }
-                ?: return
+            val files =
+                crashDir
+                    .listFiles()
+                    ?.filter { it.name.startsWith("crash_") && it.name.endsWith(".txt") }
+                    ?.sortedBy { it.lastModified() }
+                    ?: return
             val mutable = files.toMutableList()
             while (mutable.size > maxFiles) {
                 mutable.removeAt(0).delete()

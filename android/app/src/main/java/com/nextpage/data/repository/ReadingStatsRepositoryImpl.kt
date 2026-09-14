@@ -22,7 +22,7 @@ import java.util.UUID
 class ReadingStatsRepositoryImpl(
     private val readingStatsDao: ReadingStatsDao,
     private val readingSessionDao: ReadingSessionDao,
-    private val outboxDao: SyncOutboxDao? = null
+    private val outboxDao: SyncOutboxDao? = null,
 ) : ReadingStatsRepository {
     override fun observeStats(bookId: String): Flow<ReadingStatsData?> =
         readingStatsDao.observeStatsForBook(bookId).map { entity ->
@@ -31,13 +31,12 @@ class ReadingStatsRepositoryImpl(
                     bookId = it.bookId,
                     totalMinutesRead = it.totalMinutesRead,
                     lastReadDateEpochMillis = it.lastReadDateEpochMillis,
-                    sessionsCount = it.sessionsCount
+                    sessionsCount = it.sessionsCount,
                 )
             }
         }
 
-    override fun observeTotalTime(): Flow<Long> =
-        readingStatsDao.observeTotalMinutesRead().map { it ?: 0L }
+    override fun observeTotalTime(): Flow<Long> = readingStatsDao.observeTotalMinutesRead().map { it ?: 0L }
 
     override fun observeBookStats(): Flow<List<ReadingStatsData>> =
         readingStatsDao.observeAllStats().map { entities ->
@@ -46,7 +45,7 @@ class ReadingStatsRepositoryImpl(
                     bookId = it.bookId,
                     totalMinutesRead = it.totalMinutesRead,
                     lastReadDateEpochMillis = it.lastReadDateEpochMillis,
-                    sessionsCount = it.sessionsCount
+                    sessionsCount = it.sessionsCount,
                 )
             }
         }
@@ -56,7 +55,10 @@ class ReadingStatsRepositoryImpl(
             DailyReadingActivity(dateEpochMillis = it.dateEpochMillis, minutesRead = it.totalMinutes)
         }
 
-    override suspend fun updateReadingTime(bookId: String, additionalMinutes: Long) {
+    override suspend fun updateReadingTime(
+        bookId: String,
+        additionalMinutes: Long,
+    ) {
         val now = System.currentTimeMillis()
         val existingEntity = readingStatsDao.observeStatsForBook(bookId).firstOrNull()
 
@@ -65,8 +67,8 @@ class ReadingStatsRepositoryImpl(
                 existingEntity.copy(
                     totalMinutesRead = existingEntity.totalMinutesRead + additionalMinutes,
                     lastReadDateEpochMillis = now,
-                    sessionsCount = existingEntity.sessionsCount + 1
-                )
+                    sessionsCount = existingEntity.sessionsCount + 1,
+                ),
             )
         } else {
             readingStatsDao.upsert(
@@ -74,8 +76,8 @@ class ReadingStatsRepositoryImpl(
                     bookId = bookId,
                     totalMinutesRead = additionalMinutes,
                     lastReadDateEpochMillis = now,
-                    sessionsCount = 1
-                )
+                    sessionsCount = 1,
+                ),
             )
         }
     }
@@ -88,7 +90,7 @@ class ReadingStatsRepositoryImpl(
         bookId: String,
         startTimeEpochMillis: Long,
         durationMinutes: Int,
-        userId: String
+        userId: String,
     ) {
         val now = System.currentTimeMillis()
         val date = todayStartMillis()
@@ -102,23 +104,24 @@ class ReadingStatsRepositoryImpl(
                 durationMinutes = durationMinutes,
                 date = date,
                 userId = userId,
-                updatedAtEpochMillis = now
-            )
+                updatedAtEpochMillis = now,
+            ),
         )
 
         // READING_SESSION per id — never coalesced, one row per session (desktop parity).
         // entityId MUST be the deterministic session id, not bookId, otherwise multiple
         // sessions for the same book overwrite each other in the outbox and the
         // READING_SESSION flush per-id semantics are violated. Payload is valid JSON.
-        val payloadJson = JSONObject()
-            .put("id", id)
-            .put("bookId", bookId)
-            .put("startTimeEpochMillis", startTimeEpochMillis)
-            .put("durationMinutes", durationMinutes)
-            .put("date", date)
-            .put("userId", userId)
-            .put("updatedAtEpochMillis", now)
-            .toString()
+        val payloadJson =
+            JSONObject()
+                .put("id", id)
+                .put("bookId", bookId)
+                .put("startTimeEpochMillis", startTimeEpochMillis)
+                .put("durationMinutes", durationMinutes)
+                .put("date", date)
+                .put("userId", userId)
+                .put("updatedAtEpochMillis", now)
+                .toString()
         require(payloadJson.isNotEmpty()) { "payloadJson must be non-empty valid JSON" }
         // Validate JSON object (throws if invalid) — ensures outbox never stores "{}" or malformed
         JSONObject(payloadJson)
@@ -129,18 +132,19 @@ class ReadingStatsRepositoryImpl(
                 entityId = id,
                 operation = SyncOperation.UPDATE.name,
                 payloadJson = payloadJson,
-                createdAtEpochMillis = now
-            )
+                createdAtEpochMillis = now,
+            ),
         )
     }
 
     private fun todayStartMillis(): Long {
-        val calendar = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
+        val calendar =
+            Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
         return calendar.timeInMillis
     }
 }

@@ -16,7 +16,6 @@ import org.readium.r2.shared.publication.Locator
  * used internally by [ReaderInteractionStateHolder].
  */
 sealed interface SelectionCoordinator {
-
     /** No selection, no debounce, no menu. Default state. */
     data object Idle : SelectionCoordinator
 
@@ -25,7 +24,7 @@ sealed interface SelectionCoordinator {
         val text: String,
         val rect: Rect,
         val locator: Locator?,
-        val createdAt: Long = SystemClock.elapsedRealtime()
+        val createdAt: Long = SystemClock.elapsedRealtime(),
     ) : SelectionCoordinator
 
     /** User tapped an existing highlight — context menu is shown. */
@@ -33,15 +32,14 @@ sealed interface SelectionCoordinator {
         val highlight: Highlight,
         val rect: Rect,
         val debounceUntil: Long,
-        val createdAt: Long = SystemClock.elapsedRealtime()
+        val createdAt: Long = SystemClock.elapsedRealtime(),
     ) : SelectionCoordinator {
-
         val activeHighlightId: String get() = highlight.id
     }
 
     /** Menu was just dismissed — briefly ignore selection events. */
     data class MenuClosed(
-        val closedAt: Long = SystemClock.elapsedRealtime()
+        val closedAt: Long = SystemClock.elapsedRealtime(),
     ) : SelectionCoordinator
 }
 

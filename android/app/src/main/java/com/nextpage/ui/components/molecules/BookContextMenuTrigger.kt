@@ -51,19 +51,19 @@ fun BookContextMenuTrigger(
     onMarkCompleted: () -> Unit,
     onMarkPlanToRead: () -> Unit,
     onShare: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
 ) {
     var showMenu by remember { mutableStateOf(false) }
     Box(modifier = modifier) {
         IconButton(
             onClick = { showMenu = true },
-            modifier = Modifier.size(buttonSize)
+            modifier = Modifier.size(buttonSize),
         ) {
             Icon(
                 imageVector = NextPageIcons.MoreVert,
                 contentDescription = stringResource(R.string.context_menu_more),
                 tint = iconTint,
-                modifier = Modifier.size(iconSize)
+                modifier = Modifier.size(iconSize),
             )
         }
         BookContextMenu(
@@ -74,7 +74,7 @@ fun BookContextMenuTrigger(
             onMarkCompleted = onMarkCompleted,
             onMarkPlanToRead = onMarkPlanToRead,
             onShare = onShare,
-            onDelete = onDelete
+            onDelete = onDelete,
         )
     }
 }

@@ -9,10 +9,11 @@ import com.nextpage.data.local.dao.BookmarkDao
 import com.nextpage.data.local.dao.HighlightDao
 import com.nextpage.data.local.dao.ReadingProgressDao
 import com.nextpage.data.local.dao.ReadingSessionDao
+import com.nextpage.data.remote.catalog.CatalogFileDownloader
+import com.nextpage.data.remote.catalog.CatalogProvider
 import com.nextpage.data.remote.drive.DriveCoordinator
 import com.nextpage.data.remote.drive.DriveOAuthSession
 import com.nextpage.data.remote.drive.GoogleDriveAuthHelper
-import com.nextpage.data.remote.catalog.CatalogProvider
 import com.nextpage.data.remote.supabase.SupabaseBookCatalogDataSource
 import com.nextpage.data.remote.supabase.SupabaseBookCatalogSync
 import com.nextpage.data.remote.supabase.SupabaseProgressDataSource
@@ -24,33 +25,34 @@ import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.data.session.ReaderPreferences
 import com.nextpage.data.session.ReadingGoalPreferences
 import com.nextpage.data.session.SessionManager
+import com.nextpage.data.storage.AppInternalCoverStorage
 import com.nextpage.data.sync.SessionGateImpl
-import com.nextpage.domain.sync.SessionGate
 import com.nextpage.di.modules.DatabaseModule
 import com.nextpage.di.modules.NetworkModule
 import com.nextpage.di.modules.PreferencesModule
 import com.nextpage.di.modules.RepositoryModule
 import com.nextpage.di.modules.StorageModule
 import com.nextpage.di.modules.UseCaseModule
+import com.nextpage.domain.connectivity.ConnectivityObserver
 import com.nextpage.domain.repository.AuthRepository
 import com.nextpage.domain.repository.CacheRepository
 import com.nextpage.domain.repository.DictionaryRepository
-import com.nextpage.domain.connectivity.ConnectivityObserver
 import com.nextpage.domain.repository.HomeRepository
 import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.repository.ReadingStatsRepository
 import com.nextpage.domain.repository.StorageRepository
+import com.nextpage.domain.sync.SessionGate
 import com.nextpage.domain.sync.SyncSettleGate
-import com.nextpage.domain.usecase.GetBookProgressUseCase
-import com.nextpage.data.remote.catalog.CatalogFileDownloader
 import com.nextpage.domain.usecase.DownloadAndImportBookUseCase
+import com.nextpage.domain.usecase.GetBookProgressUseCase
 import com.nextpage.domain.usecase.GetStatisticsUseCase
 import com.nextpage.domain.usecase.ImportEpubBookUseCase
 import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
-import com.nextpage.data.storage.AppInternalCoverStorage
 
-class AppContainer(context: Context) {
+class AppContainer(
+    context: Context,
+) {
     companion object {
         private const val TAG = "AppContainer"
     }
@@ -60,13 +62,14 @@ class AppContainer(context: Context) {
     private val databaseModule = DatabaseModule(context.applicationContext)
     private val storageModule = StorageModule(context.applicationContext, databaseModule)
     private val preferencesModule = PreferencesModule(context.applicationContext)
-    private val repositoryModule = RepositoryModule(
-        context = context.applicationContext,
-        databaseModule = databaseModule,
-        storageModule = storageModule,
-        preferencesModule = preferencesModule,
-        syncSettleGateProvider = { syncSettleGate }
-    )
+    private val repositoryModule =
+        RepositoryModule(
+            context = context.applicationContext,
+            databaseModule = databaseModule,
+            storageModule = storageModule,
+            preferencesModule = preferencesModule,
+            syncSettleGateProvider = { syncSettleGate },
+        )
     private val networkModule = NetworkModule(context.applicationContext, databaseModule, preferencesModule)
     private val useCaseModule = UseCaseModule(repositoryModule, databaseModule, preferencesModule)
 
@@ -101,6 +104,7 @@ class AppContainer(context: Context) {
     val supabaseBookCatalogDataSource: SupabaseBookCatalogDataSource by lazy { networkModule.supabaseBookCatalogDataSource }
     val supabaseBookCatalogSync: SupabaseBookCatalogSync by lazy { networkModule.supabaseBookCatalogSync }
     val catalogProvider: CatalogProvider by lazy { networkModule.catalogProvider }
+
     // SDD android-tooling-hygiene WS2a slice 4: delegated — NetworkModule builds
     // this via createConnectivityObserver, the shared factory also used by
     // HiltFoundationModule. Manual container retained until slices 5-6 migrate
@@ -112,7 +116,7 @@ class AppContainer(context: Context) {
             downloader = networkModule.catalogFileDownloader,
             importEpubBookUseCase = ImportEpubBookUseCase(repositoryModule.libraryRepository),
             libraryRepository = repositoryModule.libraryRepository,
-            tempDir = networkModule.catalogTempDir
+            tempDir = networkModule.catalogTempDir,
         )
     }
     val addonRegistry: com.nextpage.data.remote.addons.AddonRegistry by lazy { networkModule.addonRegistry }
@@ -172,44 +176,58 @@ class AppContainer(context: Context) {
     val syncSettleGate: SyncSettleGate by lazy { createSyncSettleGate(syncOrchestrator) }
 
     internal object ReaderDependencies {
-        fun updateReadingProgressUseCase(readerRepository: ReaderRepository) =
-            UpdateReadingProgressUseCase(readerRepository)
+        fun updateReadingProgressUseCase(readerRepository: ReaderRepository) = UpdateReadingProgressUseCase(readerRepository)
     }
 
     internal object ReaderInteractionDependencies {
         fun interactionStore(
             state: kotlinx.coroutines.flow.MutableStateFlow<com.nextpage.presentation.viewmodel.reader.ReaderInteractionState>,
-            clearEvent: kotlinx.coroutines.flow.MutableSharedFlow<Unit>
-        ) = com.nextpage.presentation.viewmodel.reader.interaction.InteractionStateStore(state, clearEvent)
+            clearEvent: kotlinx.coroutines.flow.MutableSharedFlow<Unit>,
+        ) = com.nextpage.presentation.viewmodel.reader.interaction
+            .InteractionStateStore(state, clearEvent)
 
         fun selectionManager(
             store: com.nextpage.presentation.viewmodel.reader.interaction.InteractionStateStore,
             scope: kotlinx.coroutines.CoroutineScope,
-            dispatcher: kotlinx.coroutines.CoroutineDispatcher
-        ) = com.nextpage.presentation.viewmodel.reader.interaction.SelectionManager(store, scope, dispatcher)
+            dispatcher: kotlinx.coroutines.CoroutineDispatcher,
+        ) = com.nextpage.presentation.viewmodel.reader.interaction
+            .SelectionManager(store, scope, dispatcher)
 
         fun highlightManager(
             store: com.nextpage.presentation.viewmodel.reader.interaction.InteractionStateStore,
             selectionManager: com.nextpage.presentation.viewmodel.reader.interaction.SelectionManager,
             readerRepository: ReaderRepository,
             scope: kotlinx.coroutines.CoroutineScope,
-            dispatcher: kotlinx.coroutines.CoroutineDispatcher
-        ) = com.nextpage.presentation.viewmodel.reader.interaction.HighlightManager(store, selectionManager, readerRepository, scope, dispatcher)
+            dispatcher: kotlinx.coroutines.CoroutineDispatcher,
+        ) = com.nextpage.presentation.viewmodel.reader.interaction.HighlightManager(
+            store,
+            selectionManager,
+            readerRepository,
+            scope,
+            dispatcher,
+        )
 
         fun annotationManager(
             store: com.nextpage.presentation.viewmodel.reader.interaction.InteractionStateStore,
             selectionManager: com.nextpage.presentation.viewmodel.reader.interaction.SelectionManager,
             readerRepository: ReaderRepository,
             scope: kotlinx.coroutines.CoroutineScope,
-            dispatcher: kotlinx.coroutines.CoroutineDispatcher
-        ) = com.nextpage.presentation.viewmodel.reader.interaction.AnnotationManager(store, selectionManager, readerRepository, scope, dispatcher)
+            dispatcher: kotlinx.coroutines.CoroutineDispatcher,
+        ) = com.nextpage.presentation.viewmodel.reader.interaction.AnnotationManager(
+            store,
+            selectionManager,
+            readerRepository,
+            scope,
+            dispatcher,
+        )
 
         fun bookmarkManager(
             store: com.nextpage.presentation.viewmodel.reader.interaction.InteractionStateStore,
             readerRepository: ReaderRepository,
             scope: kotlinx.coroutines.CoroutineScope,
-            dispatcher: kotlinx.coroutines.CoroutineDispatcher
-        ) = com.nextpage.presentation.viewmodel.reader.interaction.BookmarkManager(store, readerRepository, scope, dispatcher)
+            dispatcher: kotlinx.coroutines.CoroutineDispatcher,
+        ) = com.nextpage.presentation.viewmodel.reader.interaction
+            .BookmarkManager(store, readerRepository, scope, dispatcher)
 
         fun shareDictionaryManager(
             store: com.nextpage.presentation.viewmodel.reader.interaction.InteractionStateStore,
@@ -217,14 +235,22 @@ class AppContainer(context: Context) {
             dictionaryRepository: DictionaryRepository?,
             scope: kotlinx.coroutines.CoroutineScope,
             onEvent: (com.nextpage.presentation.UiEvent) -> Unit,
-            dispatcher: kotlinx.coroutines.CoroutineDispatcher
-        ) = com.nextpage.presentation.viewmodel.reader.interaction.ShareDictionaryManager(store, selectionManager, dictionaryRepository, scope, onEvent, dispatcher)
+            dispatcher: kotlinx.coroutines.CoroutineDispatcher,
+        ) = com.nextpage.presentation.viewmodel.reader.interaction.ShareDictionaryManager(
+            store,
+            selectionManager,
+            dictionaryRepository,
+            scope,
+            onEvent,
+            dispatcher,
+        )
     }
 
     val isAuthConfigError: Boolean
         get() = BuildConfig.SUPABASE_URL.isBlank() || BuildConfig.SUPABASE_ANON_KEY.isBlank()
 
     private val totalInitTime = System.currentTimeMillis() - startTime
+
     init {
         Log.i(TAG, "AppContainer fully initialized in ${totalInitTime}ms")
     }

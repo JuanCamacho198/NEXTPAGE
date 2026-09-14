@@ -3,13 +3,13 @@ package com.nextpage.presentation.navigation
 import android.net.Uri
 import com.nextpage.data.remote.addons.AddonFetchErrorCode
 import com.nextpage.data.remote.addons.AddonFetchException
-import org.robolectric.RobolectricTestRunner
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
@@ -19,12 +19,12 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class InstallDeepLinkParserTest {
-
     @Test
     fun `valid install uri parses to https manifest url`() {
-        val url = InstallDeepLinkParser.parse(
-            Uri.parse("nextpage://install?url=https%3A%2F%2Fexample.com%2Fmanifest.json")
-        )
+        val url =
+            InstallDeepLinkParser.parse(
+                Uri.parse("nextpage://install?url=https%3A%2F%2Fexample.com%2Fmanifest.json"),
+            )
         assertEquals("https://example.com/manifest.json", url)
     }
 
@@ -35,11 +35,11 @@ class InstallDeepLinkParserTest {
             "nextpage://auth/reset-password",
             "nextpage://auth/confirm#fragment",
             "com.googleusercontent.apps.abc123:/oauth2redirect",
-            "nextpage://addons?url=https://example.com/m.json"
+            "nextpage://addons?url=https://example.com/m.json",
         )) {
             assertFalse(
                 "expected non-install: $raw",
-                InstallDeepLinkParser.isInstallUri(Uri.parse(raw))
+                InstallDeepLinkParser.isInstallUri(Uri.parse(raw)),
             )
             assertNull("expected null parse: $raw", InstallDeepLinkParser.parse(Uri.parse(raw)))
         }
@@ -84,7 +84,8 @@ class InstallDeepLinkParserTest {
     fun `https required error code is the shared additive code`() {
         // Guard: parser rejects via the shared AddonFetchError set (no new codes).
         try {
-            com.nextpage.data.remote.addons.ManifestValidator.assertHttpsInstallUrl("http://example.com")
+            com.nextpage.data.remote.addons.ManifestValidator
+                .assertHttpsInstallUrl("http://example.com")
             throw AssertionError("expected HTTPS_REQUIRED")
         } catch (err: AddonFetchException) {
             assertEquals(AddonFetchErrorCode.HTTPS_REQUIRED, err.code)

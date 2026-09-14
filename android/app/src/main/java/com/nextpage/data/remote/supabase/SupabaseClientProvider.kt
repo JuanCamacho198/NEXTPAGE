@@ -2,8 +2,8 @@ package com.nextpage.data.remote.supabase
 
 import com.nextpage.BuildConfig
 import io.github.jan.supabase.SupabaseClient
-import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.auth.Auth
+import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.realtime.Realtime
 import io.github.jan.supabase.storage.Storage
@@ -18,7 +18,6 @@ import io.github.jan.supabase.storage.Storage
  * @see [SupabaseDeviceDataSource] for direct DB access using this client.
  */
 object SupabaseClientProvider {
-
     private var _client: SupabaseClient? = null
 
     /**
@@ -44,7 +43,7 @@ object SupabaseClientProvider {
 
         return createSupabaseClient(
             supabaseUrl = url,
-            supabaseKey = anonKey
+            supabaseKey = anonKey,
         ) {
             install(Auth) {
                 // Deep-link scheme/host for OAuth and email-confirmation links

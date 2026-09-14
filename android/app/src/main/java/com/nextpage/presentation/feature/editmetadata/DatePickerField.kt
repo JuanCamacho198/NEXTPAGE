@@ -13,30 +13,43 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 
-internal fun isoToEpochMillis(iso: String?): Long? = try {
-    iso?.let { LocalDate.parse(it).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli() }
-} catch (_: Exception) {
-    null
-}
+internal fun isoToEpochMillis(iso: String?): Long? =
+    try {
+        iso?.let {
+            LocalDate
+                .parse(it)
+                .atStartOfDay(ZoneOffset.UTC)
+                .toInstant()
+                .toEpochMilli()
+        }
+    } catch (_: Exception) {
+        null
+    }
 
-internal fun epochMillisToIso(millis: Long?): String? = millis?.let {
-    Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate().toString()
-}
+internal fun epochMillisToIso(millis: Long?): String? =
+    millis?.let {
+        Instant
+            .ofEpochMilli(it)
+            .atZone(ZoneOffset.UTC)
+            .toLocalDate()
+            .toString()
+    }
 
-internal fun formatPublishedDate(iso: String?): String =
-    if (iso.isNullOrBlank()) "—" else iso
+internal fun formatPublishedDate(iso: String?): String = if (iso.isNullOrBlank()) "—" else iso
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun DatePickerField(
     publishedDate: String?,
     onPublishedDateChange: (String?) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
-    val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = isoToEpochMillis(publishedDate)
-            ?: System.currentTimeMillis()
-    )
+    val datePickerState =
+        rememberDatePickerState(
+            initialSelectedDateMillis =
+                isoToEpochMillis(publishedDate)
+                    ?: System.currentTimeMillis(),
+        )
     DatePickerDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
@@ -46,7 +59,7 @@ internal fun DatePickerField(
                         onPublishedDateChange(epochMillisToIso(millis))
                     }
                     onDismiss()
-                }
+                },
             ) {
                 Text(text = stringResource(R.string.action_ok))
             }
@@ -55,7 +68,7 @@ internal fun DatePickerField(
             TextButton(onClick = onDismiss) {
                 Text(text = stringResource(R.string.action_cancel))
             }
-        }
+        },
     ) {
         DatePicker(state = datePickerState)
     }

@@ -11,13 +11,13 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class AppDatabaseMigrationTest {
-
     @get:Rule
-    val helper = MigrationTestHelper(
-        InstrumentationRegistry.getInstrumentation(),
-        AppDatabase::class.java.canonicalName,
-        FrameworkSQLiteOpenHelperFactory()
-    )
+    val helper =
+        MigrationTestHelper(
+            InstrumentationRegistry.getInstrumentation(),
+            AppDatabase::class.java.canonicalName,
+            FrameworkSQLiteOpenHelperFactory(),
+        )
 
     @Test
     fun migrate4To5_preservesExistingBookRows() {
@@ -36,28 +36,30 @@ class AppDatabaseMigrationTest {
                     updated_at INTEGER NOT NULL,
                     PRIMARY KEY(id)
                 )
-                """.trimIndent()
+                """.trimIndent(),
             )
             execSQL(
                 """
                 INSERT INTO books (id, title, author, cover_path, file_path, format, updated_at)
                 VALUES ('book-1', 'Title 1', 'Author 1', NULL, '/tmp/book-1.epub', 'epub', 123)
-                """.trimIndent()
+                """.trimIndent(),
             )
             close()
         }
 
-        helper.runMigrationsAndValidate(
-            dbName,
-            5,
-            true,
-            AppDatabaseMigrations.MIGRATION_4_5
-        ).query("SELECT id, deleted_at FROM books WHERE id = 'book-1'").use { cursor ->
-            check(cursor.moveToFirst()) { "Expected migrated book row to exist" }
-            val deletedAtColumn = cursor.getColumnIndex("deleted_at")
-            check(deletedAtColumn >= 0) { "Expected deleted_at column to exist" }
-            check(cursor.isNull(deletedAtColumn)) { "Expected deleted_at to be null for existing rows" }
-        }
+        helper
+            .runMigrationsAndValidate(
+                dbName,
+                5,
+                true,
+                AppDatabaseMigrations.MIGRATION_4_5,
+            ).query("SELECT id, deleted_at FROM books WHERE id = 'book-1'")
+            .use { cursor ->
+                check(cursor.moveToFirst()) { "Expected migrated book row to exist" }
+                val deletedAtColumn = cursor.getColumnIndex("deleted_at")
+                check(deletedAtColumn >= 0) { "Expected deleted_at column to exist" }
+                check(cursor.isNull(deletedAtColumn)) { "Expected deleted_at to be null for existing rows" }
+            }
     }
 
     @Test
@@ -77,27 +79,29 @@ class AppDatabaseMigrationTest {
                     updated_at INTEGER NOT NULL,
                     PRIMARY KEY(id)
                 )
-                """.trimIndent()
+                """.trimIndent(),
             )
             close()
         }
 
-        helper.runMigrationsAndValidate(
-            dbName,
-            5,
-            true,
-            *AppDatabaseMigrations.ALL
-        ).query("PRAGMA table_info(books)").use { cursor ->
-            var hasDeletedAt = false
-            val nameColumn = cursor.getColumnIndex("name")
-            while (cursor.moveToNext()) {
-                if (cursor.getString(nameColumn) == "deleted_at") {
-                    hasDeletedAt = true
-                    break
+        helper
+            .runMigrationsAndValidate(
+                dbName,
+                5,
+                true,
+                *AppDatabaseMigrations.ALL,
+            ).query("PRAGMA table_info(books)")
+            .use { cursor ->
+                var hasDeletedAt = false
+                val nameColumn = cursor.getColumnIndex("name")
+                while (cursor.moveToNext()) {
+                    if (cursor.getString(nameColumn) == "deleted_at") {
+                        hasDeletedAt = true
+                        break
+                    }
                 }
+                assertEquals(true, hasDeletedAt)
             }
-            assertEquals(true, hasDeletedAt)
-        }
     }
 
     @Test
@@ -119,10 +123,10 @@ class AppDatabaseMigrationTest {
                     updated_at INTEGER NOT NULL,
                     PRIMARY KEY(id)
                 )
-                """.trimIndent()
+                """.trimIndent(),
             )
             execSQL(
-                "INSERT INTO books (id, title, file_path, format, updated_at) VALUES ('book-1', 'B1', '/b1.epub', 'epub', 100)"
+                "INSERT INTO books (id, title, file_path, format, updated_at) VALUES ('book-1', 'B1', '/b1.epub', 'epub', 100)",
             )
 
             // reading_stats in v15 uses camelCase column `bookId`
@@ -136,10 +140,10 @@ class AppDatabaseMigrationTest {
                     userId TEXT NOT NULL,
                     PRIMARY KEY(bookId)
                 )
-                """.trimIndent()
+                """.trimIndent(),
             )
             execSQL(
-                "INSERT INTO reading_stats VALUES ('book-1', 42, 200, 3, '')"
+                "INSERT INTO reading_stats VALUES ('book-1', 42, 200, 3, '')",
             )
 
             // sync_file_mappings in v15 has no FK
@@ -153,10 +157,10 @@ class AppDatabaseMigrationTest {
                     updated_at INTEGER NOT NULL,
                     PRIMARY KEY(drive_file_id)
                 )
-                """.trimIndent()
+                """.trimIndent(),
             )
             execSQL(
-                "INSERT INTO sync_file_mappings VALUES ('drive-1', 'u1', 'book-1', '/local/path', 300)"
+                "INSERT INTO sync_file_mappings VALUES ('drive-1', 'u1', 'book-1', '/local/path', 300)",
             )
 
             // sync_outbox in v15 has no FK
@@ -173,10 +177,10 @@ class AppDatabaseMigrationTest {
                     last_error TEXT,
                     PRIMARY KEY(id)
                 )
-                """.trimIndent()
+                """.trimIndent(),
             )
             execSQL(
-                "INSERT INTO sync_outbox VALUES ('out-1', 'BOOK', 'book-1', 'UPDATE', '{}', 400, 0, NULL)"
+                "INSERT INTO sync_outbox VALUES ('out-1', 'BOOK', 'book-1', 'UPDATE', '{}', 400, 0, NULL)",
             )
 
             // reading_sessions
@@ -191,10 +195,10 @@ class AppDatabaseMigrationTest {
                     userId TEXT NOT NULL,
                     PRIMARY KEY(id)
                 )
-                """.trimIndent()
+                """.trimIndent(),
             )
             execSQL(
-                "INSERT INTO reading_sessions VALUES ('sess-1', 'book-1', 500, 10, 20240101, '')"
+                "INSERT INTO reading_sessions VALUES ('sess-1', 'book-1', 500, 10, 20240101, '')",
             )
 
             // dictionary_words (required by FTS5 content= link)
@@ -207,22 +211,23 @@ class AppDatabaseMigrationTest {
                     definition TEXT,
                     PRIMARY KEY(id)
                 )
-                """.trimIndent()
+                """.trimIndent(),
             )
             execSQL(
-                "INSERT INTO dictionary_words VALUES ('dw-1', 'hello', 600, 'a greeting')"
+                "INSERT INTO dictionary_words VALUES ('dw-1', 'hello', 600, 'a greeting')",
             )
 
             close()
         }
 
         // Run v15 → v16 migration
-        val db = helper.runMigrationsAndValidate(
-            dbName,
-            16,
-            true,
-            AppDatabaseMigrations.MIGRATION_15_16
-        )
+        val db =
+            helper.runMigrationsAndValidate(
+                dbName,
+                16,
+                true,
+                AppDatabaseMigrations.MIGRATION_15_16,
+            )
 
         // ── R3: reading_stats column renamed, no camelCase remains
         db.query("PRAGMA table_info(reading_stats)").use { cursor ->
@@ -337,21 +342,25 @@ class AppDatabaseMigrationTest {
         }
 
         // ── R6: FTS5 virtual table exists
-        db.query(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='dictionary_words_fts'"
-        ).use { cursor ->
-            check(cursor.moveToFirst()) { "Expected dictionary_words_fts virtual table to exist" }
-        }
+        db
+            .query(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='dictionary_words_fts'",
+            ).use { cursor ->
+                check(cursor.moveToFirst()) { "Expected dictionary_words_fts virtual table to exist" }
+            }
 
         // ── All tables preserved with row counts
         db.query("SELECT COUNT(*) FROM sync_file_mappings").use { c ->
-            check(c.moveToFirst()); assertEquals(1L, c.getLong(0))
+            check(c.moveToFirst())
+            assertEquals(1L, c.getLong(0))
         }
         db.query("SELECT COUNT(*) FROM sync_outbox").use { c ->
-            check(c.moveToFirst()); assertEquals(1L, c.getLong(0))
+            check(c.moveToFirst())
+            assertEquals(1L, c.getLong(0))
         }
         db.query("SELECT COUNT(*) FROM reading_sessions").use { c ->
-            check(c.moveToFirst()); assertEquals(1L, c.getLong(0))
+            check(c.moveToFirst())
+            assertEquals(1L, c.getLong(0))
         }
 
         db.close()
@@ -361,25 +370,30 @@ class AppDatabaseMigrationTest {
     fun migrate17To18_backfillsCanonicalReadingState() {
         val dbName = "migration-test-17-18"
         helper.createDatabase(dbName, 17).apply {
-            execSQL("""
+            execSQL(
+                """
                 CREATE TABLE books (
                     id TEXT NOT NULL PRIMARY KEY, title TEXT NOT NULL, author TEXT,
                     cover_path TEXT, file_path TEXT NOT NULL, format TEXT NOT NULL,
                     updated_at INTEGER NOT NULL, deleted_at INTEGER, status TEXT,
                     content_hash TEXT
                 )
-            """.trimIndent())
+                """.trimIndent(),
+            )
             execSQL("INSERT INTO books VALUES ('zero', 'Zero', NULL, NULL, '/zero', 'epub', 1, NULL, NULL, NULL)")
             execSQL("INSERT INTO books VALUES ('reading', 'Reading', NULL, NULL, '/reading', 'epub', 2, NULL, 'reading', NULL)")
             execSQL("INSERT INTO books VALUES ('done', 'Done', NULL, NULL, '/done', 'epub', 3, NULL, 'completed', NULL)")
             close()
         }
 
-        helper.runMigrationsAndValidate(dbName, 18, true, AppDatabaseMigrations.MIGRATION_17_18)
-            .query("SELECT id, reading_state FROM books ORDER BY id").use { cursor ->
-                val states = buildList {
-                    while (cursor.moveToNext()) add(cursor.getString(1))
-                }
+        helper
+            .runMigrationsAndValidate(dbName, 18, true, AppDatabaseMigrations.MIGRATION_17_18)
+            .query("SELECT id, reading_state FROM books ORDER BY id")
+            .use { cursor ->
+                val states =
+                    buildList {
+                        while (cursor.moveToNext()) add(cursor.getString(1))
+                    }
                 assertEquals(listOf("completed", "reading", "to_read"), states)
             }
     }
@@ -390,7 +404,8 @@ class AppDatabaseMigrationTest {
 
         // Seed a v22 database with a book + a legacy reading_sessions row.
         helper.createDatabase(dbName, 22).apply {
-            execSQL("""
+            execSQL(
+                """
                 CREATE TABLE IF NOT EXISTS books (
                     id TEXT NOT NULL PRIMARY KEY,
                     title TEXT NOT NULL,
@@ -420,11 +435,15 @@ class AppDatabaseMigrationTest {
                     description TEXT,
                     chapter_count INTEGER
                 )
-            """.trimIndent())
-            execSQL("INSERT INTO books (id, title, file_path, format, updated_at, reading_state) VALUES ('book-1', 'B1', '/b1.epub', 'epub', 100, 'reading')")
+                """.trimIndent(),
+            )
+            execSQL(
+                "INSERT INTO books (id, title, file_path, format, updated_at, reading_state) VALUES ('book-1', 'B1', '/b1.epub', 'epub', 100, 'reading')",
+            )
 
             // v22 reading_sessions — NO updated_at_epoch_millis column yet.
-            execSQL("""
+            execSQL(
+                """
                 CREATE TABLE IF NOT EXISTS reading_sessions (
                     id TEXT NOT NULL PRIMARY KEY,
                     book_id TEXT NOT NULL,
@@ -433,17 +452,19 @@ class AppDatabaseMigrationTest {
                     date INTEGER NOT NULL,
                     userId TEXT NOT NULL DEFAULT ''
                 )
-            """.trimIndent())
+                """.trimIndent(),
+            )
             execSQL("INSERT INTO reading_sessions VALUES ('sess-1', 'book-1', 500, 10, 20240101, '')")
             close()
         }
 
-        val db = helper.runMigrationsAndValidate(
-            dbName,
-            23,
-            true,
-            AppDatabaseMigrations.MIGRATION_22_23
-        )
+        val db =
+            helper.runMigrationsAndValidate(
+                dbName,
+                23,
+                true,
+                AppDatabaseMigrations.MIGRATION_22_23,
+            )
 
         // R1: the LWW column exists after migration.
         db.query("PRAGMA table_info(reading_sessions)").use { cursor ->
@@ -474,7 +495,8 @@ class AppDatabaseMigrationTest {
         // Seed a v23 database with the exact books schema exported in 23.json,
         // plus rows covering rated (1..5) and unrated (NULL) books.
         helper.createDatabase(dbName, 23).apply {
-            execSQL("""
+            execSQL(
+                """
                 CREATE TABLE IF NOT EXISTS books (
                     id TEXT NOT NULL,
                     title TEXT NOT NULL,
@@ -505,33 +527,44 @@ class AppDatabaseMigrationTest {
                     remote_protocol_version INTEGER,
                     PRIMARY KEY(id)
                 )
-            """.trimIndent())
+                """.trimIndent(),
+            )
             execSQL("CREATE INDEX IF NOT EXISTS index_books_deleted_at_updated_at ON books(deleted_at, updated_at DESC)")
-            execSQL("INSERT INTO books (id, title, file_path, format, updated_at, reading_state, user_rating) VALUES ('r1', 'R1', '/r1.epub', 'epub', 1, 'to_read', 1)")
-            execSQL("INSERT INTO books (id, title, file_path, format, updated_at, reading_state, user_rating) VALUES ('r3', 'R3', '/r3.epub', 'epub', 2, 'to_read', 3)")
-            execSQL("INSERT INTO books (id, title, file_path, format, updated_at, reading_state, user_rating) VALUES ('r5', 'R5', '/r5.epub', 'epub', 3, 'to_read', 5)")
-            execSQL("INSERT INTO books (id, title, file_path, format, updated_at, reading_state, user_rating) VALUES ('r0', 'R0', '/r0.epub', 'epub', 4, 'to_read', NULL)")
+            execSQL(
+                "INSERT INTO books (id, title, file_path, format, updated_at, reading_state, user_rating) VALUES ('r1', 'R1', '/r1.epub', 'epub', 1, 'to_read', 1)",
+            )
+            execSQL(
+                "INSERT INTO books (id, title, file_path, format, updated_at, reading_state, user_rating) VALUES ('r3', 'R3', '/r3.epub', 'epub', 2, 'to_read', 3)",
+            )
+            execSQL(
+                "INSERT INTO books (id, title, file_path, format, updated_at, reading_state, user_rating) VALUES ('r5', 'R5', '/r5.epub', 'epub', 3, 'to_read', 5)",
+            )
+            execSQL(
+                "INSERT INTO books (id, title, file_path, format, updated_at, reading_state, user_rating) VALUES ('r0', 'R0', '/r0.epub', 'epub', 4, 'to_read', NULL)",
+            )
             close()
         }
 
-        val db = helper.runMigrationsAndValidate(
-            dbName,
-            24,
-            true,
-            AppDatabaseMigrations.MIGRATION_23_24
-        )
+        val db =
+            helper.runMigrationsAndValidate(
+                dbName,
+                24,
+                true,
+                AppDatabaseMigrations.MIGRATION_23_24,
+            )
 
         // R1: the 5 new metadata columns exist and are nullable.
         db.query("PRAGMA table_info(books)").use { cursor ->
             val nameColumn = cursor.getColumnIndex("name")
             val notNullColumn = cursor.getColumnIndex("notnull")
-            val expected = mapOf(
-                "genre" to false,
-                "language" to false,
-                "publisher" to false,
-                "tags" to false,
-                "published_date" to false
-            )
+            val expected =
+                mapOf(
+                    "genre" to false,
+                    "language" to false,
+                    "publisher" to false,
+                    "tags" to false,
+                    "published_date" to false,
+                )
             val actual = mutableMapOf<String, Boolean>()
             while (cursor.moveToNext()) {
                 val name = cursor.getString(nameColumn)
@@ -545,11 +578,12 @@ class AppDatabaseMigrationTest {
 
         // R2: ratings reinterpreted as half-units (1→2, 3→6, 5→10); NULL stays NULL.
         db.query("SELECT id, user_rating FROM books ORDER BY id").use { cursor ->
-            val ratings = buildList {
-                while (cursor.moveToNext()) {
-                    add(cursor.getString(0) to cursor.getLong(1).let { if (cursor.isNull(1)) null else it })
+            val ratings =
+                buildList {
+                    while (cursor.moveToNext()) {
+                        add(cursor.getString(0) to cursor.getLong(1).let { if (cursor.isNull(1)) null else it })
+                    }
                 }
-            }
             assertEquals(listOf("r0" to null, "r1" to 2L, "r3" to 6L, "r5" to 10L), ratings)
         }
 

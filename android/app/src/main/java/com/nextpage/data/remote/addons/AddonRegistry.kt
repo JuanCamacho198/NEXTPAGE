@@ -16,7 +16,7 @@ data class InstalledAddonRow(
     val url: String,
     val manifest: AddonManifest,
     val enabled: Boolean,
-    val addedAt: Long
+    val addedAt: Long,
 )
 
 /**
@@ -29,10 +29,21 @@ data class InstalledAddonRow(
  */
 interface AddonRegistryLike {
     suspend fun listInstalled(): List<InstalledAddonRow>
+
     suspend fun install(url: String): AddonManifest
+
     suspend fun fetchManifest(url: String): AddonManifest
-    suspend fun installManifest(url: String, manifest: AddonManifest): AddonManifest
-    suspend fun setEnabled(id: String, enabled: Boolean)
+
+    suspend fun installManifest(
+        url: String,
+        manifest: AddonManifest,
+    ): AddonManifest
+
+    suspend fun setEnabled(
+        id: String,
+        enabled: Boolean,
+    )
+
     suspend fun uninstall(id: String)
 }
 
@@ -48,9 +59,8 @@ class AddonRegistry(
     private val dao: AddonDao,
     private val transport: AddonHttpTransport,
     val consent: AddonConsentStore = InMemoryAddonConsentStore(),
-    private val now: () -> Long = { System.currentTimeMillis() }
+    private val now: () -> Long = { System.currentTimeMillis() },
 ) : AddonRegistryLike {
-
     private val changeListeners = mutableListOf<(Int) -> Unit>()
     private var mutationVersion = 0
 
@@ -100,7 +110,10 @@ class AddonRegistry(
      * Persist an already-fetched manifest (sha256 addonId → upsert preserving
      * enabled/addedAt → notifyChanged). No fetch; built-in id collision guard.
      */
-    override suspend fun installManifest(url: String, manifest: AddonManifest): AddonManifest {
+    override suspend fun installManifest(
+        url: String,
+        manifest: AddonManifest,
+    ): AddonManifest {
         if (
             manifest.id in BUILTIN_SOURCE_NAMES ||
             manifest.id.contains(':') ||
@@ -108,7 +121,7 @@ class AddonRegistry(
         ) {
             throw AddonFetchException(
                 AddonFetchErrorCode.INVALID_MANIFEST,
-                "addon id must not collide with built-in source ids: ${manifest.id}"
+                "addon id must not collide with built-in source ids: ${manifest.id}",
             )
         }
         val addonId = AddonId.fromUrl(url)
@@ -117,36 +130,42 @@ class AddonRegistry(
             AddonEntity(
                 id = addonId,
                 url = url,
-                manifestJson = JSONObject(
-                    mapOf(
-                        "id" to manifest.id,
-                        "name" to manifest.name,
-                        "version" to manifest.version,
-                        "catalogs" to org.json.JSONArray().apply {
-                            manifest.catalogs.forEach {
-                                put(
-                                    org.json.JSONObject()
-                                        .put("type", it.type)
-                                        .put("id", it.id)
-                                        .put("name", it.name)
-                                )
-                            }
-                        },
-                        "resources" to org.json.JSONArray().apply { manifest.resources.forEach { put(it) } }
-                    )
-                ).apply {
-                    manifest.searchUrl?.let { put("searchUrl", it) }
-                    manifest.detailsUrl?.let { put("detailsUrl", it) }
-                    manifest.resolveUrl?.let { put("resolveUrl", it) }
-                    if (manifest.capabilities.isNotEmpty()) {
-                        put("capabilities", org.json.JSONArray().apply {
-                            manifest.capabilities.forEach { put(it) }
-                        })
-                    }
-                }.toString(),
+                manifestJson =
+                    JSONObject(
+                        mapOf(
+                            "id" to manifest.id,
+                            "name" to manifest.name,
+                            "version" to manifest.version,
+                            "catalogs" to
+                                org.json.JSONArray().apply {
+                                    manifest.catalogs.forEach {
+                                        put(
+                                            org.json
+                                                .JSONObject()
+                                                .put("type", it.type)
+                                                .put("id", it.id)
+                                                .put("name", it.name),
+                                        )
+                                    }
+                                },
+                            "resources" to org.json.JSONArray().apply { manifest.resources.forEach { put(it) } },
+                        ),
+                    ).apply {
+                        manifest.searchUrl?.let { put("searchUrl", it) }
+                        manifest.detailsUrl?.let { put("detailsUrl", it) }
+                        manifest.resolveUrl?.let { put("resolveUrl", it) }
+                        if (manifest.capabilities.isNotEmpty()) {
+                            put(
+                                "capabilities",
+                                org.json.JSONArray().apply {
+                                    manifest.capabilities.forEach { put(it) }
+                                },
+                            )
+                        }
+                    }.toString(),
                 enabled = existing?.enabled ?: true,
-                addedAt = existing?.addedAt ?: now()
-            )
+                addedAt = existing?.addedAt ?: now(),
+            ),
         )
         notifyChanged()
         return manifest
@@ -159,10 +178,12 @@ class AddonRegistry(
                 runCatching { AddonManifestJson.decode(row.manifestJson) }.getOrNull()?.let { manifest ->
                     InstalledAddonRow(row.id, row.url, manifest, row.enabled, row.addedAt)
                 }
-            }
-            .sortedWith(compareBy({ it.addedAt }, { it.id }))
+            }.sortedWith(compareBy({ it.addedAt }, { it.id }))
 
-    override suspend fun setEnabled(id: String, enabled: Boolean) {
+    override suspend fun setEnabled(
+        id: String,
+        enabled: Boolean,
+    ) {
         try {
             dao.setEnabled(id, enabled)
         } finally {
@@ -186,40 +207,44 @@ class AddonRegistry(
 
 /** JSON codecs for AddonManifest (org.json, mirroring ManifestValidator's parser). */
 internal object AddonManifestJson {
-    fun decode(json: String): AddonManifest = ManifestValidator.validate(
-        json.toByteArray(Charsets.UTF_8),
-        "application/json"
-    )
+    fun decode(json: String): AddonManifest =
+        ManifestValidator.validate(
+            json.toByteArray(Charsets.UTF_8),
+            "application/json",
+        )
 
-    fun encode(manifest: AddonManifest): String = JSONObject()
-        .put("id", manifest.id)
-        .put("name", manifest.name)
-        .put("version", manifest.version)
-        .put(
-            "catalogs",
-            org.json.JSONArray().apply {
-                manifest.catalogs.forEach {
+    fun encode(manifest: AddonManifest): String =
+        JSONObject()
+            .put("id", manifest.id)
+            .put("name", manifest.name)
+            .put("version", manifest.version)
+            .put(
+                "catalogs",
+                org.json.JSONArray().apply {
+                    manifest.catalogs.forEach {
+                        put(
+                            org.json
+                                .JSONObject()
+                                .put("type", it.type)
+                                .put("id", it.id)
+                                .put("name", it.name),
+                        )
+                    }
+                },
+            ).put("resources", org.json.JSONArray().apply { manifest.resources.forEach { put(it) } })
+            .apply {
+                manifest.searchUrl?.let { put("searchUrl", it) }
+                manifest.detailsUrl?.let { put("detailsUrl", it) }
+                manifest.resolveUrl?.let { put("resolveUrl", it) }
+                if (manifest.capabilities.isNotEmpty()) {
                     put(
-                        org.json.JSONObject()
-                            .put("type", it.type)
-                            .put("id", it.id)
-                            .put("name", it.name)
+                        "capabilities",
+                        org.json.JSONArray().apply {
+                            manifest.capabilities.forEach { put(it) }
+                        },
                     )
                 }
-            }
-        )
-        .put("resources", org.json.JSONArray().apply { manifest.resources.forEach { put(it) } })
-        .apply {
-            manifest.searchUrl?.let { put("searchUrl", it) }
-            manifest.detailsUrl?.let { put("detailsUrl", it) }
-            manifest.resolveUrl?.let { put("resolveUrl", it) }
-            if (manifest.capabilities.isNotEmpty()) {
-                put("capabilities", org.json.JSONArray().apply {
-                    manifest.capabilities.forEach { put(it) }
-                })
-            }
-        }
-        .toString()
+            }.toString()
 }
 
 /**
@@ -231,8 +256,9 @@ fun catalogProvidersWithAddons(
     curated: CatalogProvider,
     installedAddons: List<InstalledAddonRow>,
     addonTransport: AddonHttpTransport? = null,
-    addonConsent: AddonConsentStore? = null
+    addonConsent: AddonConsentStore? = null,
 ): List<CatalogProvider> =
-    builtIns + curated + installedAddons
-        .filter { it.enabled }
-        .map { AddonCatalogProvider(it.manifest, it.id, addonTransport, consent = addonConsent ?: InMemoryAddonConsentStore()) }
+    builtIns + curated +
+        installedAddons
+            .filter { it.enabled }
+            .map { AddonCatalogProvider(it.manifest, it.id, addonTransport, consent = addonConsent ?: InMemoryAddonConsentStore()) }

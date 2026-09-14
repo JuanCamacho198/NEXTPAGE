@@ -36,7 +36,7 @@ internal fun SynopsisSection(synopsis: String?) {
             text = stringResource(R.string.book_detail_synopsis),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onBackground,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.SemiBold,
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
@@ -44,33 +44,35 @@ internal fun SynopsisSection(synopsis: String?) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = if (expanded) Int.MAX_VALUE else 4,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
         )
         if (synopsis != null && synopsis.length > 200) {
             Spacer(modifier = Modifier.height(4.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(4.dp))
-                    .clickable { expanded = !expanded }
-                    .padding(vertical = 4.dp)
+                modifier =
+                    Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .clickable { expanded = !expanded }
+                        .padding(vertical = 4.dp),
             ) {
                 Text(
-                    text = if (expanded) {
-                        stringResource(R.string.book_detail_show_less)
-                    } else {
-                        stringResource(R.string.book_detail_show_more_chevron)
-                    },
+                    text =
+                        if (expanded) {
+                            stringResource(R.string.book_detail_show_less)
+                        } else {
+                            stringResource(R.string.book_detail_show_more_chevron)
+                        },
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Icon(
                     imageVector = if (expanded) NextPageIcons.ChevronUp else NextPageIcons.ChevronDown,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(16.dp),
                 )
             }
         }

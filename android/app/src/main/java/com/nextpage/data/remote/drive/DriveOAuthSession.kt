@@ -32,7 +32,7 @@ fun driveOAuthRedirectUri(clientId: String): String {
 data class AuthStart(
     val verifier: String,
     val challenge: String,
-    val state: String
+    val state: String,
 )
 
 /**
@@ -46,10 +46,14 @@ sealed interface DriveAuthResult {
     data object Canceled : DriveAuthResult
 
     /** Tokens exchanged and persisted; [accessToken] is the freshly issued access token. */
-    data class Success(val accessToken: String) : DriveAuthResult
+    data class Success(
+        val accessToken: String,
+    ) : DriveAuthResult
 
     /** The flow failed; [error] carries the mapped [AppError] — surface an actionable message. */
-    data class Failure(val error: AppError) : DriveAuthResult
+    data class Failure(
+        val error: AppError,
+    ) : DriveAuthResult
 }
 
 /**
@@ -75,9 +79,8 @@ class DriveOAuthSession(
     val clientId: String,
     val redirectUri: String,
     private val tokenStore: DriveTokenStore,
-    private val tokenApi: DriveTokenApi
+    private val tokenApi: DriveTokenApi,
 ) {
-
     /**
      * Start a fresh authorization attempt. The caller keeps the returned [AuthStart]
      * and must pass its `state`/`verifier` back into [complete] when the redirect arrives.
@@ -87,7 +90,7 @@ class DriveOAuthSession(
         return AuthStart(
             verifier = verifier,
             challenge = Pkce.challenge(verifier),
-            state = Pkce.generateVerifier()
+            state = Pkce.generateVerifier(),
         )
     }
 
@@ -105,7 +108,7 @@ class DriveOAuthSession(
         code: String?,
         expectedState: String,
         returnedState: String?,
-        verifier: String
+        verifier: String,
     ): DriveAuthResult {
         if (returnedState != expectedState) {
             return DriveAuthResult.Failure(
@@ -113,8 +116,8 @@ class DriveOAuthSession(
                     category = ErrorCategory.AUTH,
                     code = "DRIVE_OAUTH_STATE_MISMATCH",
                     message = "Drive authorization state mismatch. Please try again.",
-                    component = COMPONENT
-                )
+                    component = COMPONENT,
+                ),
             )
         }
         if (code.isNullOrBlank()) {
@@ -131,10 +134,10 @@ class DriveOAuthSession(
                         category = ErrorCategory.NETWORK,
                         code = "DRIVE_OAUTH_EXCHANGE_FAILED",
                         message = "Could not reach Google to finish Drive authorization.",
-                        component = COMPONENT
-                    )
+                        component = COMPONENT,
+                    ),
                 )
-            }
+            },
         )
     }
 

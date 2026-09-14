@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -22,8 +21,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.nextpage.ui.icons.NextPageIcons
 import com.nextpage.presentation.theme.NextPageTheme
+import com.nextpage.ui.icons.NextPageIcons
 
 /**
  * Visual variant for [NextPageDialog] that drives the confirm button
@@ -32,10 +31,12 @@ import com.nextpage.presentation.theme.NextPageTheme
 enum class NextPageDialogVariant {
     /** Default variant — uses [MaterialTheme.colorScheme.primary]. */
     INFO,
+
     /** Destructive action variant — uses [MaterialTheme.colorScheme.error]. */
     DESTRUCTIVE,
+
     /** Success/positive variant — uses [MaterialTheme.colorScheme.primary]. */
-    SUCCESS
+    SUCCESS,
 }
 
 /**
@@ -82,18 +83,20 @@ fun NextPageDialog(
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
     variant: NextPageDialogVariant = NextPageDialogVariant.INFO,
-    confirmColor: Color? = null
+    confirmColor: Color? = null,
 ) {
-    val effectiveConfirmColor = confirmColor ?: when (variant) {
-        NextPageDialogVariant.INFO -> MaterialTheme.colorScheme.primary
-        NextPageDialogVariant.DESTRUCTIVE -> MaterialTheme.colorScheme.error
-        NextPageDialogVariant.SUCCESS -> MaterialTheme.colorScheme.primary
-    }
-    val effectiveContentColor = when (variant) {
-        NextPageDialogVariant.INFO -> MaterialTheme.colorScheme.onPrimary
-        NextPageDialogVariant.DESTRUCTIVE -> MaterialTheme.colorScheme.onError
-        NextPageDialogVariant.SUCCESS -> MaterialTheme.colorScheme.onPrimary
-    }
+    val effectiveConfirmColor =
+        confirmColor ?: when (variant) {
+            NextPageDialogVariant.INFO -> MaterialTheme.colorScheme.primary
+            NextPageDialogVariant.DESTRUCTIVE -> MaterialTheme.colorScheme.error
+            NextPageDialogVariant.SUCCESS -> MaterialTheme.colorScheme.primary
+        }
+    val effectiveContentColor =
+        when (variant) {
+            NextPageDialogVariant.INFO -> MaterialTheme.colorScheme.onPrimary
+            NextPageDialogVariant.DESTRUCTIVE -> MaterialTheme.colorScheme.onError
+            NextPageDialogVariant.SUCCESS -> MaterialTheme.colorScheme.onPrimary
+        }
 
     AlertDialog(
         modifier = modifier,
@@ -103,16 +106,17 @@ fun NextPageDialog(
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 if (icon != null) {
                     Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
-                        contentAlignment = Alignment.Center
+                        modifier =
+                            Modifier
+                                .size(48.dp)
+                                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
+                        contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             imageVector = icon,
                             contentDescription = null,
                             tint = effectiveConfirmColor,
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(32.dp),
                         )
                     }
                     Spacer(modifier = Modifier.height(12.dp))
@@ -124,10 +128,11 @@ fun NextPageDialog(
         confirmButton = {
             Button(
                 onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = effectiveConfirmColor,
-                    contentColor = effectiveContentColor
-                )
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = effectiveConfirmColor,
+                        contentColor = effectiveContentColor,
+                    ),
             ) {
                 Text(text = confirmText)
             }
@@ -136,7 +141,7 @@ fun NextPageDialog(
             TextButton(onClick = onDismiss) {
                 Text(text = dismissText)
             }
-        }
+        },
     )
 }
 
@@ -152,7 +157,7 @@ private fun NextPageDialogDestructiveDarkPreview() {
             onConfirm = {},
             onDismiss = {},
             icon = NextPageIcons.Trash,
-            variant = NextPageDialogVariant.DESTRUCTIVE
+            variant = NextPageDialogVariant.DESTRUCTIVE,
         )
     }
 }
@@ -169,7 +174,7 @@ private fun NextPageDialogDestructiveLightPreview() {
             onConfirm = {},
             onDismiss = {},
             icon = NextPageIcons.Trash,
-            variant = NextPageDialogVariant.DESTRUCTIVE
+            variant = NextPageDialogVariant.DESTRUCTIVE,
         )
     }
 }
@@ -186,7 +191,7 @@ private fun NextPageDialogInfoDarkPreview() {
             onConfirm = {},
             onDismiss = {},
             icon = NextPageIcons.Info,
-            variant = NextPageDialogVariant.INFO
+            variant = NextPageDialogVariant.INFO,
         )
     }
 }
@@ -203,7 +208,7 @@ private fun NextPageDialogInfoLightPreview() {
             onConfirm = {},
             onDismiss = {},
             icon = NextPageIcons.Info,
-            variant = NextPageDialogVariant.INFO
+            variant = NextPageDialogVariant.INFO,
         )
     }
 }
@@ -220,7 +225,7 @@ private fun NextPageDialogSuccessDarkPreview() {
             onConfirm = {},
             onDismiss = {},
             icon = NextPageIcons.Check,
-            variant = NextPageDialogVariant.SUCCESS
+            variant = NextPageDialogVariant.SUCCESS,
         )
     }
 }
@@ -237,7 +242,7 @@ private fun NextPageDialogSuccessLightPreview() {
             onConfirm = {},
             onDismiss = {},
             icon = NextPageIcons.Check,
-            variant = NextPageDialogVariant.SUCCESS
+            variant = NextPageDialogVariant.SUCCESS,
         )
     }
 }

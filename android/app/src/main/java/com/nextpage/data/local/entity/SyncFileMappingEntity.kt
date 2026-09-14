@@ -14,9 +14,9 @@ import androidx.room.PrimaryKey
             entity = BookEntity::class,
             parentColumns = ["id"],
             childColumns = ["book_id"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ]
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
 )
 data class SyncFileMappingEntity(
     @PrimaryKey
@@ -29,5 +29,5 @@ data class SyncFileMappingEntity(
     @ColumnInfo(name = "local_path")
     val localPath: String,
     @ColumnInfo(name = "updated_at")
-    val updatedAtEpochMillis: Long
+    val updatedAtEpochMillis: Long,
 )

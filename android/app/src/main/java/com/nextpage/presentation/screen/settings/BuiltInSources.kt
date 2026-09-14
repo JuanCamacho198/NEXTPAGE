@@ -11,11 +11,12 @@ import com.nextpage.R
  */
 data class BuiltInSource(
     val name: String,
-    val roleResId: Int
+    val roleResId: Int,
 )
 
 /** Static list rendered by [BuiltInSourcesSection]; no backend, no registry. */
-val builtInSources = listOf(
-    BuiltInSource("Gutendex", R.string.settings_addons_builtin_gutendex_role),
-    BuiltInSource("Open Library", R.string.settings_addons_builtin_openlibrary_role)
-)
+val builtInSources =
+    listOf(
+        BuiltInSource("Gutendex", R.string.settings_addons_builtin_gutendex_role),
+        BuiltInSource("Open Library", R.string.settings_addons_builtin_openlibrary_role),
+    )

@@ -16,7 +16,6 @@ import java.util.Collections
  * (PP-1 RealPerformanceDataSource). Aggregates live in memory only.
  */
 object SentryMetrics {
-
     /** In-session per-key timing samples (ms, exact values — local debug UI only). */
     data class Aggregate(
         val avgMs: Long,
@@ -29,9 +28,10 @@ object SentryMetrics {
     private const val MAX_SAMPLES = 64
     private const val P95_INDEX_FACTOR = 0.95
 
-    private val samplesByKey = Collections.synchronizedMap(
-        mutableMapOf<String, MutableList<Long>>()
-    )
+    private val samplesByKey =
+        Collections.synchronizedMap(
+            mutableMapOf<String, MutableList<Long>>(),
+        )
 
     /**
      * PP-3 opt-out gate, consulted on EVERY emission.
@@ -63,9 +63,19 @@ object SentryMetrics {
     }
 
     /** Log-scale duration buckets (ms) — mirrors metricBuckets.ts. */
-    val DURATION_BUCKETS_MS: LongArray = longArrayOf(
-        100L, 250L, 500L, 1000L, 2000L, 4000L, 8000L, 16000L, 32000L, 64000L
-    )
+    val DURATION_BUCKETS_MS: LongArray =
+        longArrayOf(
+            100L,
+            250L,
+            500L,
+            1000L,
+            2000L,
+            4000L,
+            8000L,
+            16000L,
+            32000L,
+            64000L,
+        )
 
     fun bucketDurationMs(ms: Long): Long {
         for (bound in DURATION_BUCKETS_MS) {
@@ -83,25 +93,29 @@ object SentryMetrics {
     private const val OUTBOX_DEPTH_LARGE_MAX = 99
 
     /** Outbox depth buckets: 0, 1-4, 5-19, 20-99, 100+ (upper bound emitted). */
-    fun bucketDepth(count: Int): Long = when {
-        count <= 0 -> 0L
-        count <= OUTBOX_DEPTH_SMALL_MAX -> OUTBOX_DEPTH_SMALL_MAX.toLong()
-        count <= OUTBOX_DEPTH_MEDIUM_MAX -> OUTBOX_DEPTH_MEDIUM_MAX.toLong()
-        count <= OUTBOX_DEPTH_LARGE_MAX -> OUTBOX_DEPTH_LARGE_MAX.toLong()
-        else -> 100L
-    }
+    fun bucketDepth(count: Int): Long =
+        when {
+            count <= 0 -> 0L
+            count <= OUTBOX_DEPTH_SMALL_MAX -> OUTBOX_DEPTH_SMALL_MAX.toLong()
+            count <= OUTBOX_DEPTH_MEDIUM_MAX -> OUTBOX_DEPTH_MEDIUM_MAX.toLong()
+            count <= OUTBOX_DEPTH_LARGE_MAX -> OUTBOX_DEPTH_LARGE_MAX.toLong()
+            else -> 100L
+        }
 
-    private fun metricParams(tags: Map<String, String>): SentryMetricsParameters =
-        SentryMetricsParameters.create(SentryAttributes.fromMap(tags))
+    private fun metricParams(tags: Map<String, String>): SentryMetricsParameters = SentryMetricsParameters.create(SentryAttributes.fromMap(tags))
 
-    fun distribution(name: String, bucketedValue: Long, tags: Map<String, String>) {
+    fun distribution(
+        name: String,
+        bucketedValue: Long,
+        tags: Map<String, String>,
+    ) {
         if (egressEnabled()) {
             runCatching {
                 Sentry.metrics().distribution(
                     name,
                     bucketedValue.toDouble(),
                     "millisecond",
-                    metricParams(tags)
+                    metricParams(tags),
                 )
             }
         }
@@ -111,14 +125,18 @@ object SentryMetrics {
         DebugDual.addPerfCrumb(name, tags)
     }
 
-    fun gauge(name: String, bucketedValue: Long, tags: Map<String, String>) {
+    fun gauge(
+        name: String,
+        bucketedValue: Long,
+        tags: Map<String, String>,
+    ) {
         if (egressEnabled()) {
             runCatching {
                 Sentry.metrics().gauge(
                     name,
                     bucketedValue.toDouble(),
                     null,
-                    metricParams(tags)
+                    metricParams(tags),
                 )
             }
         }
@@ -147,7 +165,11 @@ object SentryMetrics {
      * debug-only aggregate via [recordSample]; bucketed values never
      * egress on this path. MUST land before any Discover emissions.
      */
-    fun distributionRaw(name: String, rawMs: Long, tags: Map<String, String>) {
+    fun distributionRaw(
+        name: String,
+        rawMs: Long,
+        tags: Map<String, String>,
+    ) {
         requireAttrKeys(tags)
         if (egressEnabled()) {
             runCatching {
@@ -155,7 +177,7 @@ object SentryMetrics {
                     name,
                     rawMs.toDouble(),
                     "millisecond",
-                    metricParams(tags)
+                    metricParams(tags),
                 )
             }
         }
@@ -170,7 +192,11 @@ object SentryMetrics {
      * Bounded counter (U3-1): Discover totals, errors, empties, funnel.
      * Intent-based emission only; no timing aggregate is recorded.
      */
-    fun count(name: String, tags: Map<String, String>, value: Long = 1L) {
+    fun count(
+        name: String,
+        tags: Map<String, String>,
+        value: Long = 1L,
+    ) {
         requireAttrKeys(tags)
         if (egressEnabled()) {
             runCatching {
@@ -178,13 +204,16 @@ object SentryMetrics {
                     name,
                     value.toDouble(),
                     "none",
-                    metricParams(tags)
+                    metricParams(tags),
                 )
             }
         }
     }
 
-    private fun recordSample(name: String, bucketedValue: Long) {
+    private fun recordSample(
+        name: String,
+        bucketedValue: Long,
+    ) {
         synchronized(samplesByKey) {
             val list = samplesByKey.getOrPut(name) { mutableListOf() }
             list.add(bucketedValue)

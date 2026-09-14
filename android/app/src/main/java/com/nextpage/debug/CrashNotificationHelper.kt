@@ -23,7 +23,6 @@ import org.json.JSONObject
  *   triggers one notification.
  */
 object CrashNotificationHelper {
-
     const val CHANNEL_ID = "nextpage_debug_crashes"
     const val NOTIFICATION_ID = 7301
     const val EXTRA_CRASH_JSON = "crash_json"
@@ -33,13 +32,14 @@ object CrashNotificationHelper {
      */
     fun ensureChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                context.getString(R.string.debug_crash_channel_name),
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = context.getString(R.string.debug_crash_channel_description)
-            }
+            val channel =
+                NotificationChannel(
+                    CHANNEL_ID,
+                    context.getString(R.string.debug_crash_channel_name),
+                    NotificationManager.IMPORTANCE_HIGH,
+                ).apply {
+                    description = context.getString(R.string.debug_crash_channel_description)
+                }
             val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)
         }
@@ -53,39 +53,44 @@ object CrashNotificationHelper {
      */
     fun showCrashNotificationIfAny(context: Context) {
         if (!com.nextpage.BuildConfig.DEBUG) return
-        val prefs = context.getSharedPreferences(
-            NextPageApplication.PREFS_NAME,
-            Context.MODE_PRIVATE
-        )
+        val prefs =
+            context.getSharedPreferences(
+                NextPageApplication.PREFS_NAME,
+                Context.MODE_PRIVATE,
+            )
         val raw = prefs.getString(NextPageApplication.KEY_LAST_CRASH, null) ?: return
         // Clear immediately so the notification only shows once.
         prefs.edit().remove(NextPageApplication.KEY_LAST_CRASH).apply()
 
         val parsed = runCatching { JSONObject(raw) }.getOrNull() ?: return
 
-        val detailIntent = Intent(context, CrashDetailActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            putExtra(EXTRA_CRASH_JSON, parsed.toString())
-        }
-        val pendingIntent = PendingIntent.getActivity(
-            context,
-            0,
-            detailIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.stat_notify_error)
-            .setContentTitle(context.getString(R.string.debug_crash_notification_title))
-            .setContentText(context.getString(R.string.debug_crash_notification_body))
-            .setStyle(
-                NotificationCompat.BigTextStyle()
-                    .bigText(context.getString(R.string.debug_crash_notification_body))
+        val detailIntent =
+            Intent(context, CrashDetailActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                putExtra(EXTRA_CRASH_JSON, parsed.toString())
+            }
+        val pendingIntent =
+            PendingIntent.getActivity(
+                context,
+                0,
+                detailIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setAutoCancel(true)
-            .setContentIntent(pendingIntent)
-            .build()
+
+        val notification =
+            NotificationCompat
+                .Builder(context, CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.stat_notify_error)
+                .setContentTitle(context.getString(R.string.debug_crash_notification_title))
+                .setContentText(context.getString(R.string.debug_crash_notification_body))
+                .setStyle(
+                    NotificationCompat
+                        .BigTextStyle()
+                        .bigText(context.getString(R.string.debug_crash_notification_body)),
+                ).setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+                .setContentIntent(pendingIntent)
+                .build()
 
         runCatching {
             NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)

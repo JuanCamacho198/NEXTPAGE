@@ -39,7 +39,7 @@ fun HighlightsHeaderSection(
     onOpenAccount: () -> Unit,
     onSearchClick: () -> Unit,
     syncState: HighlightsSyncState,
-    onSyncRefresh: () -> Unit
+    onSyncRefresh: () -> Unit,
 ) {
     val isSyncing = syncState is HighlightsSyncState.Syncing
     val isSynced = syncState is HighlightsSyncState.Synced
@@ -50,44 +50,45 @@ fun HighlightsHeaderSection(
         avatarInitials = authSession?.displayName?.take(2)?.uppercase() ?: "NP",
         onAvatarClick = onOpenAccount,
         avatarContentDescription = stringResource(R.string.home_avatar_content_description),
-        onSearchClick = onSearchClick
+        onSearchClick = onSearchClick,
     )
 
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = stringResource(R.string.highlights_title),
                 style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = stringResource(R.string.highlights_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         IconButton(
             onClick = onSyncRefresh,
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant)
+            modifier =
+                Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
         ) {
             if (isSyncing) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(20.dp),
-                    strokeWidth = 2.dp
+                    strokeWidth = 2.dp,
                 )
             } else {
                 Icon(
                     imageVector = Icons.Filled.Refresh,
                     contentDescription = stringResource(R.string.highlights_refresh_content_description),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -96,37 +97,37 @@ fun HighlightsHeaderSection(
     if (isSyncing || isSynced) {
         Box(
             modifier = Modifier.fillMaxWidth(),
-            contentAlignment = Alignment.Center
+            contentAlignment = Alignment.Center,
         ) {
             Surface(
                 shape = RoundedCornerShape(16.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant,
-                tonalElevation = 2.dp
+                tonalElevation = 2.dp,
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     if (isSyncing) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(14.dp),
-                            strokeWidth = 2.dp
+                            strokeWidth = 2.dp,
                         )
                         Text(
                             text = stringResource(R.string.highlights_syncing),
-                            style = MaterialTheme.typography.labelSmall
+                            style = MaterialTheme.typography.labelSmall,
                         )
                     } else {
                         Icon(
                             imageVector = NextPageIcons.Check,
                             contentDescription = null,
                             modifier = Modifier.size(14.dp),
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = MaterialTheme.colorScheme.primary,
                         )
                         Text(
                             text = stringResource(R.string.highlights_synced),
-                            style = MaterialTheme.typography.labelSmall
+                            style = MaterialTheme.typography.labelSmall,
                         )
                     }
                 }

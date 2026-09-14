@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
  * @param scope CoroutineScope for lifecycle-aware timer job (e.g. viewModelScope)
  */
 class SleepTimerManager(
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
 ) {
     private val _state = MutableStateFlow(SleepTimerState())
     val state: StateFlow<SleepTimerState> = _state.asStateFlow()
@@ -53,7 +53,7 @@ class SleepTimerManager(
             _state.update {
                 SleepTimerState(
                     isActive = true,
-                    isEndOfChapter = true
+                    isEndOfChapter = true,
                 )
             }
             return
@@ -65,21 +65,22 @@ class SleepTimerManager(
             SleepTimerState(
                 isActive = true,
                 remainingSecs = minutes * 60,
-                presetMinutes = minutes
+                presetMinutes = minutes,
             )
         }
 
-        timerJob = scope.launch {
-            while (isActive && _state.value.remainingSecs > 0) {
-                delay(1000L)
-                val remaining = _state.value.remainingSecs - 1
-                if (remaining <= 0) {
-                    _state.value = SleepTimerState(isFinished = true)
-                } else {
-                    _state.update { it.copy(remainingSecs = remaining) }
+        timerJob =
+            scope.launch {
+                while (isActive && _state.value.remainingSecs > 0) {
+                    delay(1000L)
+                    val remaining = _state.value.remainingSecs - 1
+                    if (remaining <= 0) {
+                        _state.value = SleepTimerState(isFinished = true)
+                    } else {
+                        _state.update { it.copy(remainingSecs = remaining) }
+                    }
                 }
             }
-        }
     }
 
     /**

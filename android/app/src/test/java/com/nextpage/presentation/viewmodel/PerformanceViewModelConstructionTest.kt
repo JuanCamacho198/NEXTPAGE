@@ -29,34 +29,36 @@ import org.junit.Test
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PerformanceViewModelConstructionTest {
-
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule(StandardTestDispatcher())
 
-    private fun relaxedApplication(): Application =
-        mockk<Application>(relaxed = true).also { every { it.applicationContext } returns it }
+    private fun relaxedApplication(): Application = mockk<Application>(relaxed = true).also { every { it.applicationContext } returns it }
 
     @Test
     fun `exposes a single Application constructor for AndroidViewModelFactory reflection`() {
-        val constructor = PerformanceViewModel::class.java
-            .getConstructor(Application::class.java)
+        val constructor =
+            PerformanceViewModel::class.java
+                .getConstructor(Application::class.java)
         assertNotNull("PerformanceViewModel must keep a (Application) constructor", constructor)
         assertEquals(Application::class.java, constructor.parameterTypes.first())
     }
 
     @Test
     fun `explicit Factory constructs the ViewModel with its Application`() {
-        val viewModel = PerformanceViewModel.Factory(relaxedApplication())
-            .create(PerformanceViewModel::class.java)
+        val viewModel =
+            PerformanceViewModel
+                .Factory(relaxedApplication())
+                .create(PerformanceViewModel::class.java)
 
         assertTrue(viewModel is PerformanceViewModel)
     }
 
     @Test
     fun `AndroidViewModelFactory can still construct the ViewModel`() {
-        val viewModel = ViewModelProvider.AndroidViewModelFactory
-            .getInstance(relaxedApplication())
-            .create(PerformanceViewModel::class.java)
+        val viewModel =
+            ViewModelProvider.AndroidViewModelFactory
+                .getInstance(relaxedApplication())
+                .create(PerformanceViewModel::class.java)
 
         assertTrue(viewModel is PerformanceViewModel)
     }

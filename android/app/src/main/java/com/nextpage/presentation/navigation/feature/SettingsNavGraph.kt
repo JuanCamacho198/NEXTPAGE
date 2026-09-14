@@ -9,6 +9,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.nextpage.data.remote.drive.GoogleDriveAuthHelper
+import com.nextpage.debug.LogViewerScreen
 import com.nextpage.di.AppContainer
 import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.model.ThemeMode
@@ -21,7 +22,6 @@ import com.nextpage.presentation.screen.SettingsScreen
 import com.nextpage.presentation.screen.settings.AddonManagementRoute
 import com.nextpage.presentation.viewmodel.AuthViewModel
 import com.nextpage.presentation.viewmodel.StatisticsViewModel
-import com.nextpage.debug.LogViewerScreen
 
 /**
  * Feature NavGraph for Settings + LogViewer.
@@ -42,14 +42,14 @@ fun NavGraphBuilder.settingsGraph(
     onSettingsInitialRouteConsumed: () -> Unit,
     appThemeMode: ThemeMode,
     onAppThemeModeChanged: (ThemeMode) -> Unit,
-    contentPadding: PaddingValues
+    contentPadding: PaddingValues,
 ) {
     composable(
         route = NextPageDestination.Settings.route,
         enterTransition = { fadeIn() },
         exitTransition = { fadeOut() },
         popEnterTransition = { fadeIn() },
-        popExitTransition = { fadeOut() }
+        popExitTransition = { fadeOut() },
     ) {
         SettingsScreen(
             contentPadding = contentPadding,
@@ -68,16 +68,22 @@ fun NavGraphBuilder.settingsGraph(
             onUpdateCustomHighlightColor = { index, hex ->
                 val prefs = appContainer.readerPreferences
                 val current = prefs.load()
-                val colors = current.customHighlightColors?.toMutableList()
-                    ?: com.nextpage.domain.model.HighlightColor.defaultHexList().toMutableList()
+                val colors =
+                    current.customHighlightColors?.toMutableList()
+                        ?: com.nextpage.domain.model.HighlightColor
+                            .defaultHexList()
+                            .toMutableList()
                 if (index in colors.indices) colors[index] = hex
                 prefs.save(current.copy(customHighlightColors = colors))
             },
             onAddCustomHighlightColor = {
                 val prefs = appContainer.readerPreferences
                 val current = prefs.load()
-                val colors = current.customHighlightColors?.toMutableList()
-                    ?: com.nextpage.domain.model.HighlightColor.defaultHexList().toMutableList()
+                val colors =
+                    current.customHighlightColors?.toMutableList()
+                        ?: com.nextpage.domain.model.HighlightColor
+                            .defaultHexList()
+                            .toMutableList()
                 if (colors.size < 5) {
                     colors.add(com.nextpage.domain.model.HighlightColor.YELLOW.hex)
                     prefs.save(current.copy(customHighlightColors = colors))
@@ -86,8 +92,11 @@ fun NavGraphBuilder.settingsGraph(
             onDeleteCustomHighlightColor = { index ->
                 val prefs = appContainer.readerPreferences
                 val current = prefs.load()
-                val colors = current.customHighlightColors?.toMutableList()
-                    ?: com.nextpage.domain.model.HighlightColor.defaultHexList().toMutableList()
+                val colors =
+                    current.customHighlightColors?.toMutableList()
+                        ?: com.nextpage.domain.model.HighlightColor
+                            .defaultHexList()
+                            .toMutableList()
                 if (colors.size > 3 && index in colors.indices) {
                     colors.removeAt(index)
                     prefs.save(current.copy(customHighlightColors = colors))
@@ -107,13 +116,13 @@ fun NavGraphBuilder.settingsGraph(
             readingGoalPreferences = appContainer.readingGoalPreferences,
             storageRepository = appContainer.storageRepository,
             cacheRepository = appContainer.cacheRepository,
-            libraryRepository = appContainer.libraryRepository
+            libraryRepository = appContainer.libraryRepository,
         )
     }
 
     composable(route = NextPageDestination.LogViewer.route) {
         LogViewerScreen(
-            onBack = { navController.popBackStack() }
+            onBack = { navController.popBackStack() },
         )
     }
 
@@ -134,19 +143,19 @@ fun NavGraphBuilder.settingsGraph(
             },
             onOpenCapabilities = { addonId ->
                 navController.navigate(addonCapabilitiesRoute(addonId))
-            }
+            },
         )
     }
 
     composable(route = NextPageDestination.SettingsLegal.route) {
         LegalPolicyScreen(
-            onBack = { navController.popBackStack() }
+            onBack = { navController.popBackStack() },
         )
     }
 
     composable(
         route = NextPageDestination.SettingsAddonCapabilities.route,
-        arguments = listOf(navArgument("addonId") { type = NavType.StringType })
+        arguments = listOf(navArgument("addonId") { type = NavType.StringType }),
     ) { entry ->
         AddonCapabilityDetailRoute(
             registry = appContainer.addonRegistry,
@@ -162,7 +171,7 @@ fun NavGraphBuilder.settingsGraph(
             onViewPolicy = {
                 navController.navigate(NextPageDestination.SettingsLegal.route)
             },
-            onBack = { navController.popBackStack() }
+            onBack = { navController.popBackStack() },
         )
     }
 }

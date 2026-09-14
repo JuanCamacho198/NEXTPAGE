@@ -13,7 +13,6 @@ import org.junit.Test
  * `declinedForUser` on the next `shouldShow` call.
  */
 class DriveConnectPromptGateTest {
-
     private val gate = DriveConnectPromptGate
 
     private val userId = "user-google-1"
@@ -25,7 +24,13 @@ class DriveConnectPromptGateTest {
         // First import: never declined → prompt shows.
         assertTrue(
             "first import should offer the prompt",
-            gate.shouldShow(importSucceeded = true, driveEnabled = false, providerIsGoogle = true, declinedForUser = null, currentUser = userId)
+            gate.shouldShow(
+                importSucceeded = true,
+                driveEnabled = false,
+                providerIsGoogle = true,
+                declinedForUser = null,
+                currentUser = userId,
+            ),
         )
 
         // User declines → marker persisted per account.
@@ -34,7 +39,13 @@ class DriveConnectPromptGateTest {
         // Second import: same account already declined → prompt must not reappear.
         assertFalse(
             "second import must not re-offer a declined account",
-            gate.shouldShow(importSucceeded = true, driveEnabled = false, providerIsGoogle = true, declinedForUser = declinedForUser, currentUser = userId)
+            gate.shouldShow(
+                importSucceeded = true,
+                driveEnabled = false,
+                providerIsGoogle = true,
+                declinedForUser = declinedForUser,
+                currentUser = userId,
+            ),
         )
     }
 
@@ -43,7 +54,13 @@ class DriveConnectPromptGateTest {
     @Test
     fun driveEnabled_neverShows() {
         assertFalse(
-            gate.shouldShow(importSucceeded = true, driveEnabled = true, providerIsGoogle = true, declinedForUser = null, currentUser = userId)
+            gate.shouldShow(
+                importSucceeded = true,
+                driveEnabled = true,
+                providerIsGoogle = true,
+                declinedForUser = null,
+                currentUser = userId,
+            ),
         )
     }
 
@@ -52,7 +69,13 @@ class DriveConnectPromptGateTest {
     @Test
     fun importFailed_neverShows() {
         assertFalse(
-            gate.shouldShow(importSucceeded = false, driveEnabled = false, providerIsGoogle = true, declinedForUser = null, currentUser = userId)
+            gate.shouldShow(
+                importSucceeded = false,
+                driveEnabled = false,
+                providerIsGoogle = true,
+                declinedForUser = null,
+                currentUser = userId,
+            ),
         )
     }
 
@@ -61,14 +84,26 @@ class DriveConnectPromptGateTest {
     @Test
     fun nonGoogleProvider_neverShows() {
         assertFalse(
-            gate.shouldShow(importSucceeded = true, driveEnabled = false, providerIsGoogle = false, declinedForUser = null, currentUser = userId)
+            gate.shouldShow(
+                importSucceeded = true,
+                driveEnabled = false,
+                providerIsGoogle = false,
+                declinedForUser = null,
+                currentUser = userId,
+            ),
         )
     }
 
     @Test
     fun noSignedInUser_neverShows() {
         assertFalse(
-            gate.shouldShow(importSucceeded = true, driveEnabled = false, providerIsGoogle = true, declinedForUser = null, currentUser = null)
+            gate.shouldShow(
+                importSucceeded = true,
+                driveEnabled = false,
+                providerIsGoogle = true,
+                declinedForUser = null,
+                currentUser = null,
+            ),
         )
     }
 
@@ -79,7 +114,13 @@ class DriveConnectPromptGateTest {
         val declinedForUser = gate.markDeclined("user-A")
         assertTrue(
             "a different account must still be offered",
-            gate.shouldShow(importSucceeded = true, driveEnabled = false, providerIsGoogle = true, declinedForUser = declinedForUser, currentUser = "user-B")
+            gate.shouldShow(
+                importSucceeded = true,
+                driveEnabled = false,
+                providerIsGoogle = true,
+                declinedForUser = declinedForUser,
+                currentUser = "user-B",
+            ),
         )
     }
 
@@ -91,13 +132,25 @@ class DriveConnectPromptGateTest {
 
         // While Drive is (re)authorized the prompt is suppressed regardless of decline.
         assertFalse(
-            gate.shouldShow(importSucceeded = true, driveEnabled = true, providerIsGoogle = true, declinedForUser = declinedForUser, currentUser = userId)
+            gate.shouldShow(
+                importSucceeded = true,
+                driveEnabled = true,
+                providerIsGoogle = true,
+                declinedForUser = declinedForUser,
+                currentUser = userId,
+            ),
         )
 
         // Success authorization clears the decline (see NavHost wiring); once Drive
         // is disabled again in Settings a later import MAY re-offer.
         assertTrue(
-            gate.shouldShow(importSucceeded = true, driveEnabled = false, providerIsGoogle = true, declinedForUser = null, currentUser = userId)
+            gate.shouldShow(
+                importSucceeded = true,
+                driveEnabled = false,
+                providerIsGoogle = true,
+                declinedForUser = null,
+                currentUser = userId,
+            ),
         )
     }
 

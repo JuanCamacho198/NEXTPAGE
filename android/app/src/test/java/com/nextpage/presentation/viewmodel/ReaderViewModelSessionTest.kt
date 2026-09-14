@@ -29,70 +29,74 @@ import org.junit.Test
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReaderViewModelSessionTest {
-
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
     @Test
-    fun `session state lands on the slice flow`() = runTest {
-        val viewModel = createViewModel(testScheduler)
-        val chapters = listOf(
-            BookChapter(0, "c1", "Ch 1", "ch1.xhtml"),
-            BookChapter(1, "c2", "Ch 2", "ch2.xhtml"),
-            BookChapter(2, "c3", "Ch 3", "ch3.xhtml")
-        )
-        viewModel.lifecycleHolder.setEpubStateForTest(
-            chapters = chapters,
-            currentChapterIndex = 1,
-            selectedBookId = "book-7"
-        )
+    fun `session state lands on the slice flow`() =
+        runTest {
+            val viewModel = createViewModel(testScheduler)
+            val chapters =
+                listOf(
+                    BookChapter(0, "c1", "Ch 1", "ch1.xhtml"),
+                    BookChapter(1, "c2", "Ch 2", "ch2.xhtml"),
+                    BookChapter(2, "c3", "Ch 3", "ch3.xhtml"),
+                )
+            viewModel.lifecycleHolder.setEpubStateForTest(
+                chapters = chapters,
+                currentChapterIndex = 1,
+                selectedBookId = "book-7",
+            )
 
-        val slice = viewModel.sessionUiState.value
-        assertEquals("book-7", slice.selectedBookId)
-        assertEquals(3, slice.chapters.size)
-        assertEquals(1, slice.currentChapterIndex)
-        assertEquals("epub", slice.bookFormat)
+            val slice = viewModel.sessionUiState.value
+            assertEquals("book-7", slice.selectedBookId)
+            assertEquals(3, slice.chapters.size)
+            assertEquals(1, slice.currentChapterIndex)
+            assertEquals("epub", slice.bookFormat)
 
-        // No cross-slice emission: chrome/timer state untouched.
-        assertFalse(viewModel.chromeUiState.value.isFullscreen)
-        assertFalse(viewModel.sleepTimerUiState.value.isActive)
-    }
-
-    @Test
-    fun `pending CFI navigates through the session owner without VM glue`() = runTest {
-        val viewModel = createViewModel(testScheduler)
-        viewModel.lifecycleHolder.setEpubStateForTest(
-            chapters = listOf(
-                BookChapter(0, "c1", "Ch 1", "ch1.xhtml"),
-                BookChapter(1, "c2", "Ch 2", "ch2.xhtml"),
-                BookChapter(2, "c3", "Ch 3", "ch3.xhtml")
-            ),
-            currentChapterIndex = 0
-        )
-        viewModel.lifecycleHolder.navigateToCfiAfterLoad("epubcfi(/6/3)")
-
-        viewModel.lifecycleHolder.applyPendingCfi()
-        advanceUntilIdle()
-
-        assertNull(viewModel.lifecycleHolder.pendingCfiAfterLoad)
-        assertEquals(2, viewModel.sessionUiState.value.currentChapterIndex)
-    }
+            // No cross-slice emission: chrome/timer state untouched.
+            assertFalse(viewModel.chromeUiState.value.isFullscreen)
+            assertFalse(viewModel.sleepTimerUiState.value.isActive)
+        }
 
     @Test
-    fun `pdf progress emits via sessionUiState`() = runTest {
-        val viewModel = createViewModel(testScheduler)
-        viewModel.lifecycleHolder.setPdfStateForTest(
-            selectedBookId = "book-42",
-            totalPages = 10,
-            currentPage = 0
-        )
+    fun `pending CFI navigates through the session owner without VM glue`() =
+        runTest {
+            val viewModel = createViewModel(testScheduler)
+            viewModel.lifecycleHolder.setEpubStateForTest(
+                chapters =
+                    listOf(
+                        BookChapter(0, "c1", "Ch 1", "ch1.xhtml"),
+                        BookChapter(1, "c2", "Ch 2", "ch2.xhtml"),
+                        BookChapter(2, "c3", "Ch 3", "ch3.xhtml"),
+                    ),
+                currentChapterIndex = 0,
+            )
+            viewModel.lifecycleHolder.navigateToCfiAfterLoad("epubcfi(/6/3)")
 
-        viewModel.lifecycleHolder.goToPdfPage(6)
-        advanceUntilIdle()
+            viewModel.lifecycleHolder.applyPendingCfi()
+            advanceUntilIdle()
 
-        assertEquals(6, viewModel.sessionUiState.value.currentPdfPage)
-        assertEquals(10, viewModel.sessionUiState.value.totalPdfPages)
-    }
+            assertNull(viewModel.lifecycleHolder.pendingCfiAfterLoad)
+            assertEquals(2, viewModel.sessionUiState.value.currentChapterIndex)
+        }
+
+    @Test
+    fun `pdf progress emits via sessionUiState`() =
+        runTest {
+            val viewModel = createViewModel(testScheduler)
+            viewModel.lifecycleHolder.setPdfStateForTest(
+                selectedBookId = "book-42",
+                totalPages = 10,
+                currentPage = 0,
+            )
+
+            viewModel.lifecycleHolder.goToPdfPage(6)
+            advanceUntilIdle()
+
+            assertEquals(6, viewModel.sessionUiState.value.currentPdfPage)
+            assertEquals(10, viewModel.sessionUiState.value.totalPdfPages)
+        }
 
     @Test
     fun `session pass-through delegates are deleted`() {
@@ -133,7 +137,7 @@ class ReaderViewModelSessionTest {
             readingStatsRepository = FakeReadingStatsRepository(),
             updateReadingProgressUseCase = UpdateReadingProgressUseCase(fake),
             defaultBookId = null,
-            mainDispatcher = dispatcher
+            mainDispatcher = dispatcher,
         )
     }
 }

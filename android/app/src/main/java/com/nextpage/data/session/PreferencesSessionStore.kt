@@ -11,18 +11,23 @@ import com.nextpage.domain.model.AuthSession
  * Uses Android Keystore-backed MasterKey to encrypt both keys and values.
  * Data at rest is not readable even with filesystem access.
  */
-class PreferencesSessionStore(context: Context) : SessionStore {
-    private val masterKey = MasterKey.Builder(context)
-        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-        .build()
+class PreferencesSessionStore(
+    context: Context,
+) : SessionStore {
+    private val masterKey =
+        MasterKey
+            .Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
 
-    private val preferences = EncryptedSharedPreferences.create(
-        context,
-        PREFS_NAME,
-        masterKey,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
+    private val preferences =
+        EncryptedSharedPreferences.create(
+            context,
+            PREFS_NAME,
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+        )
 
     override fun read(): AuthSession? {
         val userId = preferences.getString(KEY_USER_ID, null) ?: return null
@@ -37,12 +42,13 @@ class PreferencesSessionStore(context: Context) : SessionStore {
             displayName = displayName,
             photoUrl = photoUrl,
             provider = provider,
-            createdAt = createdAt
+            createdAt = createdAt,
         )
     }
 
     override fun write(session: AuthSession) {
-        preferences.edit()
+        preferences
+            .edit()
             .putString(KEY_USER_ID, session.userId)
             .putString(KEY_EMAIL, session.email)
             .putString(KEY_DISPLAY_NAME, session.displayName)
@@ -53,7 +59,8 @@ class PreferencesSessionStore(context: Context) : SessionStore {
     }
 
     override fun clear() {
-        preferences.edit()
+        preferences
+            .edit()
             .remove(KEY_USER_ID)
             .remove(KEY_EMAIL)
             .remove(KEY_DISPLAY_NAME)

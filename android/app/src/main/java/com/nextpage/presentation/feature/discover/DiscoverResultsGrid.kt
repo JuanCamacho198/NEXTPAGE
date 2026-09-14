@@ -43,13 +43,13 @@ fun DiscoverResultsGrid(
     onOpen: (String) -> Unit,
     onLoadNext: () -> Unit,
     modifier: Modifier = Modifier,
-    attributionNames: Map<String, String> = emptyMap()
+    attributionNames: Map<String, String> = emptyMap(),
 ) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
         modifier = modifier.fillMaxSize(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         itemsIndexed(books, key = { _, book -> book.id }) { index, book ->
             DiscoverCard(book = book, onOpen = onOpen, attributionNames = attributionNames)
@@ -60,12 +60,13 @@ fun DiscoverResultsGrid(
         item(span = { GridItemSpan(maxLineSpan) }) {
             when {
                 isLoadingMore -> DiscoverLoadingMoreFooter(modifier = Modifier.padding(8.dp))
-                nextPage == null -> Text(
-                    text = stringResource(R.string.discover_end_of_results),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = NextPageColors.textSecondary,
-                    modifier = Modifier.padding(8.dp)
-                )
+                nextPage == null ->
+                    Text(
+                        text = stringResource(R.string.discover_end_of_results),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = NextPageColors.textSecondary,
+                        modifier = Modifier.padding(8.dp),
+                    )
             }
         }
     }

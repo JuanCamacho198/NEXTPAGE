@@ -32,7 +32,7 @@ class ReaderRepositoryImpl(
     private val highlightDao: HighlightDao,
     private val bookmarkDao: BookmarkDao,
     private val bookDao: BookDao,
-    private val outboxDao: SyncOutboxDao? = null
+    private val outboxDao: SyncOutboxDao? = null,
 ) : ReaderRepository {
     override fun observeProgress(bookId: String): Flow<ReadingProgress?> =
         readingProgressDao
@@ -49,14 +49,15 @@ class ReaderRepositoryImpl(
         val payload = buildProgressPayload(progress)
         ensureValidJson(payload)
         val dao = outboxDao ?: return
-        val entity = SyncOutboxEntity(
-            id = "outbox-${UUID.randomUUID()}",
-            entityType = SyncEntityType.READING_PROGRESS.name,
-            entityId = progress.bookId,
-            operation = SyncOperation.UPDATE.name,
-            payloadJson = payload,
-            createdAtEpochMillis = System.currentTimeMillis()
-        )
+        val entity =
+            SyncOutboxEntity(
+                id = "outbox-${UUID.randomUUID()}",
+                entityType = SyncEntityType.READING_PROGRESS.name,
+                entityId = progress.bookId,
+                operation = SyncOperation.UPDATE.name,
+                payloadJson = payload,
+                createdAtEpochMillis = System.currentTimeMillis(),
+            )
         // READING_PROGRESS coalesced by bookId — keep latest per (type, bookId)
         // Mirrors desktop addCoalesced: flood of location events collapses to single row
         val existing = dao.getByTypeAndEntityId(SyncEntityType.READING_PROGRESS.name, progress.bookId)
@@ -82,19 +83,24 @@ class ReaderRepositoryImpl(
     private fun ensureValidJson(json: String) {
         require(json.isNotEmpty()) { "payloadJson must be non-empty valid JSON" }
         val parsed = org.json.JSONObject(json)
-        @Suppress("UNUSED_VARIABLE") val check = parsed
+
+        @Suppress("UNUSED_VARIABLE")
+        val check = parsed
     }
 
-    override suspend fun updateBookReadingState(bookId: String, progressPercent: Float, updatedAt: Long) {
+    override suspend fun updateBookReadingState(
+        bookId: String,
+        progressPercent: Float,
+        updatedAt: Long,
+    ) {
         bookDao.updateReadingProgress(
             bookId = bookId,
             progress = progressPercent.coerceIn(0f, 100f),
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
         )
     }
 
-    override suspend fun getProgressForBook(bookId: String): ReadingProgress? =
-        readingProgressDao.getProgressForBook(bookId)?.toDomain()
+    override suspend fun getProgressForBook(bookId: String): ReadingProgress? = readingProgressDao.getProgressForBook(bookId)?.toDomain()
 
     override fun observeAllHighlights(): Flow<List<Highlight>> =
         highlightDao
@@ -105,7 +111,7 @@ class ReaderRepositoryImpl(
     override fun observeAllHighlightsPaged(): Flow<PagingData<Highlight>> =
         Pager(
             config = PagingConfig(pageSize = 20),
-            pagingSourceFactory = { highlightDao.observeAllHighlightsPaged() }
+            pagingSourceFactory = { highlightDao.observeAllHighlightsPaged() },
         ).flow.map { pagingData ->
             pagingData.map { it.toDomain() }
         }
@@ -115,8 +121,7 @@ class ReaderRepositoryImpl(
             .observeHighlightsForBook(bookId)
             .map { list -> list.map { it.toDomain() } }
 
-    override fun observeAllTags(): Flow<List<String>> =
-        highlightDao.observeAllTags()
+    override fun observeAllTags(): Flow<List<String>> = highlightDao.observeAllTags()
 
     override suspend fun upsertHighlight(highlight: Highlight) {
         // Guard: highlights.book_id has a FK to books.id (see upsertProgress).
@@ -134,8 +139,8 @@ class ReaderRepositoryImpl(
                 entityId = highlight.id,
                 operation = operation.name,
                 payloadJson = payload,
-                createdAtEpochMillis = System.currentTimeMillis()
-            )
+                createdAtEpochMillis = System.currentTimeMillis(),
+            ),
         )
     }
 
@@ -148,15 +153,26 @@ class ReaderRepositoryImpl(
         if (highlight.note != null) obj.put("note", highlight.note) else obj.put("note", org.json.JSONObject.NULL)
         obj.put("color", highlight.color)
         obj.put("updatedAtEpochMillis", highlight.updatedAtEpochMillis)
-        if (highlight.deletedAtEpochMillis != null) obj.put("deletedAtEpochMillis", highlight.deletedAtEpochMillis) else obj.put("deletedAtEpochMillis", org.json.JSONObject.NULL)
-        if (highlight.locatorJson != null) obj.put("locatorJson", highlight.locatorJson) else obj.put("locatorJson", org.json.JSONObject.NULL)
+        if (highlight.deletedAtEpochMillis !=
+            null
+        ) {
+            obj.put("deletedAtEpochMillis", highlight.deletedAtEpochMillis)
+        } else {
+            obj.put("deletedAtEpochMillis", org.json.JSONObject.NULL)
+        }
+        if (highlight.locatorJson !=
+            null
+        ) {
+            obj.put("locatorJson", highlight.locatorJson)
+        } else {
+            obj.put("locatorJson", org.json.JSONObject.NULL)
+        }
         if (highlight.type != null) obj.put("type", highlight.type) else obj.put("type", org.json.JSONObject.NULL)
         if (highlight.tag != null) obj.put("tag", highlight.tag) else obj.put("tag", org.json.JSONObject.NULL)
         return obj.toString()
     }
 
-    override suspend fun getHighlightsForBook(bookId: String): List<Highlight> =
-        highlightDao.getHighlightsForBook(bookId).map { it.toDomain() }
+    override suspend fun getHighlightsForBook(bookId: String): List<Highlight> = highlightDao.getHighlightsForBook(bookId).map { it.toDomain() }
 
     override fun observeAllBookmarks(): Flow<List<Bookmark>> =
         bookmarkDao
@@ -182,8 +198,8 @@ class ReaderRepositoryImpl(
                 entityId = bookmark.id,
                 operation = SyncOperation.UPDATE.name,
                 payloadJson = payload,
-                createdAtEpochMillis = System.currentTimeMillis()
-            )
+                createdAtEpochMillis = System.currentTimeMillis(),
+            ),
         )
     }
 
@@ -194,13 +210,18 @@ class ReaderRepositoryImpl(
         obj.put("cfiLocation", bookmark.cfiLocation)
         obj.put("titleOrSnippet", bookmark.titleOrSnippet)
         obj.put("updatedAtEpochMillis", bookmark.updatedAtEpochMillis)
-        if (bookmark.deletedAtEpochMillis != null) obj.put("deletedAtEpochMillis", bookmark.deletedAtEpochMillis) else obj.put("deletedAtEpochMillis", org.json.JSONObject.NULL)
+        if (bookmark.deletedAtEpochMillis !=
+            null
+        ) {
+            obj.put("deletedAtEpochMillis", bookmark.deletedAtEpochMillis)
+        } else {
+            obj.put("deletedAtEpochMillis", org.json.JSONObject.NULL)
+        }
         if (bookmark.locatorJson != null) obj.put("locatorJson", bookmark.locatorJson) else obj.put("locatorJson", org.json.JSONObject.NULL)
         return obj.toString()
     }
 
-    override suspend fun getBookmarksForBook(bookId: String): List<Bookmark> =
-        bookmarkDao.getBookmarksForBook(bookId).map { it.toDomain() }
+    override suspend fun getBookmarksForBook(bookId: String): List<Bookmark> = bookmarkDao.getBookmarksForBook(bookId).map { it.toDomain() }
 
     private fun ReadingProgressEntity.toDomain(): ReadingProgress {
         // Backfill: normalize on read (persist corrected similar to pageNumber fix)
@@ -216,19 +237,20 @@ class ReaderRepositoryImpl(
             percentage = percentage,
             currentPage = currentPage,
             updatedAtEpochMillis = updatedAtEpochMillis,
-            locatorJson = normalizedJson
+            locatorJson = normalizedJson,
         )
     }
 
-    private fun ReadingProgress.toEntity(): ReadingProgressEntity = ReadingProgressEntity(
-        id = id,
-        bookId = bookId,
-        cfiLocation = cfiLocation,
-        percentage = percentage,
-        currentPage = currentPage,
-        updatedAtEpochMillis = updatedAtEpochMillis,
-        locatorJson = LocatorCodec.normalizeLocatorJson(locatorJson)
-    )
+    private fun ReadingProgress.toEntity(): ReadingProgressEntity =
+        ReadingProgressEntity(
+            id = id,
+            bookId = bookId,
+            cfiLocation = cfiLocation,
+            percentage = percentage,
+            currentPage = currentPage,
+            updatedAtEpochMillis = updatedAtEpochMillis,
+            locatorJson = LocatorCodec.normalizeLocatorJson(locatorJson),
+        )
 
     private fun HighlightEntity.toDomain(): Highlight {
         val normalizedJson = LocatorCodec.normalizeLocatorJson(locatorJson)
@@ -243,23 +265,24 @@ class ReaderRepositoryImpl(
             deletedAtEpochMillis = deletedAtEpochMillis,
             locatorJson = normalizedJson,
             type = type,
-            tag = tag
+            tag = tag,
         )
     }
 
-    private fun Highlight.toEntity(): HighlightEntity = HighlightEntity(
-        id = id,
-        bookId = bookId,
-        cfiRange = cfiRange,
-        textContent = textContent,
-        note = note,
-        color = color,
-        updatedAtEpochMillis = updatedAtEpochMillis,
-        deletedAtEpochMillis = deletedAtEpochMillis,
-        locatorJson = LocatorCodec.normalizeLocatorJson(locatorJson),
-        type = type,
-        tag = tag
-    )
+    private fun Highlight.toEntity(): HighlightEntity =
+        HighlightEntity(
+            id = id,
+            bookId = bookId,
+            cfiRange = cfiRange,
+            textContent = textContent,
+            note = note,
+            color = color,
+            updatedAtEpochMillis = updatedAtEpochMillis,
+            deletedAtEpochMillis = deletedAtEpochMillis,
+            locatorJson = LocatorCodec.normalizeLocatorJson(locatorJson),
+            type = type,
+            tag = tag,
+        )
 
     private fun BookmarkEntity.toDomain(): Bookmark {
         val normalizedJson = LocatorCodec.normalizeLocatorJson(locatorJson)
@@ -270,17 +293,18 @@ class ReaderRepositoryImpl(
             titleOrSnippet = titleOrSnippet,
             updatedAtEpochMillis = updatedAtEpochMillis,
             deletedAtEpochMillis = deletedAtEpochMillis,
-            locatorJson = normalizedJson
+            locatorJson = normalizedJson,
         )
     }
 
-    private fun Bookmark.toEntity(): BookmarkEntity = BookmarkEntity(
-        id = id,
-        bookId = bookId,
-        cfiLocation = cfiLocation,
-        titleOrSnippet = titleOrSnippet,
-        updatedAtEpochMillis = updatedAtEpochMillis,
-        deletedAtEpochMillis = deletedAtEpochMillis,
-        locatorJson = LocatorCodec.normalizeLocatorJson(locatorJson)
-    )
+    private fun Bookmark.toEntity(): BookmarkEntity =
+        BookmarkEntity(
+            id = id,
+            bookId = bookId,
+            cfiLocation = cfiLocation,
+            titleOrSnippet = titleOrSnippet,
+            updatedAtEpochMillis = updatedAtEpochMillis,
+            deletedAtEpochMillis = deletedAtEpochMillis,
+            locatorJson = LocatorCodec.normalizeLocatorJson(locatorJson),
+        )
 }

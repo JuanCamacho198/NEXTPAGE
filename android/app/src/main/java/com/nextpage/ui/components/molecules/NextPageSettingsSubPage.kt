@@ -55,7 +55,7 @@ fun NextPageSettingsSubPage(
     title: String,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -65,14 +65,14 @@ fun NextPageSettingsSubPage(
                     Text(
                         text = title,
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = NextPageIcons.ArrowBack,
-                            contentDescription = stringResource(R.string.nav_back)
+                            contentDescription = stringResource(R.string.nav_back),
                         )
                     }
                 },
@@ -80,16 +80,17 @@ fun NextPageSettingsSubPage(
                 // already applies the status-bar inset to this NavHost. Letting
                 // the TopAppBar consume it again created a ~24dp dead gap above
                 // every settings sub-page toolbar.
-                windowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)
+                windowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp),
             )
-        }
+        },
     ) { innerPadding ->
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(innerPadding)
-                .padding(horizontal = 24.dp)
-                .padding(top = NextPageDimens.spacingMd)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(innerPadding)
+                    .padding(horizontal = 24.dp)
+                    .padding(top = NextPageDimens.spacingMd),
         ) {
             content()
         }
@@ -102,11 +103,11 @@ private fun SettingsSubPageDarkPreview() {
     NextPageTheme(darkTheme = true) {
         NextPageSettingsSubPage(
             title = "Settings",
-            onBack = {}
+            onBack = {},
         ) {
             Text(
                 text = "Sample setting row",
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
             )
         }
     }
@@ -118,11 +119,11 @@ private fun SettingsSubPageLightPreview() {
     NextPageTheme(darkTheme = false) {
         NextPageSettingsSubPage(
             title = "Settings",
-            onBack = {}
+            onBack = {},
         ) {
             Text(
                 text = "Sample setting row",
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
             )
         }
     }

@@ -8,8 +8,9 @@ import kotlinx.coroutines.flow.asStateFlow
  * Test double for [ConnectivityObserver] wrapping a [MutableStateFlow], so
  * offline precedence, corroboration and resume-retry are testable on the JVM.
  */
-class FakeConnectivityObserver(initiallyOnline: Boolean = true) : ConnectivityObserver {
-
+class FakeConnectivityObserver(
+    initiallyOnline: Boolean = true,
+) : ConnectivityObserver {
     private val state = MutableStateFlow(initiallyOnline)
 
     override val isOnline: StateFlow<Boolean> = state.asStateFlow()

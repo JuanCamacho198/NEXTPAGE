@@ -25,22 +25,21 @@ package com.nextpage.data.sync
 
 data class LocatorChapterMetric(
     val chapterChars: Int,
-    val charOffset: Int
+    val charOffset: Int,
 )
 
 data class LocatorLocations(
     var progression: Double? = null,
-    var fragment: String? = null
+    var fragment: String? = null,
 )
 
 data class CanonicalLocator(
     var href: String,
     var type: String,
-    var locations: LocatorLocations
+    var locations: LocatorLocations,
 )
 
 object LocatorCodec {
-
     private const val FALLBACK_TYPE = "application/xhtml+xml"
     private val SPINE_INDEX_RE = Regex("""^epubcfi\(/6/(\d+)""")
 
@@ -66,7 +65,9 @@ object LocatorCodec {
             // If href not at top level but json still contains backslash, fallback
             if (json.contains("\\") && json.contains("\"href\"")) {
                 json.replace("\\", "/")
-            } else json
+            } else {
+                json
+            }
         } catch (_: Exception) {
             if (json.contains("\\")) json.replace("\\", "/") else json
         }
@@ -85,13 +86,19 @@ object LocatorCodec {
     }
 
     /** Compute a clamped [0, 1] within-chapter progression. Returns null if total is non-positive. */
-    fun charOffsetToProgression(charOffset: Int, chapterChars: Int): Double? {
+    fun charOffsetToProgression(
+        charOffset: Int,
+        chapterChars: Int,
+    ): Double? {
         if (chapterChars <= 0) return null
         return (charOffset.toDouble() / chapterChars.toDouble()).coerceIn(0.0, 1.0)
     }
 
     /** Overload for Double to match TS Number path */
-    fun charOffsetToProgression(charOffset: Double, chapterChars: Double): Double? {
+    fun charOffsetToProgression(
+        charOffset: Double,
+        chapterChars: Double,
+    ): Double? {
         if (!chapterChars.isFinite() || chapterChars <= 0) return null
         if (!charOffset.isFinite()) return 0.0
         return (charOffset / chapterChars).coerceIn(0.0, 1.0)
@@ -105,7 +112,7 @@ object LocatorCodec {
     fun locatorFromCfi(
         readingOrder: List<String>,
         cfi: String?,
-        chapter: LocatorChapterMetric?
+        chapter: LocatorChapterMetric?,
     ): CanonicalLocator? {
         val spineIndex = parseSpineIndex(cfi) ?: return null
         val rawHref = readingOrder.getOrNull(spineIndex - 1) ?: return null
@@ -128,7 +135,7 @@ object LocatorCodec {
      */
     fun deriveLocatorForChapter(
         readingOrder: List<String>,
-        chapterHref: String?
+        chapterHref: String?,
     ): CanonicalLocator? {
         if (chapterHref.isNullOrEmpty()) return null
         val normalizedChapterHref = normalizeHref(chapterHref)
@@ -137,7 +144,7 @@ object LocatorCodec {
         return CanonicalLocator(
             href = normalizedChapterHref,
             type = FALLBACK_TYPE,
-            locations = LocatorLocations(progression = 0.0)
+            locations = LocatorLocations(progression = 0.0),
         )
     }
 

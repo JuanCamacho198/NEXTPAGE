@@ -5,7 +5,6 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Test
 
 class OnboardingGoalScreenTest {
-
     @Test
     fun goalOptions_containsExactlyFourLevels() {
         assertEquals(4, GOAL_OPTIONS.size)
@@ -28,17 +27,17 @@ class OnboardingGoalScreenTest {
             assertNotEquals(
                 "titleRes must be set for minutes=${option.minutes}",
                 0,
-                option.titleRes
+                option.titleRes,
             )
             assertNotEquals(
                 "descriptionRes must be set for minutes=${option.minutes}",
                 0,
-                option.descriptionRes
+                option.descriptionRes,
             )
             assertNotEquals(
                 "valueRes must be set for minutes=${option.minutes}",
                 0,
-                option.valueRes
+                option.valueRes,
             )
         }
     }

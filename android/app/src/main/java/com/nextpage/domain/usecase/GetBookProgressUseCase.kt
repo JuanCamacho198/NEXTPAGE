@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.map
 class GetBookProgressUseCase(
     private val readerRepository: ReaderRepository,
     private val readingProgressDao: ReadingProgressDao? = null,
-    private val bookDao: BookDao? = null
+    private val bookDao: BookDao? = null,
 ) {
     /**
      * Observe canonical progress percentage for a bookId.
@@ -30,7 +30,8 @@ class GetBookProgressUseCase(
      * Uses ReaderRepository (canonical) when DAOs not wired.
      */
     operator fun invoke(bookId: String): Flow<Float> =
-        readerRepository.observeProgress(bookId)
+        readerRepository
+            .observeProgress(bookId)
             .map { it?.percentage ?: 0f }
             .distinctUntilChanged()
 

@@ -16,8 +16,9 @@ import android.content.Context
  * `getSharedPreferences`, no encryption needed (a per-account boolean marker,
  * not a secret).
  */
-class DriveConnectPromptPrefs(context: Context) {
-
+class DriveConnectPromptPrefs(
+    context: Context,
+) {
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     /** The userId that declined the last prompt, or null when never declined / cleared. */

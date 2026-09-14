@@ -20,5 +20,5 @@ data class SearchResult(
     val chapterIndex: Int = 0,
     val rect: Rect? = null,
     val chapterTitle: String = "",
-    val cfi: String = ""
+    val cfi: String = "",
 )

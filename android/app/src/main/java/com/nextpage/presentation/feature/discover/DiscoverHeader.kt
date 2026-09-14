@@ -42,16 +42,16 @@ fun DiscoverHeader(
     userInitial: String?,
     avatarContentDescription: String,
     modifier: Modifier = Modifier,
-    onAvatarClick: (() -> Unit)? = null
+    onAvatarClick: (() -> Unit)? = null,
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+            verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(
                 text = title,
@@ -59,14 +59,14 @@ fun DiscoverHeader(
                 fontWeight = FontWeight.Bold,
                 color = NextPageColors.textPrimary,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodyMedium,
                 color = NextPageColors.textSecondary,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
         }
 
@@ -77,22 +77,23 @@ fun DiscoverHeader(
                 initials = initial,
                 size = 40.dp,
                 onClick = onAvatarClick,
-                contentDescription = avatarContentDescription
+                contentDescription = avatarContentDescription,
             )
         } else {
             // Neutral placeholder: signed out (or session unresolved). No crash.
             Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(NextPageColors.surfaceVariant),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(NextPageColors.surfaceVariant),
+                contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     imageVector = NextPageIcons.Person,
                     contentDescription = avatarContentDescription,
                     modifier = Modifier.size(20.dp),
-                    tint = NextPageColors.textSecondary
+                    tint = NextPageColors.textSecondary,
                 )
             }
         }

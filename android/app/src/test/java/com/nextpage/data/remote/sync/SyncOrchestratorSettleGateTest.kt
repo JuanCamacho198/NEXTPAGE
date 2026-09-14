@@ -18,36 +18,38 @@ import org.junit.Test
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class SyncOrchestratorSettleGateTest {
+    @Test
+    fun awaitSettled_nonActiveState_returnsTrue() =
+        runTest {
+            val orchestrator = mockk<SyncOrchestrator>()
+            every { orchestrator.state } returns MutableStateFlow<SyncState>(SyncState.Idle)
+
+            assertTrue(SyncOrchestratorSettleGate(orchestrator).awaitSettled())
+        }
 
     @Test
-    fun awaitSettled_nonActiveState_returnsTrue() = runTest {
-        val orchestrator = mockk<SyncOrchestrator>()
-        every { orchestrator.state } returns MutableStateFlow<SyncState>(SyncState.Idle)
+    fun awaitSettled_activeState_timesOut_returnsFalse() =
+        runTest {
+            val orchestrator = mockk<SyncOrchestrator>()
+            every { orchestrator.state } returns MutableStateFlow<SyncState>(SyncState.Active)
 
-        assertTrue(SyncOrchestratorSettleGate(orchestrator).awaitSettled())
-    }
-
-    @Test
-    fun awaitSettled_activeState_timesOut_returnsFalse() = runTest {
-        val orchestrator = mockk<SyncOrchestrator>()
-        every { orchestrator.state } returns MutableStateFlow<SyncState>(SyncState.Active)
-
-        assertFalse(
-            SyncOrchestratorSettleGate(orchestrator, timeoutMillis = 1_000L).awaitSettled()
-        )
-    }
+            assertFalse(
+                SyncOrchestratorSettleGate(orchestrator, timeoutMillis = 1_000L).awaitSettled(),
+            )
+        }
 
     @Test
-    fun awaitSettled_activeThenIdle_returnsTrue() = runTest {
-        val state = MutableStateFlow<SyncState>(SyncState.Active)
-        val orchestrator = mockk<SyncOrchestrator>()
-        every { orchestrator.state } returns state
-        val gate = SyncOrchestratorSettleGate(orchestrator, timeoutMillis = 60_000L)
+    fun awaitSettled_activeThenIdle_returnsTrue() =
+        runTest {
+            val state = MutableStateFlow<SyncState>(SyncState.Active)
+            val orchestrator = mockk<SyncOrchestrator>()
+            every { orchestrator.state } returns state
+            val gate = SyncOrchestratorSettleGate(orchestrator, timeoutMillis = 60_000L)
 
-        val settled = async { gate.awaitSettled() }
-        runCurrent()
-        state.value = SyncState.Idle
+            val settled = async { gate.awaitSettled() }
+            runCurrent()
+            state.value = SyncState.Idle
 
-        assertTrue(settled.await())
-    }
+            assertTrue(settled.await())
+        }
 }

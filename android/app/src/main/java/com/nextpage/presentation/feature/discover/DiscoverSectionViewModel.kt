@@ -37,7 +37,7 @@ data class DiscoverSectionUiState(
     val detail: CatalogBook? = null,
     val detailStatus: DiscoverDetailStatus = DiscoverDetailStatus.CLOSED,
     /** Download → import lifecycle for the detail book currently on screen. */
-    val download: DownloadImportState = DownloadImportState.Idle
+    val download: DownloadImportState = DownloadImportState.Idle,
 )
 
 /**
@@ -55,9 +55,8 @@ class DiscoverSectionViewModel(
     private val sourceId: String?,
     private val term: String = "",
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
-    private val downloadAndImportBookUseCase: DownloadAndImportBookUseCase? = null
+    private val downloadAndImportBookUseCase: DownloadAndImportBookUseCase? = null,
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow(DiscoverSectionUiState(sectionTitle = sectionTitle))
     val uiState: StateFlow<DiscoverSectionUiState> = _uiState.asStateFlow()
 
@@ -106,12 +105,13 @@ class DiscoverSectionViewModel(
                 val code = (err as? CatalogException)?.code ?: CatalogErrorCode.UPSTREAM_ERROR
                 _uiState.update {
                     it.copy(
-                        detailStatus = if (code == CatalogErrorCode.NOT_FOUND) {
-                            DiscoverDetailStatus.NOT_FOUND
-                        } else {
-                            DiscoverDetailStatus.ERROR
-                        },
-                        detail = null
+                        detailStatus =
+                            if (code == CatalogErrorCode.NOT_FOUND) {
+                                DiscoverDetailStatus.NOT_FOUND
+                            } else {
+                                DiscoverDetailStatus.ERROR
+                            },
+                        detail = null,
                     )
                 }
             }
@@ -158,34 +158,42 @@ class DiscoverSectionViewModel(
         downloadingBookId = book.id
         SentryMetrics.count(
             "discover_download_start",
-            mapOf("provider" to book.provider)
+            mapOf("provider" to book.provider),
         )
         // Synchronous Idle → Downloading so the progress UI appears on tap,
         // before the use-case flow emits its first value.
         _uiState.update { it.copy(download = DownloadImportState.Downloading(0L, null)) }
-        downloadJob = viewModelScope.launch(mainDispatcher) {
-            useCase(book).collect { state ->
-                // The synchronous preset above already rendered progress; the
-                // flow's leading Idle would flicker back, so skip it.
-                if (state is DownloadImportState.Idle) return@collect
-                emitDownloadTerminal(state, book.provider)
-                _uiState.update { it.copy(download = state) }
+        downloadJob =
+            viewModelScope.launch(mainDispatcher) {
+                useCase(book).collect { state ->
+                    // The synchronous preset above already rendered progress; the
+                    // flow's leading Idle would flicker back, so skip it.
+                    if (state is DownloadImportState.Idle) return@collect
+                    emitDownloadTerminal(state, book.provider)
+                    _uiState.update { it.copy(download = state) }
+                }
             }
-        }
     }
 
     /**
      * U3-2 download funnel: terminal counters only (start fires on launch above).
      * Attributes stay {provider[, code]} — NEVER book id, title, or user id.
      */
-    private fun emitDownloadTerminal(state: DownloadImportState, provider: String) {
+    private fun emitDownloadTerminal(
+        state: DownloadImportState,
+        provider: String,
+    ) {
         when (state) {
             is DownloadImportState.Success ->
                 SentryMetrics.count("discover_download_complete", mapOf("provider" to provider))
             is DownloadImportState.Failure -> {
                 val code = state.error?.name
-                val tags = if (code != null) mapOf("provider" to provider, "code" to code)
-                    else mapOf("provider" to provider)
+                val tags =
+                    if (code != null) {
+                        mapOf("provider" to provider, "code" to code)
+                    } else {
+                        mapOf("provider" to provider)
+                    }
                 SentryMetrics.count("discover_download_fail", tags)
             }
             else -> Unit
@@ -200,60 +208,66 @@ class DiscoverSectionViewModel(
         _uiState.update { it.copy(download = DownloadImportState.Idle) }
     }
 
-    private fun load(page: Int, append: Boolean) {
+    private fun load(
+        page: Int,
+        append: Boolean,
+    ) {
         loadJob?.cancel()
-        loadJob = viewModelScope.launch(mainDispatcher) {
-            _uiState.update {
-                it.copy(
-                    status = if (append) DiscoverStatus.LOADING_MORE else DiscoverStatus.LOADING,
-                    errorCode = null
-                )
-            }
-            try {
-                val result = fetchPage(page)
-                _uiState.update { state ->
-                    if (append) {
-                        val merged = ArrayList(state.books)
-                        val seen = HashSet(merged.map { it.id })
-                        for (book in result.results) {
-                            if (seen.add(book.id)) merged.add(book)
-                        }
-                        state.copy(
-                            status = DiscoverStatus.LOADED,
-                            books = merged,
-                            totalCount = result.totalCount,
-                            nextPage = result.nextPage,
-                            activePage = page
-                        )
-                    } else {
-                        state.copy(
-                            status = if (result.results.isEmpty()) {
-                                DiscoverStatus.EMPTY
-                            } else {
-                                DiscoverStatus.LOADED
-                            },
-                            books = result.results,
-                            totalCount = result.totalCount,
-                            nextPage = result.nextPage,
-                            activePage = page
-                        )
-                    }
+        loadJob =
+            viewModelScope.launch(mainDispatcher) {
+                _uiState.update {
+                    it.copy(
+                        status = if (append) DiscoverStatus.LOADING_MORE else DiscoverStatus.LOADING,
+                        errorCode = null,
+                    )
                 }
-            } catch (err: CancellationException) {
-                throw err
-            } catch (err: Throwable) {
-                val code = (err as? CatalogException)?.code ?: CatalogErrorCode.UPSTREAM_ERROR
-                _uiState.update { it.copy(status = DiscoverStatus.ERROR, errorCode = code) }
+                try {
+                    val result = fetchPage(page)
+                    _uiState.update { state ->
+                        if (append) {
+                            val merged = ArrayList(state.books)
+                            val seen = HashSet(merged.map { it.id })
+                            for (book in result.results) {
+                                if (seen.add(book.id)) merged.add(book)
+                            }
+                            state.copy(
+                                status = DiscoverStatus.LOADED,
+                                books = merged,
+                                totalCount = result.totalCount,
+                                nextPage = result.nextPage,
+                                activePage = page,
+                            )
+                        } else {
+                            state.copy(
+                                status =
+                                    if (result.results.isEmpty()) {
+                                        DiscoverStatus.EMPTY
+                                    } else {
+                                        DiscoverStatus.LOADED
+                                    },
+                                books = result.results,
+                                totalCount = result.totalCount,
+                                nextPage = result.nextPage,
+                                activePage = page,
+                            )
+                        }
+                    }
+                } catch (err: CancellationException) {
+                    throw err
+                } catch (err: Throwable) {
+                    val code = (err as? CatalogException)?.code ?: CatalogErrorCode.UPSTREAM_ERROR
+                    _uiState.update { it.copy(status = DiscoverStatus.ERROR, errorCode = code) }
+                }
             }
-        }
     }
 
-    private suspend fun fetchPage(page: Int): PagedResult = when {
-        sourceId != null && sort == null -> catalogProvider.searchSource(sourceId, term, page)
-        sort != null && sourceId == null -> catalogProvider.featured(sort, page)
-        // Neither or both selectors: fail closed, never a composite-wide search.
-        else -> PagedResult(emptyList(), null, 0)
-    }
+    private suspend fun fetchPage(page: Int): PagedResult =
+        when {
+            sourceId != null && sort == null -> catalogProvider.searchSource(sourceId, term, page)
+            sort != null && sourceId == null -> catalogProvider.featured(sort, page)
+            // Neither or both selectors: fail closed, never a composite-wide search.
+            else -> PagedResult(emptyList(), null, 0)
+        }
 
     private companion object {
         /** Log tag for the guarded download entry points (never silent). */
@@ -268,9 +282,8 @@ class DiscoverSectionViewModelFactory(
     private val sourceId: String?,
     private val term: String = "",
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
-    private val downloadAndImportBookUseCase: DownloadAndImportBookUseCase? = null
+    private val downloadAndImportBookUseCase: DownloadAndImportBookUseCase? = null,
 ) : ViewModelProvider.Factory {
-
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(DiscoverSectionViewModel::class.java)) {
@@ -281,7 +294,7 @@ class DiscoverSectionViewModelFactory(
                 sourceId = sourceId,
                 term = term,
                 mainDispatcher = mainDispatcher,
-                downloadAndImportBookUseCase = downloadAndImportBookUseCase
+                downloadAndImportBookUseCase = downloadAndImportBookUseCase,
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

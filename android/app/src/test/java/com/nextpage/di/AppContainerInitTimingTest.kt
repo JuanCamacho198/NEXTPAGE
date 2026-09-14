@@ -3,9 +3,7 @@ package com.nextpage.di
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.nextpage.BuildConfig
-import io.ktor.client.HttpClient
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -19,7 +17,6 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class AppContainerInitTimingTest {
-
     private fun appContext(): Context = ApplicationProvider.getApplicationContext()
 
     @Test
@@ -27,7 +24,7 @@ class AppContainerInitTimingTest {
         val container = AppContainer(appContext())
         assertTrue(
             "dbInitTimeMs should be < 100ms but was ${container.dbInitTimeMs}",
-            container.dbInitTimeMs < 100
+            container.dbInitTimeMs < 100,
         )
     }
 
@@ -47,7 +44,7 @@ class AppContainerInitTimingTest {
         // We cannot spy HttpClient without init, but we can assert that totalInitTime stays small.
         assertTrue(
             "totalInitTimeMs should stay small (no eager HttpClient/Supabase) but was ${container.totalInitTimeMs}",
-            container.totalInitTimeMs < 500
+            container.totalInitTimeMs < 500,
         )
     }
 

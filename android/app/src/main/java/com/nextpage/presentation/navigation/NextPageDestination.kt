@@ -8,14 +8,20 @@ import com.nextpage.ui.icons.NextPageIcons
 sealed class NextPageDestination(
     val route: String,
     @param:StringRes val labelRes: Int = -1,
-    val icon: ImageVector? = null
+    val icon: ImageVector? = null,
 ) {
     data object Auth : NextPageDestination("auth", R.string.tab_auth, NextPageIcons.Person)
+
     data object AuthRegister : NextPageDestination("auth/register")
+
     data object AuthForgot : NextPageDestination("auth/forgot")
+
     data object OnboardingGoal : NextPageDestination("onboarding/goal")
+
     data object Home : NextPageDestination("home", R.string.nav_home, NextPageIcons.Home)
+
     data object Library : NextPageDestination("library", R.string.nav_library, NextPageIcons.Library)
+
     data object Discover : NextPageDestination("discover", R.string.nav_discover, NextPageIcons.Search)
 
     /**
@@ -24,9 +30,14 @@ sealed class NextPageDestination(
      * is non-null so the screen knows which paging seam to use.
      */
     data object DiscoverSection : NextPageDestination(
-        "discover/section?sectionTitle={sectionTitle}&sort={sort}&sourceId={sourceId}"
+        "discover/section?sectionTitle={sectionTitle}&sort={sort}&sourceId={sourceId}",
     )
-    data object Reader : NextPageDestination("reader?bookId={bookId}&bookPath={bookPath}&bookFormat={bookFormat}", R.string.tab_reader, NextPageIcons.BookOpen) {
+
+    data object Reader : NextPageDestination(
+        "reader?bookId={bookId}&bookPath={bookPath}&bookFormat={bookFormat}",
+        R.string.tab_reader,
+        NextPageIcons.BookOpen,
+    ) {
         const val ARG_BOOK_ID = "bookId"
         const val ARG_BOOK_PATH = "bookPath"
         const val ARG_BOOK_FORMAT = "bookFormat"
@@ -43,7 +54,11 @@ sealed class NextPageDestination(
          * of `android.net.Uri.encode`) so it also runs on plain JVM unit tests
          * where the Android stub throws.
          */
-        fun routeFor(bookId: String, filePath: String?, format: String): String {
+        fun routeFor(
+            bookId: String,
+            filePath: String?,
+            format: String,
+        ): String {
             val encodedPath = filePath?.takeIf { it.isNotBlank() }?.let { encodeRouteParam(it) }.orEmpty()
             return "reader" +
                 "?$ARG_BOOK_ID=${encodeRouteParam(bookId)}" +
@@ -66,14 +81,19 @@ sealed class NextPageDestination(
             val out = StringBuilder(value.length)
             for (byte in value.toByteArray(Charsets.UTF_8)) {
                 val c = byte.toInt() and BYTE_MASK
-                val unreserved = c in 'a'.code..'z'.code ||
-                    c in 'A'.code..'Z'.code ||
-                    c in '0'.code..'9'.code ||
-                    c == '-'.code || c == '_'.code || c == '.'.code || c == '~'.code
+                val unreserved =
+                    c in 'a'.code..'z'.code ||
+                        c in 'A'.code..'Z'.code ||
+                        c in '0'.code..'9'.code ||
+                        c == '-'.code ||
+                        c == '_'.code ||
+                        c == '.'.code ||
+                        c == '~'.code
                 if (unreserved) {
                     out.append(c.toChar())
                 } else {
-                    out.append('%')
+                    out
+                        .append('%')
                         .append(ROUTE_PARAM_HEX[c shr HIGH_NIBBLE_SHIFT])
                         .append(ROUTE_PARAM_HEX[c and LOW_NIBBLE_MASK])
                 }
@@ -81,33 +101,61 @@ sealed class NextPageDestination(
             return out.toString()
         }
     }
+
     data object Highlights : NextPageDestination("highlights", R.string.nav_highlights, NextPageIcons.Highlights)
+
     data object Settings : NextPageDestination("settings", R.string.nav_settings, NextPageIcons.Settings)
+
     data object Statistics : NextPageDestination("statistics", R.string.nav_statistics, NextPageIcons.Statistics)
+
     data object BookDetail : NextPageDestination("book_detail/{bookId}", R.string.nav_book_detail, NextPageIcons.Book)
+
     data object BookEdit : NextPageDestination("book_edit/{bookId}")
 
     // Settings nested destinations
     data object SettingsList : NextPageDestination("settings/list")
+
     data object SettingsAccount : NextPageDestination("settings/account")
+
     data object SettingsDataStorage : NextPageDestination("settings/data")
+
     data object SettingsStorage : NextPageDestination("settings/storage", R.string.settings_storage_title, NextPageIcons.Storage)
+
     data object SettingsSync : NextPageDestination("settings/sync", R.string.settings_sync_title, NextPageIcons.CloudSync)
+
     data object SettingsNotifications : NextPageDestination("settings/notifications")
+
     data object SettingsTheme : NextPageDestination("settings/theme")
+
     data object SettingsLanguage : NextPageDestination("settings/language")
+
     data object SettingsPalette : NextPageDestination("settings/palette")
+
     data object SettingsAbout : NextPageDestination("settings/about")
+
     data object SettingsStatistics : NextPageDestination("settings/data/statistics")
-    data object SettingsDictionary : NextPageDestination("settings/dictionary", R.string.settings_dictionary_label, NextPageIcons.LibraryBooks)
+
+    data object SettingsDictionary : NextPageDestination(
+        "settings/dictionary",
+        R.string.settings_dictionary_label,
+        NextPageIcons.LibraryBooks,
+    )
+
     data object Dictionary : NextPageDestination("settings/dictionary", R.string.settings_dictionary_label, NextPageIcons.LibraryBooks)
+
     data object SettingsDevices : NextPageDestination("settings/devices")
+
     data object SettingsDailyGoal : NextPageDestination("settings/daily-goal")
+
     data object SettingsPerformance : NextPageDestination("settings/performance")
+
     data object SettingsAddons : NextPageDestination("settings/addons", R.string.settings_addons_title, NextPageIcons.LibraryBooks)
+
     /** U5: legal policy page, reachable from the disclaimer and addon screens. */
     data object SettingsLegal : NextPageDestination("settings/legal", R.string.legal_policy_title, NextPageIcons.LibraryBooks)
+
     /** U5: per-addon capability detail; `{addonId}` is the registry id (hex). */
     data object SettingsAddonCapabilities : NextPageDestination("settings/addon-capabilities/{addonId}")
+
     data object LogViewer : NextPageDestination("settings/log-viewer")
 }

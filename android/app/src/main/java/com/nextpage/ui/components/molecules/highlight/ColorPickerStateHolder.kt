@@ -7,7 +7,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 
-class ColorPickerState(initialColor: String) {
+class ColorPickerState(
+    initialColor: String,
+) {
     var selectedColor by mutableStateOf(initialColor)
     var hexInput by mutableStateOf(initialColor.removePrefix("#"))
     var hue by mutableFloatStateOf(hueFromHex(initialColor))
@@ -15,5 +17,4 @@ class ColorPickerState(initialColor: String) {
 }
 
 @Composable
-fun rememberColorPickerState(initialColor: String): ColorPickerState =
-    remember { ColorPickerState(initialColor) }
+fun rememberColorPickerState(initialColor: String): ColorPickerState = remember { ColorPickerState(initialColor) }

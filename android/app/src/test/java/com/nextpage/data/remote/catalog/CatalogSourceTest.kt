@@ -7,7 +7,6 @@ import org.junit.Test
 
 /** Strict source-id parsing — mirrors desktop catalog-source.test.ts vectors. */
 class CatalogSourceTest {
-
     private val addonId = "a1b2c3d4e5f60718"
 
     @Test

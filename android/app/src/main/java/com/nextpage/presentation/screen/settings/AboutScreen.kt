@@ -37,51 +37,54 @@ fun AboutScreen(
     onTerms: (() -> Unit)? = null,
     onLicenses: (() -> Unit)? = null,
     onContact: (() -> Unit)? = null,
-    onRate: (() -> Unit)? = null
+    onRate: (() -> Unit)? = null,
 ) {
     NextPageSettingsSubPage(
         title = stringResource(R.string.settings_about_title),
-        onBack = onBack
+        onBack = onBack,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Cita Lincoln card centrada 280dp, padding 24dp, corner 20dp, bg surfaceVariant 30%
             Box(
                 modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 Surface(
                     modifier = Modifier.width(280.dp),
                     shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
                 ) {
                     Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Text(
                             text = stringResource(R.string.about_lincoln_quote),
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                fontSize = 16.sp,
-                                lineHeight = 25.6.sp
-                            ),
+                            style =
+                                MaterialTheme.typography.bodyLarge.copy(
+                                    fontSize = 16.sp,
+                                    lineHeight = 25.6.sp,
+                                ),
                             textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
                             text = stringResource(R.string.about_lincoln_author),
                             style = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp),
                             textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -91,28 +94,29 @@ fun AboutScreen(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant
+                color = MaterialTheme.colorScheme.surfaceVariant,
             ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
                 ) {
                     Text(
                         text = stringResource(R.string.app_name),
                         style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = stringResource(R.string.settings_about_version, BuildConfig.VERSION_NAME),
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
                         text = stringResource(R.string.settings_about_build, BuildConfig.GIT_SHA),
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -132,7 +136,7 @@ fun AboutScreen(
                 style = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             )
             Spacer(modifier = Modifier.height(24.dp))
         }
@@ -143,37 +147,38 @@ fun AboutScreen(
 private fun AboutRow(
     labelRes: Int,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    onClick: (() -> Unit)?
+    onClick: (() -> Unit)?,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth().height(56.dp),
         shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant
+        color = MaterialTheme.colorScheme.surfaceVariant,
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.width(24.dp).height(24.dp)
+                modifier = Modifier.width(24.dp).height(24.dp),
             )
             Text(
                 text = stringResource(labelRes),
                 style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
                 fontWeight = FontWeight.Medium,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
             Icon(
                 imageVector = NextPageIcons.ChevronRight,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.width(20.dp).height(20.dp)
+                modifier = Modifier.width(20.dp).height(20.dp),
             )
         }
     }

@@ -37,7 +37,9 @@ interface DiscoverCacheDao {
     suspend fun deleteExpired(nowEpochSecs: Long): Int
 
     /** Removes rows left behind under the pre-`v3` key namespaces (never served since the bump). */
-    @Query("DELETE FROM discover_cache WHERE `key` LIKE 'p:v1:%' OR `key` LIKE 'd:v1:%' OR `key` LIKE 'f:v1:%' OR `key` LIKE 'p:v2:%' OR `key` LIKE 'd:v2:%' OR `key` LIKE 'f:v2:%'")
+    @Query(
+        "DELETE FROM discover_cache WHERE `key` LIKE 'p:v1:%' OR `key` LIKE 'd:v1:%' OR `key` LIKE 'f:v1:%' OR `key` LIKE 'p:v2:%' OR `key` LIKE 'd:v2:%' OR `key` LIKE 'f:v2:%'",
+    )
     suspend fun deleteLegacyNamespaces(): Int
 
     /** Removes every discover-cache row. Books/covers are not in this table. */

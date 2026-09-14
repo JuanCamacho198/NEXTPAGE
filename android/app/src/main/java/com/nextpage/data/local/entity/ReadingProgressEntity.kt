@@ -13,10 +13,10 @@ import androidx.room.PrimaryKey
             entity = BookEntity::class,
             parentColumns = ["id"],
             childColumns = ["book_id"],
-            onDelete = ForeignKey.CASCADE
-        )
+            onDelete = ForeignKey.CASCADE,
+        ),
     ],
-    indices = [Index(value = ["book_id"], unique = true)]
+    indices = [Index(value = ["book_id"], unique = true)],
 )
 data class ReadingProgressEntity(
     @PrimaryKey
@@ -31,5 +31,5 @@ data class ReadingProgressEntity(
     @ColumnInfo(name = "updated_at")
     val updatedAtEpochMillis: Long,
     @ColumnInfo(name = "locator_json")
-    val locatorJson: String? = null
+    val locatorJson: String? = null,
 )

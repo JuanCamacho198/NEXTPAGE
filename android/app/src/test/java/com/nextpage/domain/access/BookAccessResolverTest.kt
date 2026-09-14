@@ -15,7 +15,6 @@ import org.junit.Test
  * download path; identity-free books fall back to generic web search.
  */
 class BookAccessResolverTest {
-
     private companion object {
         const val HTTPS_PREFIX = "https://"
         const val HTTP_PREFIX = "http://"
@@ -35,31 +34,33 @@ class BookAccessResolverTest {
         isbn10: String? = null,
         openLibraryWorkId: String? = null,
         internetArchiveId: String? = null,
-        googleBooksId: String? = null
-    ): CatalogBook = CatalogBook(
-        id = id,
-        provider = BUILTIN_GUTENDEX,
-        title = title,
-        authors = authors,
-        coverUrl = null,
-        languages = listOf("en"),
-        subjects = emptyList(),
-        downloadUrl = downloadUrl,
-        isPublicDomain = isPublicDomain,
-        isbn13 = isbn13,
-        isbn10 = isbn10,
-        openLibraryWorkId = openLibraryWorkId,
-        internetArchiveId = internetArchiveId,
-        googleBooksId = googleBooksId
-    )
+        googleBooksId: String? = null,
+    ): CatalogBook =
+        CatalogBook(
+            id = id,
+            provider = BUILTIN_GUTENDEX,
+            title = title,
+            authors = authors,
+            coverUrl = null,
+            languages = listOf("en"),
+            subjects = emptyList(),
+            downloadUrl = downloadUrl,
+            isPublicDomain = isPublicDomain,
+            isbn13 = isbn13,
+            isbn10 = isbn10,
+            openLibraryWorkId = openLibraryWorkId,
+            internetArchiveId = internetArchiveId,
+            googleBooksId = googleBooksId,
+        )
 
     @Test fun groups_coverFreeBuySubscribe() {
-        val access = resolveAccess(
-            book(
-                openLibraryWorkId = "/works/OL66554W",
-                isbn13 = "9780141439518"
+        val access =
+            resolveAccess(
+                book(
+                    openLibraryWorkId = "/works/OL66554W",
+                    isbn13 = "9780141439518",
+                ),
             )
-        )
         val groups = access.options.map { it.group }.toSet()
         assertTrue(groups.contains(AccessGroup.FREE))
         assertTrue(groups.contains(AccessGroup.BUY))
@@ -68,16 +69,17 @@ class BookAccessResolverTest {
     }
 
     @Test fun allLinks_areHttpsOnly() {
-        val access = resolveAccess(
-            book(
-                downloadUrl = PD_DOWNLOAD_URL,
-                isPublicDomain = true,
-                openLibraryWorkId = "/works/OL66554W",
-                internetArchiveId = "prideandprejudice0000aust",
-                googleBooksId = "abc123",
-                isbn13 = "9780141439518"
+        val access =
+            resolveAccess(
+                book(
+                    downloadUrl = PD_DOWNLOAD_URL,
+                    isPublicDomain = true,
+                    openLibraryWorkId = "/works/OL66554W",
+                    internetArchiveId = "prideandprejudice0000aust",
+                    googleBooksId = "abc123",
+                    isbn13 = "9780141439518",
+                ),
             )
-        )
         assertTrue(access.options.isNotEmpty())
         access.options.forEach { option ->
             assertTrue(option.url.startsWith(HTTPS_PREFIX))
@@ -107,9 +109,10 @@ class BookAccessResolverTest {
     }
 
     @Test fun inCopyrightBook_resolvesExternalOnly() {
-        val access = resolveAccess(
-            book(downloadUrl = PD_DOWNLOAD_URL, isPublicDomain = false)
-        )
+        val access =
+            resolveAccess(
+                book(downloadUrl = PD_DOWNLOAD_URL, isPublicDomain = false),
+            )
         assertFalse(access.canDownloadInApp)
         assertNull(access.downloadUrl)
         assertTrue(access.options.none { it.opensInApp })
@@ -123,9 +126,10 @@ class BookAccessResolverTest {
     }
 
     @Test fun insecureDownloadUrl_neverResolvesInApp() {
-        val access = resolveAccess(
-            book(downloadUrl = INSECURE_DOWNLOAD_URL, isPublicDomain = true)
-        )
+        val access =
+            resolveAccess(
+                book(downloadUrl = INSECURE_DOWNLOAD_URL, isPublicDomain = true),
+            )
         assertFalse(access.canDownloadInApp)
         assertNull(access.downloadUrl)
         assertTrue(access.options.none { it.opensInApp })
@@ -133,15 +137,16 @@ class BookAccessResolverTest {
     }
 
     @Test fun identityLinks_pointAtCanonicalHttpsHosts() {
-        val access = resolveAccess(
-            book(
-                downloadUrl = null,
-                isPublicDomain = false,
-                openLibraryWorkId = "/works/OL66554W",
-                internetArchiveId = "prideandprejudice0000aust",
-                googleBooksId = "abc123"
+        val access =
+            resolveAccess(
+                book(
+                    downloadUrl = null,
+                    isPublicDomain = false,
+                    openLibraryWorkId = "/works/OL66554W",
+                    internetArchiveId = "prideandprejudice0000aust",
+                    googleBooksId = "abc123",
+                ),
             )
-        )
         val freeUrls = access.options.filter { it.group == AccessGroup.FREE }.map { it.url }
         assertTrue(freeUrls.any { it.contains(TITLE_FREE_MARKER) })
         assertTrue(freeUrls.any { it.contains("archive.org/details/") })
@@ -155,13 +160,14 @@ class BookAccessResolverTest {
     }
 
     @Test fun noIdentity_fallsBackToGenericWebSearch() {
-        val access = resolveAccess(
-            book(
-                id = "openlibrary:/works/OL00000W",
-                downloadUrl = null,
-                isPublicDomain = null
+        val access =
+            resolveAccess(
+                book(
+                    id = "openlibrary:/works/OL00000W",
+                    downloadUrl = null,
+                    isPublicDomain = null,
+                ),
             )
-        )
         val groups = access.options.map { it.group }.toSet()
         assertTrue(groups.contains(AccessGroup.FREE))
         assertTrue(groups.contains(AccessGroup.BUY))
@@ -169,7 +175,7 @@ class BookAccessResolverTest {
         assertTrue(
             access.options.any {
                 it.group == AccessGroup.FREE && it.url.contains(TITLE_BUY_MARKER)
-            }
+            },
         )
         access.options.forEach { assertTrue(it.url.startsWith(HTTPS_PREFIX)) }
     }

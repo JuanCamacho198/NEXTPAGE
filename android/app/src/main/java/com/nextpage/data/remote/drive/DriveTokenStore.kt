@@ -11,7 +11,6 @@ import io.ktor.client.call.body
 import io.ktor.client.request.forms.FormDataContent
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
-import io.ktor.http.HttpHeaders
 import io.ktor.http.Parameters
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
@@ -29,7 +28,7 @@ import kotlinx.serialization.json.Json
  */
 data class DriveTokenPair(
     val accessToken: String,
-    val refreshToken: String?
+    val refreshToken: String?,
 )
 
 /**
@@ -46,7 +45,7 @@ interface DriveTokenApi {
         clientId: String,
         authCode: String,
         redirectUri: String?,
-        codeVerifier: String?
+        codeVerifier: String?,
     ): Result<DriveTokenPair>
 
     /**
@@ -54,7 +53,7 @@ interface DriveTokenApi {
      */
     suspend fun refresh(
         clientId: String,
-        refreshToken: String
+        refreshToken: String,
     ): Result<DriveTokenPair>
 }
 
@@ -64,63 +63,64 @@ interface DriveTokenApi {
  */
 class KtorAuthApi(
     private val client: HttpClient,
-    private val json: Json = Json { ignoreUnknownKeys = true }
+    private val json: Json = Json { ignoreUnknownKeys = true },
 ) : DriveTokenApi {
-
     override suspend fun exchange(
         clientId: String,
         authCode: String,
         redirectUri: String?,
-        codeVerifier: String?
-    ): Result<DriveTokenPair> = postToken(
-        params = buildMap {
-            put("client_id", clientId)
-            put("code", authCode)
-            put("grant_type", "authorization_code")
-            if (redirectUri != null) put("redirect_uri", redirectUri)
-            if (codeVerifier != null) put("code_verifier", codeVerifier)
-        }
-    )
+        codeVerifier: String?,
+    ): Result<DriveTokenPair> =
+        postToken(
+            params =
+                buildMap {
+                    put("client_id", clientId)
+                    put("code", authCode)
+                    put("grant_type", "authorization_code")
+                    if (redirectUri != null) put("redirect_uri", redirectUri)
+                    if (codeVerifier != null) put("code_verifier", codeVerifier)
+                },
+        )
 
     override suspend fun refresh(
         clientId: String,
-        refreshToken: String
-    ): Result<DriveTokenPair> = postToken(
-        params = mapOf(
-            "client_id" to clientId,
-            "refresh_token" to refreshToken,
-            "grant_type" to "refresh_token"
+        refreshToken: String,
+    ): Result<DriveTokenPair> =
+        postToken(
+            params =
+                mapOf(
+                    "client_id" to clientId,
+                    "refresh_token" to refreshToken,
+                    "grant_type" to "refresh_token",
+                ),
         )
-    )
 
-    private suspend fun postToken(
-        params: Map<String, String>
-    ): Result<DriveTokenPair> = withContext(Dispatchers.IO) {
-        runCatching {
-            val response = client.post(GoogleDriveConfig.GOOGLE_OAUTH_TOKEN_ENDPOINT) {
-                contentType(io.ktor.http.ContentType.Application.FormUrlEncoded)
-                setBody(FormDataContent(Parameters.build { params.forEach { (k, v) -> append(k, v) } }))
-            }
-            val body: TokenResponse = json.decodeFromString(response.body())
-            if (response.status.isSuccess() && !body.accessToken.isNullOrBlank()) {
-                DriveTokenPair(
-                    accessToken = requireNotNull(body.accessToken) { "Google Drive token response missing accessToken" },
-                    refreshToken = body.refreshToken
-                )
-            } else {
-                throw AppError(
-                    category = ErrorCategory.AUTH,
-                    code = "DRIVE_TOKEN_EXCHANGE_FAILED",
-                    message = "Token exchange failed: ${body.error ?: "unknown error"}",
-                    component = COMPONENT
-                )
-            }
-        }.mapError()
-    }
+    private suspend fun postToken(params: Map<String, String>): Result<DriveTokenPair> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val response =
+                    client.post(GoogleDriveConfig.GOOGLE_OAUTH_TOKEN_ENDPOINT) {
+                        contentType(io.ktor.http.ContentType.Application.FormUrlEncoded)
+                        setBody(FormDataContent(Parameters.build { params.forEach { (k, v) -> append(k, v) } }))
+                    }
+                val body: TokenResponse = json.decodeFromString(response.body())
+                if (response.status.isSuccess() && !body.accessToken.isNullOrBlank()) {
+                    DriveTokenPair(
+                        accessToken = requireNotNull(body.accessToken) { "Google Drive token response missing accessToken" },
+                        refreshToken = body.refreshToken,
+                    )
+                } else {
+                    throw AppError(
+                        category = ErrorCategory.AUTH,
+                        code = "DRIVE_TOKEN_EXCHANGE_FAILED",
+                        message = "Token exchange failed: ${body.error ?: "unknown error"}",
+                        component = COMPONENT,
+                    )
+                }
+            }.mapError()
+        }
 
-    private fun <T> Result<T>.mapError(): Result<T> {
-        return this
-    }
+    private fun <T> Result<T>.mapError(): Result<T> = this
 
     @Serializable
     private data class TokenResponse(
@@ -130,7 +130,7 @@ class KtorAuthApi(
         val scope: String? = null,
         @SerialName("token_type") val tokenType: String? = null,
         val error: String? = null,
-        @SerialName("error_description") val errorDescription: String? = null
+        @SerialName("error_description") val errorDescription: String? = null,
     )
 
     companion object {
@@ -164,21 +164,26 @@ interface DriveTokenStore {
 /**
  * [DriveTokenStore] backed by EncryptedSharedPreferences.
  */
-class EncryptedDriveTokenStore(context: Context) : DriveTokenStore {
-    private val prefs = runCatching {
-        val masterKey = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-        EncryptedSharedPreferences.create(
-            context,
-            PREFS_NAME,
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
-    }.getOrElse {
-        throw IllegalStateException("Failed to build EncryptedSharedPreferences for Drive tokens", it)
-    }
+class EncryptedDriveTokenStore(
+    context: Context,
+) : DriveTokenStore {
+    private val prefs =
+        runCatching {
+            val masterKey =
+                MasterKey
+                    .Builder(context)
+                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                    .build()
+            EncryptedSharedPreferences.create(
+                context,
+                PREFS_NAME,
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+            )
+        }.getOrElse {
+            throw IllegalStateException("Failed to build EncryptedSharedPreferences for Drive tokens", it)
+        }
 
     override fun accessToken(): String? = prefs.getString(KEY_ACCESS, null)
 

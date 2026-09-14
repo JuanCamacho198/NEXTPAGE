@@ -11,7 +11,11 @@ import java.security.MessageDigest
  * across devices (SCEN-reading-sessions-sync-7). A different [startTimeEpochMillis]
  * per minute-flush yields a distinct id → no double counting.
  */
-fun readingSessionId(userId: String, bookId: String, startTimeEpochMillis: Long): String {
+fun readingSessionId(
+    userId: String,
+    bookId: String,
+    startTimeEpochMillis: Long,
+): String {
     val input = "$userId|$bookId|$startTimeEpochMillis"
     val digest = MessageDigest.getInstance("SHA-256").digest(input.toByteArray(Charsets.UTF_8))
     val hex = digest.joinToString("") { "%02x".format(it) }

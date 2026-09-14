@@ -2,7 +2,9 @@ package com.nextpage.data.session
 
 import android.content.Context
 
-class AppLanguagePreferences(private val context: Context) {
+class AppLanguagePreferences(
+    private val context: Context,
+) {
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     fun load(): String? {

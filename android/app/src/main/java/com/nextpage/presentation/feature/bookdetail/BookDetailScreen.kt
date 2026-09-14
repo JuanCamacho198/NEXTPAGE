@@ -60,11 +60,12 @@ fun BookDetailScreen(
     libraryRepository: LibraryRepository,
     onNavigateBack: () -> Unit,
     onEditBook: () -> Unit,
-    onContinueReading: (String, String?, String) -> Unit
+    onContinueReading: (String, String?, String) -> Unit,
 ) {
-    val viewModel: BookDetailViewModel = viewModel(
-        factory = BookDetailViewModel.Factory(bookId, libraryRepository)
-    )
+    val viewModel: BookDetailViewModel =
+        viewModel(
+            factory = BookDetailViewModel.Factory(bookId, libraryRepository),
+        )
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
@@ -77,11 +78,11 @@ fun BookDetailScreen(
                 navigationIcon = {
                     NextPageButton(
                         onClick = onNavigateBack,
-                        variant = NextPageButtonVariant.ICON
+                        variant = NextPageButtonVariant.ICON,
                     ) {
                         Icon(
                             imageVector = NextPageIcons.ArrowBack,
-                            contentDescription = stringResource(R.string.reader_cancel)
+                            contentDescription = stringResource(R.string.reader_cancel),
                         )
                     }
                 },
@@ -89,56 +90,58 @@ fun BookDetailScreen(
                     IconButton(onClick = { state.book?.let { shareBookFile(context, it) } }) {
                         Icon(
                             imageVector = NextPageIcons.Share,
-                            contentDescription = stringResource(R.string.book_detail_share_content_description)
+                            contentDescription = stringResource(R.string.book_detail_share_content_description),
                         )
                     }
                     Box {
                         IconButton(onClick = { showActionsMenu = true }) {
                             Icon(
                                 imageVector = NextPageIcons.MoreVert,
-                                contentDescription = stringResource(R.string.book_detail_more_content_description)
+                                contentDescription = stringResource(R.string.book_detail_more_content_description),
                             )
                         }
                         DropdownMenu(
                             expanded = showActionsMenu,
-                            onDismissRequest = { showActionsMenu = false }
+                            onDismissRequest = { showActionsMenu = false },
                         ) {
                             DropdownMenuItem(
                                 leadingIcon = {
                                     Icon(
                                         imageVector = NextPageIcons.Pencil,
                                         contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 },
                                 text = { Text(stringResource(R.string.library_menu_edit_metadata)) },
                                 onClick = {
                                     showActionsMenu = false
                                     onEditBook()
-                                }
+                                },
                             )
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
-                )
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
             )
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(contentPadding)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(contentPadding),
         ) {
             val book = state.book
             when {
                 state.isLoading -> {
                     CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center)
+                        modifier = Modifier.align(Alignment.Center),
                     )
                 }
                 book == null -> {
@@ -146,7 +149,7 @@ fun BookDetailScreen(
                         text = stringResource(R.string.book_detail_error_not_found),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.align(Alignment.Center)
+                        modifier = Modifier.align(Alignment.Center),
                     )
                 }
                 else -> {
@@ -154,7 +157,7 @@ fun BookDetailScreen(
                         book = book,
                         progress = state.readingProgress,
                         onRatingChanged = { viewModel.updateRating(it) },
-                        onContinueReading = onContinueReading
+                        onContinueReading = onContinueReading,
                     )
                 }
             }
@@ -167,31 +170,37 @@ fun BookDetailScreen(
  * [androidx.core.content.FileProvider] flow used by the library context menu.
  * Missing files are ignored silently.
  */
-private fun shareBookFile(context: Context, book: Book) {
-    val mimeType = when (book.format.lowercase()) {
-        "pdf" -> "application/pdf"
-        "epub" -> "application/epub+zip"
-        "zip" -> "application/epub+zip"
-        else -> "*/*"
-    }
+private fun shareBookFile(
+    context: Context,
+    book: Book,
+) {
+    val mimeType =
+        when (book.format.lowercase()) {
+            "pdf" -> "application/pdf"
+            "epub" -> "application/epub+zip"
+            "zip" -> "application/epub+zip"
+            else -> "*/*"
+        }
     runCatching {
         val file = File(book.filePath)
         if (!file.exists()) return@runCatching
-        val uri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            file
-        )
-        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-            type = mimeType
-            putExtra(Intent.EXTRA_STREAM, uri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
+        val uri =
+            FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file,
+            )
+        val shareIntent =
+            Intent(Intent.ACTION_SEND).apply {
+                type = mimeType
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
         context.startActivity(
             Intent.createChooser(
                 shareIntent,
-                context.getString(R.string.library_share_chooser_title)
-            )
+                context.getString(R.string.library_share_chooser_title),
+            ),
         )
     }
 }
@@ -201,23 +210,24 @@ internal fun BookDetailContent(
     book: Book,
     progress: ReadingProgress?,
     onRatingChanged: (Int?) -> Unit,
-    onContinueReading: (String, String?, String) -> Unit
+    onContinueReading: (String, String?, String) -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
     ) {
         BookHeroSection(
             book = book,
             rating = book.userRating,
             onRatingChanged = onRatingChanged,
-            onContinueReading = onContinueReading
+            onContinueReading = onContinueReading,
         )
 
         Column(
             modifier = Modifier.padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             Spacer(modifier = Modifier.height(4.dp))
             BookMetadataGrid(book = book)
@@ -228,7 +238,7 @@ internal fun BookDetailContent(
                 DetailChipsSection(title = stringResource(R.string.book_detail_genres)) {
                     GenreChipsDisplay(
                         genres = genres,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
             }
@@ -237,7 +247,7 @@ internal fun BookDetailContent(
                 DetailChipsSection(title = stringResource(R.string.edit_metadata_tags)) {
                     TagChipsDisplay(
                         tags = tags,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
             }
@@ -268,6 +278,6 @@ private fun BookDetailScreenPreviewContent() {
         book = previewBook,
         progress = previewProgress,
         onRatingChanged = {},
-        onContinueReading = { _, _, _ -> }
+        onContinueReading = { _, _, _ -> },
     )
 }

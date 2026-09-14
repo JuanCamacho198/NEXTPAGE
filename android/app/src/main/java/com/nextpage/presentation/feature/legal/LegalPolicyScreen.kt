@@ -33,7 +33,7 @@ import com.nextpage.ui.icons.NextPageIcons
 @Composable
 fun LegalPolicyScreen(
     onBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Scaffold(
         modifier = modifier,
@@ -44,42 +44,43 @@ fun LegalPolicyScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = NextPageIcons.ArrowBack,
-                            contentDescription = stringResource(R.string.discover_back)
+                            contentDescription = stringResource(R.string.discover_back),
                         )
                     }
-                }
+                },
             )
-        }
+        },
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
                 text = stringResource(R.string.legal_policy_intro),
                 style = MaterialTheme.typography.bodyMedium,
-                color = NextPageColors.textPrimary
+                color = NextPageColors.textPrimary,
             )
             LegalPolicySection(
                 title = stringResource(R.string.legal_policy_sources_title),
-                body = stringResource(R.string.legal_policy_sources_body)
+                body = stringResource(R.string.legal_policy_sources_body),
             )
             LegalPolicySection(
                 title = stringResource(R.string.legal_policy_public_domain_title),
-                body = stringResource(R.string.legal_policy_public_domain_body)
+                body = stringResource(R.string.legal_policy_public_domain_body),
             )
             LegalPolicySection(
                 title = stringResource(R.string.legal_policy_addons_title),
-                body = stringResource(R.string.legal_policy_addons_body)
+                body = stringResource(R.string.legal_policy_addons_body),
             )
             Text(
                 text = stringResource(R.string.legal_policy_updated_note),
                 style = MaterialTheme.typography.bodySmall,
-                color = NextPageColors.textSecondary
+                color = NextPageColors.textSecondary,
             )
         }
     }
@@ -87,18 +88,22 @@ fun LegalPolicyScreen(
 
 /** One titled section of the legal page. */
 @Composable
-private fun LegalPolicySection(title: String, body: String, modifier: Modifier = Modifier) {
+private fun LegalPolicySection(
+    title: String,
+    body: String,
+    modifier: Modifier = Modifier,
+) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
-            color = NextPageColors.textPrimary
+            color = NextPageColors.textPrimary,
         )
         Text(
             text = body,
             style = MaterialTheme.typography.bodySmall,
-            color = NextPageColors.textSecondary
+            color = NextPageColors.textSecondary,
         )
     }
 }

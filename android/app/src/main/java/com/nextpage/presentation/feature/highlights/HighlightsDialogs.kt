@@ -38,7 +38,7 @@ fun HighlightsDialogs(
     onConfirmColorChange: (String) -> Unit,
     onDismissTagEdit: () -> Unit,
     onTagEditTextChanged: (String) -> Unit,
-    onSaveHighlightTag: (String) -> Unit
+    onSaveHighlightTag: (String) -> Unit,
 ) {
     uiState.highlightToEdit?.let { highlight ->
         HighlightAnnotationModal(
@@ -48,7 +48,7 @@ fun HighlightsDialogs(
             selectedText = highlight.textContent.replace("\\n", " ").replace("\n", " "),
             initialText = uiState.editNoteText,
             onSave = onSaveHighlightNote,
-            onDismiss = onDismissEditHighlight
+            onDismiss = onDismissEditHighlight,
         )
     }
 
@@ -58,16 +58,20 @@ fun HighlightsDialogs(
             title = { Text(text = stringResource(R.string.highlights_delete_title)) },
             text = {
                 Text(
-                    text = stringResource(
-                        R.string.highlights_delete_message,
-                        highlight.textContent.replace("\\n", " ").replace("\n", " ").take(60)
-                    )
+                    text =
+                        stringResource(
+                            R.string.highlights_delete_message,
+                            highlight.textContent
+                                .replace("\\n", " ")
+                                .replace("\n", " ")
+                                .take(60),
+                        ),
                 )
             },
             confirmButton = {
                 NextPageButton(
                     onClick = onConfirmDeleteHighlight,
-                    variant = NextPageButtonVariant.TEXT
+                    variant = NextPageButtonVariant.TEXT,
                 ) {
                     Text(text = stringResource(R.string.highlights_delete_confirm))
                 }
@@ -75,11 +79,11 @@ fun HighlightsDialogs(
             dismissButton = {
                 NextPageButton(
                     onClick = onDismissDeleteHighlightDialog,
-                    variant = NextPageButtonVariant.TEXT
+                    variant = NextPageButtonVariant.TEXT,
                 ) {
                     Text(text = stringResource(R.string.reader_cancel))
                 }
-            }
+            },
         )
     }
 
@@ -90,23 +94,25 @@ fun HighlightsDialogs(
             text = {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                    horizontalArrangement = Arrangement.SpaceEvenly,
                 ) {
                     for (color in HighlightColor.entries) {
                         val isActive = color.hex.equals(highlight.color, ignoreCase = true)
                         Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(parseDialogColor(color.hex))
-                                .clickable { onConfirmColorChange(color.hex) },
-                            contentAlignment = Alignment.Center
+                            modifier =
+                                Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(parseDialogColor(color.hex))
+                                    .clickable { onConfirmColorChange(color.hex) },
+                            contentAlignment = Alignment.Center,
                         ) {
                             if (isActive) {
                                 Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .border(2.dp, Color.White, CircleShape)
+                                    modifier =
+                                        Modifier
+                                            .size(36.dp)
+                                            .border(2.dp, Color.White, CircleShape),
                                 )
                             }
                         }
@@ -118,7 +124,7 @@ fun HighlightsDialogs(
                 TextButton(onClick = onDismissColorPicker) {
                     Text(stringResource(R.string.reader_cancel))
                 }
-            }
+            },
         )
     }
 
@@ -128,9 +134,12 @@ fun HighlightsDialogs(
             title = {
                 Text(
                     stringResource(
-                        if (uiState.editTagText.isBlank()) R.string.highlights_menu_add_tag
-                        else R.string.highlights_menu_edit_tag
-                    )
+                        if (uiState.editTagText.isBlank()) {
+                            R.string.highlights_menu_add_tag
+                        } else {
+                            R.string.highlights_menu_edit_tag
+                        },
+                    ),
                 )
             },
             text = {
@@ -138,7 +147,7 @@ fun HighlightsDialogs(
                     value = uiState.editTagText,
                     onValueChange = onTagEditTextChanged,
                     placeholder = { Text(stringResource(R.string.highlights_tag_dialog_hint)) },
-                    singleLine = true
+                    singleLine = true,
                 )
             },
             confirmButton = {
@@ -150,12 +159,10 @@ fun HighlightsDialogs(
                 TextButton(onClick = onDismissTagEdit) {
                     Text(stringResource(R.string.reader_cancel))
                 }
-            }
+            },
         )
     }
 }
 
 @Composable
-private fun parseDialogColor(hex: String): Color {
-    return resolveHighlightColorHex(hex) ?: MaterialTheme.colorScheme.primary
-}
+private fun parseDialogColor(hex: String): Color = resolveHighlightColorHex(hex) ?: MaterialTheme.colorScheme.primary

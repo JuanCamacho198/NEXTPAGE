@@ -30,7 +30,7 @@ data class FragmentHostState(
     val navigatorFragment: MutableState<EpubNavigatorFragment?>,
     val containerReady: MutableState<Boolean>,
     val readingOrder: List<Link>,
-    val containerId: Int
+    val containerId: Int,
 )
 
 /**
@@ -53,14 +53,15 @@ fun rememberFragmentHost(
     fragmentManager: FragmentManager,
     containerId: Int,
     initialLocator: Locator?,
-    viewModel: ReaderViewModel
+    viewModel: ReaderViewModel,
 ): FragmentHostState {
     val containerReady = remember { mutableStateOf(false) }
     val navigatorFragment = remember { mutableStateOf<EpubNavigatorFragment?>(null) }
     val readingOrder = remember(publication) { publication.readingOrder }
-    val navigatorFactory = remember(publication, navigatorConfig) {
-        EpubNavigatorFactory(publication, navigatorConfig)
-    }
+    val navigatorFactory =
+        remember(publication, navigatorConfig) {
+            EpubNavigatorFactory(publication, navigatorConfig)
+        }
 
     // ── Reset container readiness when the publication changes ──
     LaunchedEffect(publication) {
@@ -77,14 +78,16 @@ fun rememberFragmentHost(
     LaunchedEffect(publication, containerReady.value) {
         if (!containerReady.value) return@LaunchedEffect
         val tag = "ReadiumNavigator"
-        val resolvedLocator = initialLocator
-            ?: publication.readingOrder.firstOrNull()?.let {
-                publication.locatorFromLink(it)
-            }
+        val resolvedLocator =
+            initialLocator
+                ?: publication.readingOrder.firstOrNull()?.let {
+                    publication.locatorFromLink(it)
+                }
         if (resolvedLocator == null) return@LaunchedEffect
-        val factory = navigatorFactory.createFragmentFactory(
-            initialLocator = resolvedLocator
-        )
+        val factory =
+            navigatorFactory.createFragmentFactory(
+                initialLocator = resolvedLocator,
+            )
         fragmentManager.fragmentFactory = factory
         fragmentManager.commit {
             add(containerId, EpubNavigatorFragment::class.java, Bundle(), tag)
@@ -121,7 +124,7 @@ fun rememberFragmentHost(
         navigatorFragment = navigatorFragment,
         containerReady = containerReady,
         readingOrder = readingOrder,
-        containerId = containerId
+        containerId = containerId,
     )
 }
 
@@ -134,7 +137,7 @@ fun rememberFragmentHost(
 @Composable
 fun FragmentHostState.FragmentHostView(
     viewModel: ReaderViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     AndroidView(
         factory = { ctx ->
@@ -142,9 +145,10 @@ fun FragmentHostState.FragmentHostView(
                 id = containerId
             }
         },
-        modifier = modifier.onGloballyPositioned { coordinates ->
-            if (!containerReady.value) containerReady.value = true
-            viewModel.lifecycleHolder.onReadiumViewportChanged(coordinates.size.height, coordinates.size.width)
-        }
+        modifier =
+            modifier.onGloballyPositioned { coordinates ->
+                if (!containerReady.value) containerReady.value = true
+                viewModel.lifecycleHolder.onReadiumViewportChanged(coordinates.size.height, coordinates.size.width)
+            },
     )
 }

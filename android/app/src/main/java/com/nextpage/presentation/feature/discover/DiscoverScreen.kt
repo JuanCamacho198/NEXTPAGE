@@ -51,7 +51,7 @@ fun DiscoverScreen(
     userInitial: String? = null,
     onOpenSection: (DiscoverRailState.Loaded, String) -> Unit = { _, _ -> },
     onNavigateToSettingsAddons: () -> Unit = {},
-    onNavigateToLegalPolicy: () -> Unit = {}
+    onNavigateToLegalPolicy: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val trendingChips = trendingChips()
@@ -65,22 +65,23 @@ fun DiscoverScreen(
                 showDisclaimer = false
             },
             onViewPolicy = onNavigateToLegalPolicy,
-            onDismiss = { showDisclaimer = false }
+            onDismiss = { showDisclaimer = false },
         )
     }
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(contentPadding)
-            .padding(horizontal = 16.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(contentPadding)
+                .padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         DiscoverHeader(
             title = stringResource(R.string.discover_title),
             subtitle = headerSubtitle(uiState),
             userInitial = userInitial,
-            avatarContentDescription = stringResource(R.string.discover_avatar_content_desc)
+            avatarContentDescription = stringResource(R.string.discover_avatar_content_desc),
         )
 
         DiscoverSearchField(
@@ -88,7 +89,7 @@ fun DiscoverScreen(
             isSearching = uiState.isSearching,
             onQueryChange = viewModel::onQueryChange,
             onClear = { viewModel.onQueryChange("") },
-            onSearch = viewModel::searchFirstPage
+            onSearch = viewModel::searchFirstPage,
         )
 
         if (uiState.status == DiscoverStatus.IDLE) {
@@ -98,7 +99,7 @@ fun DiscoverScreen(
                     val term = trendingChips[index].label
                     viewModel.onQueryChange(term)
                     viewModel.searchFirstPage()
-                }
+                },
             )
         }
 
@@ -110,48 +111,52 @@ fun DiscoverScreen(
                 uiState.status == DiscoverStatus.LOADED ||
                     uiState.status == DiscoverStatus.LOADING_MORE ||
                     uiState.status == DiscoverStatus.EMPTY
-                )
+            )
         ) {
             DiscoverSourceFilterRow(
                 sources = uiState.sources,
                 selected = uiState.sourceFilter,
-                onSelect = viewModel::setSourceFilter
+                onSelect = viewModel::setSourceFilter,
             )
         }
 
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
         ) {
             when (uiState.status) {
-                DiscoverStatus.IDLE -> DiscoverIdleRails(
-                    rails = uiState.rails,
-                    attributionNames = uiState.attributionNames,
-                    onOpenBook = viewModel::openDetail,
-                    onSeeAll = onOpenSection,
-                    onNavigateToSettingsAddons = onNavigateToSettingsAddons
-                )
+                DiscoverStatus.IDLE ->
+                    DiscoverIdleRails(
+                        rails = uiState.rails,
+                        attributionNames = uiState.attributionNames,
+                        onOpenBook = viewModel::openDetail,
+                        onSeeAll = onOpenSection,
+                        onNavigateToSettingsAddons = onNavigateToSettingsAddons,
+                    )
                 DiscoverStatus.LOADING -> DiscoverSkeletonState()
-                DiscoverStatus.EMPTY -> DiscoverEmptyState(
-                    query = uiState.query,
-                    onSuggestionClick = { term ->
-                        viewModel.onQueryChange(term)
-                        viewModel.searchFirstPage()
-                    },
-                    legalEmpty = isLegalEmpty(uiState),
-                    sourceName = legalEmptySourceName(uiState)
-                )
+                DiscoverStatus.EMPTY ->
+                    DiscoverEmptyState(
+                        query = uiState.query,
+                        onSuggestionClick = { term ->
+                            viewModel.onQueryChange(term)
+                            viewModel.searchFirstPage()
+                        },
+                        legalEmpty = isLegalEmpty(uiState),
+                        sourceName = legalEmptySourceName(uiState),
+                    )
                 DiscoverStatus.ERROR -> DiscoverErrorState(onRetry = viewModel::retry)
                 DiscoverStatus.OFFLINE -> DiscoverOfflineState(onRetry = viewModel::retry)
-                DiscoverStatus.LOADED, DiscoverStatus.LOADING_MORE -> DiscoverResultsGrid(
-                    books = uiState.visibleBooks,
-                    nextPage = uiState.nextPage,
-                    isLoadingMore = uiState.status == DiscoverStatus.LOADING_MORE,
-                    onOpen = viewModel::openDetail,
-                    onLoadNext = viewModel::loadNextPage,
-                    attributionNames = uiState.attributionNames
-                )
+                DiscoverStatus.LOADED, DiscoverStatus.LOADING_MORE ->
+                    DiscoverResultsGrid(
+                        books = uiState.visibleBooks,
+                        nextPage = uiState.nextPage,
+                        isLoadingMore = uiState.status == DiscoverStatus.LOADING_MORE,
+                        onOpen = viewModel::openDetail,
+                        onLoadNext = viewModel::loadNextPage,
+                        attributionNames = uiState.attributionNames,
+                    )
             }
         }
 
@@ -169,12 +174,13 @@ fun DiscoverScreen(
             onOpenAddonRead = { addonId ->
                 viewModel.openAddonRead(
                     addonId,
-                    uiState.attributionNames[addonId] ?: addonId
+                    uiState.attributionNames[addonId] ?: addonId,
                 )
             },
             onAllowAccessConsent = {
                 (uiState.accessState as? AccessResolverState.ConsentRequired)
-                    ?.addonId?.let(viewModel::grantAccessConsent)
+                    ?.addonId
+                    ?.let(viewModel::grantAccessConsent)
             },
             onDenyAccessConsent = viewModel::denyAccessConsent,
             onAllowAddonConsent = viewModel::grantAddonReadConsent,
@@ -183,7 +189,7 @@ fun DiscoverScreen(
             onRetryAddonRead = viewModel::retryAddonRead,
             onRetryAccess = {
                 uiState.detail?.id?.let(viewModel::openDetail)
-            }
+            },
         )
     }
 }
@@ -199,20 +205,21 @@ private fun DiscoverIdleRails(
     onOpenBook: (String) -> Unit,
     onSeeAll: (DiscoverRailState.Loaded, String) -> Unit,
     onNavigateToSettingsAddons: () -> Unit,
-    attributionNames: Map<String, String> = emptyMap()
+    attributionNames: Map<String, String> = emptyMap(),
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         rails.forEach { rail ->
             DiscoverRailSection(
                 state = rail,
                 onBookClick = onOpenBook,
                 onSeeAll = onSeeAll,
-                attributionNames = attributionNames
+                attributionNames = attributionNames,
             )
         }
         DiscoverManageAddonsEntry(onClick = onNavigateToSettingsAddons)
@@ -220,23 +227,25 @@ private fun DiscoverIdleRails(
 }
 
 @Composable
-private fun headerSubtitle(uiState: DiscoverUiState): String = when {
-    uiState.status == DiscoverStatus.LOADED || uiState.status == DiscoverStatus.LOADING_MORE ->
-        if (uiState.totalCount > 0) {
-            stringResource(R.string.discover_results_count, uiState.totalCount)
-        } else {
-            stringResource(R.string.discover_subtitle)
-        }
-    else -> stringResource(R.string.discover_subtitle)
-}
+private fun headerSubtitle(uiState: DiscoverUiState): String =
+    when {
+        uiState.status == DiscoverStatus.LOADED || uiState.status == DiscoverStatus.LOADING_MORE ->
+            if (uiState.totalCount > 0) {
+                stringResource(R.string.discover_results_count, uiState.totalCount)
+            } else {
+                stringResource(R.string.discover_subtitle)
+            }
+        else -> stringResource(R.string.discover_subtitle)
+    }
 
 @Composable
-private fun trendingChips(): List<DiscoverChip> = listOf(
-    DiscoverChip(label = stringResource(R.string.discover_trending_all), icon = NextPageIcons.Sparkle),
-    DiscoverChip(label = stringResource(R.string.discover_trending_popular), icon = NextPageIcons.Flame),
-    DiscoverChip(label = stringResource(R.string.discover_trending_scifi), icon = NextPageIcons.Sparkle),
-    DiscoverChip(label = stringResource(R.string.discover_trending_classics), icon = NextPageIcons.Book)
-)
+private fun trendingChips(): List<DiscoverChip> =
+    listOf(
+        DiscoverChip(label = stringResource(R.string.discover_trending_all), icon = NextPageIcons.Sparkle),
+        DiscoverChip(label = stringResource(R.string.discover_trending_popular), icon = NextPageIcons.Flame),
+        DiscoverChip(label = stringResource(R.string.discover_trending_scifi), icon = NextPageIcons.Sparkle),
+        DiscoverChip(label = stringResource(R.string.discover_trending_classics), icon = NextPageIcons.Book),
+    )
 
 /**
  * U5: true when a universal-source chip narrowed a non-empty result list to

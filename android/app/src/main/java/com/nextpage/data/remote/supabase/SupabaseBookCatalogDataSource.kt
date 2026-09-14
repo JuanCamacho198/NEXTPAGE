@@ -26,9 +26,8 @@ import kotlinx.serialization.Serializable
  */
 @OptIn(SupabaseExperimental::class)
 class SupabaseBookCatalogDataSource(
-    private val client: SupabaseClient = SupabaseClientProvider.client
+    private val client: SupabaseClient = SupabaseClientProvider.client,
 ) {
-
     private val postgrest get() = client.postgrest
     private val realtime get() = client.realtime
 
@@ -48,8 +47,7 @@ class SupabaseBookCatalogDataSource(
             .upsert(row) {
                 onConflict = "user_id, id"
                 headers.append("Prefer", "return=representation")
-            }
-            .decodeSingleOrNullTolerant<UserBookRow>()
+            }.decodeSingleOrNullTolerant<UserBookRow>()
             ?: row
     }
 
@@ -57,32 +55,31 @@ class SupabaseBookCatalogDataSource(
      * List all books in the catalog for a given [userId],
      * ordered by [updated_at] descending (most recent first).
      */
-    suspend fun listUserBooks(userId: String): List<UserBookRow> {
-        return postgrest["user_books"]
+    suspend fun listUserBooks(userId: String): List<UserBookRow> =
+        postgrest["user_books"]
             .select {
                 filter {
                     eq("user_id", userId)
                 }
                 order("updated_at", Order.DESCENDING)
-            }
-            .decodeList<UserBookRow>()
-    }
+            }.decodeList<UserBookRow>()
 
     /**
      * Get a single book row by [userId] and [bookId].
      * Returns null if not found.
      */
-    suspend fun getUserBook(userId: String, bookId: String): UserBookRow? {
-        return postgrest["user_books"]
+    suspend fun getUserBook(
+        userId: String,
+        bookId: String,
+    ): UserBookRow? =
+        postgrest["user_books"]
             .select {
                 filter {
                     eq("user_id", userId)
                     eq("id", bookId)
                 }
                 limit(1)
-            }
-            .decodeSingleOrNull<UserBookRow>()
-    }
+            }.decodeSingleOrNull<UserBookRow>()
 
     /**
      * Find a book row by content hash.
@@ -90,22 +87,26 @@ class SupabaseBookCatalogDataSource(
      * Used for content-hash dedup (PR 5) — checks if a book with the
      * same SHA-256 hash already exists in the catalog for this user.
      */
-    suspend fun getUserBookByHash(userId: String, contentHash: String): UserBookRow? {
-        return postgrest["user_books"]
+    suspend fun getUserBookByHash(
+        userId: String,
+        contentHash: String,
+    ): UserBookRow? =
+        postgrest["user_books"]
             .select {
                 filter {
                     eq("user_id", userId)
                     eq("content_hash", contentHash)
                 }
                 limit(1)
-            }
-            .decodeSingleOrNull<UserBookRow>()
-    }
+            }.decodeSingleOrNull<UserBookRow>()
 
     /**
      * Delete a book row from the catalog.
      */
-    suspend fun deleteUserBook(userId: String, bookId: String) {
+    suspend fun deleteUserBook(
+        userId: String,
+        bookId: String,
+    ) {
         postgrest["user_books"]
             .delete {
                 filter {
@@ -124,10 +125,11 @@ class SupabaseBookCatalogDataSource(
         catalogChannel?.unsubscribe()
         val channel = client.channel("catalog:$userId")
         catalogChannel = channel
-        val flow = channel.postgresChangeFlow<PostgresAction>(schema = "public") {
-            table = "user_books"
-            filter("user_id", FilterOperator.EQ, userId)
-        }
+        val flow =
+            channel.postgresChangeFlow<PostgresAction>(schema = "public") {
+                table = "user_books"
+                filter("user_id", FilterOperator.EQ, userId)
+            }
         channel.subscribe()
         return flow
     }
@@ -193,11 +195,10 @@ data class UserBookRow(
     @SerialName("remote_file_id") val remoteFileId: String? = null,
     @SerialName("remote_path") val remotePath: String? = null,
     @SerialName("file_size") val fileSize: Long? = null,
-    @SerialName("cover_object_path") val coverObjectPath: String? = null
-    ,
+    @SerialName("cover_object_path") val coverObjectPath: String? = null,
     // Desktop persists protocol_version as NULL when the row was never written
     // by the recovery protocol. Declare it nullable so kotlinx.serialization
     // does NOT crash decoding "protocol_version":null (JsonDecodingException
     // "Unexpected symbol 'n' in numeric literal"). Consumers default to 1.
-    @SerialName("protocol_version") val protocolVersion: Int? = null
+    @SerialName("protocol_version") val protocolVersion: Int? = null,
 )

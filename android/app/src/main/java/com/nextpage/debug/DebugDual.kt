@@ -15,7 +15,6 @@ import io.sentry.SentryLevel
  * highlight.text or EPUB body).
  */
 object DebugDual {
-
     private const val MAX_ERROR_SNIPPET_LENGTH = 200
 
     const val TAG_SYNC = "ReaderSync"
@@ -32,35 +31,61 @@ object DebugDual {
 
     // ---- Generic dual emitters (used by inline call sites) ----
 
-    fun d(tag: String, message: String) {
+    fun d(
+        tag: String,
+        message: String,
+    ) {
         DebugLog.info(tag, message)
         runCatching { Log.d(tag, message) }
         // Also emit under the aggregate filter tag so a single `adb logcat -s NextPageDebug` captures all
         if (tag != TAG_FILTER) runCatching { Log.d(TAG_FILTER, "[$tag] $message") }
     }
 
-    fun w(tag: String, message: String) {
+    fun w(
+        tag: String,
+        message: String,
+    ) {
         DebugLog.warn(tag, message)
         runCatching { Log.w(tag, message) }
         if (tag != TAG_FILTER) runCatching { Log.w(TAG_FILTER, "[$tag] $message") }
     }
 
-    fun e(tag: String, message: String, throwable: Throwable? = null) {
+    fun e(
+        tag: String,
+        message: String,
+        throwable: Throwable? = null,
+    ) {
         DebugLog.error(tag, message + (throwable?.let { ": ${it.message}" } ?: ""))
         runCatching { Log.e(tag, message, throwable) }
         if (tag != TAG_FILTER) runCatching { Log.e(TAG_FILTER, "[$tag] $message", throwable) }
     }
 
     // ---- Required aliases per spec (debugInfo / debugWarn / debugError) ----
-    fun debugInfo(tag: String, msg: String) = d(tag, msg)
-    fun debugWarn(tag: String, msg: String) = w(tag, msg)
-    fun debugError(tag: String, msg: String, throwable: Throwable? = null) = e(tag, msg, throwable)
+    fun debugInfo(
+        tag: String,
+        msg: String,
+    ) = d(tag, msg)
+
+    fun debugWarn(
+        tag: String,
+        msg: String,
+    ) = w(tag, msg)
+
+    fun debugError(
+        tag: String,
+        msg: String,
+        throwable: Throwable? = null,
+    ) = e(tag, msg, throwable)
 
     // ---- Typed event helpers (ensure both DebugLog+DebugStateHolder AND Log fire) ----
     // Each helper delegates to log(event) so exactly ONE non-error signal
     // (breadcrumb / WARN log) is emitted per typed event. These are deliberate
     // telemetry, never error-level Sentry issues.
-    fun logHighlightSkipped(id: String, cfi: String?, reason: String) {
+    fun logHighlightSkipped(
+        id: String,
+        cfi: String?,
+        reason: String,
+    ) {
         log(DebugEvent.HighlightsSkipped(id, cfi, reason))
     }
 
@@ -73,13 +98,21 @@ object DebugDual {
     }
 
     // Convenience overload for per-highlight applied (kept for backward compat with existing call sites)
-    fun logHighlightApplied(highlightId: String, cfi: String?, viaFallback: Boolean) {
+    fun logHighlightApplied(
+        highlightId: String,
+        cfi: String?,
+        viaFallback: Boolean,
+    ) {
         log(DebugEvent.HighlightsApplied(highlightId, cfi, viaFallback))
         // Ensure DebugStateHolder also sees the single apply (handled inside log(event) -> counts are per highlight)
         // For count-based tracking, the caller should also call logHighlightApplied(1) after batch apply
     }
 
-    fun logSyncFailed(entityType: String, entityId: String?, error: String) {
+    fun logSyncFailed(
+        entityType: String,
+        entityId: String?,
+        error: String,
+    ) {
         log(DebugEvent.SyncOutboxFailed(entityType, entityId, error))
         // Keep the SupabaseProgressSync mirror for RLS/empty-body diagnostics.
         // WARN level: this is retryable telemetry, not an error-level event; it
@@ -91,7 +124,10 @@ object DebugDual {
     // Legacy (expected, actual) shape carries no locatorHref, so it cannot
     // delegate to DebugEvent.FooterMismatch. Kept for backward compat; callers
     // with a locatorHref should prefer log(DebugEvent.FooterMismatch(...)).
-    fun logFooterMismatch(expected: String?, actual: String?) {
+    fun logFooterMismatch(
+        expected: String?,
+        actual: String?,
+    ) {
         val msg = "reader.footerMismatch expected=${expected ?: "null"} actual=${actual ?: "null"}"
         w(TAG_FOOTER, msg)
     }
@@ -108,7 +144,11 @@ object DebugDual {
      * SDK is uninit the call is a safe no-op and local DebugLog entries are
      * unaffected.
      */
-    private fun addCrumb(category: String, message: String, data: Map<String, String>) {
+    private fun addCrumb(
+        category: String,
+        message: String,
+        data: Map<String, String>,
+    ) {
         runCatching {
             Sentry.addBreadcrumb(
                 Breadcrumb().apply {
@@ -116,7 +156,7 @@ object DebugDual {
                     setMessage(message)
                     level = SentryLevel.INFO
                     data.forEach { (key, value) -> setData(key, value) }
-                }
+                },
             )
         }
     }
@@ -126,7 +166,10 @@ object DebugDual {
      * `metric.<name>` — both allowlisted by SentryPiiScrubber. Data must be
      * ids/enums only; the scrubber still applies the denylist.
      */
-    fun addPerfCrumb(name: String, data: Map<String, String>) {
+    fun addPerfCrumb(
+        name: String,
+        data: Map<String, String>,
+    ) {
         addCrumb(category = "perf", message = "metric.$name", data = data)
     }
 
@@ -144,10 +187,11 @@ object DebugDual {
                 addCrumb(
                     category = "highlight",
                     message = msg,
-                    data = mapOf(
-                        "highlightId" to event.highlightId,
-                        "reason" to event.reason
-                    )
+                    data =
+                        mapOf(
+                            "highlightId" to event.highlightId,
+                            "reason" to event.reason,
+                        ),
                 )
             }
             is DebugEvent.HighlightsApplied -> {
@@ -159,10 +203,11 @@ object DebugDual {
                 addCrumb(
                     category = "highlight",
                     message = msg,
-                    data = mapOf(
-                        "highlightId" to event.highlightId,
-                        "viaFallback" to event.viaFallback.toString()
-                    )
+                    data =
+                        mapOf(
+                            "highlightId" to event.highlightId,
+                            "viaFallback" to event.viaFallback.toString(),
+                        ),
                 )
             }
             is DebugEvent.SyncOutboxFailed -> {
@@ -175,10 +220,11 @@ object DebugDual {
                 addCrumb(
                     category = "sync",
                     message = msg,
-                    data = mapOf(
-                        "entityType" to event.entityType,
-                        "entityId" to (event.entityId ?: "null")
-                    )
+                    data =
+                        mapOf(
+                            "entityType" to event.entityType,
+                            "entityId" to (event.entityId ?: "null"),
+                        ),
                 )
             }
             is DebugEvent.FooterMismatch -> {
@@ -188,7 +234,7 @@ object DebugDual {
                 addCrumb(
                     category = "navigation",
                     message = msg,
-                    data = mapOf("locatorHref" to event.locatorHref)
+                    data = mapOf("locatorHref" to event.locatorHref),
                 )
             }
             is DebugEvent.ChromeToggled -> {
@@ -205,10 +251,11 @@ object DebugDual {
                 addCrumb(
                     category = "navigation",
                     message = msg,
-                    data = mapOf(
-                        "bookId" to event.bookId,
-                        "source" to event.source
-                    )
+                    data =
+                        mapOf(
+                            "bookId" to event.bookId,
+                            "source" to event.source,
+                        ),
                 )
             }
             is DebugEvent.ProgressReconciled -> {
@@ -222,7 +269,7 @@ object DebugDual {
                 addCrumb(
                     category = "sync",
                     message = msg,
-                    data = mapOf("highlightId" to event.highlightId)
+                    data = mapOf("highlightId" to event.highlightId),
                 )
             }
             is DebugEvent.ChapterResolved -> {
@@ -233,10 +280,11 @@ object DebugDual {
                 addCrumb(
                     category = "navigation",
                     message = msg,
-                    data = mapOf(
-                        "locatorHref" to event.locatorHref,
-                        "index" to event.index.toString()
-                    )
+                    data =
+                        mapOf(
+                            "locatorHref" to event.locatorHref,
+                            "index" to event.index.toString(),
+                        ),
                 )
             }
         }

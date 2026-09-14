@@ -19,14 +19,14 @@ import com.nextpage.presentation.screen.OnboardingGoalScreen
 fun NavGraphBuilder.onboardingGraph(
     navController: NavController,
     appContainer: AppContainer,
-    onGoalSaved: () -> Unit
+    onGoalSaved: () -> Unit,
 ) {
     composable(
         route = NextPageDestination.OnboardingGoal.route,
         enterTransition = { fadeIn() },
         exitTransition = { fadeOut() },
         popEnterTransition = { fadeIn() },
-        popExitTransition = { fadeOut() }
+        popExitTransition = { fadeOut() },
     ) {
         OnboardingGoalScreen(
             onSave = { minutes ->
@@ -36,7 +36,7 @@ fun NavGraphBuilder.onboardingGraph(
                     popUpTo(0) { inclusive = true }
                 }
             },
-            onNavigateBack = { navController.popBackStack() }
+            onNavigateBack = { navController.popBackStack() },
         )
     }
 }

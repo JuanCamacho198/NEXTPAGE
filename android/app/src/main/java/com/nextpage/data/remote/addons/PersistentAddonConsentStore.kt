@@ -17,13 +17,13 @@ import android.content.Context
  * reads go through the in-memory cache, so this is safe to call from any
  * dispatcher, including the providers' I/O threads.
  */
-class PersistentAddonConsentStore(context: Context) : AddonConsentStore {
-
+class PersistentAddonConsentStore(
+    context: Context,
+) : AddonConsentStore {
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     @Synchronized
-    override fun hasConsent(addonId: String): Boolean =
-        prefs.getBoolean(consentKey(addonId), false)
+    override fun hasConsent(addonId: String): Boolean = prefs.getBoolean(consentKey(addonId), false)
 
     @Synchronized
     override fun recordConsent(addonId: String) {

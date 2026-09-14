@@ -29,19 +29,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.testTag
-import com.nextpage.presentation.screen.NavTags
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.tooling.preview.Preview
 import com.nextpage.R
 import com.nextpage.presentation.navigation.NextPageDestination
+import com.nextpage.presentation.screen.NavTags
 import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.ui.icons.NextPageIcons
@@ -49,7 +49,7 @@ import com.nextpage.ui.icons.NextPageIcons
 data class BottomNavItem(
     val route: String,
     @param:StringRes val labelRes: Int,
-    val icon: ImageVector
+    val icon: ImageVector,
 )
 
 /**
@@ -87,38 +87,41 @@ fun NextPageBottomNavBar(
     destinations: List<BottomNavItem>,
     currentRoute: String?,
     onTabSelected: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .navigationBarsPadding(),
-        color = MaterialTheme.colorScheme.surfaceContainer
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .navigationBarsPadding(),
+        color = MaterialTheme.colorScheme.surfaceContainer,
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(64.dp)
-                .padding(horizontal = 12.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(64.dp)
+                    .padding(horizontal = 12.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-                destinations.forEach { dest ->
-                    val isSelected = currentRoute == dest.route
-                    val navTag = when (dest.route) {
+            destinations.forEach { dest ->
+                val isSelected = currentRoute == dest.route
+                val navTag =
+                    when (dest.route) {
                         NextPageDestination.Home.route -> NavTags.HOME
                         NextPageDestination.Library.route -> NavTags.LIBRARY
                         NextPageDestination.Highlights.route -> NavTags.HIGHLIGHTS
                         NextPageDestination.Settings.route -> NavTags.SETTINGS
                         else -> dest.route
                     }
-                    NextPageBottomNavTab(
-                        item = dest,
-                        isSelected = isSelected,
-                        modifier = Modifier.weight(1f).testTag(navTag),
-                        onClick = { onTabSelected(dest.route) }
-                    )
-                }
+                NextPageBottomNavTab(
+                    item = dest,
+                    isSelected = isSelected,
+                    modifier = Modifier.weight(1f).testTag(navTag),
+                    onClick = { onTabSelected(dest.route) },
+                )
+            }
         }
     }
 }
@@ -133,7 +136,7 @@ private fun NextPageBottomNavTab(
     item: BottomNavItem,
     isSelected: Boolean,
     modifier: Modifier = Modifier,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
 
@@ -142,51 +145,53 @@ private fun NextPageBottomNavTab(
 
     val iconTint by animateColorAsState(
         targetValue = if (isSelected) activeTint else inactiveTint,
-        label = "navIconTint"
+        label = "navIconTint",
     )
     val pillColor by animateColorAsState(
         targetValue = if (isSelected) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent,
-        label = "navPillColor"
+        label = "navPillColor",
     )
     val pillPadding by animateDpAsState(
         targetValue = if (isSelected) 16.dp else 6.dp,
-        label = "navPillPadding"
+        label = "navPillPadding",
     )
     val iconScale by animateFloatAsState(
         targetValue = if (isSelected) 1.15f else 1f,
-        label = "navIconScale"
+        label = "navIconScale",
     )
 
     Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .selectable(
-                selected = isSelected,
-                role = Role.Tab,
-                interactionSource = interactionSource,
-                indication = LocalIndication.current,
-                onClick = onClick
-            )
-            .padding(vertical = 4.dp),
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(16.dp))
+                .selectable(
+                    selected = isSelected,
+                    role = Role.Tab,
+                    interactionSource = interactionSource,
+                    indication = LocalIndication.current,
+                    onClick = onClick,
+                ).padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .background(pillColor)
-                .padding(horizontal = pillPadding, vertical = 4.dp)
+            modifier =
+                Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(pillColor)
+                    .padding(horizontal = pillPadding, vertical = 4.dp),
         ) {
             Icon(
                 imageVector = item.icon,
                 contentDescription = stringResource(id = item.labelRes),
                 tint = iconTint,
-                modifier = Modifier
-                    .size(NextPageDimens.iconNavBar)
-                    .graphicsLayer {
-                        scaleX = iconScale
-                        scaleY = iconScale
-                    }
+                modifier =
+                    Modifier
+                        .size(NextPageDimens.iconNavBar)
+                        .graphicsLayer {
+                            scaleX = iconScale
+                            scaleY = iconScale
+                        },
             )
         }
 
@@ -196,33 +201,34 @@ private fun NextPageBottomNavTab(
             text = stringResource(id = item.labelRes),
             fontSize = 12.sp,
             color = iconTint,
-            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
+            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
         )
     }
 }
 
-private val previewDestinations = listOf(
-    BottomNavItem(
-        route = NextPageDestination.Home.route,
-        labelRes = R.string.nav_home,
-        icon = NextPageIcons.Home
-    ),
-    BottomNavItem(
-        route = NextPageDestination.Library.route,
-        labelRes = R.string.nav_library,
-        icon = NextPageIcons.Library
-    ),
-    BottomNavItem(
-        route = NextPageDestination.Highlights.route,
-        labelRes = R.string.nav_highlights,
-        icon = NextPageIcons.Highlights
-    ),
-    BottomNavItem(
-        route = NextPageDestination.Settings.route,
-        labelRes = R.string.nav_settings,
-        icon = NextPageIcons.Settings
+private val previewDestinations =
+    listOf(
+        BottomNavItem(
+            route = NextPageDestination.Home.route,
+            labelRes = R.string.nav_home,
+            icon = NextPageIcons.Home,
+        ),
+        BottomNavItem(
+            route = NextPageDestination.Library.route,
+            labelRes = R.string.nav_library,
+            icon = NextPageIcons.Library,
+        ),
+        BottomNavItem(
+            route = NextPageDestination.Highlights.route,
+            labelRes = R.string.nav_highlights,
+            icon = NextPageIcons.Highlights,
+        ),
+        BottomNavItem(
+            route = NextPageDestination.Settings.route,
+            labelRes = R.string.nav_settings,
+            icon = NextPageIcons.Settings,
+        ),
     )
-)
 
 @Preview(showBackground = true, name = "Bottom nav — Dark")
 @Composable
@@ -231,7 +237,7 @@ private fun NextPageBottomNavBarDarkPreview() {
         NextPageBottomNavBar(
             destinations = previewDestinations,
             currentRoute = NextPageDestination.Home.route,
-            onTabSelected = {}
+            onTabSelected = {},
         )
     }
 }
@@ -243,7 +249,7 @@ private fun NextPageBottomNavBarLightPreview() {
         NextPageBottomNavBar(
             destinations = previewDestinations,
             currentRoute = NextPageDestination.Home.route,
-            onTabSelected = {}
+            onTabSelected = {},
         )
     }
 }

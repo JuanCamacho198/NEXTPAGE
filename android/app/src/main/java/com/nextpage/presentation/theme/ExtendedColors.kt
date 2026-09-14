@@ -24,7 +24,7 @@ data class ExtendedColors(
     val chartAccent: Color,
     val bgHeader: Color,
     val borderSubtle: Color,
-    val welcomeBrandBlue: Color
+    val welcomeBrandBlue: Color,
 )
 
 /**
@@ -35,34 +35,37 @@ data class ExtendedColors(
  * [NextPageTheme] to read real values; using [Color.Unspecified] will fall back
  * to whatever Material 3 supplies for that role.
  */
-val LocalExtendedColors = staticCompositionLocalOf {
-    ExtendedColors(
-        readingBackground = Color.Unspecified,
-        chartAccent = Color.Unspecified,
-        bgHeader = Color.Unspecified,
-        borderSubtle = Color.Unspecified,
-        welcomeBrandBlue = Color.Unspecified
-    )
-}
+val LocalExtendedColors =
+    staticCompositionLocalOf {
+        ExtendedColors(
+            readingBackground = Color.Unspecified,
+            chartAccent = Color.Unspecified,
+            bgHeader = Color.Unspecified,
+            borderSubtle = Color.Unspecified,
+            welcomeBrandBlue = Color.Unspecified,
+        )
+    }
 
 /**
  * Dark-theme [ExtendedColors] — applied when [NextPageTheme] is rendering with `darkTheme = true`.
  */
-val darkExtendedColors = ExtendedColors(
-    readingBackground = ReadingBackgroundDark,
-    chartAccent = ChartAccent,
-    bgHeader = BgHeader,
-    borderSubtle = BorderSubtle,
-    welcomeBrandBlue = WelcomeBrandBlueDark
-)
+val darkExtendedColors =
+    ExtendedColors(
+        readingBackground = ReadingBackgroundDark,
+        chartAccent = ChartAccent,
+        bgHeader = BgHeader,
+        borderSubtle = BorderSubtle,
+        welcomeBrandBlue = WelcomeBrandBlueDark,
+    )
 
 /**
  * Light-theme [ExtendedColors] — applied when [NextPageTheme] is rendering with `darkTheme = false`.
  */
-val lightExtendedColors = ExtendedColors(
-    readingBackground = ReadingBackgroundLight,
-    chartAccent = ChartAccent,
-    bgHeader = BgHeader,
-    borderSubtle = BorderSubtle,
-    welcomeBrandBlue = PrimaryBlue
-)
+val lightExtendedColors =
+    ExtendedColors(
+        readingBackground = ReadingBackgroundLight,
+        chartAccent = ChartAccent,
+        bgHeader = BgHeader,
+        borderSubtle = BorderSubtle,
+        welcomeBrandBlue = PrimaryBlue,
+    )

@@ -15,7 +15,9 @@ sealed interface AccessResolverState {
     data object Loading : AccessResolverState
 
     /** Resolved legal options for the open book (may still be action-less). */
-    data class Loaded(val access: LegalAccess) : AccessResolverState
+    data class Loaded(
+        val access: LegalAccess,
+    ) : AccessResolverState
 
     /** Resolved with zero openable options — "sin coincidencias legales" copy. */
     data object Empty : AccessResolverState
@@ -31,7 +33,9 @@ sealed interface AccessResolverState {
      * was not consented yet: no resolve ran (zero I/O), the section prompts
      * for consent instead of rendering options.
      */
-    data class ConsentRequired(val addonId: String) : AccessResolverState
+    data class ConsentRequired(
+        val addonId: String,
+    ) : AccessResolverState
 }
 
 /**
@@ -48,15 +52,16 @@ fun mapAccessState(
     consentRequiredAddonId: String?,
     hasConsent: Boolean,
     access: LegalAccess?,
-    failed: Boolean
+    failed: Boolean,
 ): AccessResolverState {
     if (!isOnline) return AccessResolverState.Offline
     if (consentRequiredAddonId != null && !hasConsent) {
         return AccessResolverState.ConsentRequired(consentRequiredAddonId)
     }
     if (failed || access == null) return AccessResolverState.Error
-    val openable = access.options.count { it.url.isNotBlank() } +
-        if (access.canDownloadInApp) HAS_DOWNLOAD_BONUS else NO_DOWNLOAD_BONUS
+    val openable =
+        access.options.count { it.url.isNotBlank() } +
+            if (access.canDownloadInApp) HAS_DOWNLOAD_BONUS else NO_DOWNLOAD_BONUS
     return if (openable > NO_OPTIONS) {
         AccessResolverState.Loaded(access)
     } else {

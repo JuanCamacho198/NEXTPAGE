@@ -10,13 +10,13 @@ fun FilterSheetContent(
     showFilterSheet: Boolean,
     filterFormat: String,
     onFormatSelected: (String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     if (showFilterSheet) {
         FilterBottomSheet(
             selectedFormat = filterFormat,
             onFormatSelected = onFormatSelected,
-            onDismiss = onDismiss
+            onDismiss = onDismiss,
         )
     }
 }
@@ -31,7 +31,7 @@ private fun FilterSheetContentDarkPreview() {
             showFilterSheet = true,
             filterFormat = "epub",
             onFormatSelected = {},
-            onDismiss = {}
+            onDismiss = {},
         )
     }
 }
@@ -44,7 +44,7 @@ private fun FilterSheetContentLightPreview() {
             showFilterSheet = true,
             filterFormat = "epub",
             onFormatSelected = {},
-            onDismiss = {}
+            onDismiss = {},
         )
     }
 }

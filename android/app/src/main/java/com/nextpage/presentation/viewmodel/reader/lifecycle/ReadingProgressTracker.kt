@@ -33,9 +33,8 @@ class ReadingProgressTracker(
     private val readerRepository: ReaderRepository,
     private val updateReadingProgressUseCase: UpdateReadingProgressUseCase,
     private val onSelectionCleared: () -> Unit = {},
-    private val onErrorEvent: (UiEvent) -> Unit = {}
+    private val onErrorEvent: (UiEvent) -> Unit = {},
 ) : Clearable {
-
     private var observeProgressJob: Job? = null
     private var typographySnapshot: ReadingProgressCalculator.ViewportTypography? = null
     private var densitySnapshot: Float = 3f
@@ -60,7 +59,7 @@ class ReadingProgressTracker(
             it.copy(
                 readiumLocator = locator,
                 currentChapterIndex = newIndex,
-                progressPercent = progressPercent
+                progressPercent = progressPercent,
             )
         }
         updateProgressDisplay()
@@ -71,35 +70,45 @@ class ReadingProgressTracker(
                 bookId = bookId,
                 cfiLocation = "readium:${locator.href}",
                 percentage = progressPercent,
-                locatorJson = locatorJson
+                locatorJson = locatorJson,
             )
         }
         DebugDual.log(DebugEvent.ProgressEmit(bookId, progressPercent, "locatorChanged"))
     }
 
-    fun onReadiumViewportChanged(height: Int, width: Int = 0) {
+    fun onReadiumViewportChanged(
+        height: Int,
+        width: Int = 0,
+    ) {
         val hasChanged = state.value.readiumViewportHeight != height || state.value.readiumViewportWidth != width
         state.update { it.copy(readiumViewportHeight = height, readiumViewportWidth = width) }
         typographySnapshot?.let { snap ->
-            typographySnapshot = snap.copy(
-                viewportW = width.takeIf { it > 0 } ?: snap.viewportW,
-                viewportH = height.takeIf { it > 0 } ?: snap.viewportH
-            )
+            typographySnapshot =
+                snap.copy(
+                    viewportW = width.takeIf { it > 0 } ?: snap.viewportW,
+                    viewportH = height.takeIf { it > 0 } ?: snap.viewportH,
+                )
         }
         if (hasChanged) updateProgressDisplay()
     }
 
-    fun onTypographyConfigChanged(fontSizeSp: Float, lineHeight: Float, pageMarginsDp: Float = 16f, density: Float = 3f) {
+    fun onTypographyConfigChanged(
+        fontSizeSp: Float,
+        lineHeight: Float,
+        pageMarginsDp: Float = 16f,
+        density: Float = 3f,
+    ) {
         densitySnapshot = density
         val vp = state.value
-        typographySnapshot = ReadingProgressCalculator.ViewportTypography(
-            viewportW = vp.readiumViewportWidth.takeIf { it > 0 } ?: 360,
-            viewportH = vp.readiumViewportHeight.takeIf { it > 0 } ?: 720,
-            fontSizeSp = fontSizeSp,
-            lineHeight = lineHeight,
-            pageMarginsDp = pageMarginsDp,
-            density = density
-        )
+        typographySnapshot =
+            ReadingProgressCalculator.ViewportTypography(
+                viewportW = vp.readiumViewportWidth.takeIf { it > 0 } ?: 360,
+                viewportH = vp.readiumViewportHeight.takeIf { it > 0 } ?: 720,
+                fontSizeSp = fontSizeSp,
+                lineHeight = lineHeight,
+                pageMarginsDp = pageMarginsDp,
+                density = density,
+            )
         updateProgressDisplay()
     }
 
@@ -108,12 +117,16 @@ class ReadingProgressTracker(
         updateProgressDisplay()
     }
 
-    fun updateProgress(bookId: String, cfiLocation: String, percentage: Float) {
+    fun updateProgress(
+        bookId: String,
+        cfiLocation: String,
+        percentage: Float,
+    ) {
         scope.launch(mainDispatcher) {
             updateReadingProgressUseCase(
                 bookId = bookId,
                 cfiLocation = cfiLocation,
-                percentage = percentage.coerceIn(0f, 100f)
+                percentage = percentage.coerceIn(0f, 100f),
             )
         }
     }
@@ -121,33 +134,42 @@ class ReadingProgressTracker(
     fun restoreProgressForBook(bookId: String) {
         observeProgressJob?.cancel()
         state.update { it.copy(selectedBookId = bookId, isLoading = true) }
-        observeProgressJob = scope.launch(mainDispatcher) {
-            readerRepository.observeProgress(bookId).collect { progress ->
-                state.update { s ->
-                    var newState = s.copy(readingProgress = progress, isLoading = false)
-                    if (progress != null) {
-                        val cfi = progress.cfiLocation
-                        if (cfi.startsWith("pdfpage:")) {
-                            val page = cfi.removePrefix("pdfpage:").toIntOrNull()
-                            if (page != null) newState = newState.copy(currentPdfPage = page)
-                        } else if (cfi.startsWith("epubcfi(")) {
-                            val chapterMatch = Regex("/6/(\\d+)").find(cfi)
-                            val spineIdx = chapterMatch?.groupValues?.getOrNull(1)?.toIntOrNull()?.minus(1)
-                            if (spineIdx != null) {
-                                val chapters = newState.chapters
-                                val listPos = if (chapters.isNotEmpty()) {
-                                    chapters.indexOfFirst { it.index == spineIdx }.takeIf { it >= 0 }
-                                } else null
-                                val resolved = listPos ?: spineIdx
-                                newState = newState.copy(currentChapterIndex = resolved)
+        observeProgressJob =
+            scope.launch(mainDispatcher) {
+                readerRepository.observeProgress(bookId).collect { progress ->
+                    state.update { s ->
+                        var newState = s.copy(readingProgress = progress, isLoading = false)
+                        if (progress != null) {
+                            val cfi = progress.cfiLocation
+                            if (cfi.startsWith("pdfpage:")) {
+                                val page = cfi.removePrefix("pdfpage:").toIntOrNull()
+                                if (page != null) newState = newState.copy(currentPdfPage = page)
+                            } else if (cfi.startsWith("epubcfi(")) {
+                                val chapterMatch = Regex("/6/(\\d+)").find(cfi)
+                                val spineIdx =
+                                    chapterMatch
+                                        ?.groupValues
+                                        ?.getOrNull(1)
+                                        ?.toIntOrNull()
+                                        ?.minus(1)
+                                if (spineIdx != null) {
+                                    val chapters = newState.chapters
+                                    val listPos =
+                                        if (chapters.isNotEmpty()) {
+                                            chapters.indexOfFirst { it.index == spineIdx }.takeIf { it >= 0 }
+                                        } else {
+                                            null
+                                        }
+                                    val resolved = listPos ?: spineIdx
+                                    newState = newState.copy(currentChapterIndex = resolved)
+                                }
                             }
                         }
+                        newState
                     }
-                    newState
+                    updateProgressDisplay()
                 }
-                updateProgressDisplay()
             }
-        }
     }
 
     fun onProgressChange(percent: Float) {
@@ -196,9 +218,11 @@ class ReadingProgressTracker(
             val computedTitle = expectedTitle
             val hrefMismatch = publication != null && computedIndex == null && locatorHref.isNotBlank()
             val chapterHref = chapters.getOrNull(resolvedChapterIndex)?.href
-            val hrefTitleMismatch = chapterHref != null && locatorHref.isNotBlank() &&
-                chapterHref.substringAfterLast('/').substringBefore('#').lowercase() !=
-                locatorHref.substringAfterLast('/').substringBefore('#').lowercase()
+            val hrefTitleMismatch =
+                chapterHref != null &&
+                    locatorHref.isNotBlank() &&
+                    chapterHref.substringAfterLast('/').substringBefore('#').lowercase() !=
+                    locatorHref.substringAfterLast('/').substringBefore('#').lowercase()
             if (hrefMismatch || hrefTitleMismatch) {
                 DebugDual.logFooterMismatch(expectedTitle, locatorHref)
                 DebugDual.log(DebugEvent.FooterMismatch(locatorHref, computedTitle, expectedTitle))
@@ -207,39 +231,43 @@ class ReadingProgressTracker(
             }
             val totalProgression = locator.locations.totalProgression?.toFloat() ?: 0f
             percent = (totalProgression * 100f).coerceIn(0f, 100f)
-            val chapterTitle = chapters.getOrNull(resolvedChapterIndex)?.title?.takeIf { it.isNotBlank() }
-                ?: locatorHref.substringAfterLast('/').substringBefore('#').takeIf { it.isNotBlank() }
-                ?: "—"
+            val chapterTitle =
+                chapters.getOrNull(resolvedChapterIndex)?.title?.takeIf { it.isNotBlank() }
+                    ?: locatorHref.substringAfterLast('/').substringBefore('#').takeIf { it.isNotBlank() }
+                    ?: "—"
             val typography = typographySnapshot
-            val viewportTypography = typography?.copy(
-                viewportW = snapshot.readiumViewportWidth.takeIf { it > 0 } ?: typography.viewportW,
-                viewportH = snapshot.readiumViewportHeight.takeIf { it > 0 } ?: typography.viewportH,
-                density = densitySnapshot
-            ) ?: ReadingProgressCalculator.ViewportTypography(
-                viewportW = snapshot.readiumViewportWidth.takeIf { it > 0 } ?: 360,
-                viewportH = snapshot.readiumViewportHeight.takeIf { it > 0 } ?: 720,
-                fontSizeSp = 16f,
-                lineHeight = 1.6f,
-                pageMarginsDp = 16f,
-                density = densitySnapshot
-            )
-            val calc = ReadingProgressCalculator.compute(
-                publication = publication,
-                locator = locator,
-                chapters = chapters,
-                currentChapterIndex = resolvedChapterIndex,
-                viewport = viewportTypography
-            )
-            val remaining = calc.remaining
-            label = if (remaining > 0 && chapterTitle != "—") {
-                application.getString(
-                    com.nextpage.R.string.reader_pages_remaining,
-                    chapterTitle,
-                    remaining
+            val viewportTypography =
+                typography?.copy(
+                    viewportW = snapshot.readiumViewportWidth.takeIf { it > 0 } ?: typography.viewportW,
+                    viewportH = snapshot.readiumViewportHeight.takeIf { it > 0 } ?: typography.viewportH,
+                    density = densitySnapshot,
+                ) ?: ReadingProgressCalculator.ViewportTypography(
+                    viewportW = snapshot.readiumViewportWidth.takeIf { it > 0 } ?: 360,
+                    viewportH = snapshot.readiumViewportHeight.takeIf { it > 0 } ?: 720,
+                    fontSizeSp = 16f,
+                    lineHeight = 1.6f,
+                    pageMarginsDp = 16f,
+                    density = densitySnapshot,
                 )
-            } else {
-                chapterTitle
-            }
+            val calc =
+                ReadingProgressCalculator.compute(
+                    publication = publication,
+                    locator = locator,
+                    chapters = chapters,
+                    currentChapterIndex = resolvedChapterIndex,
+                    viewport = viewportTypography,
+                )
+            val remaining = calc.remaining
+            label =
+                if (remaining > 0 && chapterTitle != "—") {
+                    application.getString(
+                        com.nextpage.R.string.reader_pages_remaining,
+                        chapterTitle,
+                        remaining,
+                    )
+                } else {
+                    chapterTitle
+                }
         } else if (snapshot.chapters.isNotEmpty()) {
             val current = snapshot.currentChapterIndex + 1
             val total = snapshot.chapters.size
@@ -255,19 +283,29 @@ class ReadingProgressTracker(
     private fun resolveChapterListIndex(
         locator: Locator,
         publication: Publication?,
-        chapters: List<BookChapter>
+        chapters: List<BookChapter>,
     ): Int? {
         if (chapters.isEmpty()) return null
         val locatorHref = locator.href.toString()
+
         fun normalizeFile(href: String): String =
-            href.substringAfterLast('/').substringBefore('#').substringBefore('?').trim().lowercase()
+            href
+                .substringAfterLast('/')
+                .substringBefore('#')
+                .substringBefore('?')
+                .trim()
+                .lowercase()
         val normLocatorFile = normalizeFile(locatorHref)
         chapters.indexOfFirst { it.href == locatorHref }.takeIf { it >= 0 }?.let { return it }
         val locatorBase = locatorHref.substringBefore('#').substringBefore('?')
-        chapters.indexOfFirst { it.href.substringBefore('#').substringBefore('?') == locatorBase }
-            .takeIf { it >= 0 }?.let { return it }
-        chapters.indexOfFirst { normalizeFile(it.href) == normLocatorFile }
-            .takeIf { it >= 0 }?.let { return it }
+        chapters
+            .indexOfFirst { it.href.substringBefore('#').substringBefore('?') == locatorBase }
+            .takeIf { it >= 0 }
+            ?.let { return it }
+        chapters
+            .indexOfFirst { normalizeFile(it.href) == normLocatorFile }
+            .takeIf { it >= 0 }
+            ?.let { return it }
         publication?.let { pub ->
             try {
                 val link = pub.linkWithHref(locator.href) ?: return@let null
@@ -279,12 +317,16 @@ class ReadingProgressTracker(
                     if (adjusted in chapters.indices) return adjusted
                     if (roIndex in chapters.indices) return roIndex
                 }
-            } catch (_: Throwable) {}
+            } catch (_: Throwable) {
+            }
         }
         return null
     }
 
-    private fun updatePdfProgress(currentPage: Int, totalPages: Int) {
+    private fun updatePdfProgress(
+        currentPage: Int,
+        totalPages: Int,
+    ) {
         val bookId = state.value.selectedBookId ?: return
         if (totalPages > 0) {
             val percentage = (((currentPage + 1).toFloat() / totalPages) * 100f).coerceIn(0f, 100f)

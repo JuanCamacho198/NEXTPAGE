@@ -22,12 +22,12 @@ import com.nextpage.presentation.theme.NextPageTheme
  */
 @Composable
 fun NextPageDivider(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     HorizontalDivider(
         modifier = modifier,
         color = MaterialTheme.colorScheme.outlineVariant,
-        thickness = 1.dp
+        thickness = 1.dp,
     )
 }
 

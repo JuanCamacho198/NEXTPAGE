@@ -7,7 +7,6 @@ import org.junit.Test
 
 /** Unit tests for [Pkce] (RFC 7636 verifier/challenge contract). */
 class PkceTest {
-
     @Test
     fun generateVerifier_is43CharsBase64Url() {
         val verifier = Pkce.generateVerifier()

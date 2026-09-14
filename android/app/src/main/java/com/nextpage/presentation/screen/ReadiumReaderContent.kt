@@ -11,7 +11,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.fragment.app.FragmentActivity
@@ -52,27 +51,28 @@ fun ReadiumReaderContent(
     inspectHighlightsHtmlTrigger: SharedFlow<Unit> = MutableSharedFlow(),
     logWebViewTreeTrigger: SharedFlow<Unit> = MutableSharedFlow(),
     onShowChrome: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current as FragmentActivity
     val fragmentManager = remember { context.supportFragmentManager }
     val containerId = remember { View.generateViewId() }
 
-    val hostState = rememberFragmentHost(
-        publication = publication,
-        navigatorConfig = navigatorConfig,
-        fragmentManager = fragmentManager,
-        containerId = containerId,
-        initialLocator = initialLocator,
-        viewModel = viewModel
-    )
+    val hostState =
+        rememberFragmentHost(
+            publication = publication,
+            navigatorConfig = navigatorConfig,
+            fragmentManager = fragmentManager,
+            containerId = containerId,
+            initialLocator = initialLocator,
+            viewModel = viewModel,
+        )
 
     rememberSelectionBridge(
         navigatorFragment = hostState.navigatorFragment.value,
         highlights = highlights,
         publication = publication,
         readingOrder = hostState.readingOrder,
-        viewModel = viewModel
+        viewModel = viewModel,
     )
 
     // ── Settings sync (readerSettings → EpubPreferences) ──────────
@@ -98,7 +98,8 @@ fun ReadiumReaderContent(
                     DebugLog.warn("InspectHL", "No navigator fragment available")
                     return@collect
                 }
-                val js = """
+                val js =
+                    """
                     (function(){
                         var results = [];
                         var spans = document.querySelectorAll('span, a, mark');
@@ -117,16 +118,19 @@ fun ReadiumReaderContent(
                         }
                         return JSON.stringify(results);
                     })()
-                """.trimIndent()
+                    """.trimIndent()
                 try {
                     val result = currentFrag.evaluateJavascript(js)
                     if (result.isNullOrBlank()) {
                         DebugLog.info("InspectHL", "Found 0 highlighted elements (empty result)")
                         return@collect
                     }
-                    val trimmed = result.trim().removeSurrounding("\"")
-                        .replace("\\\"", "\"")
-                        .replace("\\n", "\n")
+                    val trimmed =
+                        result
+                            .trim()
+                            .removeSurrounding("\"")
+                            .replace("\\\"", "\"")
+                            .replace("\\n", "\n")
                     val arr = JSONArray(trimmed)
                     val count = arr.length()
                     DebugLog.info("InspectHL", "Found $count highlighted elements")
@@ -158,12 +162,20 @@ fun ReadiumReaderContent(
                     return@collect
                 }
                 val sb = StringBuilder()
-                fun dumpView(v: View, depth: Int) {
-                    sb.append("  ".repeat(depth))
+
+                fun dumpView(
+                    v: View,
+                    depth: Int,
+                ) {
+                    sb
+                        .append("  ".repeat(depth))
                         .append(v::class.java.simpleName)
-                        .append(" id=").append(v.id)
-                        .append(" visible=").append(v.visibility)
-                        .append(" clickable=").append(v.isClickable)
+                        .append(" id=")
+                        .append(v.id)
+                        .append(" visible=")
+                        .append(v.visibility)
+                        .append(" clickable=")
+                        .append(v.isClickable)
                         .append('\n')
                     if (v is android.view.ViewGroup) {
                         for (i in 0 until v.childCount) {
@@ -210,7 +222,7 @@ fun ReadiumReaderContent(
             viewModel.clearSelectionEvent.collect {
                 try {
                     frag.evaluateJavascript(
-                        "(function(){var s=window.getSelection();if(s)s.removeAllRanges();})()"
+                        "(function(){var s=window.getSelection();if(s)s.removeAllRanges();})()",
                     )
                     Log.d("SelectionDebug", "WebView selection cleared via JS")
                 } catch (e: Throwable) {

@@ -43,7 +43,14 @@ import com.nextpage.ui.components.atoms.NextPageDialog
 import com.nextpage.ui.icons.NextPageIcons
 
 @Composable
-fun DownloadableBooksSection(books: List<UserBookRow>, downloadStateMap: Map<String, DownloadState>, isDriveAuthorized: Boolean, isLoading: Boolean, onConnectDrive: (UserBookRow) -> Unit, onConfirmDownload: (bookId: String) -> Unit) {
+fun DownloadableBooksSection(
+    books: List<UserBookRow>,
+    downloadStateMap: Map<String, DownloadState>,
+    isDriveAuthorized: Boolean,
+    isLoading: Boolean,
+    onConnectDrive: (UserBookRow) -> Unit,
+    onConfirmDownload: (bookId: String) -> Unit,
+) {
     var pendingDownloadBook by remember { mutableStateOf<UserBookRow?>(null) }
     if (isLoading && books.isEmpty()) {
         Column(modifier = Modifier.padding(top = 8.dp)) {
@@ -70,12 +77,19 @@ fun DownloadableBooksSection(books: List<UserBookRow>, downloadStateMap: Map<Str
         Spacer(modifier = Modifier.height(12.dp))
     }
     pendingDownloadBook?.let { book ->
-        NextPageDialog(title = stringResource(R.string.download_confirm_title), body = if (book.author.isNullOrBlank()) stringResource(R.string.download_confirm_body_no_author, book.title) else stringResource(R.string.download_confirm_body, book.title, book.author), confirmText = stringResource(R.string.book_download), dismissText = stringResource(R.string.action_cancel), onConfirm = { onConfirmDownload(book.id); pendingDownloadBook = null }, onDismiss = { pendingDownloadBook = null }, icon = NextPageIcons.CloudDownload)
+        NextPageDialog(title = stringResource(R.string.download_confirm_title), body = if (book.author.isNullOrBlank()) stringResource(R.string.download_confirm_body_no_author, book.title) else stringResource(R.string.download_confirm_body, book.title, book.author), confirmText = stringResource(R.string.book_download), dismissText = stringResource(R.string.action_cancel), onConfirm = {
+            onConfirmDownload(book.id)
+            pendingDownloadBook = null
+        }, onDismiss = { pendingDownloadBook = null }, icon = NextPageIcons.CloudDownload)
     }
 }
 
 @Composable
-private fun DownloadableBookCard(book: UserBookRow, isDownloading: Boolean, onDownload: () -> Unit) {
+private fun DownloadableBookCard(
+    book: UserBookRow,
+    isDownloading: Boolean,
+    onDownload: () -> Unit,
+) {
     Card(modifier = Modifier.width(140.dp), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))) {
         Column {
             Box(modifier = Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))) { CoverThumbnail(coverPath = book.coverUrl, modifier = Modifier.matchParentSize()) }

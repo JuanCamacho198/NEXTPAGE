@@ -7,7 +7,7 @@ data class DebugInfo(
     val syncDebug: SyncDebugSection = SyncDebugSection(),
     val supabaseSyncDebug: SupabaseSyncDebugSection = SupabaseSyncDebugSection(),
     val pdfDebug: PdfDebugSection? = null,
-    val isLoadingDbCounts: Boolean = false
+    val isLoadingDbCounts: Boolean = false,
 )
 
 data class SessionSection(
@@ -16,14 +16,14 @@ data class SessionSection(
     val displayName: String? = null,
     val authMode: String = "",
     val isSupabaseConfigured: Boolean = false,
-    val hasWiringIssue: Boolean = false
+    val hasWiringIssue: Boolean = false,
 )
 
 data class InitTimingsSection(
     val dbInitMs: Long = 0,
     val epubImportInitMs: Long = 0,
     val readerRepoInitMs: Long = 0,
-    val totalInitMs: Long = 0
+    val totalInitMs: Long = 0,
 )
 
 data class DbCountsSection(
@@ -31,23 +31,23 @@ data class DbCountsSection(
     val highlights: Int = -1,
     val bookmarks: Int = -1,
     val readingSessions: Int = -1,
-    val readingProgress: Int = -1
+    val readingProgress: Int = -1,
 )
 
 data class SyncDebugSection(
     val state: String = "unknown",
-    val pendingCount: Int = 0
+    val pendingCount: Int = 0,
 )
 
 data class SupabaseSyncDebugSection(
     val state: String = "unknown",
     val gatedReason: String? = null,
-    val pendingCount: Int = 0
+    val pendingCount: Int = 0,
 )
 
 data class PdfDebugSection(
     val currentPage: Int = 0,
     val totalPages: Int = 0,
     val loadTimeMs: Long? = null,
-    val filePath: String? = null
+    val filePath: String? = null,
 )

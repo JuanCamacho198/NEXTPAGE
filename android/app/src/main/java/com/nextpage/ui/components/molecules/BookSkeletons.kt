@@ -45,7 +45,10 @@ private val CARD_CORNER = 12.dp
  * @param cards Number of card placeholders to render.
  */
 @Composable
-fun ContinueReadingSkeleton(modifier: Modifier = Modifier, cards: Int = 3) {
+fun ContinueReadingSkeleton(
+    modifier: Modifier = Modifier,
+    cards: Int = 3,
+) {
     Column(modifier = modifier.fillMaxWidth()) {
         NextPageSkeletonBox(modifier = Modifier.width(160.dp).height(20.dp))
         Spacer(modifier = Modifier.height(NextPageDimens.spacingSm))
@@ -58,15 +61,16 @@ fun ContinueReadingSkeleton(modifier: Modifier = Modifier, cards: Int = 3) {
 @Composable
 private fun ContinueReadingCardSkeleton() {
     Row(
-        modifier = Modifier
-            .width(240.dp)
-            .clip(RoundedCornerShape(NextPageDimens.spacingSm))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = CONTAINER_ALPHA))
-            .padding(NextPageDimens.spacingMd)
+        modifier =
+            Modifier
+                .width(240.dp)
+                .clip(RoundedCornerShape(NextPageDimens.spacingSm))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = CONTAINER_ALPHA))
+                .padding(NextPageDimens.spacingMd),
     ) {
         NextPageSkeletonBox(
             modifier = Modifier.width(80.dp).height(120.dp),
-            radius = NextPageDimens.spacingXs
+            radius = NextPageDimens.spacingXs,
         )
         Spacer(modifier = Modifier.width(NextPageDimens.spacingMd))
         Column(modifier = Modifier.weight(1f)) {
@@ -86,10 +90,13 @@ private fun ContinueReadingCardSkeleton() {
  * @param rows Number of row placeholders to render.
  */
 @Composable
-fun BookListSkeleton(modifier: Modifier = Modifier, rows: Int = 5) {
+fun BookListSkeleton(
+    modifier: Modifier = Modifier,
+    rows: Int = 5,
+) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         repeat(rows) { BookListRowSkeleton() }
     }
@@ -98,11 +105,12 @@ fun BookListSkeleton(modifier: Modifier = Modifier, rows: Int = 5) {
 @Composable
 private fun BookListRowSkeleton() {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(CARD_CORNER))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = CONTAINER_ALPHA))
-            .padding(12.dp)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(CARD_CORNER))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = CONTAINER_ALPHA))
+                .padding(12.dp),
     ) {
         NextPageSkeletonBox(modifier = Modifier.width(60.dp).height(80.dp), radius = 8.dp)
         Spacer(modifier = Modifier.width(12.dp))
@@ -122,16 +130,19 @@ private fun BookListRowSkeleton() {
  * @param cards Number of card placeholders to render.
  */
 @Composable
-fun BookGridSkeleton(modifier: Modifier = Modifier, cards: Int = 6) {
+fun BookGridSkeleton(
+    modifier: Modifier = Modifier,
+    cards: Int = 6,
+) {
     val rows = (cards + 1) / 2
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         repeat(rows) { rowIndex ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 repeat(2) { columnIndex ->
                     if (rowIndex * 2 + columnIndex < cards) {
@@ -148,14 +159,15 @@ fun BookGridSkeleton(modifier: Modifier = Modifier, cards: Int = 6) {
 @Composable
 private fun BookGridCardSkeleton(modifier: Modifier = Modifier) {
     Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(CARD_CORNER))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = CONTAINER_ALPHA))
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(CARD_CORNER))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = CONTAINER_ALPHA)),
     ) {
         NextPageSkeletonBox(modifier = Modifier.fillMaxWidth().height(220.dp), radius = 0.dp)
         Column(
             modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             NextPageSkeletonBox(modifier = Modifier.fillMaxWidth().height(14.dp))
             NextPageSkeletonBox(modifier = Modifier.fillMaxWidth(0.5f).height(12.dp))
@@ -176,12 +188,12 @@ fun QuickAccessSkeleton(modifier: Modifier = Modifier) {
             repeat(2) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)
+                    horizontalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm),
                 ) {
                     repeat(2) {
                         NextPageSkeletonBox(
                             modifier = Modifier.weight(1f).height(108.dp),
-                            radius = NextPageDimens.spacingSm
+                            radius = NextPageDimens.spacingSm,
                         )
                     }
                 }

@@ -30,16 +30,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -54,6 +53,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nextpage.R
 import com.nextpage.ui.icons.NextPageIcons
 import kotlinx.coroutines.Dispatchers
@@ -88,33 +88,49 @@ data class CrashEntry(
     val message: String,
     val stackTrace: String,
     val logs: List<String>,
-    val fullText: String
+    val fullText: String,
 )
 
 /**
  * Parses a crash file created by [NextPageApplication]'s crash handler.
  * Returns `null` if the file cannot be read or parsed.
  */
-private fun parseCrashFile(file: File): CrashEntry? {
-    return runCatching {
+private fun parseCrashFile(file: File): CrashEntry? =
+    runCatching {
         val lines = file.readLines()
-        val timestamp = lines.firstOrNull { it.startsWith("Timestamp:") }
-            ?.removePrefix("Timestamp:")?.trim()?.toLongOrNull() ?: 0L
-        val thread = lines.firstOrNull { it.startsWith("Thread:") }
-            ?.removePrefix("Thread:")?.trim() ?: ""
-        val msg = lines.firstOrNull { it.startsWith("Message:") }
-            ?.removePrefix("Message:")?.trim() ?: ""
+        val timestamp =
+            lines
+                .firstOrNull { it.startsWith("Timestamp:") }
+                ?.removePrefix("Timestamp:")
+                ?.trim()
+                ?.toLongOrNull() ?: 0L
+        val thread =
+            lines
+                .firstOrNull { it.startsWith("Thread:") }
+                ?.removePrefix("Thread:")
+                ?.trim() ?: ""
+        val msg =
+            lines
+                .firstOrNull { it.startsWith("Message:") }
+                ?.removePrefix("Message:")
+                ?.trim() ?: ""
         val stackStart = lines.indexOfFirst { it == "--- Stack Trace ---" }
         val logsStart = lines.indexOfFirst { it == "--- Logs ---" }
 
-        val stackTrace = if (stackStart >= 0) {
-            val end = if (logsStart > stackStart) logsStart else lines.size
-            lines.subList(stackStart + 1, end).joinToString("\n")
-        } else ""
+        val stackTrace =
+            if (stackStart >= 0) {
+                val end = if (logsStart > stackStart) logsStart else lines.size
+                lines.subList(stackStart + 1, end).joinToString("\n")
+            } else {
+                ""
+            }
 
-        val crashLogs = if (logsStart >= 0) {
-            lines.subList(logsStart + 1, lines.size)
-        } else emptyList()
+        val crashLogs =
+            if (logsStart >= 0) {
+                lines.subList(logsStart + 1, lines.size)
+            } else {
+                emptyList()
+            }
 
         CrashEntry(
             fileName = file.name,
@@ -123,24 +139,25 @@ private fun parseCrashFile(file: File): CrashEntry? {
             message = msg,
             stackTrace = stackTrace,
             logs = crashLogs,
-            fullText = lines.joinToString("\n")
+            fullText = lines.joinToString("\n"),
         )
     }.getOrNull()
-}
 
 /**
  * Loads and parses all crash files from [crashDir], sorted newest-first.
  * Runs on [Dispatchers.IO].
  */
-private suspend fun loadCrashes(crashDir: File): List<CrashEntry> = withContext(Dispatchers.IO) {
-    runCatching {
-        crashDir.listFiles()
-            ?.filter { it.name.startsWith("crash_") && it.name.endsWith(".txt") }
-            ?.sortedByDescending { it.lastModified() }
-            ?.mapNotNull { parseCrashFile(it) }
-            ?: emptyList()
-    }.getOrDefault(emptyList())
-}
+private suspend fun loadCrashes(crashDir: File): List<CrashEntry> =
+    withContext(Dispatchers.IO) {
+        runCatching {
+            crashDir
+                .listFiles()
+                ?.filter { it.name.startsWith("crash_") && it.name.endsWith(".txt") }
+                ?.sortedByDescending { it.lastModified() }
+                ?.mapNotNull { parseCrashFile(it) }
+                ?: emptyList()
+        }.getOrDefault(emptyList())
+    }
 
 /**
  * Builds the export text for the currently selected tab.
@@ -149,13 +166,17 @@ private fun buildCopyText(
     tab: Int,
     crashes: List<CrashEntry>,
     liveLogs: List<DebugLog.DebugEvent>,
-    levelFilter: Set<DebugLog.Level>
-): String {
-    return when (tab) {
+    levelFilter: Set<DebugLog.Level>,
+): String =
+    when (tab) {
         0 -> crashes.joinToString("\n\n---\n\n") { it.fullText }
         1 -> {
-            val filtered = if (levelFilter.isEmpty()) liveLogs
-            else liveLogs.filter { it.level in levelFilter }
+            val filtered =
+                if (levelFilter.isEmpty()) {
+                    liveLogs
+                } else {
+                    liveLogs.filter { it.level in levelFilter }
+                }
             val sdf = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
             filtered.joinToString("\n") { e ->
                 "[${e.level.name}] ${sdf.format(Date(e.timestamp))} ${e.tag}: ${e.message}"
@@ -163,7 +184,6 @@ private fun buildCopyText(
         }
         else -> ""
     }
-}
 
 /**
  * Full-screen debug log viewer with two tabs:
@@ -182,14 +202,15 @@ private fun buildCopyText(
 @Composable
 fun LogViewerScreen(
     onBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf(
-        stringResource(R.string.debug_log_viewer_tab_crashes),
-        stringResource(R.string.debug_log_viewer_tab_live)
-    )
+    val tabs =
+        listOf(
+            stringResource(R.string.debug_log_viewer_tab_crashes),
+            stringResource(R.string.debug_log_viewer_tab_live),
+        )
 
     // ── Crash state ───────────────────────────────────────────────
     var crashes by remember { mutableStateOf<List<CrashEntry>>(emptyList()) }
@@ -213,33 +234,35 @@ fun LogViewerScreen(
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        modifier = modifier
+        modifier = modifier,
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding),
         ) {
             // ── Top bar ───────────────────────────────────────────
             Surface(
                 color = MaterialTheme.colorScheme.surface,
-                shadowElevation = 2.dp
+                shadowElevation = 2.dp,
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 4.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(start = 4.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = NextPageIcons.ArrowBack,
-                            contentDescription = stringResource(R.string.nav_back)
+                            contentDescription = stringResource(R.string.nav_back),
                         )
                     }
                     Text(
                         text = stringResource(R.string.debug_log_viewer_title),
-                        style = MaterialTheme.typography.titleLarge
+                        style = MaterialTheme.typography.titleLarge,
                     )
                 }
             }
@@ -250,34 +273,36 @@ fun LogViewerScreen(
                     Tab(
                         selected = selectedTab == index,
                         onClick = { selectedTab = index },
-                        text = { Text(title) }
+                        text = { Text(title) },
                     )
                 }
             }
 
             // ── Action row (Copy All / Share) ──────────────────────
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 OutlinedButton(
                     onClick = {
                         val text = buildCopyText(selectedTab, crashes, liveLogs, levelFilter)
                         if (text.isNotEmpty()) {
-                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE)
-                                as ClipboardManager
+                            val clipboard =
+                                context.getSystemService(Context.CLIPBOARD_SERVICE)
+                                    as ClipboardManager
                             clipboard.setPrimaryClip(
-                                ClipData.newPlainText("log", text)
+                                ClipData.newPlainText("log", text),
                             )
                             scope.launch {
                                 snackbarHostState.showSnackbar(
-                                    context.getString(R.string.debug_log_copied)
+                                    context.getString(R.string.debug_log_copied),
                                 )
                             }
                         }
-                    }
+                    },
                 ) {
                     Text(stringResource(R.string.debug_log_viewer_copy_all))
                 }
@@ -286,18 +311,19 @@ fun LogViewerScreen(
                     onClick = {
                         val text = buildCopyText(selectedTab, crashes, liveLogs, levelFilter)
                         if (text.isNotEmpty()) {
-                            val intent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, text)
-                            }
+                            val intent =
+                                Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, text)
+                                }
                             context.startActivity(
                                 Intent.createChooser(
                                     intent,
-                                    context.getString(R.string.debug_log_viewer_share)
-                                )
+                                    context.getString(R.string.debug_log_viewer_share),
+                                ),
                             )
                         }
-                    }
+                    },
                 ) {
                     Text(stringResource(R.string.debug_log_viewer_share))
                 }
@@ -305,30 +331,34 @@ fun LogViewerScreen(
 
             // ── Tab content ───────────────────────────────────────
             when (selectedTab) {
-                0 -> CrashesTab(
-                    crashes = crashes,
-                    isLoading = isLoadingCrashes,
-                    expandedFiles = expandedCrashFiles,
-                    onToggleExpand = { file ->
-                        expandedCrashFiles = if (file in expandedCrashFiles) {
-                            expandedCrashFiles - file
-                        } else {
-                            expandedCrashFiles + file
-                        }
-                    }
-                )
+                0 ->
+                    CrashesTab(
+                        crashes = crashes,
+                        isLoading = isLoadingCrashes,
+                        expandedFiles = expandedCrashFiles,
+                        onToggleExpand = { file ->
+                            expandedCrashFiles =
+                                if (file in expandedCrashFiles) {
+                                    expandedCrashFiles - file
+                                } else {
+                                    expandedCrashFiles + file
+                                }
+                        },
+                    )
 
-                1 -> LiveLogsTab(
-                    logs = liveLogs,
-                    levelFilter = levelFilter,
-                    onLevelFilterChange = { level ->
-                        levelFilter = if (level in levelFilter) {
-                            levelFilter - level
-                        } else {
-                            levelFilter + level
-                        }
-                    }
-                )
+                1 ->
+                    LiveLogsTab(
+                        logs = liveLogs,
+                        levelFilter = levelFilter,
+                        onLevelFilterChange = { level ->
+                            levelFilter =
+                                if (level in levelFilter) {
+                                    levelFilter - level
+                                } else {
+                                    levelFilter + level
+                                }
+                        },
+                    )
             }
         }
     }
@@ -341,37 +371,37 @@ private fun CrashesTab(
     crashes: List<CrashEntry>,
     isLoading: Boolean,
     expandedFiles: Set<String>,
-    onToggleExpand: (String) -> Unit
+    onToggleExpand: (String) -> Unit,
 ) {
     if (isLoading) {
         Box(
             modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
+            contentAlignment = Alignment.Center,
         ) {
             CircularProgressIndicator()
         }
     } else if (crashes.isEmpty()) {
         Box(
             modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
+            contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = stringResource(R.string.debug_log_viewer_no_crashes),
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     } else {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(crashes, key = { it.fileName }) { crash ->
                 CrashCard(
                     crash = crash,
                     isExpanded = crash.fileName in expandedFiles,
-                    onToggleExpand = { onToggleExpand(crash.fileName) }
+                    onToggleExpand = { onToggleExpand(crash.fileName) },
                 )
             }
         }
@@ -382,45 +412,51 @@ private fun CrashesTab(
 private fun CrashCard(
     crash: CrashEntry,
     isExpanded: Boolean,
-    onToggleExpand: () -> Unit
+    onToggleExpand: () -> Unit,
 ) {
-    val dateFormat = remember {
-        SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
-    }
+    val dateFormat =
+        remember {
+            SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
+        }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize()
-            .clickable(onClick = onToggleExpand),
-        shape = RoundedCornerShape(12.dp)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .animateContentSize()
+                .clickable(onClick = onToggleExpand),
+        shape = RoundedCornerShape(12.dp),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // Header row: timestamp + expand icon
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = dateFormat.format(Date(crash.timestamp)),
                         style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
                     )
                     Text(
                         text = crash.message,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                         maxLines = if (isExpanded) Int.MAX_VALUE else 1,
-                        softWrap = true
+                        softWrap = true,
                     )
                 }
                 Icon(
-                    imageVector = if (isExpanded) NextPageIcons.ChevronUp
-                    else NextPageIcons.ChevronDown,
+                    imageVector =
+                        if (isExpanded) {
+                            NextPageIcons.ChevronUp
+                        } else {
+                            NextPageIcons.ChevronDown
+                        },
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
@@ -434,7 +470,7 @@ private fun CrashCard(
                 Text(
                     text = stringResource(R.string.debug_log_viewer_crash_thread, crash.threadName),
                     style = MaterialTheme.typography.bodySmall,
-                    fontFamily = FontFamily.Monospace
+                    fontFamily = FontFamily.Monospace,
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -442,19 +478,19 @@ private fun CrashCard(
                 Text(
                     text = stringResource(R.string.debug_log_viewer_crash_stack),
                     style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceVariant,
                     shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
                         text = crash.stackTrace,
                         style = MaterialTheme.typography.bodySmall,
                         fontFamily = FontFamily.Monospace,
-                        modifier = Modifier.padding(8.dp)
+                        modifier = Modifier.padding(8.dp),
                     )
                 }
 
@@ -464,13 +500,13 @@ private fun CrashCard(
                     Text(
                         text = stringResource(R.string.debug_log_viewer_crash_logs),
                         style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Surface(
                         color = MaterialTheme.colorScheme.surfaceVariant,
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         val displayLogs = crash.logs.take(50)
                         Column(modifier = Modifier.padding(8.dp)) {
@@ -479,7 +515,7 @@ private fun CrashCard(
                                     text = line,
                                     style = MaterialTheme.typography.bodySmall,
                                     fontFamily = FontFamily.Monospace,
-                                    fontSize = 10.sp
+                                    fontSize = 10.sp,
                                 )
                             }
                             if (crash.logs.size > 50) {
@@ -488,7 +524,7 @@ private fun CrashCard(
                                     text = stringResource(R.string.debug_log_viewer_crash_logs_more, crash.logs.size - 50),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontFamily = FontFamily.Monospace
+                                    fontFamily = FontFamily.Monospace,
                                 )
                             }
                         }
@@ -505,49 +541,54 @@ private fun CrashCard(
 private fun LiveLogsTab(
     logs: List<DebugLog.DebugEvent>,
     levelFilter: Set<DebugLog.Level>,
-    onLevelFilterChange: (DebugLog.Level) -> Unit
+    onLevelFilterChange: (DebugLog.Level) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         // Filter chips
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             listOf(DebugLog.Level.INFO, DebugLog.Level.WARN, DebugLog.Level.ERROR).forEach { level ->
                 FilterChip(
                     selected = level in levelFilter,
                     onClick = { onLevelFilterChange(level) },
-                    label = { Text(level.name) }
+                    label = { Text(level.name) },
                 )
             }
         }
 
         // Filtered logs
-        val filteredLogs = if (levelFilter.isEmpty()) logs
-        else logs.filter { it.level in levelFilter }
+        val filteredLogs =
+            if (levelFilter.isEmpty()) {
+                logs
+            } else {
+                logs.filter { it.level in levelFilter }
+            }
 
         if (filteredLogs.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = stringResource(R.string.debug_log_viewer_no_logs),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(1.dp)
+                verticalArrangement = Arrangement.spacedBy(1.dp),
             ) {
                 items(
                     items = filteredLogs,
-                    key = { "${it.timestamp}_${it.level.name}_${it.tag}_${it.message.hashCode()}" }
+                    key = { "${it.timestamp}_${it.level.name}_${it.tag}_${it.message.hashCode()}" },
                 ) { event ->
                     LogEntryRow(event = event)
                 }
@@ -558,25 +599,28 @@ private fun LiveLogsTab(
 
 @Composable
 private fun LogEntryRow(event: DebugLog.DebugEvent) {
-    val color = when (event.level) {
-        DebugLog.Level.ERROR -> MaterialTheme.colorScheme.error
-        DebugLog.Level.WARN -> MaterialTheme.colorScheme.tertiary
-        DebugLog.Level.INFO -> MaterialTheme.colorScheme.primary
-        DebugLog.Level.SUCCESS -> MaterialTheme.colorScheme.primary
-    }
+    val color =
+        when (event.level) {
+            DebugLog.Level.ERROR -> MaterialTheme.colorScheme.error
+            DebugLog.Level.WARN -> MaterialTheme.colorScheme.tertiary
+            DebugLog.Level.INFO -> MaterialTheme.colorScheme.primary
+            DebugLog.Level.SUCCESS -> MaterialTheme.colorScheme.primary
+        }
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
-        verticalAlignment = Alignment.Top
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.Top,
     ) {
         // Level color indicator
         Box(
-            modifier = Modifier
-                .width(4.dp)
-                .height(20.dp)
-                .background(color, RoundedCornerShape(2.dp))
+            modifier =
+                Modifier
+                    .width(4.dp)
+                    .height(20.dp)
+                    .background(color, RoundedCornerShape(2.dp)),
         )
         Spacer(modifier = Modifier.width(8.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -585,18 +629,18 @@ private fun LogEntryRow(event: DebugLog.DebugEvent) {
                     text = event.level.name,
                     style = MaterialTheme.typography.labelSmall,
                     color = color,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
                 Text(
                     text = event.tag,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Text(
                 text = event.message,
                 style = MaterialTheme.typography.bodySmall,
-                fontFamily = FontFamily.Monospace
+                fontFamily = FontFamily.Monospace,
             )
         }
     }

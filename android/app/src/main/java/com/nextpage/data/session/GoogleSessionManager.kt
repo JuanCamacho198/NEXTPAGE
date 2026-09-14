@@ -15,7 +15,6 @@ import com.nextpage.domain.model.AuthSession
  * @deprecated Replaced by [SupabaseSessionManager].
  * Will be removed in the next release cycle.
  */
-@Deprecated("Replaced by SupabaseSessionManager", ReplaceWith("SupabaseSessionManager"))
 
 /**
  * SessionManager implementation backed by Google Sign-In OAuth token lifecycle.
@@ -24,13 +23,13 @@ import com.nextpage.domain.model.AuthSession
  * [GoogleSignInClient.silentSignIn] — the official Android method for obtaining
  * a fresh OAuth access token without user interaction.
  */
+@Deprecated("Replaced by SupabaseSessionManager", ReplaceWith("SupabaseSessionManager"))
 class GoogleSessionManager(
     private val googleSignInClient: GoogleSignInClient?,
     private val diagnosticError: AppError?,
     private val sessionStore: SessionStore,
-    private val isClientAvailable: Boolean = googleSignInClient != null
+    private val isClientAvailable: Boolean = googleSignInClient != null,
 ) : SessionManager {
-
     @Volatile
     private var currentSession: AuthSession? = null
 
@@ -52,10 +51,10 @@ class GoogleSessionManager(
                             category = ErrorCategory.WIRING_ERROR,
                             code = "GOOGLE_SESSION_RESTORE_FAILED",
                             message = throwable.message ?: "Failed to restore persisted session.",
-                            component = COMPONENT
-                        )
+                            component = COMPONENT,
+                        ),
                     )
-                }
+                },
             )
     }
 
@@ -75,19 +74,21 @@ class GoogleSessionManager(
 
         val client = googleSignInClient ?: return Result.failure(missingClientError())
 
-        val signInResult = runCatching {
-            val task = client.silentSignIn()
-            Tasks.await(task)
-        }
+        val signInResult =
+            runCatching {
+                val task = client.silentSignIn()
+                Tasks.await(task)
+            }
 
         return signInResult.fold(
             onSuccess = { account ->
-                val session = AuthSession(
-                    userId = account?.id ?: "google-user",
-                    email = account?.email,
-                    displayName = account?.displayName,
-                    photoUrl = account?.photoUrl?.toString()
-                )
+                val session =
+                    AuthSession(
+                        userId = account?.id ?: "google-user",
+                        email = account?.email,
+                        displayName = account?.displayName,
+                        photoUrl = account?.photoUrl?.toString(),
+                    )
                 currentSession = session
                 runCatching { sessionStore.write(session) }
                 Result.success(session)
@@ -99,20 +100,21 @@ class GoogleSessionManager(
                     return Result.success(existing)
                 }
                 val apiError = error as? ApiException
-                val code = when (apiError?.statusCode) {
-                    12501 -> "GOOGLE_SESSION_DISABLED" // SIGN_IN_CURRENTLY_IN_PROGRESS
-                    12500 -> "GOOGLE_SESSION_CANCELLED"
-                    else -> "GOOGLE_SESSION_REFRESH_FAILED"
-                }
+                val code =
+                    when (apiError?.statusCode) {
+                        12501 -> "GOOGLE_SESSION_DISABLED" // SIGN_IN_CURRENTLY_IN_PROGRESS
+                        12500 -> "GOOGLE_SESSION_CANCELLED"
+                        else -> "GOOGLE_SESSION_REFRESH_FAILED"
+                    }
                 Result.failure(
                     AppError(
                         category = ErrorCategory.WIRING_ERROR,
                         code = code,
                         message = error.message ?: "Failed to refresh Google session.",
-                        component = COMPONENT
-                    )
+                        component = COMPONENT,
+                    ),
                 )
-            }
+            },
         )
     }
 
@@ -147,21 +149,20 @@ class GoogleSessionManager(
                         category = ErrorCategory.WIRING_ERROR,
                         code = "GOOGLE_SESSION_PERSIST_FAILED",
                         message = throwable.message ?: "Failed to persist local session.",
-                        component = COMPONENT
-                    )
+                        component = COMPONENT,
+                    ),
                 )
-            }
+            },
         )
     }
 
-    private fun missingClientError(): AppError {
-        return diagnosticError ?: AppError(
+    private fun missingClientError(): AppError =
+        diagnosticError ?: AppError(
             category = ErrorCategory.WIRING_ERROR,
             code = "GOOGLE_SESSION_CLIENT_NOT_AVAILABLE",
             message = "Google Sign-In client is not available in session manager.",
-            component = COMPONENT
+            component = COMPONENT,
         )
-    }
 
     companion object {
         const val COMPONENT = "GoogleSessionManager"

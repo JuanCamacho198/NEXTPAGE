@@ -17,9 +17,11 @@ import org.junit.Test
  * in androidTest; this file keeps the matrix guards in unit test for fast feedback.
  */
 class NextPageNavHostTest {
-
     // Helper mirroring host's startDestination derivation
-    private fun resolveStartDestination(isAuthenticated: Boolean, hasDailyGoal: Boolean): String =
+    private fun resolveStartDestination(
+        isAuthenticated: Boolean,
+        hasDailyGoal: Boolean,
+    ): String =
         when {
             !isAuthenticated -> NextPageDestination.Auth.route
             !hasDailyGoal -> NextPageDestination.OnboardingGoal.route
@@ -42,7 +44,7 @@ class NextPageNavHostTest {
         listOf(
             resolveStartDestination(false, false) to NextPageDestination.Auth.route,
             resolveStartDestination(true, false) to NextPageDestination.OnboardingGoal.route,
-            resolveStartDestination(true, true) to NextPageDestination.Home.route
+            resolveStartDestination(true, true) to NextPageDestination.Home.route,
         ).forEach { (actual, expected) ->
             assertEquals(expected, actual)
             // BottomTabNavOptions must not break when startDestination is outside bottomBar
@@ -77,7 +79,7 @@ class NextPageNavHostTest {
         assertEquals("/6/2[c1]", cfiAfterLoad)
         assertEquals(
             NextPageDestination.Reader.routeFor("book-123", "/files/book.epub", "epub"),
-            navigatedRoute
+            navigatedRoute,
         )
     }
 
@@ -86,7 +88,7 @@ class NextPageNavHostTest {
         val route = NextPageDestination.Reader.routeFor("book-123", "/files/my book.epub", "epub")
         assertEquals(
             "reader?bookId={bookId}&bookPath={bookPath}&bookFormat={bookFormat}",
-            NextPageDestination.Reader.route
+            NextPageDestination.Reader.route,
         )
         org.junit.Assert.assertTrue(route.startsWith("reader?"))
         org.junit.Assert.assertTrue(route.contains("bookId=book-123"))
@@ -101,11 +103,15 @@ class NextPageNavHostTest {
         // Equivalence guard: route strings must stay verbatim (spec equivalence requirement)
         assertEquals(
             "reader?bookId={bookId}&bookPath={bookPath}&bookFormat={bookFormat}",
-            NextPageDestination.Reader.route
+            NextPageDestination.Reader.route,
         )
         assertEquals("book_detail/{bookId}", NextPageDestination.BookDetail.route)
         assertEquals("auth", NextPageDestination.Auth.route)
     }
 
-    private data class FakeBook(val id: String, val filePath: String, val format: String)
+    private data class FakeBook(
+        val id: String,
+        val filePath: String,
+        val format: String,
+    )
 }

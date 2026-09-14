@@ -13,7 +13,6 @@ import org.junit.Test
  * fields; strict mapper unchanged; old cache payloads still decode.
  */
 class MapOpenLibraryAnyDocTest {
-
     private val json = Json { ignoreUnknownKeys = true }
 
     private fun fixture(name: String): String =
@@ -37,15 +36,16 @@ class MapOpenLibraryAnyDocTest {
     }
 
     @Test fun permissiveMapper_carriesIsbnAndIaIdentityFields() {
-        val doc = OpenLibraryDoc(
-            key = "/works/OL99991W",
-            title = "Borrow Restricted Title",
-            authorName = listOf("Some Author"),
-            coverId = 1234567,
-            ebookAccess = "borrowable",
-            isbn = listOf("9780141439518"),
-            internetArchiveIds = listOf("prideandprejudice0000aust")
-        )
+        val doc =
+            OpenLibraryDoc(
+                key = "/works/OL99991W",
+                title = "Borrow Restricted Title",
+                authorName = listOf("Some Author"),
+                coverId = 1234567,
+                ebookAccess = "borrowable",
+                isbn = listOf("9780141439518"),
+                internetArchiveIds = listOf("prideandprejudice0000aust"),
+            )
         assertEquals(listOf("9780141439518"), doc.isbn)
         assertEquals(listOf("prideandprejudice0000aust"), doc.internetArchiveIds)
         val book = mapOpenLibraryAnyDoc(doc)
@@ -57,7 +57,8 @@ class MapOpenLibraryAnyDocTest {
     }
 
     @Test fun permissiveMapper_decodesDocsCarryingIsbnAndIa() {
-        val raw = """
+        val raw =
+            """
             {
               "key": "/works/OL1W",
               "title": "T",
@@ -67,7 +68,7 @@ class MapOpenLibraryAnyDocTest {
               "isbn": ["9780000000001"],
               "ia": ["someid"]
             }
-        """.trimIndent()
+            """.trimIndent()
         val doc = json.decodeFromString<OpenLibraryDoc>(raw)
         assertEquals(listOf("9780000000001"), doc.isbn)
         assertEquals(listOf("someid"), doc.internetArchiveIds)
@@ -82,7 +83,8 @@ class MapOpenLibraryAnyDocTest {
     }
 
     @Test fun legacyCachePayload_stillDecodes() {
-        val legacy = """
+        val legacy =
+            """
             {
               "results": [
                 {
@@ -99,10 +101,15 @@ class MapOpenLibraryAnyDocTest {
               "nextPage": null,
               "totalCount": 1
             }
-        """.trimIndent()
+            """.trimIndent()
         val decoded = json.decodeFromString<PagedResult>(legacy)
         assertEquals(1, decoded.totalCount)
-        assertTrue(decoded.results.single().formats.isEmpty())
+        assertTrue(
+            decoded.results
+                .single()
+                .formats
+                .isEmpty(),
+        )
         assertNull(decoded.results.single().description)
     }
 }

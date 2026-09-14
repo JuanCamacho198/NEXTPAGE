@@ -3,11 +3,10 @@ package com.nextpage.presentation.screen
 import android.os.Bundle
 import android.util.Log
 import android.view.ActionMode
-import android.view.Menu
-import android.view.MenuItem
 import android.view.View
-import android.view.ViewGroup
 import android.webkit.WebView
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -15,8 +14,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -26,27 +23,25 @@ import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentContainerView
 import androidx.fragment.app.commit
 import com.nextpage.debug.DebugLog
+import com.nextpage.domain.model.Highlight
+import com.nextpage.domain.model.ReaderSettings
 import com.nextpage.presentation.screen.readium.findWebView
 import com.nextpage.presentation.screen.readium.highlightsToPdfDecorations
 import com.nextpage.presentation.screen.readium.installPdfActionModeCallback
-import com.nextpage.domain.model.Highlight
-import com.nextpage.domain.model.ReaderSettings
-import com.nextpage.presentation.viewmodel.CfiMigrator
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlin.coroutines.resume
+import org.readium.adapter.pdfium.navigator.PdfiumEngineProvider
 import org.readium.r2.navigator.DecorableNavigator
-import org.readium.r2.navigator.Decoration
 import org.readium.r2.navigator.SelectableNavigator
 import org.readium.r2.navigator.pdf.PdfNavigatorFactory
 import org.readium.r2.navigator.pdf.PdfNavigatorFragment
 import org.readium.r2.shared.ExperimentalReadiumApi
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
-import org.readium.adapter.pdfium.navigator.PdfiumEngineProvider
+import kotlin.coroutines.resume
 
 /** Group identifier for all highlight decorations. */
 private const val DECORATION_GROUP = "com.nextpage.highlights"
@@ -76,21 +71,23 @@ fun ReadiumPdfReaderContent(
     readerSettings: ReaderSettings,
     viewModel: ReaderViewModel,
     onShowChrome: (() -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current as FragmentActivity
     val fragmentManager = remember { context.supportFragmentManager }
     val containerId = remember { View.generateViewId() }
 
     // Create PdfiumEngineProvider — the adapter engine for PdfNavigatorFragment
-    val pdfEngineProvider = remember {
-        PdfiumEngineProvider()
-    }
+    val pdfEngineProvider =
+        remember {
+            PdfiumEngineProvider()
+        }
 
     // Create the PdfNavigatorFactory — does NOT use a Configuration class
-    val navigatorFactory = remember(publication, pdfEngineProvider) {
-        PdfNavigatorFactory(publication, pdfEngineProvider)
-    }
+    val navigatorFactory =
+        remember(publication, pdfEngineProvider) {
+            PdfNavigatorFactory(publication, pdfEngineProvider)
+        }
 
     // S7: live highlights for the holder call below (the deleted VM delegate
     // read them live from the aggregate; rememberUpdatedState preserves that).
@@ -105,12 +102,14 @@ fun ReadiumPdfReaderContent(
         val tag = "ReadiumPdfNavigator"
         val existing = fragmentManager.findFragmentByTag(tag)
         if (existing == null) {
-            val initialLocator = publication.readingOrder.firstOrNull()?.let {
-                publication.locatorFromLink(it)
-            }
-            val factory = navigatorFactory.createFragmentFactory(
-                initialLocator = initialLocator
-            )
+            val initialLocator =
+                publication.readingOrder.firstOrNull()?.let {
+                    publication.locatorFromLink(it)
+                }
+            val factory =
+                navigatorFactory.createFragmentFactory(
+                    initialLocator = initialLocator,
+                )
             fragmentManager.fragmentFactory = factory
             fragmentManager.commit {
                 add(containerId, PdfNavigatorFragment::class.java, Bundle(), tag)
@@ -159,50 +158,54 @@ fun ReadiumPdfReaderContent(
     // so we fall back to extracting text from the locator's text context.
     LaunchedEffect(navigatorFragment) {
         val frag = navigatorFragment ?: return@LaunchedEffect
-        val selectable = frag as? SelectableNavigator ?: run {
-            DebugLog.warn("PdfReadium", "PdfNavigatorFragment is NOT a SelectableNavigator")
-            return@LaunchedEffect
-        }
+        val selectable =
+            frag as? SelectableNavigator ?: run {
+                DebugLog.warn("PdfReadium", "PdfNavigatorFragment is NOT a SelectableNavigator")
+                return@LaunchedEffect
+            }
         DebugLog.info("PdfReadium", "SelectableNavigator acquired (hash=${selectable.hashCode()})")
         var lastSelection: Boolean = false
         var pollCount = 0
         while (isActive) {
             delay(300)
             pollCount++
-            val sel = runCatching { selectable.currentSelection() }
-                .onFailure { DebugLog.error("PdfReadium", "currentSelection() threw: ${it.message}") }
-                .getOrNull()
+            val sel =
+                runCatching { selectable.currentSelection() }
+                    .onFailure { DebugLog.error("PdfReadium", "currentSelection() threw: ${it.message}") }
+                    .getOrNull()
             if (pollCount % 10 == 0) {
                 DebugLog.info(
                     "PdfReadium",
-                    "Poll #$pollCount: ${if (sel != null) "selection present" else "no selection"}"
+                    "Poll #$pollCount: ${if (sel != null) "selection present" else "no selection"}",
                 )
             }
             if (sel != null) {
-                val selRect = sel.rect ?: run {
-                    if (lastSelection) viewModel.interactionHolder.onSelectionCleared()
-                    lastSelection = false
-                    continue
-                }
+                val selRect =
+                    sel.rect ?: run {
+                        if (lastSelection) viewModel.interactionHolder.onSelectionCleared()
+                        lastSelection = false
+                        continue
+                    }
                 // Always try JS selection first (even for PDF) — locator.text window is ~150 chars and truncates long selections.
                 // Pdfium has no fragment-level evaluateJavascript, so probe the underlying WebView if present.
                 val fallbackText = sel.locator.text?.let { "${it.before ?: ""}${it.after ?: ""}" } ?: ""
-                val text: String = try {
-                    val webView = frag.view?.findWebView()
-                    if (webView != null) {
-                        val jsResult = webView.evalSelectionJs()
-                        if (jsResult.isNullOrBlank()) fallbackText else jsResult
-                    } else {
+                val text: String =
+                    try {
+                        val webView = frag.view?.findWebView()
+                        if (webView != null) {
+                            val jsResult = webView.evalSelectionJs()
+                            if (jsResult.isNullOrBlank()) fallbackText else jsResult
+                        } else {
+                            fallbackText
+                        }
+                    } catch (_: Throwable) {
                         fallbackText
                     }
-                } catch (_: Throwable) {
-                    fallbackText
-                }
                 viewModel.interactionHolder.onReadiumSelection(
                     locator = sel.locator,
                     rect = selRect,
                     text = text,
-                    existingHighlights = latestHighlights
+                    existingHighlights = latestHighlights,
                 )
                 lastSelection = true
             } else {
@@ -253,17 +256,21 @@ fun ReadiumPdfReaderContent(
             factory = { ctx ->
                 FragmentContainerView(ctx).also { view ->
                     view.id = containerId
-                    view.addOnAttachStateChangeListener(object : android.view.View.OnAttachStateChangeListener {
-                        override fun onViewAttachedToWindow(v: android.view.View) {
-                            containerReady = true
-                        }
-                        override fun onViewDetachedFromWindow(v: android.view.View) {}
-                    })
+                    view.addOnAttachStateChangeListener(
+                        object : android.view.View.OnAttachStateChangeListener {
+                            override fun onViewAttachedToWindow(v: android.view.View) {
+                                containerReady = true
+                            }
+
+                            override fun onViewDetachedFromWindow(v: android.view.View) {}
+                        },
+                    )
                 }
             },
-            modifier = Modifier.fillMaxSize().onGloballyPositioned { coordinates ->
-                viewModel.lifecycleHolder.onReadiumViewportChanged(coordinates.size.height)
-            }
+            modifier =
+                Modifier.fillMaxSize().onGloballyPositioned { coordinates ->
+                    viewModel.lifecycleHolder.onReadiumViewportChanged(coordinates.size.height)
+                },
         )
 
         // Edge-tap zones (top + bottom 5%) for re-showing the chrome. See
@@ -276,15 +283,20 @@ fun ReadiumPdfReaderContent(
     }
 }
 
-private suspend fun WebView.evalSelectionJs(): String? = suspendCancellableCoroutine { cont ->
-    try {
-        evaluateJavascript("(function(){var s=window.getSelection();return s?s.toString():'';})()") { result ->
-            // WebView wraps result in JSON quotes; strip them
-            val cleaned = result?.trim()?.removeSurrounding("\"")?.replace("\\n", "\n")?.replace("\\\"", "\"")
-            if (cont.isActive) cont.resume(cleaned)
+private suspend fun WebView.evalSelectionJs(): String? =
+    suspendCancellableCoroutine { cont ->
+        try {
+            evaluateJavascript("(function(){var s=window.getSelection();return s?s.toString():'';})()") { result ->
+                // WebView wraps result in JSON quotes; strip them
+                val cleaned =
+                    result
+                        ?.trim()
+                        ?.removeSurrounding("\"")
+                        ?.replace("\\n", "\n")
+                        ?.replace("\\\"", "\"")
+                if (cont.isActive) cont.resume(cleaned)
+            }
+        } catch (t: Throwable) {
+            if (cont.isActive) cont.resume(null)
         }
-    } catch (t: Throwable) {
-        if (cont.isActive) cont.resume(null)
     }
-}
-

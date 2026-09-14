@@ -14,26 +14,29 @@ object CoilModule {
     private const val DISK_CACHE_SIZE_BYTES = 64L * 1024L * 1024L
 
     fun imageLoader(context: Context): ImageLoader {
-        val okHttpClient = OkHttpClient.Builder()
-            .connectTimeout(CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-            .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-            .retryOnConnectionFailure(true)
-            .build()
+        val okHttpClient =
+            OkHttpClient
+                .Builder()
+                .connectTimeout(CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                .retryOnConnectionFailure(true)
+                .build()
 
-        return ImageLoader.Builder(context)
+        return ImageLoader
+            .Builder(context)
             .okHttpClient { okHttpClient }
             .memoryCache {
-                MemoryCache.Builder(context)
+                MemoryCache
+                    .Builder(context)
                     .maxSizePercent(MEMORY_CACHE_SIZE_PERCENT)
                     .build()
-            }
-            .diskCache {
-                DiskCache.Builder()
+            }.diskCache {
+                DiskCache
+                    .Builder()
                     .directory(context.cacheDir.resolve("coil-images"))
                     .maxSizeBytes(DISK_CACHE_SIZE_BYTES)
                     .build()
-            }
-            .crossfade(true)
+            }.crossfade(true)
             .build()
     }
 }

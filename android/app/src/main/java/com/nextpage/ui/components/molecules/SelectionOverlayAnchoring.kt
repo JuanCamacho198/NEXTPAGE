@@ -36,7 +36,7 @@ fun computeAnchor(
     viewportWidth: Int,
     viewportHeight: Int,
     gapDp: Int = 8,
-    density: Density
+    density: Density,
 ): IntOffset {
     val gapPx = with(density) { gapDp.dp.toPx() }.toInt()
     val headerReservePx = with(density) { HEADER_RESERVE_DP.dp.toPx() }.toInt()
@@ -46,11 +46,12 @@ fun computeAnchor(
     val belowTop = selectionRectPx.bottom + gapPx
     val placeAbove = selectionRectPx.top - menuHeightPx - gapPx >= headerReservePx
     val fitsBelow = belowTop + menuHeightPx <= viewportHeight - footerReservePx
-    val y = when {
-        placeAbove -> aboveTop
-        fitsBelow -> belowTop
-        else -> aboveTop
-    }
+    val y =
+        when {
+            placeAbove -> aboveTop
+            fitsBelow -> belowTop
+            else -> aboveTop
+        }
 
     val selectionCenterX = selectionRectPx.left + ((selectionRectPx.right - selectionRectPx.left) / 2)
     val rawX = selectionCenterX - (menuWidthPx / 2)
@@ -72,30 +73,31 @@ fun AnchoredOverlayBox(
     viewportHeight: Int,
     gapDp: Int = 8,
     modifier: Modifier = Modifier,
-    content: @Composable BoxScope.() -> Unit
+    content: @Composable BoxScope.() -> Unit,
 ) {
     var menuWidthPx by remember { mutableIntStateOf(0) }
     var menuHeightPx by remember { mutableIntStateOf(0) }
     val density = LocalDensity.current
 
-    val anchor = computeAnchor(
-        selectionRectPx = selectionRect,
-        menuWidthPx = menuWidthPx,
-        menuHeightPx = menuHeightPx,
-        viewportWidth = viewportWidth,
-        viewportHeight = viewportHeight,
-        gapDp = gapDp,
-        density = density
-    )
+    val anchor =
+        computeAnchor(
+            selectionRectPx = selectionRect,
+            menuWidthPx = menuWidthPx,
+            menuHeightPx = menuHeightPx,
+            viewportWidth = viewportWidth,
+            viewportHeight = viewportHeight,
+            gapDp = gapDp,
+            density = density,
+        )
 
     Box(
-        modifier = modifier
-            .offset { anchor }
-            .onGloballyPositioned { coords ->
-                menuWidthPx = coords.size.width
-                menuHeightPx = coords.size.height
-            }
-            .padding(8.dp)
+        modifier =
+            modifier
+                .offset { anchor }
+                .onGloballyPositioned { coords ->
+                    menuWidthPx = coords.size.width
+                    menuHeightPx = coords.size.height
+                }.padding(8.dp),
     ) {
         content()
     }

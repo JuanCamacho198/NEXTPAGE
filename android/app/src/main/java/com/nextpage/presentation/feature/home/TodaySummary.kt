@@ -30,7 +30,11 @@ import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.ui.icons.NextPageIcons
 
 @Composable
-fun TodaySummarySection(minutesReadToday: Int, sessionsToday: Int, currentStreak: Int) {
+fun TodaySummarySection(
+    minutesReadToday: Int,
+    sessionsToday: Int,
+    currentStreak: Int,
+) {
     Column {
         Text(text = stringResource(R.string.home_today_summary_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         Spacer(modifier = Modifier.height(NextPageDimens.spacingSm))
@@ -43,7 +47,10 @@ fun TodaySummarySection(minutesReadToday: Int, sessionsToday: Int, currentStreak
 }
 
 @Composable
-fun StreakStatCard(streakDays: Int, modifier: Modifier = Modifier) {
+fun StreakStatCard(
+    streakDays: Int,
+    modifier: Modifier = Modifier,
+) {
     val isZero = streakDays == 0
     Surface(modifier = modifier, shape = RoundedCornerShape(NextPageDimens.spacingSm), color = MaterialTheme.colorScheme.surfaceVariant, tonalElevation = 1.dp) {
         Column(modifier = Modifier.fillMaxWidth().padding(NextPageDimens.spacingMd), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -57,7 +64,12 @@ fun StreakStatCard(streakDays: Int, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun StatCard(icon: ImageVector, value: String, label: String, modifier: Modifier = Modifier) {
+fun StatCard(
+    icon: ImageVector,
+    value: String,
+    label: String,
+    modifier: Modifier = Modifier,
+) {
     Surface(modifier = modifier, shape = RoundedCornerShape(NextPageDimens.spacingSm), color = MaterialTheme.colorScheme.surfaceVariant, tonalElevation = 1.dp) {
         Column(modifier = Modifier.fillMaxWidth().padding(NextPageDimens.spacingMd), horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(imageVector = icon, contentDescription = label, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))

@@ -11,7 +11,7 @@ fun BookDetailScreen(
     libraryRepository: LibraryRepository,
     onNavigateBack: () -> Unit,
     onEditBook: () -> Unit,
-    onContinueReading: (String, String?, String) -> Unit
+    onContinueReading: (String, String?, String) -> Unit,
 ) {
     com.nextpage.presentation.feature.bookdetail.BookDetailScreen(
         contentPadding = contentPadding,
@@ -19,6 +19,6 @@ fun BookDetailScreen(
         libraryRepository = libraryRepository,
         onNavigateBack = onNavigateBack,
         onEditBook = onEditBook,
-        onContinueReading = onContinueReading
+        onContinueReading = onContinueReading,
     )
 }

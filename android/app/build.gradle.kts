@@ -23,6 +23,10 @@ plugins {
     // SDD android-tooling-hygiene WS5 slice 7: Spotless formatting gate
     // (catalog alias; declared in the root build file, applied here).
     alias(libs.plugins.spotless)
+
+    // SDD android-tooling-hygiene WS4 slice 9: Kover report-only coverage
+    // (catalog alias; declared in the root build file, applied here).
+    alias(libs.plugins.kover)
 }
 
 ksp {
@@ -38,6 +42,27 @@ spotless {
     kotlin {
         target("**/*.kt", "**/*.kts")
         ktlint()
+    }
+}
+
+// SDD android-tooling-hygiene WS4 slice 9: Kover report-only coverage bound
+// to the debug variant (`testDebugUnitTest`) ONLY — androidTest is separate
+// and must NOT be required. Since Kover 0.8 the aggregate `koverXmlReport`
+// / `koverHtmlReport` tasks run tests for ALL variants, so the debug-only
+// reports live in `variant("debug")` (`:app:koverXmlReportDebug` +
+// `:app:koverHtmlReportDebug`). `onCheck = false` keeps `check` green
+// without a report run; NO `verify` block — report-only, the coverage bound
+// is explicitly deferred to a later decision. Config-cache compatible.
+kover {
+    reports {
+        variant("debug") {
+            xml {
+                onCheck = false
+            }
+            html {
+                onCheck = false
+            }
+        }
     }
 }
 

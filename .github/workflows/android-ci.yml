@@ -83,7 +83,23 @@ jobs:
             :app:lintDebug \
             :app:verifyStringParity \
             :app:verifyAuthScreenNoHardcodedStrings \
-            :app:verifyNoReaderUiStateResidue
+            :app:verifyNoReaderUiStateResidue \
+            :app:koverXmlReportDebug \
+            :app:koverHtmlReportDebug
+
+      - name: Upload Kover coverage reports
+        # Report-only: coverage is published as an artifact and never gates the
+        # build (Kover's `verify` block is deliberately absent; a coverage bound
+        # is deferred). `if: always()` keeps the report available even when an
+        # earlier gate failed, since the tests that produce it already ran.
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: kover-coverage
+          path: |
+            android/app/build/reports/kover/reportDebug.xml
+            android/app/build/reports/kover/htmlDebug/
+          if-no-files-found: warn
 
       - name: Print failed test reports
         if: failure()

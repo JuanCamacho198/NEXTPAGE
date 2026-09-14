@@ -21,4 +21,8 @@ plugins {
     // SDD android-tooling-hygiene WS5 slice 7: Spotless (declared in the
     // catalog; applied in app/build.gradle.kts).
     alias(libs.plugins.spotless) apply false
+
+    // SDD android-tooling-hygiene WS4 slice 9: Kover report-only coverage
+    // (declared in the catalog; applied in app/build.gradle.kts).
+    alias(libs.plugins.kover) apply false
 }

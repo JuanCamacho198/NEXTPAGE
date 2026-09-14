@@ -7,6 +7,7 @@ import com.nextpage.data.local.entity.SyncEntityType
 import com.nextpage.data.local.entity.SyncOperation
 import com.nextpage.data.remote.drive.SyncErrorCodes
 import com.nextpage.data.remote.sync.ApplyOutcome
+import com.nextpage.data.remote.sync.CommitOutcome
 import com.nextpage.data.remote.sync.OutboxCommit
 import com.nextpage.data.remote.sync.StorageSyncRemoteDataSource
 import com.nextpage.data.session.SessionManager
@@ -231,7 +232,17 @@ class SupabaseBookCatalogSync(
     ) {
         val helper = outboxCommit
         if (helper != null) {
-            helper.commit(item, apply)
+            val outcome = helper.commit(item, apply)
+            if (outcome is CommitOutcome.Poison) {
+                // Genuine, bounded error: the item exhausted its retries and was
+                // pruned. Per-attempt failures stay WARN telemetry (FIX 5); only
+                // this terminal state is error-level.
+                DebugLog.error(
+                    TAG,
+                    "sync.outboxPoisoned entityType=${item.entityType} " +
+                        "entityId=${item.entityId} error=${outcome.cause.message}"
+                )
+            }
             return
         }
         when (val outcome = apply()) {

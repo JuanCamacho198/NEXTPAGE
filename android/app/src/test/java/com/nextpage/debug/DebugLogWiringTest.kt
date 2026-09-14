@@ -4,14 +4,12 @@ import android.util.Log
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
-import io.mockk.slot
 import io.mockk.unmockkAll
 import io.mockk.verify
-import io.sentry.Scope
+import io.sentry.Breadcrumb
 import io.sentry.ScopeCallback
 import io.sentry.Sentry
 import io.sentry.SentryLevel
-import io.sentry.SentryOptions
 import io.sentry.protocol.SentryId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -153,33 +151,26 @@ class DebugLogWiringTest {
         }
     }
 
-    // PR2 reader-error-enrichment: typed DebugDual events must reach Sentry via
-    // structured captureException (setExtra/setTag), not concatenated strings.
-    // Runs the event through DebugDual.log, captures the ScopeCallback, applies
-    // it to a real Scope, and returns it for extra/tag assertions. The @After
-    // tearDown calls unmockkAll() per android/AGENTS.md's teardown rule.
-    private fun captureScopeFor(event: DebugEvent): Scope {
+    // FIX 5: typed reader/sync telemetry must NOT create Sentry error issues.
+    // Previously each event fired Sentry.captureException(RuntimeException(msg));
+    // now they are local WARN/DEBUG entries plus ids-only breadcrumbs, so these
+    // tests pin "no captureException" for every telemetry event.
+    private fun assertTelemetryDoesNotCaptureException(event: DebugEvent) {
         mockkStatic(Sentry::class)
-        val callbackSlot = slot<ScopeCallback>()
-        every { Sentry.captureException(any<Throwable>(), capture(callbackSlot)) } returns SentryId.EMPTY_ID
+        every { Sentry.captureException(any<Throwable>(), any<ScopeCallback>()) } returns SentryId.EMPTY_ID
+        every { Sentry.addBreadcrumb(any<Breadcrumb>()) } answers { }
 
         DebugDual.log(event)
 
-        verify(exactly = 1) { Sentry.captureException(any<Throwable>(), any<ScopeCallback>()) }
-        return Scope(SentryOptions()).also { callbackSlot.captured.run(it) }
+        verify(exactly = 0) { Sentry.captureException(any<Throwable>(), any<ScopeCallback>()) }
     }
 
     @Test
-    fun `highlightsSkipped captures structured Sentry exception`() {
-        val scope = captureScopeFor(
+    fun `highlightsSkipped emits telemetry without a Sentry exception`() {
+        assertTelemetryDoesNotCaptureException(
             DebugEvent.HighlightsSkipped("hl1", "epubcfi(/6/2)", "bounds_out_of_viewport")
         )
 
-        assertEquals("hl1", scope.extras["highlightId"])
-        assertEquals("epubcfi(/6/2)", scope.extras["cfi"])
-        assertEquals("bounds_out_of_viewport", scope.extras["reason"])
-        assertEquals("reader", scope.tags["source"])
-        assertEquals("highlight_skipped", scope.tags["event"])
         // Local source of truth preserved: WARN entry still lands in DebugLog
         assertTrue(
             "DebugLog should still hold the local entry",
@@ -188,70 +179,43 @@ class DebugLogWiringTest {
     }
 
     @Test
-    fun `highlightsApplied captures structured Sentry exception`() {
-        val scope = captureScopeFor(
+    fun `highlightsApplied emits telemetry without a Sentry exception`() {
+        assertTelemetryDoesNotCaptureException(
             DebugEvent.HighlightsApplied("hl2", "epubcfi(/6/4)", true)
         )
-
-        assertEquals("hl2", scope.extras["highlightId"])
-        assertEquals("epubcfi(/6/4)", scope.extras["cfi"])
-        assertEquals("true", scope.extras["viaFallback"])
-        assertEquals("1", scope.extras["count"])
-        assertEquals("reader", scope.tags["source"])
-        assertEquals("highlight_applied", scope.tags["event"])
+        assertTrue(DebugLog.events.value.any { it.message.contains("highlights.applied") })
     }
 
     @Test
-    fun `syncOutboxFailed captures structured Sentry exception with truncated error`() {
-        val longError = "x".repeat(250)
-        val scope = captureScopeFor(
-            DebugEvent.SyncOutboxFailed("HIGHLIGHT", "hl1", longError)
+    fun `syncOutboxFailed emits telemetry without a Sentry exception`() {
+        assertTelemetryDoesNotCaptureException(
+            DebugEvent.SyncOutboxFailed("HIGHLIGHT", "hl1", "x".repeat(250))
         )
-
-        assertEquals("HIGHLIGHT", scope.extras["entityType"])
-        assertEquals("hl1", scope.extras["entityId"])
-        assertEquals(longError.take(200), scope.extras["error"])
-        assertEquals("reader", scope.tags["source"])
-        assertEquals("sync_outbox_failed", scope.tags["event"])
+        assertTrue(DebugLog.events.value.any { it.message.contains("sync.outboxFailed") })
     }
 
     @Test
-    fun `footerMismatch captures structured Sentry exception`() {
-        val scope = captureScopeFor(
+    fun `footerMismatch emits telemetry without a Sentry exception`() {
+        assertTelemetryDoesNotCaptureException(
             DebugEvent.FooterMismatch("ch1.html", "Chapter One", "Chapter Two")
         )
-
-        assertEquals("ch1.html", scope.extras["locatorHref"])
-        assertEquals("Chapter One", scope.extras["computed"])
-        assertEquals("Chapter Two", scope.extras["expected"])
-        assertEquals("reader", scope.tags["source"])
-        assertEquals("footer_mismatch", scope.tags["event"])
+        assertTrue(DebugLog.events.value.any { it.message.contains("reader.footerMismatch") })
     }
 
     @Test
-    fun `syncReceive captures structured Sentry exception`() {
-        val scope = captureScopeFor(
+    fun `syncReceive emits telemetry without a Sentry exception`() {
+        assertTelemetryDoesNotCaptureException(
             DebugEvent.SyncReceive("hl3", "epubcfi(/6/6)", true)
         )
-
-        assertEquals("hl3", scope.extras["highlightId"])
-        assertEquals("epubcfi(/6/6)", scope.extras["cfi"])
-        assertEquals("true", scope.extras["locatorJsonNull"])
-        assertEquals("reader", scope.tags["source"])
-        assertEquals("sync_receive", scope.tags["event"])
+        assertTrue(DebugLog.events.value.any { it.message.contains("sync.receive") })
     }
 
     @Test
-    fun `chapterResolved captures structured Sentry exception`() {
-        val scope = captureScopeFor(
+    fun `chapterResolved emits telemetry without a Sentry exception`() {
+        assertTelemetryDoesNotCaptureException(
             DebugEvent.ChapterResolved("ch2.html", "Chapter Two", 3)
         )
-
-        assertEquals("ch2.html", scope.extras["locatorHref"])
-        assertEquals("Chapter Two", scope.extras["chapterTitle"])
-        assertEquals("3", scope.extras["index"])
-        assertEquals("reader", scope.tags["source"])
-        assertEquals("chapter_resolved", scope.tags["event"])
+        assertTrue(DebugLog.events.value.any { it.message.contains("footer.chapterResolved") })
     }
 }
 

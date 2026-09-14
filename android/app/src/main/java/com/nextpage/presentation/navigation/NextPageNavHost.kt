@@ -84,6 +84,7 @@ import com.nextpage.presentation.debug.DebugPanel
 import com.nextpage.presentation.viewmodel.DiscoverViewModel
 import com.nextpage.presentation.viewmodel.DiscoverViewModelFactory
 import com.nextpage.presentation.debug.DebugViewModel
+import com.nextpage.presentation.debug.InitTimingsSection
 import com.nextpage.debug.DebugPrefs
 import com.nextpage.ui.icons.NextPageIcons
 import java.io.File
@@ -193,7 +194,22 @@ fun NextPageNavHost(
     )
 
     val debugViewModel: DebugViewModel = viewModel(
-        factory = DebugViewModel.Factory(appContainer)
+        factory = DebugViewModel.Factory(
+            initTimings = InitTimingsSection(
+                dbInitMs = appContainer.dbInitTimeMs,
+                epubImportInitMs = appContainer.epubImportInitTimeMs,
+                readerRepoInitMs = appContainer.readerRepoInitTimeMs,
+                totalInitMs = appContainer.totalInitTimeMs
+            ),
+            supabaseProgressSyncProvider = appContainer::supabaseProgressSync,
+            bookDao = appContainer.bookDao,
+            highlightDao = appContainer.highlightDao,
+            bookmarkDao = appContainer.bookmarkDao,
+            readingSessionDao = appContainer.readingSessionDao,
+            readingProgressDao = appContainer.readingProgressDao,
+            clearAllData = appContainer::clearAllData,
+            syncServiceProvider = appContainer::syncService,
+        )
     )
 
         val discoverViewModel: DiscoverViewModel = viewModel(

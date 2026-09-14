@@ -39,7 +39,9 @@ import java.io.File
  *   crash report (and the process still dies as expected).
  *
  * SDD android-tooling-hygiene WS2a slice 4: Hilt root. App-scoped bindings
- * live in `com.nextpage.di.HiltFoundationModule`; the manual [com.nextpage.di.AppContainer]
+ * live in `com.nextpage.di.HiltFoundationModule` (slice 4) and
+ * `com.nextpage.di.HiltSingletonsModule` (slice 5: sync + deep-link
+ * singletons); the manual [com.nextpage.di.AppContainer]
  * still constructs entry-point graphs and delegates binding construction to the
  * shared factories until slices 5-6 migrate consumers.
  */

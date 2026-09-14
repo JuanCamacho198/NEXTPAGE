@@ -7,8 +7,13 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.nextpage.data.local.dao.BookDao
+import com.nextpage.data.local.dao.BookmarkDao
+import com.nextpage.data.local.dao.HighlightDao
+import com.nextpage.data.local.dao.ReadingProgressDao
+import com.nextpage.data.local.dao.ReadingSessionDao
+import com.nextpage.data.remote.supabase.SupabaseProgressSync
 import com.nextpage.data.remote.sync.SyncService
-import com.nextpage.di.AppContainer
 import com.nextpage.domain.model.AuthSession
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,8 +24,23 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/**
+ * SDD android-tooling-hygiene WS2b slice 5: decomposed — takes explicit
+ * dependencies instead of the whole [com.nextpage.di.AppContainer] (it was
+ * the widest container dependency). Lazy manual singletons stay lazy via
+ * providers so cold-start partitions are preserved; slice 6 migrates this
+ * to `@HiltViewModel` constructor injection.
+ */
 class DebugViewModel(
-    private val appContainer: AppContainer
+    initTimings: InitTimingsSection,
+    private val supabaseProgressSyncProvider: () -> SupabaseProgressSync,
+    private val bookDao: BookDao,
+    private val highlightDao: HighlightDao,
+    private val bookmarkDao: BookmarkDao,
+    private val readingSessionDao: ReadingSessionDao,
+    private val readingProgressDao: ReadingProgressDao,
+    private val clearAllData: () -> Unit,
+    private val syncServiceProvider: () -> SyncService,
 ) : ViewModel() {
 
     companion object {
@@ -31,13 +51,7 @@ class DebugViewModel(
     val debugInfo: StateFlow<DebugInfo> = _debugInfo.asStateFlow()
 
     init {
-        val timings = InitTimingsSection(
-            dbInitMs = appContainer.dbInitTimeMs,
-            epubImportInitMs = appContainer.epubImportInitTimeMs,
-            readerRepoInitMs = appContainer.readerRepoInitTimeMs,
-            totalInitMs = appContainer.totalInitTimeMs
-        )
-        _debugInfo.update { it.copy(initTimings = timings) }
+        _debugInfo.update { it.copy(initTimings = initTimings) }
     }
 
     fun updateSessionInfo(
@@ -86,9 +100,9 @@ class DebugViewModel(
         viewModelScope.launch {
             val state = syncService.syncState.first()
             val pending = syncService.pendingCount.first()
-            // Supabase sync state + pending count via appContainer (AFR-3)
-            val supabaseState = appContainer.supabaseProgressSync.state.first()
-            val supabasePending = appContainer.supabaseProgressSync.pendingCount.first()
+            // Supabase sync state + pending count via provider (AFR-3)
+            val supabaseState = supabaseProgressSyncProvider().state.first()
+            val supabasePending = supabaseProgressSyncProvider().pendingCount.first()
             val (supaStateStr, gatedReason) = when (supabaseState) {
                 is com.nextpage.data.remote.supabase.SupabaseProgressSync.State.Gated -> "Gated" to supabaseState.reason
                 is com.nextpage.data.remote.supabase.SupabaseProgressSync.State.Idle -> "Idle" to null
@@ -114,12 +128,12 @@ class DebugViewModel(
     /**
      * Overload that collects only the Supabase sync state (used when Drive
      * syncService is not available but Supabase state is needed via
-     * appContainer).
+     * the progress-sync provider).
      */
     fun updateSupabaseSyncInfo() {
         viewModelScope.launch {
-            val supabaseState = appContainer.supabaseProgressSync.state.first()
-            val supabasePending = appContainer.supabaseProgressSync.pendingCount.first()
+            val supabaseState = supabaseProgressSyncProvider().state.first()
+            val supabasePending = supabaseProgressSyncProvider().pendingCount.first()
             val (supaStateStr, gatedReason) = when (supabaseState) {
                 is com.nextpage.data.remote.supabase.SupabaseProgressSync.State.Gated -> "Gated" to supabaseState.reason
                 is com.nextpage.data.remote.supabase.SupabaseProgressSync.State.Idle -> "Idle" to null
@@ -143,11 +157,11 @@ class DebugViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val counts = DbCountsSection(
-                    books = appContainer.bookDao.count(),
-                    highlights = appContainer.highlightDao.count(),
-                    bookmarks = appContainer.bookmarkDao.count(),
-                    readingSessions = appContainer.readingSessionDao.count(),
-                    readingProgress = appContainer.readingProgressDao.count()
+                    books = bookDao.count(),
+                    highlights = highlightDao.count(),
+                    bookmarks = bookmarkDao.count(),
+                    readingSessions = readingSessionDao.count(),
+                    readingProgress = readingProgressDao.count()
                 )
                 _debugInfo.update {
                     it.copy(dbCounts = counts, isLoadingDbCounts = false)
@@ -163,7 +177,7 @@ class DebugViewModel(
         viewModelScope.launch {
             try {
                 withContext(Dispatchers.IO) {
-                    appContainer.clearAllData()
+                    clearAllData()
                 }
                 loadDbCounts()
             } catch (e: Exception) {
@@ -174,13 +188,13 @@ class DebugViewModel(
 
     fun forceSyncPush() {
         viewModelScope.launch {
-            appContainer.syncService.schedulePush()
+            syncServiceProvider().schedulePush()
         }
     }
 
     fun forceSyncPull() {
         viewModelScope.launch {
-            appContainer.syncService.schedulePull()
+            syncServiceProvider().schedulePull()
         }
     }
 
@@ -199,10 +213,30 @@ class DebugViewModel(
         clipboard.setPrimaryClip(clip)
     }
 
-    class Factory(private val appContainer: AppContainer) : ViewModelProvider.Factory {
+    class Factory(
+        private val initTimings: InitTimingsSection,
+        private val supabaseProgressSyncProvider: () -> SupabaseProgressSync,
+        private val bookDao: BookDao,
+        private val highlightDao: HighlightDao,
+        private val bookmarkDao: BookmarkDao,
+        private val readingSessionDao: ReadingSessionDao,
+        private val readingProgressDao: ReadingProgressDao,
+        private val clearAllData: () -> Unit,
+        private val syncServiceProvider: () -> SyncService,
+    ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return DebugViewModel(appContainer) as T
+            return DebugViewModel(
+                initTimings = initTimings,
+                supabaseProgressSyncProvider = supabaseProgressSyncProvider,
+                bookDao = bookDao,
+                highlightDao = highlightDao,
+                bookmarkDao = bookmarkDao,
+                readingSessionDao = readingSessionDao,
+                readingProgressDao = readingProgressDao,
+                clearAllData = clearAllData,
+                syncServiceProvider = syncServiceProvider,
+            ) as T
         }
     }
 }

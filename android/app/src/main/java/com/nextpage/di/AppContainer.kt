@@ -20,8 +20,6 @@ import com.nextpage.data.remote.supabase.SupabaseProgressSync
 import com.nextpage.data.remote.sync.DriveColdBackupService
 import com.nextpage.data.remote.sync.StorageSyncRemoteDataSource
 import com.nextpage.data.remote.sync.SyncOrchestrator
-import com.nextpage.data.remote.sync.SyncOrchestratorImpl
-import com.nextpage.data.remote.sync.SyncOrchestratorSettleGate
 import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.data.session.ReaderPreferences
 import com.nextpage.data.session.ReadingGoalPreferences
@@ -126,11 +124,12 @@ class AppContainer(context: Context) {
     // ── addon-deeplink-v1: pending install deep links (B2/B3) ──────────
     // Main-scoped: onInstallUri/confirm mutate StateFlow read by the Compose
     // dialog host in NextPageNavHost root.
+    // SDD android-tooling-hygiene WS2b slice 5: delegated — built via
+    // createInstallDeepLinkController, the shared factory also used by
+    // HiltSingletonsModule. Manual container retained until slice 6 migrates
+    // consumers.
     val installDeepLinkController: com.nextpage.presentation.navigation.InstallDeepLinkController by lazy {
-        com.nextpage.presentation.navigation.InstallDeepLinkController(
-            registry = addonRegistry,
-            mainDispatcher = kotlinx.coroutines.Dispatchers.Main
-        )
+        createInstallDeepLinkController(registry = addonRegistry)
     }
     val driveColdBackupService: DriveColdBackupService by lazy { networkModule.driveColdBackupService }
 
@@ -148,16 +147,17 @@ class AppContainer(context: Context) {
     // by `AuthViewModel` in PR-3 (sign-out closes ALL Realtime channels via
     // orchestrator.stop, fixing the catalog-logout Realtime leak; sign-in
     // delegates to orchestrator.start).
+    // SDD android-tooling-hygiene WS2b slice 5: delegated — built via
+    // createSyncOrchestrator, the shared factory also used by
+    // HiltSingletonsModule. Manual container retained until slice 6 migrates
+    // consumers.
     val syncOrchestrator: SyncOrchestrator by lazy {
-        SyncOrchestratorImpl(
+        createSyncOrchestrator(
             drive = syncService,
             catalog = supabaseBookCatalogSync,
             progress = supabaseProgressSync,
             gate = sessionGate,
             outboxDao = databaseModule.syncOutboxDao,
-            externalScope = kotlinx.coroutines.CoroutineScope(
-                kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default
-            ),
         )
     }
 
@@ -165,8 +165,11 @@ class AppContainer(context: Context) {
      * Settle signal consumed by local file cleanup: a delete waits (bounded)
      * for the aggregate sync state to leave [com.nextpage.data.remote.sync.SyncState.Active].
      * Lazy so it is built only when the first delete/sweep runs.
+     * SDD android-tooling-hygiene WS2b slice 5: delegated — built via
+     * createSyncSettleGate, the shared factory also used by
+     * HiltSingletonsModule.
      */
-    val syncSettleGate: SyncSettleGate by lazy { SyncOrchestratorSettleGate(syncOrchestrator) }
+    val syncSettleGate: SyncSettleGate by lazy { createSyncSettleGate(syncOrchestrator) }
 
     internal object ReaderDependencies {
         fun updateReadingProgressUseCase(readerRepository: ReaderRepository) =

@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nextpage.di.AppContainer
 import com.nextpage.presentation.viewmodel.AuthViewModel
 import com.nextpage.presentation.debug.DebugViewModel
+import com.nextpage.presentation.debug.InitTimingsSection
 import com.nextpage.presentation.viewmodel.DiscoverViewModel
 import com.nextpage.presentation.viewmodel.DiscoverViewModelFactory
 import com.nextpage.presentation.viewmodel.HighlightsViewModel
@@ -112,7 +113,22 @@ internal fun rememberNavHostViewModels(
     )
 
     val debugViewModel: DebugViewModel = viewModel(
-        factory = DebugViewModel.Factory(appContainer)
+        factory = DebugViewModel.Factory(
+            initTimings = InitTimingsSection(
+                dbInitMs = appContainer.dbInitTimeMs,
+                epubImportInitMs = appContainer.epubImportInitTimeMs,
+                readerRepoInitMs = appContainer.readerRepoInitTimeMs,
+                totalInitMs = appContainer.totalInitTimeMs
+            ),
+            supabaseProgressSyncProvider = appContainer::supabaseProgressSync,
+            bookDao = appContainer.bookDao,
+            highlightDao = appContainer.highlightDao,
+            bookmarkDao = appContainer.bookmarkDao,
+            readingSessionDao = appContainer.readingSessionDao,
+            readingProgressDao = appContainer.readingProgressDao,
+            clearAllData = appContainer::clearAllData,
+            syncServiceProvider = appContainer::syncService,
+        )
     )
 
     val discoverViewModel: DiscoverViewModel = viewModel(

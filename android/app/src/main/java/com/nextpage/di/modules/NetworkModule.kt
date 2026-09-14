@@ -23,11 +23,11 @@ import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.data.repository.SupabaseAuthRepository
 import com.nextpage.data.session.SessionManager
 import com.nextpage.data.session.SupabaseSessionManager
+import com.nextpage.di.createConnectivityObserver
 import com.nextpage.domain.connectivity.ConnectivityObserver
 import com.nextpage.domain.error.AppError
 import com.nextpage.domain.error.ErrorCategory
 import com.nextpage.domain.repository.AuthRepository
-import com.nextpage.data.connectivity.AndroidConnectivityObserver
 import com.nextpage.data.remote.catalog.ANDROID_USER_AGENT
 import com.nextpage.data.remote.catalog.CatalogHttpTransport
 import com.nextpage.data.remote.catalog.CatalogFileDownloader
@@ -323,7 +323,9 @@ class NetworkModule(
 
     // discover-screen U1: app-lifetime connectivity observer. Network callbacks
     // are process-global, so this singleton has no cleanup hook.
+    // SDD android-tooling-hygiene WS2a slice 4: delegated to the shared factory
+    // also used by HiltFoundationModule (Hilt graph + manual container agree).
     val connectivityObserver: ConnectivityObserver by lazy {
-        AndroidConnectivityObserver(context)
+        createConnectivityObserver(context)
     }
 }

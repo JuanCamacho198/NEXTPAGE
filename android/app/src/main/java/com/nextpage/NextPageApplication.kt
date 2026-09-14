@@ -13,6 +13,7 @@ import com.nextpage.debug.SentryPrivacyPrefs
 import com.nextpage.debug.DebugLog
 import com.nextpage.debug.FeedbackPersistence
 import com.nextpage.presentation.theme.CoilModule
+import dagger.hilt.android.HiltAndroidApp
 import io.sentry.Sentry
 import io.sentry.SentryLevel
 import io.sentry.SentryOptions
@@ -36,7 +37,13 @@ import java.io.File
  *   file with a log snapshot to `cacheDir/crashes/`.
  * - Chains to the previous default handler so the OS still gets the
  *   crash report (and the process still dies as expected).
+ *
+ * SDD android-tooling-hygiene WS2a slice 4: Hilt root. App-scoped bindings
+ * live in `com.nextpage.di.HiltFoundationModule`; the manual [com.nextpage.di.AppContainer]
+ * still constructs entry-point graphs and delegates binding construction to the
+ * shared factories until slices 5-6 migrate consumers.
  */
+@HiltAndroidApp
 class NextPageApplication : Application(), ImageLoaderFactory {
 
     companion object {

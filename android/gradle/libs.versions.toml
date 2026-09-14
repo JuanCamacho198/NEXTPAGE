@@ -127,6 +127,12 @@ readium-adapter-pdfium = { group = "org.readium.kotlin-toolkit", name = "readium
 sentry-android = { group = "io.sentry", name = "sentry-android", version.ref = "sentry" }
 desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugar" }
 
+# hilt group (WS2a slice 4: Hilt 2.57.1 verified for Kotlin 2.2.21 / KSP 2.0.5 /
+# AGP 8.11.1 — processor built against KSP 2.0.x API, plugin targets Kotlin 2.2.0
+# metadata readable by 2.2.21, AGP 8.x supported; Hilt >= 2.59 requires AGP 9).
+hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
+hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
+
 # testing group
 testing-junit4 = { group = "junit", name = "junit", version.ref = "junit4" }
 testing-mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }

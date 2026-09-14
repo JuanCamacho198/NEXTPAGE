@@ -15,6 +15,10 @@ plugins {
     // applied here so it participates in the app module's variant graph
     // and can upload R8 mapping artifacts for release builds).
     id("io.sentry.android.gradle")
+
+    // SDD android-tooling-hygiene WS2a slice 4: Hilt foundation (catalog alias;
+    // declared in the root build file, applied here).
+    alias(libs.plugins.hilt)
 }
 
 ksp {
@@ -228,6 +232,11 @@ dependencies {
 
     implementation(libs.bundles.room)
     ksp(libs.room.compiler)
+    // SDD android-tooling-hygiene WS2a slice 4: Hilt compiler via KSP ALONGSIDE
+    // (not replacing) the Room compiler — one processor addition per the
+    // KSP-ordering rule; both processors must run on assemble.
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
     androidTestImplementation(libs.room.testing)
     testImplementation(libs.room.testing)
 

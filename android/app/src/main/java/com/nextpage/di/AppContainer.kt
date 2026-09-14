@@ -103,6 +103,10 @@ class AppContainer(context: Context) {
     val supabaseBookCatalogDataSource: SupabaseBookCatalogDataSource by lazy { networkModule.supabaseBookCatalogDataSource }
     val supabaseBookCatalogSync: SupabaseBookCatalogSync by lazy { networkModule.supabaseBookCatalogSync }
     val catalogProvider: CatalogProvider by lazy { networkModule.catalogProvider }
+    // SDD android-tooling-hygiene WS2a slice 4: delegated — NetworkModule builds
+    // this via createConnectivityObserver, the shared factory also used by
+    // HiltFoundationModule. Manual container retained until slices 5-6 migrate
+    // consumers; no `hiltViewModel()` / ViewModel migration in this slice.
     val connectivityObserver: ConnectivityObserver by lazy { networkModule.connectivityObserver }
     val catalogFileDownloader: CatalogFileDownloader by lazy { networkModule.catalogFileDownloader }
     val downloadAndImportBookUseCase: DownloadAndImportBookUseCase by lazy {

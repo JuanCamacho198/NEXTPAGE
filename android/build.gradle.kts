@@ -13,4 +13,8 @@ plugins {
     // we additionally pin sentry-android:8.54.0 in app/build.gradle.kts
     // for explicit version control.
     alias(libs.plugins.sentry.gradle) apply false
+
+    // SDD android-tooling-hygiene WS2a slice 4: Hilt (declared in the catalog;
+    // applied in app/build.gradle.kts).
+    alias(libs.plugins.hilt) apply false
 }

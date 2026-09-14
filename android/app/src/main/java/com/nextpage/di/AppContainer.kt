@@ -21,6 +21,7 @@ import com.nextpage.data.remote.sync.DriveColdBackupService
 import com.nextpage.data.remote.sync.StorageSyncRemoteDataSource
 import com.nextpage.data.remote.sync.SyncOrchestrator
 import com.nextpage.data.remote.sync.SyncOrchestratorImpl
+import com.nextpage.data.remote.sync.SyncOrchestratorSettleGate
 import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.data.session.ReaderPreferences
 import com.nextpage.data.session.ReadingGoalPreferences
@@ -41,6 +42,8 @@ import com.nextpage.domain.repository.HomeRepository
 import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.repository.ReadingStatsRepository
+import com.nextpage.domain.repository.StorageRepository
+import com.nextpage.domain.sync.SyncSettleGate
 import com.nextpage.domain.usecase.GetBookProgressUseCase
 import com.nextpage.data.remote.catalog.CatalogFileDownloader
 import com.nextpage.domain.usecase.DownloadAndImportBookUseCase
@@ -59,7 +62,13 @@ class AppContainer(context: Context) {
     private val databaseModule = DatabaseModule(context.applicationContext)
     private val storageModule = StorageModule(context.applicationContext, databaseModule)
     private val preferencesModule = PreferencesModule(context.applicationContext)
-    private val repositoryModule = RepositoryModule(context.applicationContext, databaseModule, storageModule, preferencesModule)
+    private val repositoryModule = RepositoryModule(
+        context = context.applicationContext,
+        databaseModule = databaseModule,
+        storageModule = storageModule,
+        preferencesModule = preferencesModule,
+        syncSettleGateProvider = { syncSettleGate }
+    )
     private val networkModule = NetworkModule(context.applicationContext, databaseModule, preferencesModule)
     private val useCaseModule = UseCaseModule(repositoryModule, databaseModule, preferencesModule)
 
@@ -72,6 +81,7 @@ class AppContainer(context: Context) {
     val homeRepository: HomeRepository get() = repositoryModule.homeRepository
     val dictionaryRepository: DictionaryRepository get() = repositoryModule.dictionaryRepository
     val cacheRepository: CacheRepository get() = repositoryModule.cacheRepository
+    val storageRepository: StorageRepository get() = repositoryModule.storageRepository
     val readerPreferences: ReaderPreferences get() = preferencesModule.readerPreferences
     val readingGoalPreferences: ReadingGoalPreferences get() = preferencesModule.readingGoalPreferences
     val dailyGoalProvider: () -> Int get() = preferencesModule.dailyGoalProvider
@@ -146,6 +156,13 @@ class AppContainer(context: Context) {
             ),
         )
     }
+
+    /**
+     * Settle signal consumed by local file cleanup: a delete waits (bounded)
+     * for the aggregate sync state to leave [com.nextpage.data.remote.sync.SyncState.Active].
+     * Lazy so it is built only when the first delete/sweep runs.
+     */
+    val syncSettleGate: SyncSettleGate by lazy { SyncOrchestratorSettleGate(syncOrchestrator) }
 
     internal object ReaderDependencies {
         fun updateReadingProgressUseCase(readerRepository: ReaderRepository) =

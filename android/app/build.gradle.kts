@@ -350,6 +350,9 @@ dependencies {
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     testImplementation(libs.bundles.testing)
+    // Turbine — deterministic Flow/StateFlow emission assertions paired with
+    // kotlinx-coroutines-test (test-only; never on a production classpath).
+    testImplementation(libs.testing.turbine)
     testImplementation(libs.hilt.testing)
     kspTest(libs.hilt.compiler)
     testImplementation(libs.ktor.client.mock)

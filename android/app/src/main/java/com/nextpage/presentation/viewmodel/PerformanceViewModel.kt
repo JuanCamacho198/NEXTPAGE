@@ -4,6 +4,8 @@ import android.app.Application
 import android.app.ActivityManager
 import android.content.Context
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import java.io.File
 import java.text.SimpleDateFormat
@@ -246,5 +248,26 @@ class PerformanceViewModel(
     private fun folderSize(dir: File): Long {
         if (!dir.exists()) return 0L
         return dir.walkTopDown().filter { it.isFile }.map { it.length() }.sum()
+    }
+
+    /**
+     * Explicit factory for [PerformanceViewModel].
+     *
+     * The ViewModel keeps a SINGLE `(Application)` constructor so
+     * [ViewModelProvider.AndroidViewModelFactory] can instantiate it by
+     * reflection. A defaulted second constructor parameter would generate a
+     * synthetic constructor instead and break that path with
+     * `NoSuchMethodException: PerformanceViewModel.<init> [Application]`
+     * (NEXTPAGE-ANDROID-1). This factory is the non-reflective call site used
+     * by the settings screen; both paths are covered by
+     * `PerformanceViewModelConstructionTest`.
+     */
+    class Factory(
+        private val application: Application
+    ) : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            return PerformanceViewModel(application) as T
+        }
     }
 }

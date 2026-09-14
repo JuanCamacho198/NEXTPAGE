@@ -32,7 +32,7 @@ import java.io.File
 fun PerformanceScreen(
     onBack: () -> Unit,
     viewModel: PerformanceViewModel = viewModel(
-        factory = androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.getInstance(
+        factory = PerformanceViewModel.Factory(
             LocalContext.current.applicationContext as Application
         )
     )

@@ -12,8 +12,6 @@ import io.github.jan.supabase.realtime.realtime
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import com.nextpage.debug.DebugDual
-import com.nextpage.debug.DebugEvent
 
 /**
  * Reading progress CRUD via Supabase PostgREST (using supabase-kt postgrest-kt).
@@ -62,52 +60,15 @@ class SupabaseProgressDataSource {
     }
 
     suspend fun upsertProgress(progress: ReadingProgressRow): ReadingProgressRow {
-        return try {
-            // Prefer return=representation may return [] on RLS block — use maybeSingle (decodeSingleOrNull)
-            val result = postgrest["reading_progress"]
-                .upsert(progress) {
-                    onConflict = "user_id, book_id"
-                    headers.append("Prefer", "return=representation")
-                }
-                .decodeSingleOrNull<ReadingProgressRow>()
-            if (result != null) return result
-            DebugDual.logSyncFailed("READING_PROGRESS", progress.bookId, "upsertProgress empty-body: returned null/[] with Prefer")
-            DebugDual.e(DebugDual.TAG_SUPABASE_SYNC, "upsertProgress empty-body fallback for ${progress.bookId}")
-            // Try maybeSingle fallback then fetch (RLS check: row exists but not returned)
-            try {
-                val fetched = postgrest["reading_progress"]
-                    .select {
-                        filter {
-                            eq("user_id", progress.userId)
-                            eq("book_id", progress.bookId)
-                        }
-                    }
-                    .decodeSingleOrNull<ReadingProgressRow>()
-                if (fetched != null) return fetched
-            } catch (_: Throwable) {}
-            // Return original as success to drain outbox (RLS may block representation but row exists)
-            return progress
-        } catch (e: Exception) {
-            val msg = e.message ?: ""
-            // Handle empty-body EOF / RLS blocked select returning []
-            if (msg.contains("EOF") || msg.contains("Expected start of the array") || msg.contains("empty")) {
-                DebugDual.logSyncFailed("READING_PROGRESS", progress.bookId, "upsertProgress empty-body: ${e.message}")
-                DebugDual.e(DebugDual.TAG_SUPABASE_SYNC, "upsertProgress exception empty-body: ${e.message}")
-                try {
-                    val fetched = postgrest["reading_progress"]
-                        .select {
-                            filter {
-                                eq("user_id", progress.userId)
-                                eq("book_id", progress.bookId)
-                            }
-                        }
-                        .decodeSingleOrNull<ReadingProgressRow>()
-                    if (fetched != null) return fetched
-                } catch (_: Throwable) {}
-                return progress
+        // An empty response body (204 / return=minimal / RLS-stripped representation)
+        // is a successful write, not a failure: fall back to the row we sent.
+        return postgrest["reading_progress"]
+            .upsert(progress) {
+                onConflict = "user_id, book_id"
+                headers.append("Prefer", "return=representation")
             }
-            throw e
-        }
+            .decodeSingleOrNullTolerant<ReadingProgressRow>()
+            ?: progress
     }
 
     suspend fun getProgress(userId: String, bookId: String): ReadingProgressRow? {
@@ -153,38 +114,14 @@ class SupabaseProgressDataSource {
     // ─── Bookmarks ───────────────────────────────────────────────
 
     suspend fun upsertBookmark(bookmark: BookmarkRow): BookmarkRow {
-        return try {
-            val result = postgrest["bookmarks"]
-                .upsert(bookmark) {
-                    onConflict = "user_id, book_id, cfi_location"
-                    headers.append("Prefer", "return=representation")
-                }
-                .decodeSingleOrNull<BookmarkRow>()
-            if (result != null) return result
-            DebugDual.logSyncFailed("BOOKMARK", bookmark.id, "upsertBookmark empty-body: returned null/[] with Prefer")
-            DebugDual.e(DebugDual.TAG_SUPABASE_SYNC, "upsertBookmark empty-body fallback for ${bookmark.id}")
-            try {
-                val fetched = postgrest["bookmarks"]
-                    .select { filter { eq("id", bookmark.id ?: "") } }
-                    .decodeSingleOrNull<BookmarkRow>()
-                if (fetched != null) return fetched
-            } catch (_: Throwable) {}
-            return bookmark
-        } catch (e: Exception) {
-            val msg = e.message ?: ""
-            if (msg.contains("EOF") || msg.contains("Expected start of the array") || msg.contains("empty")) {
-                DebugDual.logSyncFailed("BOOKMARK", bookmark.id, "upsertBookmark empty-body: ${e.message}")
-                DebugDual.e(DebugDual.TAG_SUPABASE_SYNC, "upsertBookmark exception empty-body: ${e.message}")
-                try {
-                    val fetched = postgrest["bookmarks"]
-                        .select { filter { eq("id", bookmark.id ?: "") } }
-                        .decodeSingleOrNull<BookmarkRow>()
-                    if (fetched != null) return fetched
-                } catch (_: Throwable) {}
-                return bookmark
+        // Empty response body = successful write (see decodeSingleOrNullTolerant).
+        return postgrest["bookmarks"]
+            .upsert(bookmark) {
+                onConflict = "user_id, book_id, cfi_location"
+                headers.append("Prefer", "return=representation")
             }
-            throw e
-        }
+            .decodeSingleOrNullTolerant<BookmarkRow>()
+            ?: bookmark
     }
 
     suspend fun getBookmark(userId: String, bookId: String, cfiLocation: String): BookmarkRow? {
@@ -249,38 +186,14 @@ class SupabaseProgressDataSource {
     // ─── Highlights ─────────────────────────────────────────────
 
     suspend fun upsertHighlight(highlight: HighlightRow): HighlightRow {
-        return try {
-            val result = postgrest["highlights"]
-                .upsert(highlight) {
-                    onConflict = "id"
-                    headers.append("Prefer", "return=representation")
-                }
-                .decodeSingleOrNull<HighlightRow>()
-            if (result != null) return result
-            DebugDual.logSyncFailed("HIGHLIGHT", highlight.id, "upsertHighlight empty-body: returned null/[] with Prefer")
-            DebugDual.e(DebugDual.TAG_SUPABASE_SYNC, "upsertHighlight empty-body fallback for ${highlight.id}")
-            try {
-                val fetched = postgrest["highlights"]
-                    .select { filter { eq("id", highlight.id ?: "") } }
-                    .decodeSingleOrNull<HighlightRow>()
-                if (fetched != null) return fetched
-            } catch (_: Throwable) {}
-            return highlight
-        } catch (e: Exception) {
-            val msg = e.message ?: ""
-            if (msg.contains("EOF") || msg.contains("Expected start of the array") || msg.contains("empty")) {
-                DebugDual.logSyncFailed("HIGHLIGHT", highlight.id, "upsertHighlight empty-body: ${e.message}")
-                DebugDual.e(DebugDual.TAG_SUPABASE_SYNC, "upsertHighlight exception empty-body: ${e.message}")
-                try {
-                    val fetched = postgrest["highlights"]
-                        .select { filter { eq("id", highlight.id ?: "") } }
-                        .decodeSingleOrNull<HighlightRow>()
-                    if (fetched != null) return fetched
-                } catch (_: Throwable) {}
-                return highlight
+        // Empty response body = successful write (see decodeSingleOrNullTolerant).
+        return postgrest["highlights"]
+            .upsert(highlight) {
+                onConflict = "id"
+                headers.append("Prefer", "return=representation")
             }
-            throw e
-        }
+            .decodeSingleOrNullTolerant<HighlightRow>()
+            ?: highlight
     }
 
     suspend fun getHighlight(id: String): HighlightRow? {
@@ -353,34 +266,15 @@ class SupabaseProgressDataSource {
     }
 
     suspend fun createTag(tag: TagRow): TagRow {
-        return try {
-            val result = postgrest["tags"]
-                .upsert(tag) {
-                    onConflict = "user_id, name"
-                    headers.append("Prefer", "return=representation")
-                }
-                .decodeSingleOrNull<TagRow>()
-            if (result != null) return result
-            DebugDual.logSyncFailed("TAG", tag.id, "createTag empty-body: returned null/[] with Prefer")
-            DebugDual.e(DebugDual.TAG_SUPABASE_SYNC, "createTag empty-body fallback for ${tag.id}")
-            try {
-                val fetched = findTagByName(tag.userId, tag.name)
-                if (fetched != null) return fetched
-            } catch (_: Throwable) {}
-            return tag
-        } catch (e: Exception) {
-            val msg = e.message ?: ""
-            if (msg.contains("EOF") || msg.contains("Expected start of the array") || msg.contains("empty")) {
-                DebugDual.logSyncFailed("TAG", tag.id, "createTag empty-body: ${e.message}")
-                DebugDual.e(DebugDual.TAG_SUPABASE_SYNC, "createTag exception empty-body: ${e.message}")
-                try {
-                    val fetched = findTagByName(tag.userId, tag.name)
-                    if (fetched != null) return fetched
-                } catch (_: Throwable) {}
-                return tag
+        // Empty response body = successful write (see decodeSingleOrNullTolerant).
+        // The caller already owns the tag id, so the sent row is the correct success value.
+        return postgrest["tags"]
+            .upsert(tag) {
+                onConflict = "user_id, name"
+                headers.append("Prefer", "return=representation")
             }
-            throw e
-        }
+            .decodeSingleOrNullTolerant<TagRow>()
+            ?: tag
     }
 
     suspend fun findOrCreateTag(userId: String, name: String, color: String? = null): TagRow {
@@ -463,38 +357,14 @@ class SupabaseProgressDataSource {
      * primary key + `onConflict = "id"` (SCEN-reading-sessions-sync-3/7).
      */
     suspend fun upsertReadingSession(session: ReadingSessionRow): ReadingSessionRow {
-        return try {
-            val result = postgrest["reading_sessions"]
-                .upsert(session) {
-                    onConflict = "id"
-                    headers.append("Prefer", "return=representation")
-                }
-                .decodeSingleOrNull<ReadingSessionRow>()
-            if (result != null) return result
-            DebugDual.logSyncFailed("READING_SESSION", session.id, "upsertReadingSession empty-body: returned null/[] with Prefer")
-            DebugDual.e(DebugDual.TAG_SUPABASE_SYNC, "upsertReadingSession empty-body fallback for ${session.id}")
-            try {
-                val fetched = postgrest["reading_sessions"]
-                    .select { filter { eq("id", session.id) } }
-                    .decodeSingleOrNull<ReadingSessionRow>()
-                if (fetched != null) return fetched
-            } catch (_: Throwable) {}
-            return session
-        } catch (e: Exception) {
-            val msg = e.message ?: ""
-            if (msg.contains("EOF") || msg.contains("Expected start of the array") || msg.contains("empty")) {
-                DebugDual.logSyncFailed("READING_SESSION", session.id, "upsertReadingSession empty-body: ${e.message}")
-                DebugDual.e(DebugDual.TAG_SUPABASE_SYNC, "upsertReadingSession exception empty-body: ${e.message}")
-                try {
-                    val fetched = postgrest["reading_sessions"]
-                        .select { filter { eq("id", session.id) } }
-                        .decodeSingleOrNull<ReadingSessionRow>()
-                    if (fetched != null) return fetched
-                } catch (_: Throwable) {}
-                return session
+        // Empty response body = successful write (see decodeSingleOrNullTolerant).
+        return postgrest["reading_sessions"]
+            .upsert(session) {
+                onConflict = "id"
+                headers.append("Prefer", "return=representation")
             }
-            throw e
-        }
+            .decodeSingleOrNullTolerant<ReadingSessionRow>()
+            ?: session
     }
 
     /**

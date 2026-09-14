@@ -2,10 +2,12 @@ package com.nextpage.data.remote.supabase
 
 import com.nextpage.data.local.dao.BookDao
 import com.nextpage.data.local.dao.HighlightDao
+import com.nextpage.data.local.dao.ReadingProgressDao
 import com.nextpage.data.local.dao.ReadingSessionDao
 import com.nextpage.data.local.dao.SyncOutboxDao
 import com.nextpage.data.local.entity.BookEntity
 import com.nextpage.data.local.entity.HighlightEntity
+import com.nextpage.data.local.entity.ReadingProgressEntity
 import com.nextpage.data.local.entity.ReadingSessionEntity
 import com.nextpage.data.local.entity.SyncEntityType
 import com.nextpage.data.local.entity.SyncOperation
@@ -106,6 +108,55 @@ class SupabaseProgressSyncTest {
             date = "2026-08-13T00:00:00.000Z",
             updatedAt = updatedAt
         )
+
+    // ─── Outbox: empty-body tolerant write is acked, never re-queued ───
+
+    /**
+     * FIX 1 regression: once the data source tolerates an empty write body
+     * (returns the sent row instead of throwing), the outbox item must be
+     * acked (deleted), never retried/poisoned.
+     */
+    @Test
+    fun processOutbox_progress_emptyBodyTolerantWriteAcksEntry() = runBlocking {
+        val localProgressDao = mockk<ReadingProgressDao>(relaxed = true)
+        coEvery { localProgressDao.getProgressForBook("book-1") } returns ReadingProgressEntity(
+            id = "progress-1",
+            bookId = "book-1",
+            cfiLocation = "epubcfi(/6/2)",
+            percentage = 0.5f,
+            updatedAtEpochMillis = 1_000L
+        )
+        val tolerantSync = SupabaseProgressSync(
+            outboxDao = fakeOutboxDao,
+            bookDao = fakeBookDao,
+            readingProgressDao = localProgressDao,
+            bookmarkDao = mockk(relaxed = true),
+            highlightDao = mockk(relaxed = true),
+            readingSessionDao = fakeSessionDao,
+            sessionManager = mockSessionManager,
+            dataSource = mockDataSource
+        )
+        val item = SyncOutboxEntity(
+            id = "outbox-progress-1",
+            entityType = SyncEntityType.READING_PROGRESS.name,
+            entityId = "book-1",
+            operation = SyncOperation.UPDATE.name,
+            payloadJson = "{}",
+            createdAtEpochMillis = 50L
+        )
+        fakeOutboxDao.insert(item)
+        // Tolerant write success: the data source resolves the row (empty body) instead of throwing.
+        coEvery { mockDataSource.upsertProgress(any()) } returns mockk()
+
+        tolerantSync.startProcessing()
+        Thread.sleep(500)
+
+        assertTrue(
+            "An empty-body-tolerant progress write must ack the outbox entry, not re-queue it",
+            fakeOutboxDao.getPendingItems().none { it.id == item.id }
+        )
+        assertEquals(0, fakeOutboxDao.incrementCalls)
+    }
 
     // ─── Outbox: upsert + delete (SCEN-sync-3) ────────────────────
 

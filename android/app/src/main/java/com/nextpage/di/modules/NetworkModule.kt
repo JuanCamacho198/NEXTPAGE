@@ -2,6 +2,30 @@ package com.nextpage.di.modules
 
 import android.content.Context
 import com.nextpage.BuildConfig
+import com.nextpage.data.remote.addons.AddonCatalogProvider
+import com.nextpage.data.remote.addons.AddonRegistry
+import com.nextpage.data.remote.addons.CuratedCatalogProvider
+import com.nextpage.data.remote.addons.KtorAddonHttpTransport
+import com.nextpage.data.remote.addons.PersistentAddonConsentStore
+import com.nextpage.data.remote.addons.catalogProvidersWithAddons
+import com.nextpage.data.remote.catalog.ANDROID_USER_AGENT
+import com.nextpage.data.remote.catalog.CatalogBook
+import com.nextpage.data.remote.catalog.CatalogFileDownloader
+import com.nextpage.data.remote.catalog.CatalogHttpTransport
+import com.nextpage.data.remote.catalog.CatalogProvider
+import com.nextpage.data.remote.catalog.CompositeCatalogProvider
+import com.nextpage.data.remote.catalog.GoogleBooksCatalogProvider
+import com.nextpage.data.remote.catalog.GoogleBooksDataSource
+import com.nextpage.data.remote.catalog.GutendexCatalogProvider
+import com.nextpage.data.remote.catalog.GutendexDataSource
+import com.nextpage.data.remote.catalog.KtorCatalogFileDownloader
+import com.nextpage.data.remote.catalog.KtorCatalogHttpTransport
+import com.nextpage.data.remote.catalog.LiveCatalogProvider
+import com.nextpage.data.remote.catalog.OpenLibraryCatalogProvider
+import com.nextpage.data.remote.catalog.OpenLibraryDataSource
+import com.nextpage.data.remote.catalog.RebuildingCatalogProvider
+import com.nextpage.data.remote.catalog.RoomDiscoverCache
+import com.nextpage.data.remote.catalog.googleBooksProviderOrNull
 import com.nextpage.data.remote.drive.DriveCoordinator
 import com.nextpage.data.remote.drive.DriveOAuthSession
 import com.nextpage.data.remote.drive.DriveTokenApi
@@ -23,36 +47,12 @@ import com.nextpage.data.remote.sync.SyncService
 import com.nextpage.data.repository.SupabaseAuthRepository
 import com.nextpage.data.session.SessionManager
 import com.nextpage.data.session.SupabaseSessionManager
+import com.nextpage.di.createConnectivityObserver
+import com.nextpage.domain.access.LegalAccess
 import com.nextpage.domain.connectivity.ConnectivityObserver
 import com.nextpage.domain.error.AppError
 import com.nextpage.domain.error.ErrorCategory
 import com.nextpage.domain.repository.AuthRepository
-import com.nextpage.data.connectivity.AndroidConnectivityObserver
-import com.nextpage.data.remote.catalog.ANDROID_USER_AGENT
-import com.nextpage.data.remote.catalog.CatalogHttpTransport
-import com.nextpage.data.remote.catalog.CatalogFileDownloader
-import com.nextpage.data.remote.catalog.KtorCatalogFileDownloader
-import com.nextpage.data.remote.catalog.CatalogProvider
-import com.nextpage.data.remote.catalog.CompositeCatalogProvider
-import com.nextpage.data.remote.catalog.GutendexCatalogProvider
-import com.nextpage.data.remote.catalog.GutendexDataSource
-import com.nextpage.data.remote.catalog.GoogleBooksCatalogProvider
-import com.nextpage.data.remote.catalog.GoogleBooksDataSource
-import com.nextpage.data.remote.catalog.googleBooksProviderOrNull
-import com.nextpage.data.remote.catalog.KtorCatalogHttpTransport
-import com.nextpage.data.remote.catalog.OpenLibraryCatalogProvider
-import com.nextpage.data.remote.catalog.OpenLibraryDataSource
-import com.nextpage.data.remote.addons.CuratedCatalogProvider
-import com.nextpage.data.remote.addons.AddonCatalogProvider
-import com.nextpage.data.remote.addons.AddonRegistry
-import com.nextpage.data.remote.addons.KtorAddonHttpTransport
-import com.nextpage.data.remote.addons.PersistentAddonConsentStore
-import com.nextpage.data.remote.addons.catalogProvidersWithAddons
-import com.nextpage.data.remote.catalog.CatalogBook
-import com.nextpage.domain.access.LegalAccess
-import com.nextpage.data.remote.catalog.LiveCatalogProvider
-import com.nextpage.data.remote.catalog.RebuildingCatalogProvider
-import com.nextpage.data.remote.catalog.RoomDiscoverCache
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
@@ -66,7 +66,7 @@ import kotlinx.serialization.json.Json
 class NetworkModule(
     private val context: Context,
     private val databaseModule: DatabaseModule,
-    @Suppress("UNUSED_PARAMETER") private val preferencesModule: PreferencesModule
+    @Suppress("UNUSED_PARAMETER") private val preferencesModule: PreferencesModule,
 ) {
     val driveTokenStore: DriveTokenStore by lazy {
         runCatching { EncryptedDriveTokenStore(context.applicationContext) }
@@ -82,14 +82,14 @@ class NetworkModule(
             clientId = BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID,
             redirectUri = driveOAuthRedirectUri(BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID),
             tokenStore = driveTokenStore,
-            tokenApi = driveTokenApi
+            tokenApi = driveTokenApi,
         )
     }
 
     val googleDriveAuthHelper: GoogleDriveAuthHelper by lazy {
         GoogleDriveAuthHelper(
             context = context.applicationContext,
-            session = driveOAuthSession
+            session = driveOAuthSession,
         )
     }
 
@@ -98,7 +98,7 @@ class NetworkModule(
             context = context.applicationContext,
             tokenStore = driveTokenStore,
             tokenApi = driveTokenApi,
-            clientId = BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID
+            clientId = BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID,
         )
     }
 
@@ -112,7 +112,7 @@ class NetworkModule(
 
     val authRepository: AuthRepository by lazy {
         SupabaseAuthRepository(
-            sessionManager = sessionManager
+            sessionManager = sessionManager,
         )
     }
 
@@ -129,12 +129,13 @@ class NetworkModule(
             localBooksDir = context.applicationContext.filesDir.resolve("books"),
             isEnabled = driveCoordinator::isEnabled,
             tokenRefresher = { driveCoordinator.refreshAccessToken() },
-            diagnosticError = AppError(
-                category = ErrorCategory.CONFIG_ERROR,
-                code = "SYNC_DRIVE_NOT_AUTHORIZED",
-                message = "Google Drive not authorized. Authorize in Settings → Data & Storage.",
-                component = "AppContainer"
-            )
+            diagnosticError =
+                AppError(
+                    category = ErrorCategory.CONFIG_ERROR,
+                    code = "SYNC_DRIVE_NOT_AUTHORIZED",
+                    message = "Google Drive not authorized. Authorize in Settings → Data & Storage.",
+                    component = "AppContainer",
+                ),
         )
     }
 
@@ -152,7 +153,7 @@ class NetworkModule(
             readingSessionDao = databaseModule.readingSessionDao,
             sessionManager = sessionManager,
             dataSource = supabaseProgressDataSource,
-            outboxCommit = outboxCommit
+            outboxCommit = outboxCommit,
         )
     }
 
@@ -170,7 +171,7 @@ class NetworkModule(
             driveTokenRefresher = { driveCoordinator.refreshAccessToken() },
             localBooksDir = context.applicationContext.filesDir.resolve("books"),
             progressDataSource = supabaseProgressDataSource,
-            outboxCommit = outboxCommit
+            outboxCommit = outboxCommit,
         )
     }
 
@@ -184,7 +185,7 @@ class NetworkModule(
             readingSessionDao = databaseModule.readingSessionDao,
             bookCatalogDataSource = supabaseBookCatalogDataSource,
             progressDataSource = supabaseProgressDataSource,
-            sessionManager = sessionManager
+            sessionManager = sessionManager,
         )
     }
 
@@ -204,7 +205,12 @@ class NetworkModule(
     val catalogHttpClient: HttpClient by lazy {
         HttpClient(OkHttp) {
             install(ContentNegotiation) {
-                json(Json { ignoreUnknownKeys = true; isLenient = true })
+                json(
+                    Json {
+                        ignoreUnknownKeys = true
+                        isLenient = true
+                    },
+                )
             }
             install(HttpTimeout) {
                 requestTimeoutMillis = 15_000
@@ -262,7 +268,7 @@ class NetworkModule(
             KtorAddonHttpTransport(catalogHttpClient),
             // U5: durable consent (survives process restart); delivers the
             // persistence deferred from U4's in-memory default.
-            PersistentAddonConsentStore(context)
+            PersistentAddonConsentStore(context),
         )
     }
 
@@ -282,7 +288,7 @@ class NetworkModule(
                     row.manifest,
                     addonId,
                     addonTransport,
-                    consent = addonRegistry.consent
+                    consent = addonRegistry.consent,
                 ).resolveAccess(book)
             }
         }
@@ -296,25 +302,27 @@ class NetworkModule(
     }
 
     val rebuildingCatalogProvider: RebuildingCatalogProvider by lazy {
-        val provider = RebuildingCatalogProvider {
-            CompositeCatalogProvider(
-                catalogProvidersWithAddons(
-                    builtIns = listOfNotNull(
-                        GutendexCatalogProvider(gutendexDataSource),
-                        OpenLibraryCatalogProvider(openLibraryDataSource),
-                        // Fail-closed: absent/blank GOOGLE_BOOKS_KEY ⇒ null ⇒ omitted.
-                        googleBooksCatalogProvider
+        val provider =
+            RebuildingCatalogProvider {
+                CompositeCatalogProvider(
+                    catalogProvidersWithAddons(
+                        builtIns =
+                            listOfNotNull(
+                                GutendexCatalogProvider(gutendexDataSource),
+                                OpenLibraryCatalogProvider(openLibraryDataSource),
+                                // Fail-closed: absent/blank GOOGLE_BOOKS_KEY ⇒ null ⇒ omitted.
+                                googleBooksCatalogProvider,
+                            ),
+                        curated = CuratedCatalogProvider(context),
+                        installedAddons = addonRegistry.listInstalled(),
+                        addonTransport = addonTransport,
+                        // U4: providers share the registry consent store so a
+                        // recorded disclosure consent unblocks resolveAccess.
+                        addonConsent = addonRegistry.consent,
                     ),
-                    curated = CuratedCatalogProvider(context),
-                    installedAddons = addonRegistry.listInstalled(),
-                    addonTransport = addonTransport,
-                    // U4: providers share the registry consent store so a
-                    // recorded disclosure consent unblocks resolveAccess.
-                    addonConsent = addonRegistry.consent
-                ),
-                cache = RoomDiscoverCache(databaseModule.discoverCacheDao)
-            )
-        }
+                    cache = RoomDiscoverCache(databaseModule.discoverCacheDao),
+                )
+            }
         addonRegistry.addOnChangedListener { provider.invalidate() }
         provider
     }
@@ -323,7 +331,9 @@ class NetworkModule(
 
     // discover-screen U1: app-lifetime connectivity observer. Network callbacks
     // are process-global, so this singleton has no cleanup hook.
+    // SDD android-tooling-hygiene WS2a slice 4: delegated to the shared factory
+    // also used by HiltFoundationModule (Hilt graph + manual container agree).
     val connectivityObserver: ConnectivityObserver by lazy {
-        AndroidConnectivityObserver(context)
+        createConnectivityObserver(context)
     }
 }

@@ -18,15 +18,15 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.ui.components.atoms.NextPageBottomSheet
 import com.nextpage.ui.icons.NextPageIcons
-import com.nextpage.presentation.theme.NextPageTheme
 
 data class SelectorOption(
     val id: String,
     @param:StringRes val labelRes: Int? = null,
     val label: String? = null,
-    val icon: ImageVector? = null
+    val icon: ImageVector? = null,
 )
 
 /**
@@ -64,46 +64,47 @@ fun NextPageSelector(
     options: List<SelectorOption>,
     selectedOptionId: String,
     onOptionSelected: (SelectorOption) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     NextPageBottomSheet(
         title = title,
-        onDismiss = onDismiss
+        onDismiss = onDismiss,
     ) {
         LazyColumn {
             items(options, key = { it.id }) { option ->
                 val isSelected = option.id == selectedOptionId
-                val optionLabel = option.label
-                    ?: option.labelRes?.let { stringResource(it) }
-                    ?: option.id
+                val optionLabel =
+                    option.label
+                        ?: option.labelRes?.let { stringResource(it) }
+                        ?: option.id
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            onOptionSelected(option)
-                            onDismiss()
-                        }
-                        .padding(vertical = 12.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onOptionSelected(option)
+                                onDismiss()
+                            }.padding(vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     option.icon?.let { icon ->
                         Icon(
                             imageVector = icon,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     Text(
                         text = optionLabel,
                         style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
                     )
                     if (isSelected) {
                         Icon(
                             imageVector = NextPageIcons.Check,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = MaterialTheme.colorScheme.primary,
                         )
                     }
                 }
@@ -118,14 +119,15 @@ private fun NextPageSelectorDarkPreview() {
     NextPageTheme(darkTheme = true) {
         NextPageSelector(
             title = "Sort by",
-            options = listOf(
-                SelectorOption(id = "recent", label = "Recently added"),
-                SelectorOption(id = "title", label = "Title A-Z"),
-                SelectorOption(id = "author", label = "Author")
-            ),
+            options =
+                listOf(
+                    SelectorOption(id = "recent", label = "Recently added"),
+                    SelectorOption(id = "title", label = "Title A-Z"),
+                    SelectorOption(id = "author", label = "Author"),
+                ),
             selectedOptionId = "title",
             onOptionSelected = {},
-            onDismiss = {}
+            onDismiss = {},
         )
     }
 }
@@ -136,14 +138,15 @@ private fun NextPageSelectorLightPreview() {
     NextPageTheme(darkTheme = false) {
         NextPageSelector(
             title = "Sort by",
-            options = listOf(
-                SelectorOption(id = "recent", label = "Recently added"),
-                SelectorOption(id = "title", label = "Title A-Z"),
-                SelectorOption(id = "author", label = "Author")
-            ),
+            options =
+                listOf(
+                    SelectorOption(id = "recent", label = "Recently added"),
+                    SelectorOption(id = "title", label = "Title A-Z"),
+                    SelectorOption(id = "author", label = "Author"),
+                ),
             selectedOptionId = "title",
             onOptionSelected = {},
-            onDismiss = {}
+            onDismiss = {},
         )
     }
 }

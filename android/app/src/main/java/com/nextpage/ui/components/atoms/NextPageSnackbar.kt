@@ -41,14 +41,14 @@ import com.nextpage.presentation.theme.NextPageTheme
 @Composable
 fun NextPageSnackbar(
     snackbarData: SnackbarData,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Snackbar(
         modifier = modifier,
         snackbarData = snackbarData,
         containerColor = MaterialTheme.colorScheme.inverseSurface,
         contentColor = MaterialTheme.colorScheme.inverseOnSurface,
-        actionColor = MaterialTheme.colorScheme.inversePrimary
+        actionColor = MaterialTheme.colorScheme.inversePrimary,
     )
 }
 
@@ -61,14 +61,15 @@ private fun SnackbarDarkPreview() {
             hostState.showSnackbar(
                 message = "Sample message",
                 withDismissAction = true,
-                duration = SnackbarDuration.Indefinite
+                duration = SnackbarDuration.Indefinite,
             )
         }
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            contentAlignment = Alignment.BottomCenter
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+            contentAlignment = Alignment.BottomCenter,
         ) {
             SnackbarHost(hostState = hostState) { data ->
                 NextPageSnackbar(snackbarData = data)
@@ -86,14 +87,15 @@ private fun SnackbarLightPreview() {
             hostState.showSnackbar(
                 message = "Sample message",
                 withDismissAction = true,
-                duration = SnackbarDuration.Indefinite
+                duration = SnackbarDuration.Indefinite,
             )
         }
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            contentAlignment = Alignment.BottomCenter
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+            contentAlignment = Alignment.BottomCenter,
         ) {
             SnackbarHost(hostState = hostState) { data ->
                 NextPageSnackbar(snackbarData = data)

@@ -16,7 +16,10 @@ object CfiMigrator {
         val textOffset: Int,
     )
 
-    data class TextMetric(val charOffset: Int, val chapterChars: Int)
+    data class TextMetric(
+        val charOffset: Int,
+        val chapterChars: Int,
+    )
 
     /**
      * Converts a legacy CFI string to a Readium Locator.
@@ -28,23 +31,33 @@ object CfiMigrator {
      * @param cfiString e.g. "epubcfi(/6/3)" — chapter index is 1-based
      * @param readingOrder the publication's readingOrder (list of Link)
      */
-    fun migrateCfiToLocator(cfiString: String, readingOrder: List<Link>): Locator? {
-        val chapterIndex = LEGACY_CFI_REGEX.find(cfiString)
-            ?.groupValues?.getOrNull(1)
-            ?.toIntOrNull()
-            ?.minus(1) // Convert to 0-based
-            ?: return null
+    fun migrateCfiToLocator(
+        cfiString: String,
+        readingOrder: List<Link>,
+    ): Locator? {
+        val chapterIndex =
+            LEGACY_CFI_REGEX
+                .find(cfiString)
+                ?.groupValues
+                ?.getOrNull(1)
+                ?.toIntOrNull()
+                ?.minus(1) // Convert to 0-based
+                ?: return null
 
         val link = readingOrder.getOrNull(chapterIndex) ?: return null
 
         // Build a minimal Locator JSON matching Readium's serialization format.
-        val json = JSONObject().apply {
-            put("href", link.href.toString())
-            put("type", link.mediaType?.toString() ?: "application/xhtml+xml")
-            put("locations", JSONObject().apply {
-                put("progression", 0.0)
-            })
-        }
+        val json =
+            JSONObject().apply {
+                put("href", link.href.toString())
+                put("type", link.mediaType?.toString() ?: "application/xhtml+xml")
+                put(
+                    "locations",
+                    JSONObject().apply {
+                        put("progression", 0.0)
+                    },
+                )
+            }
         return Locator.fromJSON(json)
     }
 
@@ -67,14 +80,18 @@ object CfiMigrator {
         if (metric.chapterChars <= 0) return null
 
         val progression = progressionFor(metric)
-        val json = JSONObject().apply {
-            put("href", link.href.toString())
-            put("type", link.mediaType?.toString() ?: "application/xhtml+xml")
-            put("locations", JSONObject().apply {
-                put("progression", progression)
-                put("fragment", cfiString)
-            })
-        }
+        val json =
+            JSONObject().apply {
+                put("href", link.href.toString())
+                put("type", link.mediaType?.toString() ?: "application/xhtml+xml")
+                put(
+                    "locations",
+                    JSONObject().apply {
+                        put("progression", progression)
+                        put("fragment", cfiString)
+                    },
+                )
+            }
         return Locator.fromJSON(json)
     }
 
@@ -92,8 +109,12 @@ object CfiMigrator {
         val rangeParts = spineAndPath[1].split(',', limit = 3)
         if (rangeParts.size < 3) return null
         val localPath = rangeParts[0].split('/').mapNotNull { it.toIntOrNull()?.takeIf { n -> n > 0 } }
-        val textOffset = TERMINUS_OFFSET_REGEX.find(rangeParts[1])
-            ?.groupValues?.getOrNull(1)?.toIntOrNull() ?: return null
+        val textOffset =
+            TERMINUS_OFFSET_REGEX
+                .find(rangeParts[1])
+                ?.groupValues
+                ?.getOrNull(1)
+                ?.toIntOrNull() ?: return null
         return ParsedPreciseCfi(spineIndex, localPath, textOffset)
     }
 
@@ -104,8 +125,9 @@ object CfiMigrator {
     }
 
     /** Deserializes a JSON string back to a Locator. Returns null on failure. */
-    fun jsonToLocator(json: String): Locator? = runCatching {
-        val normalized = LocatorCodec.normalizeLocatorJson(json) ?: json
-        Locator.fromJSON(JSONObject(normalized))
-    }.getOrNull()
+    fun jsonToLocator(json: String): Locator? =
+        runCatching {
+            val normalized = LocatorCodec.normalizeLocatorJson(json) ?: json
+            Locator.fromJSON(JSONObject(normalized))
+        }.getOrNull()
 }

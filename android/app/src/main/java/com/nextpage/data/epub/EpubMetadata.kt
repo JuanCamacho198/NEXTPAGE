@@ -14,5 +14,5 @@ data class EpubMetadata(
     /** Subject values from `dc:subject` (sanitized: commas stripped, trimmed, deduped). */
     val tags: List<String> = emptyList(),
     /** Publication date (ISO) from `dc:date`; null when absent. */
-    val publishedDate: String? = null
+    val publishedDate: String? = null,
 )

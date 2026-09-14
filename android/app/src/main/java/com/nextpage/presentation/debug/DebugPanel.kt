@@ -1,7 +1,6 @@
 package com.nextpage.presentation.debug
 
 import android.widget.Toast
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,7 +17,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -29,7 +27,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,6 +40,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nextpage.presentation.viewmodel.AuthViewModel
 import com.nextpage.presentation.viewmodel.reader.SessionUiState
 import com.nextpage.ui.icons.NextPageIcons
@@ -65,7 +63,7 @@ fun DebugPanel(
     // then skipped, exactly as before.
     session: SessionUiState?,
     syncService: com.nextpage.data.remote.sync.SyncService,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val debugInfo by viewModel.debugInfo.collectAsStateWithLifecycle()
@@ -88,7 +86,7 @@ fun DebugPanel(
                 email = sessionInfo.email,
                 displayName = sessionInfo.displayName,
                 isSupabaseConfigured = authState.isConfigured,
-                hasWiringIssue = authState.hasWiringIssue
+                hasWiringIssue = authState.hasWiringIssue,
             )
         }
 
@@ -98,7 +96,7 @@ fun DebugPanel(
                 currentPage = session.currentPdfPage,
                 totalPages = session.totalPdfPages,
                 loadTimeMs = session.loadTimeMs,
-                filePath = session.bookFilePath
+                filePath = session.bookFilePath,
             )
         }
     }
@@ -116,9 +114,10 @@ fun DebugPanel(
                         viewModel.clearDb()
                         onDismiss()
                     },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFE53935)
-                    )
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFE53935),
+                        ),
                 ) {
                     Text("Clear & Sign Out")
                 }
@@ -127,7 +126,7 @@ fun DebugPanel(
                 TextButton(onClick = { showClearConfirm = false }) {
                     Text("Cancel")
                 }
-            }
+            },
         )
     }
 
@@ -135,32 +134,33 @@ fun DebugPanel(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = DARK_BG,
-        contentColor = VALUE_TEXT
+        contentColor = VALUE_TEXT,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 32.dp)
-                .verticalScroll(rememberScrollState())
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 32.dp)
+                    .verticalScroll(rememberScrollState()),
         ) {
             // ── Header ────────────────────────────────────────────────
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(bottom = 16.dp)
+                modifier = Modifier.padding(bottom = 16.dp),
             ) {
                 Icon(
                     imageVector = NextPageIcons.BugReport,
                     contentDescription = null,
                     tint = ACCENT,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(24.dp),
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = "Debug Panel",
                     style = MaterialTheme.typography.titleMedium,
                     color = VALUE_TEXT,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
             }
 
@@ -178,16 +178,16 @@ fun DebugPanel(
             DebugRow(label = "authMode", value = debugInfo.session.authMode)
             DebugRow(
                 label = "supabaseConfigured",
-                value = debugInfo.session.isSupabaseConfigured.toString()
+                value = debugInfo.session.isSupabaseConfigured.toString(),
             )
             DebugRow(
                 label = "hasWiringIssue",
-                value = debugInfo.session.hasWiringIssue.toString()
+                value = debugInfo.session.hasWiringIssue.toString(),
             )
 
             HorizontalDivider(
                 modifier = Modifier.padding(vertical = 12.dp),
-                color = DARK_SURFACE
+                color = DARK_SURFACE,
             )
 
             // ── 2. Init Timings Section ───────────────────────────────
@@ -198,12 +198,12 @@ fun DebugPanel(
             DebugRow(
                 label = "totalInit",
                 value = "${debugInfo.initTimings.totalInitMs}ms",
-                isBold = true
+                isBold = true,
             )
 
             HorizontalDivider(
                 modifier = Modifier.padding(vertical = 12.dp),
-                color = DARK_SURFACE
+                color = DARK_SURFACE,
             )
 
             // ── 3. DB Counts Section ──────────────────────────────────
@@ -211,12 +211,12 @@ fun DebugPanel(
             if (debugInfo.isLoadingDbCounts) {
                 Box(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
                         color = ACCENT,
-                        strokeWidth = 2.dp
+                        strokeWidth = 2.dp,
                     )
                 }
             } else {
@@ -229,7 +229,7 @@ fun DebugPanel(
 
             HorizontalDivider(
                 modifier = Modifier.padding(vertical = 12.dp),
-                color = DARK_SURFACE
+                color = DARK_SURFACE,
             )
 
             // ── 4. Sync Section ──────────────────────────────────────
@@ -239,7 +239,7 @@ fun DebugPanel(
 
             HorizontalDivider(
                 modifier = Modifier.padding(vertical = 12.dp),
-                color = DARK_SURFACE
+                color = DARK_SURFACE,
             )
 
             // ── 4b. Supabase Sync Section ──────────────────────────────
@@ -256,7 +256,7 @@ fun DebugPanel(
             if (pdfDebug != null) {
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 12.dp),
-                    color = DARK_SURFACE
+                    color = DARK_SURFACE,
                 )
 
                 SectionHeader(title = "PDF Debug")
@@ -272,7 +272,7 @@ fun DebugPanel(
 
             HorizontalDivider(
                 modifier = Modifier.padding(vertical = 12.dp),
-                color = DARK_SURFACE
+                color = DARK_SURFACE,
             )
 
             // ── Quick Actions ────────────────────────────────────────
@@ -283,7 +283,7 @@ fun DebugPanel(
                 icon = NextPageIcons.Trash,
                 label = "Clear DB",
                 color = Color(0xFFE53935),
-                onClick = { showClearConfirm = true }
+                onClick = { showClearConfirm = true },
             )
             Spacer(Modifier.height(8.dp))
             QuickActionButton(
@@ -292,7 +292,7 @@ fun DebugPanel(
                 onClick = {
                     viewModel.forceSyncPush()
                     Toast.makeText(context, "Sync push scheduled", Toast.LENGTH_SHORT).show()
-                }
+                },
             )
             Spacer(Modifier.height(8.dp))
             QuickActionButton(
@@ -301,7 +301,7 @@ fun DebugPanel(
                 onClick = {
                     viewModel.forceSyncPull()
                     Toast.makeText(context, "Sync pull scheduled", Toast.LENGTH_SHORT).show()
-                }
+                },
             )
             Spacer(Modifier.height(8.dp))
             QuickActionButton(
@@ -310,7 +310,7 @@ fun DebugPanel(
                 onClick = {
                     viewModel.copySessionInfo(context, authState.currentSession)
                     Toast.makeText(context, "Session info copied", Toast.LENGTH_SHORT).show()
-                }
+                },
             )
         }
     }
@@ -326,36 +326,44 @@ private fun SectionHeader(title: String) {
         color = SECTION_LABEL,
         fontWeight = FontWeight.SemiBold,
         letterSpacing = 1.sp,
-        modifier = Modifier.padding(bottom = 8.dp)
+        modifier = Modifier.padding(bottom = 8.dp),
     )
 }
 
 @Composable
-private fun DebugRow(label: String, value: String, isBold: Boolean = false) {
+private fun DebugRow(
+    label: String,
+    value: String,
+    isBold: Boolean = false,
+) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 3.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 3.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(
             text = label,
             color = SECTION_LABEL,
             fontSize = 13.sp,
-            fontFamily = FontFamily.Monospace
+            fontFamily = FontFamily.Monospace,
         )
         Text(
             text = value,
             color = if (isBold) ACCENT else VALUE_TEXT,
             fontSize = 13.sp,
             fontWeight = if (isBold) FontWeight.Bold else FontWeight.Normal,
-            fontFamily = FontFamily.Monospace
+            fontFamily = FontFamily.Monospace,
         )
     }
 }
 
 @Composable
-private fun DbCountRow(label: String, count: Int) {
+private fun DbCountRow(
+    label: String,
+    count: Int,
+) {
     val display = if (count < 0) "Error" else count.toString()
     DebugRow(label = label, value = display)
 }
@@ -365,21 +373,22 @@ private fun QuickActionButton(
     icon: ImageVector,
     label: String,
     color: Color = ACCENT,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     Button(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = DARK_SURFACE,
-            contentColor = VALUE_TEXT
-        )
+        colors =
+            ButtonDefaults.buttonColors(
+                containerColor = DARK_SURFACE,
+                contentColor = VALUE_TEXT,
+            ),
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             tint = color,
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier.size(18.dp),
         )
         Spacer(Modifier.width(8.dp))
         Text(text = label)

@@ -18,7 +18,7 @@ import com.nextpage.ui.components.atoms.NextPageDialogVariant
 fun LibraryDialogs(
     bookToDelete: Book?,
     onDismissDelete: () -> Unit,
-    onConfirmDelete: () -> Unit
+    onConfirmDelete: () -> Unit,
 ) {
     bookToDelete?.let { selectedBook ->
         NextPageDialog(
@@ -28,22 +28,23 @@ fun LibraryDialogs(
             dismissText = stringResource(R.string.reader_cancel),
             onConfirm = onConfirmDelete,
             onDismiss = onDismissDelete,
-            variant = NextPageDialogVariant.DESTRUCTIVE
+            variant = NextPageDialogVariant.DESTRUCTIVE,
         )
     }
 }
 
 // ─── Previews ─────────────────────────────────────────────────────────
 
-private val PreviewBook = Book(
-    id = "preview-book-1",
-    title = "The Hobbit",
-    author = "J.R.R. Tolkien",
-    coverPath = null,
-    filePath = "/preview/the-hobbit.epub",
-    format = "epub",
-    updatedAtEpochMillis = 0L
-)
+private val PreviewBook =
+    Book(
+        id = "preview-book-1",
+        title = "The Hobbit",
+        author = "J.R.R. Tolkien",
+        coverPath = null,
+        filePath = "/preview/the-hobbit.epub",
+        format = "epub",
+        updatedAtEpochMillis = 0L,
+    )
 
 @Preview(showBackground = true)
 @Composable
@@ -52,7 +53,7 @@ private fun LibraryDialogsDarkPreview() {
         LibraryDialogs(
             bookToDelete = PreviewBook,
             onDismissDelete = {},
-            onConfirmDelete = {}
+            onConfirmDelete = {},
         )
     }
 }
@@ -64,7 +65,7 @@ private fun LibraryDialogsLightPreview() {
         LibraryDialogs(
             bookToDelete = PreviewBook,
             onDismissDelete = {},
-            onConfirmDelete = {}
+            onConfirmDelete = {},
         )
     }
 }

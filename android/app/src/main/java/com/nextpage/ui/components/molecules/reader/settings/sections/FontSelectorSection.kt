@@ -34,62 +34,64 @@ import com.nextpage.ui.icons.NextPageIcons
 fun FontSelectorSection(
     settings: ReaderSettings,
     onSettingsChanged: (ReaderSettings) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     var showFontDropdown by remember { mutableStateOf(false) }
 
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF2F3445))
-            .clickable { showFontDropdown = true }
-            .padding(12.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color(0xFF2F3445))
+                .clickable { showFontDropdown = true }
+                .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = NextPageIcons.TextAa,
                 contentDescription = null,
                 tint = Color(0xFFADC6FF),
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(20.dp),
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = settings.fontName,
                 color = Color(0xFFDDE2F8),
-                fontSize = 14.sp
+                fontSize = 14.sp,
             )
         }
         Icon(
             imageVector = NextPageIcons.ChevronRight,
             contentDescription = null,
             tint = Color(0xFF718096),
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(20.dp),
         )
     }
 
     DropdownMenu(
         expanded = showFontDropdown,
-        onDismissRequest = { showFontDropdown = false }
+        onDismissRequest = { showFontDropdown = false },
     ) {
         listOf("Georgia", "Arial", "Merriweather").forEach { font ->
             DropdownMenuItem(
                 text = {
                     Text(
-                        text = when (font) {
-                            "Georgia" -> stringResource(R.string.font_name_georgia)
-                            "Arial" -> stringResource(R.string.font_name_arial)
-                            "Merriweather" -> stringResource(R.string.font_name_merriweather)
-                            else -> font
-                        }
+                        text =
+                            when (font) {
+                                "Georgia" -> stringResource(R.string.font_name_georgia)
+                                "Arial" -> stringResource(R.string.font_name_arial)
+                                "Merriweather" -> stringResource(R.string.font_name_merriweather)
+                                else -> font
+                            },
                     )
                 },
                 onClick = {
                     onSettingsChanged(settings.copy(fontName = font))
                     showFontDropdown = false
-                }
+                },
             )
         }
     }

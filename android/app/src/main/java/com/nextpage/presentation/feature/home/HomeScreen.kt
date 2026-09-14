@@ -51,27 +51,78 @@ internal enum class HomeSectionRenderState { SKELETON, EMPTY, CONTENT }
  *   has not emitted any item yet, [HomeSectionRenderState.EMPTY] when loading
  *   finished with no items, otherwise [HomeSectionRenderState.CONTENT].
  */
-internal fun homeSectionRenderState(isLoading: Boolean, isEmpty: Boolean): HomeSectionRenderState = when {
-    isLoading && isEmpty -> HomeSectionRenderState.SKELETON
-    isEmpty -> HomeSectionRenderState.EMPTY
-    else -> HomeSectionRenderState.CONTENT
-}
+internal fun homeSectionRenderState(
+    isLoading: Boolean,
+    isEmpty: Boolean,
+): HomeSectionRenderState =
+    when {
+        isLoading && isEmpty -> HomeSectionRenderState.SKELETON
+        isEmpty -> HomeSectionRenderState.EMPTY
+        else -> HomeSectionRenderState.CONTENT
+    }
 
 @Composable
-fun HomeScreen(contentPadding: PaddingValues, viewModel: HomeViewModel, onNavigateToLibrary: () -> Unit, onNavigateToHighlights: () -> Unit, onNavigateToSettings: () -> Unit, onOpenAccount: () -> Unit = {}, onNavigateToStatistics: () -> Unit, onBookSelected: (String, String, String) -> Unit, onContinueReading: (String, String?, String) -> Unit, onImportBook: () -> Unit, onEditBook: (Book) -> Unit = {}, onMarkCompleted: (Book) -> Unit = {}, onMarkPlanToRead: (Book) -> Unit = {}, onShareBook: (Book) -> Unit = {}, onRequestDeleteBook: (Book) -> Unit = {}) {
+fun HomeScreen(
+    contentPadding: PaddingValues,
+    viewModel: HomeViewModel,
+    onNavigateToLibrary: () -> Unit,
+    onNavigateToHighlights: () -> Unit,
+    onNavigateToSettings: () -> Unit,
+    onOpenAccount: () -> Unit = {},
+    onNavigateToStatistics: () -> Unit,
+    onBookSelected: (String, String, String) -> Unit,
+    onContinueReading: (String, String?, String) -> Unit,
+    onImportBook: () -> Unit,
+    onEditBook: (Book) -> Unit = {},
+    onMarkCompleted: (Book) -> Unit = {},
+    onMarkPlanToRead: (Book) -> Unit = {},
+    onShareBook: (Book) -> Unit = {},
+    onRequestDeleteBook: (Book) -> Unit = {},
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     HomeScreenContent(uiState = uiState, contentPadding = contentPadding, onNavigateToLibrary = onNavigateToLibrary, onNavigateToHighlights = onNavigateToHighlights, onNavigateToSettings = onNavigateToSettings, onOpenAccount = onOpenAccount, onNavigateToStatistics = onNavigateToStatistics, onBookSelected = onBookSelected, onContinueReading = onContinueReading, onImportBook = onImportBook, onSearchQueryChange = viewModel::onSearchQueryChanged, onToggleSearch = viewModel::onToggleSearch, onEditBook = onEditBook, onMarkCompleted = onMarkCompleted, onMarkPlanToRead = onMarkPlanToRead, onShareBook = onShareBook, onRequestDeleteBook = onRequestDeleteBook)
 }
 
 @Composable
-fun HomeScreenContent(uiState: HomeUiState, contentPadding: PaddingValues, onNavigateToLibrary: () -> Unit, onNavigateToHighlights: () -> Unit, onNavigateToSettings: () -> Unit, onOpenAccount: () -> Unit = {}, onNavigateToStatistics: () -> Unit, onBookSelected: (String, String, String) -> Unit, onContinueReading: (String, String?, String) -> Unit, onImportBook: () -> Unit, onSearchQueryChange: (String) -> Unit, onToggleSearch: () -> Unit, onEditBook: (Book) -> Unit = {}, onMarkCompleted: (Book) -> Unit = {}, onMarkPlanToRead: (Book) -> Unit = {}, onShareBook: (Book) -> Unit = {}, onRequestDeleteBook: (Book) -> Unit = {}) {
+fun HomeScreenContent(
+    uiState: HomeUiState,
+    contentPadding: PaddingValues,
+    onNavigateToLibrary: () -> Unit,
+    onNavigateToHighlights: () -> Unit,
+    onNavigateToSettings: () -> Unit,
+    onOpenAccount: () -> Unit = {},
+    onNavigateToStatistics: () -> Unit,
+    onBookSelected: (String, String, String) -> Unit,
+    onContinueReading: (String, String?, String) -> Unit,
+    onImportBook: () -> Unit,
+    onSearchQueryChange: (String) -> Unit,
+    onToggleSearch: () -> Unit,
+    onEditBook: (Book) -> Unit = {},
+    onMarkCompleted: (Book) -> Unit = {},
+    onMarkPlanToRead: (Book) -> Unit = {},
+    onShareBook: (Book) -> Unit = {},
+    onRequestDeleteBook: (Book) -> Unit = {},
+) {
     var showNotifications by remember { mutableStateOf(false) }
     if (showNotifications) NotificationSheet(onDismiss = { showNotifications = false })
-    LazyColumn(modifier = Modifier.fillMaxSize().padding(contentPadding).padding(horizontal = 24.dp).testTag(HomeTags.SCREEN_ROOT), verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(NextPageDimens.spacingMd)) {
+    LazyColumn(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(contentPadding)
+                .padding(horizontal = 24.dp)
+                .testTag(HomeTags.SCREEN_ROOT),
+        verticalArrangement =
+            androidx.compose.foundation.layout.Arrangement
+                .spacedBy(NextPageDimens.spacingMd),
+    ) {
         if (uiState.showSearch) {
             item { SearchBarSection(searchQuery = uiState.searchQuery, onSearchQueryChange = onSearchQueryChange, onCloseSearch = onToggleSearch) }
-            if (uiState.searchResults.isNotEmpty()) { item { SearchResultsList(results = uiState.searchResults, onBookSelected = onBookSelected) } }
-            else if (uiState.searchQuery.isNotBlank()) { item { Box(modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) { NextPageEmptyState(icon = NextPageIcons.Search, title = stringResource(R.string.library_search_no_results), subtitle = stringResource(R.string.library_search_empty_subtitle)) } } }
+            if (uiState.searchResults.isNotEmpty()) {
+                item { SearchResultsList(results = uiState.searchResults, onBookSelected = onBookSelected) }
+            } else if (uiState.searchQuery.isNotBlank()) {
+                item { Box(modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) { NextPageEmptyState(icon = NextPageIcons.Search, title = stringResource(R.string.library_search_no_results), subtitle = stringResource(R.string.library_search_empty_subtitle)) } }
+            }
         }
         if (!uiState.showSearch) {
             item { NextPageHeader(title = stringResource(R.string.home_nextpage_title), avatarImageUrl = uiState.avatarUrl, avatarInitials = uiState.userName.take(1).uppercase(), onAvatarClick = onOpenAccount, avatarContentDescription = stringResource(R.string.home_avatar_content_description), onSearchClick = onToggleSearch, onNotificationsClick = { showNotifications = true }) }
@@ -103,7 +154,10 @@ fun HomeScreenContent(uiState: HomeUiState, contentPadding: PaddingValues, onNav
         }
         item { Spacer(modifier = Modifier.height(NextPageDimens.spacingMd)) }
         if (com.nextpage.BuildConfig.DEBUG) {
-            item { Spacer(modifier = Modifier.height(12.dp)); Text(text = stringResource(R.string.home_version_format, com.nextpage.BuildConfig.VERSION_NAME, com.nextpage.BuildConfig.GIT_SHA, com.nextpage.BuildConfig.BUILD_TIME), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) }
+            item {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(text = stringResource(R.string.home_version_format, com.nextpage.BuildConfig.VERSION_NAME, com.nextpage.BuildConfig.GIT_SHA, com.nextpage.BuildConfig.BUILD_TIME), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp))
+            }
             item { Text(text = stringResource(R.string.debug_version_label), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp)) }
         }
     }

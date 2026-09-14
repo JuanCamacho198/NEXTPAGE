@@ -13,7 +13,6 @@ package com.nextpage.data.remote.drive
  * successful authorization — see the NavHost wiring).
  */
 object DriveConnectPromptGate {
-
     /**
      * Whether the one-time connect prompt should appear for the current state.
      *
@@ -29,7 +28,7 @@ object DriveConnectPromptGate {
         driveEnabled: Boolean,
         providerIsGoogle: Boolean,
         declinedForUser: String?,
-        currentUser: String?
+        currentUser: String?,
     ): Boolean {
         if (!importSucceeded || driveEnabled || !providerIsGoogle || currentUser.isNullOrBlank()) {
             return false

@@ -34,7 +34,6 @@ import org.junit.Test
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class SessionGateTest {
-
     private lateinit var sessionManager: SessionManager
     private lateinit var gate: SessionGateImpl
 
@@ -49,8 +48,7 @@ class SessionGateTest {
         io.mockk.unmockkAll()
     }
 
-    private fun authSession(): AuthSession =
-        AuthSession(userId = "user-1", email = "u@example.com")
+    private fun authSession(): AuthSession = AuthSession(userId = "user-1", email = "u@example.com")
 
     // ─── hasLiveSession (cached flag, no manager call) ──────────────────
 
@@ -63,22 +61,24 @@ class SessionGateTest {
     }
 
     @Test
-    fun hasLiveSession_returnsTrueAfterSuccessfulEnsureFreshSession() = runTest {
-        coEvery { sessionManager.ensureFreshSession() } returns Result.success(authSession())
+    fun hasLiveSession_returnsTrueAfterSuccessfulEnsureFreshSession() =
+        runTest {
+            coEvery { sessionManager.ensureFreshSession() } returns Result.success(authSession())
 
-        gate.ensureFreshSession()
+            gate.ensureFreshSession()
 
-        assertTrue(gate.hasLiveSession())
-    }
+            assertTrue(gate.hasLiveSession())
+        }
 
     @Test
-    fun hasLiveSession_returnsFalseAfterEnsureFreshSessionFailure() = runTest {
-        coEvery { sessionManager.ensureFreshSession() } returns Result.failure(IllegalStateException("expired"))
+    fun hasLiveSession_returnsFalseAfterEnsureFreshSessionFailure() =
+        runTest {
+            coEvery { sessionManager.ensureFreshSession() } returns Result.failure(IllegalStateException("expired"))
 
-        gate.ensureFreshSession()
+            gate.ensureFreshSession()
 
-        assertFalse(gate.hasLiveSession())
-    }
+            assertFalse(gate.hasLiveSession())
+        }
 
     @Test
     fun hasLiveSession_returnsFalseAfterOnSessionLost() {
@@ -103,44 +103,48 @@ class SessionGateTest {
     // ─── ensureFreshSession ────────────────────────────────────────────
 
     @Test
-    fun ensureFreshSession_returnsSuccessOnRefresh() = runTest {
-        val session = authSession()
-        coEvery { sessionManager.ensureFreshSession() } returns Result.success(session)
+    fun ensureFreshSession_returnsSuccessOnRefresh() =
+        runTest {
+            val session = authSession()
+            coEvery { sessionManager.ensureFreshSession() } returns Result.success(session)
 
-        val result = gate.ensureFreshSession()
+            val result = gate.ensureFreshSession()
 
-        assertTrue(result.isSuccess)
-        assertEquals(session, result.getOrNull())
-    }
-
-    @Test
-    fun ensureFreshSession_returnsFailureOnManagerFailure() = runTest {
-        coEvery { sessionManager.ensureFreshSession() } returns Result.failure(IllegalStateException("expired"))
-
-        val result = gate.ensureFreshSession()
-
-        assertTrue(result.isFailure)
-        assertTrue(result.exceptionOrNull() is IllegalStateException)
-    }
+            assertTrue(result.isSuccess)
+            assertEquals(session, result.getOrNull())
+        }
 
     @Test
-    fun ensureFreshSession_returnsFailureOnException_doesNotThrow() = runTest {
-        coEvery { sessionManager.ensureFreshSession() } throws RuntimeException("network down")
+    fun ensureFreshSession_returnsFailureOnManagerFailure() =
+        runTest {
+            coEvery { sessionManager.ensureFreshSession() } returns Result.failure(IllegalStateException("expired"))
 
-        val result = gate.ensureFreshSession()
+            val result = gate.ensureFreshSession()
 
-        assertTrue(result.isFailure)
-        assertTrue(result.exceptionOrNull() is RuntimeException)
-    }
+            assertTrue(result.isFailure)
+            assertTrue(result.exceptionOrNull() is IllegalStateException)
+        }
 
     @Test
-    fun ensureFreshSession_delegatesToManager_exactlyOnce() = runTest {
-        coEvery { sessionManager.ensureFreshSession() } returns Result.success(authSession())
+    fun ensureFreshSession_returnsFailureOnException_doesNotThrow() =
+        runTest {
+            coEvery { sessionManager.ensureFreshSession() } throws RuntimeException("network down")
 
-        gate.ensureFreshSession()
+            val result = gate.ensureFreshSession()
 
-        coVerify(exactly = 1) { sessionManager.ensureFreshSession() }
-    }
+            assertTrue(result.isFailure)
+            assertTrue(result.exceptionOrNull() is RuntimeException)
+        }
+
+    @Test
+    fun ensureFreshSession_delegatesToManager_exactlyOnce() =
+        runTest {
+            coEvery { sessionManager.ensureFreshSession() } returns Result.success(authSession())
+
+            gate.ensureFreshSession()
+
+            coVerify(exactly = 1) { sessionManager.ensureFreshSession() }
+        }
 
     // ─── sessionEvents ────────────────────────────────────────────────
     // MutableSharedFlow(replay=0, extraBufferCapacity=8, DROP_OLDEST) —
@@ -149,72 +153,77 @@ class SessionGateTest {
     // suspension is wired before we trigger the signal.
 
     @Test
-    fun sessionEvents_emitsLiveOnSuccessfulRefresh() = runTest(UnconfinedTestDispatcher()) {
-        coEvery { sessionManager.ensureFreshSession() } returns Result.success(authSession())
-        val scope = CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
-        val deferred = scope.async { gate.sessionEvents().first() }
+    fun sessionEvents_emitsLiveOnSuccessfulRefresh() =
+        runTest(UnconfinedTestDispatcher()) {
+            coEvery { sessionManager.ensureFreshSession() } returns Result.success(authSession())
+            val scope = CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
+            val deferred = scope.async { gate.sessionEvents().first() }
 
-        gate.ensureFreshSession()
+            gate.ensureFreshSession()
 
-        val event = deferred.await()
-        assertEquals(SessionEvent.Live, event)
-        scope.cancel()
-    }
-
-    @Test
-    fun sessionEvents_emitsLostOnSessionLostSignal() = runTest(UnconfinedTestDispatcher()) {
-        val scope = CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
-        val deferred = scope.async { gate.sessionEvents().first() }
-
-        gate.onSessionLost()
-
-        val event = deferred.await()
-        assertEquals(SessionEvent.Lost, event)
-        scope.cancel()
-    }
+            val event = deferred.await()
+            assertEquals(SessionEvent.Live, event)
+            scope.cancel()
+        }
 
     @Test
-    fun sessionEvents_emitsExpiredWithReasonOnEnsureFailure() = runTest(UnconfinedTestDispatcher()) {
-        coEvery { sessionManager.ensureFreshSession() } throws RuntimeException("refresh_token_revoked")
-        val scope = CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
-        val deferred = scope.async { gate.sessionEvents().first() }
+    fun sessionEvents_emitsLostOnSessionLostSignal() =
+        runTest(UnconfinedTestDispatcher()) {
+            val scope = CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
+            val deferred = scope.async { gate.sessionEvents().first() }
 
-        gate.ensureFreshSession()
+            gate.onSessionLost()
 
-        val event = deferred.await()
-        assertTrue(event is SessionEvent.Expired)
-        assertEquals("refresh_token_revoked", (event as SessionEvent.Expired).reason)
-        scope.cancel()
-    }
-
-    @Test
-    fun sessionEvents_emitsExpiredOnManagerFailureResult() = runTest(UnconfinedTestDispatcher()) {
-        coEvery { sessionManager.ensureFreshSession() } returns Result.failure(IllegalStateException("no_session"))
-        val scope = CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
-        val deferred = scope.async { gate.sessionEvents().first() }
-
-        gate.ensureFreshSession()
-
-        val event = deferred.await()
-        assertTrue(event is SessionEvent.Expired)
-        assertEquals("no_session", (event as SessionEvent.Expired).reason)
-        scope.cancel()
-    }
+            val event = deferred.await()
+            assertEquals(SessionEvent.Lost, event)
+            scope.cancel()
+        }
 
     @Test
-    fun sessionEvents_emitsLostThenLiveInOrder() = runTest(UnconfinedTestDispatcher()) {
-        val scope = CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
-        val lostDeferred = scope.async { gate.sessionEvents().first() }
+    fun sessionEvents_emitsExpiredWithReasonOnEnsureFailure() =
+        runTest(UnconfinedTestDispatcher()) {
+            coEvery { sessionManager.ensureFreshSession() } throws RuntimeException("refresh_token_revoked")
+            val scope = CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
+            val deferred = scope.async { gate.sessionEvents().first() }
 
-        gate.onSessionLost()
-        val lostEvent = lostDeferred.await()
-        assertEquals(SessionEvent.Lost, lostEvent)
+            gate.ensureFreshSession()
 
-        val liveDeferred = scope.async { gate.sessionEvents().first() }
-        gate.onSessionRestored()
-        val liveEvent = liveDeferred.await()
-        assertEquals(SessionEvent.Live, liveEvent)
+            val event = deferred.await()
+            assertTrue(event is SessionEvent.Expired)
+            assertEquals("refresh_token_revoked", (event as SessionEvent.Expired).reason)
+            scope.cancel()
+        }
 
-        scope.cancel()
-    }
+    @Test
+    fun sessionEvents_emitsExpiredOnManagerFailureResult() =
+        runTest(UnconfinedTestDispatcher()) {
+            coEvery { sessionManager.ensureFreshSession() } returns Result.failure(IllegalStateException("no_session"))
+            val scope = CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
+            val deferred = scope.async { gate.sessionEvents().first() }
+
+            gate.ensureFreshSession()
+
+            val event = deferred.await()
+            assertTrue(event is SessionEvent.Expired)
+            assertEquals("no_session", (event as SessionEvent.Expired).reason)
+            scope.cancel()
+        }
+
+    @Test
+    fun sessionEvents_emitsLostThenLiveInOrder() =
+        runTest(UnconfinedTestDispatcher()) {
+            val scope = CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
+            val lostDeferred = scope.async { gate.sessionEvents().first() }
+
+            gate.onSessionLost()
+            val lostEvent = lostDeferred.await()
+            assertEquals(SessionEvent.Lost, lostEvent)
+
+            val liveDeferred = scope.async { gate.sessionEvents().first() }
+            gate.onSessionRestored()
+            val liveEvent = liveDeferred.await()
+            assertEquals(SessionEvent.Live, liveEvent)
+
+            scope.cancel()
+        }
 }

@@ -7,18 +7,16 @@ import android.util.Log
 import com.nextpage.debug.DebugLog
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.HighlightColor
-import com.nextpage.presentation.viewmodel.reader.BookChapter
-import com.nextpage.presentation.viewmodel.reader.ReaderInteractionState
-import com.nextpage.presentation.viewmodel.reader.ReaderSelectionState
-import com.nextpage.presentation.viewmodel.reader.SelectionCoordinator
 import com.nextpage.presentation.viewmodel.reader.HIGHLIGHT_TAP_DEBOUNCE_MS
 import com.nextpage.presentation.viewmodel.reader.MENU_CLOSE_IGNORE_MS
+import com.nextpage.presentation.viewmodel.reader.ReaderSelectionState
+import com.nextpage.presentation.viewmodel.reader.SelectionCoordinator
 import com.nextpage.presentation.viewmodel.reader.lifecycle.Clearable
-import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.update
 import org.readium.r2.shared.publication.Locator
+import kotlin.math.roundToInt
 
 /**
  * Owns SelectionCoordinator state machine and all selection/menu transitions.
@@ -28,9 +26,8 @@ import org.readium.r2.shared.publication.Locator
 internal class SelectionManager(
     private val store: InteractionStateStore,
     private val scope: CoroutineScope,
-    private val mainDispatcher: CoroutineDispatcher
+    private val mainDispatcher: CoroutineDispatcher,
 ) : Clearable {
-
     companion object {
         private const val TAG = "SelectionManager"
         private const val DEBUG_LOG_TEXT_LIMIT = 50
@@ -39,10 +36,11 @@ internal class SelectionManager(
 
     internal var coordinator: SelectionCoordinator = SelectionCoordinator.Idle
 
-    fun activeHighlightId(): String? = when (val c = coordinator) {
-        is SelectionCoordinator.ExistingHighlight -> c.activeHighlightId
-        else -> null
-    }
+    fun activeHighlightId(): String? =
+        when (val c = coordinator) {
+            is SelectionCoordinator.ExistingHighlight -> c.activeHighlightId
+            else -> null
+        }
 
     // ── Selection pipeline ──────────────────────────────────────
 
@@ -50,9 +48,12 @@ internal class SelectionManager(
         locator: Locator,
         rect: RectF,
         text: String,
-        existingHighlights: List<Highlight>
+        existingHighlights: List<Highlight>,
     ) {
-        Log.d("SelectionDebug", "VM.onReadiumSelection: text='', rect=[${rect.left},${rect.top},${rect.right},${rect.bottom}], locator.href=${locator.href}")
+        Log.d(
+            "SelectionDebug",
+            "VM.onReadiumSelection: text='', rect=[${rect.left},${rect.top},${rect.right},${rect.bottom}], locator.href=${locator.href}",
+        )
         val now = SystemClock.elapsedRealtime()
         when (val current = coordinator) {
             is SelectionCoordinator.MenuClosed -> {
@@ -64,10 +65,13 @@ internal class SelectionManager(
             }
             is SelectionCoordinator.ExistingHighlight -> {
                 val activeHighlight = current.highlight
-                val textMatchesActive = activeHighlight.textContent.isNotBlank() &&
-                    (text == activeHighlight.textContent ||
-                        text.contains(activeHighlight.textContent) ||
-                        activeHighlight.textContent.contains(text))
+                val textMatchesActive =
+                    activeHighlight.textContent.isNotBlank() &&
+                        (
+                            text == activeHighlight.textContent ||
+                                text.contains(activeHighlight.textContent) ||
+                                activeHighlight.textContent.contains(text)
+                        )
                 if (now < current.debounceUntil) {
                     if (textMatchesActive) {
                         Log.d("SelectionDebug", "Ignoring selection during highlight-tap debounce (matches active highlight)")
@@ -80,15 +84,17 @@ internal class SelectionManager(
                 }
             }
             is SelectionCoordinator.Idle,
-            is SelectionCoordinator.NewSelection -> {}
+            is SelectionCoordinator.NewSelection,
+            -> {}
         }
 
-        val selectionRect = try {
-            Rect(rect.left.roundToInt(), rect.top.roundToInt(), rect.right.roundToInt(), rect.bottom.roundToInt())
-        } catch (e: Throwable) {
-            Log.e("SelectionDebug", "Rect creation THREW: ${e::class.simpleName}: ${e.message}", e)
-            Rect(0, 0, 100, DEBUG_LOG_TEXT_LIMIT)
-        }
+        val selectionRect =
+            try {
+                Rect(rect.left.roundToInt(), rect.top.roundToInt(), rect.right.roundToInt(), rect.bottom.roundToInt())
+            } catch (e: Throwable) {
+                Log.e("SelectionDebug", "Rect creation THREW: ${e::class.simpleName}: ${e.message}", e)
+                Rect(0, 0, 100, DEBUG_LOG_TEXT_LIMIT)
+            }
 
         try {
             val normalizedText = text.trim().replace(Regex("\\s+"), " ")
@@ -97,7 +103,7 @@ internal class SelectionManager(
                 it.copy(
                     selectionState = ReaderSelectionState.New(rect = selectionRect, text = normalizedText, locator = locator),
                     selectedText = normalizedText,
-                    selectionRect = selectionRect
+                    selectionRect = selectionRect,
                 )
             }
             DebugLog.info(TAG, "onReadiumSelection: selectionState=New")
@@ -108,20 +114,22 @@ internal class SelectionManager(
     }
 
     fun onSelectionCleared() {
-        val activeId = when (val c = coordinator) {
-            is SelectionCoordinator.ExistingHighlight -> c.activeHighlightId
-            else -> null
-        }
-        val debounceUntil = when (val c = coordinator) {
-            is SelectionCoordinator.ExistingHighlight -> c.debounceUntil
-            else -> 0L
-        }
+        val activeId =
+            when (val c = coordinator) {
+                is SelectionCoordinator.ExistingHighlight -> c.activeHighlightId
+                else -> null
+            }
+        val debounceUntil =
+            when (val c = coordinator) {
+                is SelectionCoordinator.ExistingHighlight -> c.debounceUntil
+                else -> 0L
+            }
         onSelectionCleared(activeId, debounceUntil)
     }
 
     fun onSelectionCleared(
         currentActiveHighlightId: String?,
-        currentHighlightTapDebounceUntil: Long
+        currentHighlightTapDebounceUntil: Long,
     ) {
         Log.d("SelectionDebug", "VM.onSelectionCleared — resetting selection state")
         try {
@@ -146,7 +154,7 @@ internal class SelectionManager(
                     activeTagText = "",
                     activeDefinitionText = "",
                     tagSuggestions = emptyList(),
-                    debugForceMenu = false
+                    debugForceMenu = false,
                 )
             }
         } catch (e: Throwable) {
@@ -154,11 +162,20 @@ internal class SelectionManager(
         }
     }
 
-    fun onTextSelectionEvent(text: String, left: Float, top: Float, right: Float, bottom: Float) {
+    fun onTextSelectionEvent(
+        text: String,
+        left: Float,
+        top: Float,
+        right: Float,
+        bottom: Float,
+    ) {
         onTextSelection(text, Rect(left.roundToInt(), top.roundToInt(), right.roundToInt(), bottom.roundToInt()))
     }
 
-    fun onTextSelection(text: String, rect: Rect) {
+    fun onTextSelection(
+        text: String,
+        rect: Rect,
+    ) {
         Log.d("ReaderVM", "onTextSelection: \"${text.take(DEBUG_LOG_TEXT_LIMIT)}\" rect=$rect")
         coordinator = SelectionCoordinator.NewSelection(text, rect, null)
         store.update {
@@ -166,17 +183,28 @@ internal class SelectionManager(
         }
     }
 
-    fun onHighlightTapped(highlight: Highlight, rect: RectF) {
+    fun onHighlightTapped(
+        highlight: Highlight,
+        rect: RectF,
+    ) {
         DebugLog.info(TAG, "onHighlightTapped id=${highlight.id} t=${SystemClock.elapsedRealtime()}")
         val selectionRect = Rect(rect.left.roundToInt(), rect.top.roundToInt(), rect.right.roundToInt(), rect.bottom.roundToInt())
-        coordinator = SelectionCoordinator.ExistingHighlight(
-            highlight = highlight,
-            rect = selectionRect,
-            debounceUntil = SystemClock.elapsedRealtime() + HIGHLIGHT_TAP_DEBOUNCE_MS
+        coordinator =
+            SelectionCoordinator.ExistingHighlight(
+                highlight = highlight,
+                rect = selectionRect,
+                debounceUntil = SystemClock.elapsedRealtime() + HIGHLIGHT_TAP_DEBOUNCE_MS,
+            )
+        DebugLog.info(
+            TAG,
+            "Highlight tapped: id=${highlight.id}, rect=[${selectionRect.left},${selectionRect.top},${selectionRect.right},${selectionRect.bottom}]",
         )
-        DebugLog.info(TAG, "Highlight tapped: id=${highlight.id}, rect=[${selectionRect.left},${selectionRect.top},${selectionRect.right},${selectionRect.bottom}]")
         store.update {
-            it.copy(selectionState = ReaderSelectionState.Existing(highlight, selectionRect), selectedText = highlight.textContent, selectionRect = selectionRect)
+            it.copy(
+                selectionState = ReaderSelectionState.Existing(highlight, selectionRect),
+                selectedText = highlight.textContent,
+                selectionRect = selectionRect,
+            )
         }
         DebugLog.info(TAG, "onHighlightTapped: debounce until set, selectionState=Existing")
     }
@@ -209,20 +237,22 @@ internal class SelectionManager(
                 activeTagText = "",
                 activeDefinitionText = "",
                 tagSuggestions = emptyList(),
-                debugForceMenu = false
+                debugForceMenu = false,
             )
         }
     }
 
     fun onSelectionClearedFromLifecycle() {
-        val activeId = when (val c = coordinator) {
-            is SelectionCoordinator.ExistingHighlight -> c.activeHighlightId
-            else -> null
-        }
-        val debounceUntil = when (val c = coordinator) {
-            is SelectionCoordinator.ExistingHighlight -> c.debounceUntil
-            else -> 0L
-        }
+        val activeId =
+            when (val c = coordinator) {
+                is SelectionCoordinator.ExistingHighlight -> c.activeHighlightId
+                else -> null
+            }
+        val debounceUntil =
+            when (val c = coordinator) {
+                is SelectionCoordinator.ExistingHighlight -> c.debounceUntil
+                else -> 0L
+            }
         onSelectionCleared(activeId, debounceUntil)
     }
 
@@ -236,14 +266,31 @@ internal class SelectionManager(
         }
         try {
             val rect = DEBUG_FORCE_MENU_RECT
-            val highlight = Highlight(
-                id = "debug-highlight", bookId = "debug-book", cfiRange = "epubcfi(/6/1)",
-                textContent = "Texto de prueba debug", note = null, color = HighlightColor.YELLOW.hex,
-                updatedAtEpochMillis = System.currentTimeMillis(), deletedAtEpochMillis = null
-            )
-            coordinator = SelectionCoordinator.ExistingHighlight(highlight = highlight, rect = rect, debounceUntil = SystemClock.elapsedRealtime() + HIGHLIGHT_TAP_DEBOUNCE_MS)
+            val highlight =
+                Highlight(
+                    id = "debug-highlight",
+                    bookId = "debug-book",
+                    cfiRange = "epubcfi(/6/1)",
+                    textContent = "Texto de prueba debug",
+                    note = null,
+                    color = HighlightColor.YELLOW.hex,
+                    updatedAtEpochMillis = System.currentTimeMillis(),
+                    deletedAtEpochMillis = null,
+                )
+            coordinator =
+                SelectionCoordinator.ExistingHighlight(
+                    highlight = highlight,
+                    rect = rect,
+                    debounceUntil =
+                        SystemClock.elapsedRealtime() + HIGHLIGHT_TAP_DEBOUNCE_MS,
+                )
             store.update {
-                it.copy(selectedText = "Texto de prueba debug", selectionRect = rect, selectionState = ReaderSelectionState.Existing(highlight, rect), debugForceMenu = true)
+                it.copy(
+                    selectedText = "Texto de prueba debug",
+                    selectionRect = rect,
+                    selectionState = ReaderSelectionState.Existing(highlight, rect),
+                    debugForceMenu = true,
+                )
             }
         } catch (e: Throwable) {
             DebugLog.warn(TAG, "onDebugForceMenu failed: ${e::class.simpleName}: ${e.message}")
@@ -260,7 +307,12 @@ internal class SelectionManager(
             val rect = DEBUG_FORCE_MENU_RECT
             coordinator = SelectionCoordinator.NewSelection("Texto de prueba debug", rect, null)
             store.update {
-                it.copy(selectedText = "Texto de prueba debug", selectionRect = rect, selectionState = ReaderSelectionState.New(rect = rect, text = "Texto de prueba debug", locator = null), debugForceMenu = true)
+                it.copy(
+                    selectedText = "Texto de prueba debug",
+                    selectionRect = rect,
+                    selectionState = ReaderSelectionState.New(rect = rect, text = "Texto de prueba debug", locator = null),
+                    debugForceMenu = true,
+                )
             }
         } catch (e: Throwable) {
             DebugLog.warn(TAG, "onDebugForceColorPicker failed: ${e::class.simpleName}: ${e.message}")

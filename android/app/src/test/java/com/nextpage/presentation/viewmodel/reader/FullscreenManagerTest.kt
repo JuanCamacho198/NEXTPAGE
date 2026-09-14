@@ -10,7 +10,6 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class FullscreenManagerTest {
-
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 

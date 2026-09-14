@@ -9,5 +9,5 @@ data class DailyReadingMinutes(
     @ColumnInfo(name = "date")
     val dateEpochMillis: Long,
     @ColumnInfo(name = "total_minutes")
-    val totalMinutes: Int
+    val totalMinutes: Int,
 )

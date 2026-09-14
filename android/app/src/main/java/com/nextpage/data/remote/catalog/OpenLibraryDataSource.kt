@@ -1,7 +1,7 @@
 package com.nextpage.data.remote.catalog
 
-import java.net.URLEncoder
 import kotlinx.serialization.json.Json
+import java.net.URLEncoder
 
 const val OPEN_LIBRARY_BASE_URL = "https://openlibrary.org"
 
@@ -13,14 +13,13 @@ open class OpenLibraryDataSource(
     private val transport: CatalogHttpTransport,
     private val limiter: RateLimiter = RateLimiter(OL_MIN_GAP_MS),
     private val baseUrl: String = OPEN_LIBRARY_BASE_URL,
-    private val json: Json = Json { ignoreUnknownKeys = true }
+    private val json: Json = Json { ignoreUnknownKeys = true },
 ) {
-
     /** Search usable-public docs only; borrow-restricted docs are dropped. */
     open suspend fun search(
         query: String,
         page: Int,
-        pageSize: Int = DEFAULT_PAGE_SIZE
+        pageSize: Int = DEFAULT_PAGE_SIZE,
     ): CatalogSearchResult {
         val size = clampPageSize(pageSize)
         limiter.waitForSlot()

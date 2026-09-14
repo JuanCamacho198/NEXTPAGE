@@ -15,8 +15,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.nextpage.ui.icons.NextPageIcons
 import com.nextpage.presentation.theme.NextPageTheme
+import com.nextpage.ui.icons.NextPageIcons
 
 /**
  * Full-screen empty state: a decorative vector icon, title, optional
@@ -48,25 +48,25 @@ fun NextPageEmptyState(
     title: String,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
-    action: @Composable (() -> Unit)? = null
+    action: @Composable (() -> Unit)? = null,
 ) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
         )
         if (!subtitle.isNullOrBlank()) {
             Spacer(modifier = Modifier.height(8.dp))
@@ -74,7 +74,7 @@ fun NextPageEmptyState(
                 text = subtitle,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
             )
         }
         if (action != null) {
@@ -91,7 +91,7 @@ private fun NextPageEmptyStateDarkPreview() {
         NextPageEmptyState(
             icon = NextPageIcons.LibraryBooks,
             title = "No books yet",
-            subtitle = "Import your first book to start reading"
+            subtitle = "Import your first book to start reading",
         )
     }
 }
@@ -103,7 +103,7 @@ private fun NextPageEmptyStateLightPreview() {
         NextPageEmptyState(
             icon = NextPageIcons.LibraryBooks,
             title = "No books yet",
-            subtitle = "Import your first book to start reading"
+            subtitle = "Import your first book to start reading",
         )
     }
 }

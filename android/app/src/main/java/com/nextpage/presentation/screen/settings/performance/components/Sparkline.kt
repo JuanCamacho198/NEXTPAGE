@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun Sparkline(
     samples: List<Float>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val primary = MaterialTheme.colorScheme.primary
     val outline = MaterialTheme.colorScheme.outlineVariant
@@ -36,20 +36,21 @@ fun Sparkline(
             color = outline.copy(alpha = 0.7f),
             start = Offset(0f, h),
             end = Offset(w, h),
-            strokeWidth = 1.dp.toPx()
+            strokeWidth = 1.dp.toPx(),
         )
 
-        val path = Path().apply {
-            points.forEachIndexed { i, v ->
-                val x = i * stepX
-                val y = h - ((v - min) / range) * h * 0.85f - h * 0.07f
-                if (i == 0) moveTo(x, y) else lineTo(x, y)
+        val path =
+            Path().apply {
+                points.forEachIndexed { i, v ->
+                    val x = i * stepX
+                    val y = h - ((v - min) / range) * h * 0.85f - h * 0.07f
+                    if (i == 0) moveTo(x, y) else lineTo(x, y)
+                }
             }
-        }
         drawPath(
             path = path,
             color = primary,
-            style = Stroke(width = 1.8.dp.toPx(), cap = StrokeCap.Round)
+            style = Stroke(width = 1.8.dp.toPx(), cap = StrokeCap.Round),
         )
         points.forEachIndexed { i, v ->
             val x = i * stepX

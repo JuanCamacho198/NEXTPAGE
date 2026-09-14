@@ -9,7 +9,6 @@ import androidx.activity.viewModels
 import com.nextpage.NextPageApplication
 import com.nextpage.presentation.theme.NextPageTheme
 
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 /**
  * Host activity for the crash-feedback bottom sheet (PR4 / tasks 4.3-4.4).
  *
@@ -31,8 +30,8 @@ import com.nextpage.presentation.theme.NextPageTheme
  *   the queue is updated synchronously so the next-launch prompt is
  *   consistent.
  */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 class FeedbackActivity : ComponentActivity() {
-
     companion object {
         const val EXTRA_EVENT_ID = "feedback_event_id"
         const val EXTRA_BOOK_ID = "feedback_book_id"
@@ -44,16 +43,17 @@ class FeedbackActivity : ComponentActivity() {
         fun intent(
             context: Context,
             eventId: String?,
-            book: FeedbackEvent.BookMeta
-        ): Intent = Intent(context, FeedbackActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            putExtra(EXTRA_EVENT_ID, eventId)
-            putExtra(EXTRA_BOOK_ID, book.bookId)
-            putExtra(EXTRA_BOOK_TITLE, book.title)
-            putExtra(EXTRA_CHAPTER_LABEL, book.chapterLabel)
-            if (book.chapterIndex != null) putExtra(EXTRA_CHAPTER_INDEX, book.chapterIndex)
-            if (book.page != null) putExtra(EXTRA_PAGE, book.page)
-        }
+            book: FeedbackEvent.BookMeta,
+        ): Intent =
+            Intent(context, FeedbackActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                putExtra(EXTRA_EVENT_ID, eventId)
+                putExtra(EXTRA_BOOK_ID, book.bookId)
+                putExtra(EXTRA_BOOK_TITLE, book.title)
+                putExtra(EXTRA_CHAPTER_LABEL, book.chapterLabel)
+                if (book.chapterIndex != null) putExtra(EXTRA_CHAPTER_INDEX, book.chapterIndex)
+                if (book.page != null) putExtra(EXTRA_PAGE, book.page)
+            }
     }
 
     private lateinit var persistence: FeedbackPersistence
@@ -62,21 +62,25 @@ class FeedbackActivity : ComponentActivity() {
         persistence = FeedbackPersistence(applicationContext)
         val queue = persistence.readQueue()
         val dismissed = persistence.readDismissed()
-        val book = FeedbackEvent.BookMeta(
-            bookId = intent.getStringExtra(EXTRA_BOOK_ID) ?: "",
-            title = intent.getStringExtra(EXTRA_BOOK_TITLE),
-            chapterLabel = intent.getStringExtra(EXTRA_CHAPTER_LABEL),
-            chapterIndex = intent.getIntExtra(EXTRA_CHAPTER_INDEX, -1)
-                .takeIf { it >= 0 },
-            page = intent.getIntExtra(EXTRA_PAGE, -1).takeIf { it >= 0 }
-        )
-        val eventId = intent.getStringExtra(EXTRA_EVENT_ID)
-            ?: (applicationContext as? NextPageApplication)?.feedbackPersistence?.readLastEventId()
+        val book =
+            FeedbackEvent.BookMeta(
+                bookId = intent.getStringExtra(EXTRA_BOOK_ID) ?: "",
+                title = intent.getStringExtra(EXTRA_BOOK_TITLE),
+                chapterLabel = intent.getStringExtra(EXTRA_CHAPTER_LABEL),
+                chapterIndex =
+                    intent
+                        .getIntExtra(EXTRA_CHAPTER_INDEX, -1)
+                        .takeIf { it >= 0 },
+                page = intent.getIntExtra(EXTRA_PAGE, -1).takeIf { it >= 0 },
+            )
+        val eventId =
+            intent.getStringExtra(EXTRA_EVENT_ID)
+                ?: (applicationContext as? NextPageApplication)?.feedbackPersistence?.readLastEventId()
         FeedbackViewModel.factory(
             initialQueue = queue,
             initialDismissed = dismissed,
             book = book,
-            eventId = eventId
+            eventId = eventId,
         )
     }
 
@@ -86,7 +90,7 @@ class FeedbackActivity : ComponentActivity() {
             NextPageTheme(darkTheme = true) {
                 FeedbackSheet(
                     viewModel = viewModel,
-                    onDismiss = { persistAndFinish() }
+                    onDismiss = { persistAndFinish() },
                 )
             }
         }

@@ -22,21 +22,23 @@ fun DiscoverSourceFilterRow(
     sources: List<CatalogSourceInfo>,
     selected: DiscoverSourceFilter,
     onSelect: (DiscoverSourceFilter) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val allLabel = stringResource(R.string.discover_source_filter_all)
-    val chips = buildList {
-        add(DiscoverChip(label = allLabel, selected = selected is DiscoverSourceFilter.AllSources))
-        sources.forEach { source ->
-            add(
-                DiscoverChip(
-                    label = source.name,
-                    selected = selected is DiscoverSourceFilter.Source &&
-                        selected.sourceId == source.sourceId
+    val chips =
+        buildList {
+            add(DiscoverChip(label = allLabel, selected = selected is DiscoverSourceFilter.AllSources))
+            sources.forEach { source ->
+                add(
+                    DiscoverChip(
+                        label = source.name,
+                        selected =
+                            selected is DiscoverSourceFilter.Source &&
+                                selected.sourceId == source.sourceId,
+                    ),
                 )
-            )
+            }
         }
-    }
 
     DiscoverChipRow(
         chips = chips,
@@ -47,6 +49,6 @@ fun DiscoverSourceFilterRow(
                 onSelect(DiscoverSourceFilter.Source(sources[index - 1].sourceId))
             }
         },
-        modifier = modifier
+        modifier = modifier,
     )
 }

@@ -1,7 +1,6 @@
 package com.nextpage.presentation.navigation
 
 import android.net.Uri
-import org.robolectric.RobolectricTestRunner
 import com.nextpage.data.remote.addons.AddonFetchErrorCode
 import com.nextpage.data.remote.addons.AddonFetchException
 import com.nextpage.data.remote.addons.AddonManifest
@@ -20,23 +19,24 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 private fun previewManifest(
     id: String = "dl-addon",
     name: String = "Deep Link Addon",
-    version: String = "1.0.0"
+    version: String = "1.0.0",
 ): AddonManifest {
-    val json = JSONObject()
-        .put("id", id)
-        .put("name", name)
-        .put("version", version)
-        .put(
-            "catalogs",
-            org.json.JSONArray().put(JSONObject().put("type", "book").put("id", "main").put("name", "Main"))
-        )
-        .put("resources", org.json.JSONArray().put("catalog"))
-        .toString()
+    val json =
+        JSONObject()
+            .put("id", id)
+            .put("name", name)
+            .put("version", version)
+            .put(
+                "catalogs",
+                org.json.JSONArray().put(JSONObject().put("type", "book").put("id", "main").put("name", "Main")),
+            ).put("resources", org.json.JSONArray().put("catalog"))
+            .toString()
     return ManifestValidator.validate(json.toByteArray(Charsets.UTF_8), "application/json")
 }
 
@@ -52,7 +52,10 @@ private class RecordingRegistry : AddonRegistryLike {
         return previewManifest()
     }
 
-    override suspend fun installManifest(url: String, manifest: AddonManifest): AddonManifest {
+    override suspend fun installManifest(
+        url: String,
+        manifest: AddonManifest,
+    ): AddonManifest {
         confirmed.add(url to manifest)
         return manifest
     }
@@ -63,7 +66,12 @@ private class RecordingRegistry : AddonRegistryLike {
     }
 
     override suspend fun listInstalled(): List<InstalledAddonRow> = emptyList()
-    override suspend fun setEnabled(id: String, enabled: Boolean) {}
+
+    override suspend fun setEnabled(
+        id: String,
+        enabled: Boolean,
+    ) {}
+
     override suspend fun uninstall(id: String) {}
 }
 
@@ -78,7 +86,6 @@ private fun installUri() = Uri.parse("nextpage://install?url=https%3A%2F%2Fx.tes
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class InstallDeepLinkControllerTest {
-
     private val dispatcher = UnconfinedTestDispatcher()
 
     @Before
@@ -131,8 +138,9 @@ class InstallDeepLinkControllerTest {
 
     @Test
     fun `fetch failure surfaces error state with the transport code`() {
-        val registry = RecordingRegistry()
-            .apply { fetchError = AddonFetchException(AddonFetchErrorCode.NETWORK, "down") }
+        val registry =
+            RecordingRegistry()
+                .apply { fetchError = AddonFetchException(AddonFetchErrorCode.NETWORK, "down") }
         val controller = InstallDeepLinkController(registry, dispatcher)
         controller.onInstallUri(installUri())
         val state = controller.state.value
@@ -143,8 +151,9 @@ class InstallDeepLinkControllerTest {
 
     @Test
     fun `dismiss error returns to idle`() {
-        val registry = RecordingRegistry()
-            .apply { fetchError = AddonFetchException(AddonFetchErrorCode.NETWORK, "down") }
+        val registry =
+            RecordingRegistry()
+                .apply { fetchError = AddonFetchException(AddonFetchErrorCode.NETWORK, "down") }
         val controller = InstallDeepLinkController(registry, dispatcher)
         controller.onInstallUri(installUri())
         controller.dismissError()
@@ -215,5 +224,8 @@ class InstallDeepLinkControllerTest {
 /** Unused-import guards for the seam types exercised via the fake above. */
 private class SeamVisibility {
     @Suppress("UNUSED_PARAMETER")
-    fun touch(rows: List<InstalledAddonRow>, like: AddonRegistryLike) = rows.size + 0
+    fun touch(
+        rows: List<InstalledAddonRow>,
+        like: AddonRegistryLike,
+    ) = rows.size + 0
 }

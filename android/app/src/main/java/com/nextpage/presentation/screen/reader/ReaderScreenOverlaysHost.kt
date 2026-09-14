@@ -42,11 +42,11 @@ fun ReaderScreenOverlaysHost(
     onGoToPageConfirm: () -> Unit,
     onDismissGoToPage: () -> Unit,
     bookmarkRibbonVisible: Boolean,
-    onBookmarkRibbonEnd: () -> Unit
+    onBookmarkRibbonEnd: () -> Unit,
 ) {
     BookmarkRibbonOverlay(
         visible = bookmarkRibbonVisible,
-        onAnimationEnd = onBookmarkRibbonEnd
+        onAnimationEnd = onBookmarkRibbonEnd,
     )
 
     if (searchUiState.isSearchActive) {
@@ -58,12 +58,12 @@ fun ReaderScreenOverlaysHost(
                 viewModel.searchStateHolder.onSearchQuery(
                     it,
                     sessionUiState.readiumPublication,
-                    sessionUiState.bookFormat
+                    sessionUiState.bookFormat,
                 )
             },
             onClearQuery = { viewModel.onClearSearch() },
             onResultSelected = { viewModel.onSearchResultSelected(it) },
-            onDismiss = { viewModel.onDismissSearch() }
+            onDismiss = { viewModel.onDismissSearch() },
         )
     }
 
@@ -71,7 +71,7 @@ fun ReaderScreenOverlaysHost(
         HighlightsSheet(
             highlights = annotationUiState.highlights,
             onHighlightSelected = { viewModel.onHighlightSelected(it) },
-            onDismiss = { viewModel.interactionHolder.onToggleHighlightsPanel() }
+            onDismiss = { viewModel.interactionHolder.onToggleHighlightsPanel() },
         )
     }
 
@@ -80,23 +80,24 @@ fun ReaderScreenOverlaysHost(
             chapters = sessionUiState.chapters,
             currentChapterIndex = sessionUiState.currentChapterIndex,
             onChapterSelected = { idx -> viewModel.lifecycleHolder.goToChapter(idx) },
-            onDismiss = { viewModel.lifecycleHolder.onToggleTocSheet() }
+            onDismiss = { viewModel.lifecycleHolder.onToggleTocSheet() },
         )
     }
 
     if (settingsUiState.showSplitSettings && sessionUiState.chapters.isNotEmpty()) {
-        val previewText = remember(sessionUiState.previewText, annotationUiState.selectedText, sessionUiState.currentChapterIndex, sessionUiState.chapters) {
-            sessionUiState.previewText.ifBlank {
-                annotationUiState.selectedText?.takeIf { it.isNotBlank() }
-                    ?: sessionUiState.chapters.getOrNull(sessionUiState.currentChapterIndex)?.title
-                    ?: ""
+        val previewText =
+            remember(sessionUiState.previewText, annotationUiState.selectedText, sessionUiState.currentChapterIndex, sessionUiState.chapters) {
+                sessionUiState.previewText.ifBlank {
+                    annotationUiState.selectedText?.takeIf { it.isNotBlank() }
+                        ?: sessionUiState.chapters.getOrNull(sessionUiState.currentChapterIndex)?.title
+                        ?: ""
+                }
             }
-        }
         SplitSettingsSheet(
             settings = settingsUiState.readerSettings,
             previewText = previewText,
             onSettingsChanged = { viewModel.settingsManager.updateReaderSettings(it) },
-            onDismiss = { viewModel.settingsManager.onToggleSplitSettings() }
+            onDismiss = { viewModel.settingsManager.onToggleSplitSettings() },
         )
     }
 
@@ -104,17 +105,18 @@ fun ReaderScreenOverlaysHost(
         SleepTimerSheet(
             isActive = sleepTimerUiState.isActive,
             remainingFormatted = viewModel.sleepTimerManager.formatRemaining(sleepTimerUiState.remainingSecs),
-            presets = listOf(
-                SleepTimerPreset("5", 5),
-                SleepTimerPreset("10", 10),
-                SleepTimerPreset("15", 15),
-                SleepTimerPreset("30", 30),
-                SleepTimerPreset(
-                    label = stringResource(R.string.reader_sleep_timer_end_of_chapter),
-                    minutes = Int.MIN_VALUE,
-                    isEndOfChapter = true
-                )
-            ),
+            presets =
+                listOf(
+                    SleepTimerPreset("5", 5),
+                    SleepTimerPreset("10", 10),
+                    SleepTimerPreset("15", 15),
+                    SleepTimerPreset("30", 30),
+                    SleepTimerPreset(
+                        label = stringResource(R.string.reader_sleep_timer_end_of_chapter),
+                        minutes = Int.MIN_VALUE,
+                        isEndOfChapter = true,
+                    ),
+                ),
             onPresetSelected = { minutes: Int ->
                 viewModel.sleepTimerManager.startTimer(minutes)
                 onDismissSleepTimerSheet()
@@ -123,13 +125,13 @@ fun ReaderScreenOverlaysHost(
                 viewModel.sleepTimerManager.cancel()
                 onDismissSleepTimerSheet()
             },
-            onDismiss = onDismissSleepTimerSheet
+            onDismiss = onDismissSleepTimerSheet,
         )
     }
 
     if (sleepTimerUiState.isFinished) {
         SleepTimerOverlay(
-            onDismiss = { viewModel.sleepTimerManager.dismissOverlay() }
+            onDismiss = { viewModel.sleepTimerManager.dismissOverlay() },
         )
     }
 
@@ -141,7 +143,7 @@ fun ReaderScreenOverlaysHost(
             selectedText = annotationUiState.selectedText,
             initialText = annotationUiState.activeNoteText,
             onSave = { viewModel.interactionHolder.onSaveNote(it) },
-            onDismiss = { viewModel.interactionHolder.onDismissNoteModal() }
+            onDismiss = { viewModel.interactionHolder.onDismissNoteModal() },
         )
     }
 
@@ -165,10 +167,10 @@ fun ReaderScreenOverlaysHost(
                                 Text(text = error)
                             } else {
                                 Text(
-                                    text = stringResource(R.string.reader_go_to_page_input_hint, sessionUiState.totalPdfPages)
+                                    text = stringResource(R.string.reader_go_to_page_input_hint, sessionUiState.totalPdfPages),
                                 )
                             }
-                        }
+                        },
                     )
                 }
             },
@@ -181,7 +183,7 @@ fun ReaderScreenOverlaysHost(
                 TextButton(onClick = onDismissGoToPage) {
                     Text(text = stringResource(R.string.reader_cancel))
                 }
-            }
+            },
         )
     }
 }

@@ -34,7 +34,17 @@ import com.nextpage.ui.components.atoms.NextPageProgressBar
 import com.nextpage.ui.components.molecules.BookContextMenuTrigger
 
 @Composable
-fun ContinueReadingSection(books: List<Book>, progressPercentByBook: Map<String, Float> = emptyMap(), onBookSelected: (String, String, String) -> Unit, onContinueReading: (String, String?, String) -> Unit, onEdit: (Book) -> Unit = {}, onMarkCompleted: (Book) -> Unit = {}, onMarkPlanToRead: (Book) -> Unit = {}, onShare: (Book) -> Unit = {}, onDelete: (Book) -> Unit = {}) {
+fun ContinueReadingSection(
+    books: List<Book>,
+    progressPercentByBook: Map<String, Float> = emptyMap(),
+    onBookSelected: (String, String, String) -> Unit,
+    onContinueReading: (String, String?, String) -> Unit,
+    onEdit: (Book) -> Unit = {},
+    onMarkCompleted: (Book) -> Unit = {},
+    onMarkPlanToRead: (Book) -> Unit = {},
+    onShare: (Book) -> Unit = {},
+    onDelete: (Book) -> Unit = {},
+) {
     Column {
         Text(text = stringResource(R.string.home_continue_reading), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         Spacer(modifier = Modifier.height(NextPageDimens.spacingSm))
@@ -54,7 +64,17 @@ fun ContinueReadingSection(books: List<Book>, progressPercentByBook: Map<String,
 }
 
 @Composable
-fun ContinueReadingCard(book: Book, progressFraction: Float = 0f, onBookSelected: (String, String, String) -> Unit, onContinueReading: (String, String?, String) -> Unit, onEdit: (Book) -> Unit = {}, onMarkCompleted: (Book) -> Unit = {}, onMarkPlanToRead: (Book) -> Unit = {}, onShare: (Book) -> Unit = {}, onDelete: (Book) -> Unit = {}) {
+fun ContinueReadingCard(
+    book: Book,
+    progressFraction: Float = 0f,
+    onBookSelected: (String, String, String) -> Unit,
+    onContinueReading: (String, String?, String) -> Unit,
+    onEdit: (Book) -> Unit = {},
+    onMarkCompleted: (Book) -> Unit = {},
+    onMarkPlanToRead: (Book) -> Unit = {},
+    onShare: (Book) -> Unit = {},
+    onDelete: (Book) -> Unit = {},
+) {
     Surface(modifier = Modifier.width(240.dp).clickable { onBookSelected(book.id, book.filePath, book.format) }, shape = RoundedCornerShape(NextPageDimens.spacingSm), color = MaterialTheme.colorScheme.surfaceVariant, tonalElevation = 1.dp) {
         Row(modifier = Modifier.padding(NextPageDimens.spacingMd)) {
             CoverThumbnail(coverPath = book.coverPath, modifier = Modifier.width(80.dp).height(120.dp).clip(RoundedCornerShape(NextPageDimens.spacingXs)))
@@ -72,7 +92,7 @@ fun ContinueReadingCard(book: Book, progressFraction: Float = 0f, onBookSelected
                         onMarkCompleted = { onMarkCompleted(book) },
                         onMarkPlanToRead = { onMarkPlanToRead(book) },
                         onShare = { onShare(book) },
-                        onDelete = { onDelete(book) }
+                        onDelete = { onDelete(book) },
                     )
                 }
                 book.author?.let { author -> Text(text = author, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis) }

@@ -40,7 +40,7 @@ fun ReaderScreenEffects(
     onControlsVisibleChange: (Boolean) -> Unit,
     onLastInteractionChange: (Long) -> Unit,
     onBookmarkRibbonVisibleChange: (Boolean) -> Unit,
-    onShowChrome: () -> Unit
+    onShowChrome: () -> Unit,
 ) {
     val context = LocalContext.current
 
@@ -58,17 +58,26 @@ fun ReaderScreenEffects(
     DisposableEffect(isFullscreen) {
         if (isFullscreen) {
             view.windowInsetsController?.let { controller ->
-                controller.hide(android.view.WindowInsets.Type.systemBars())
+                controller.hide(
+                    android.view.WindowInsets.Type
+                        .systemBars(),
+                )
                 controller.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             }
         } else {
             view.windowInsetsController?.let { controller ->
-                controller.show(android.view.WindowInsets.Type.systemBars())
+                controller.show(
+                    android.view.WindowInsets.Type
+                        .systemBars(),
+                )
             }
         }
         onDispose {
             view.windowInsetsController?.let { controller ->
-                controller.show(android.view.WindowInsets.Type.systemBars())
+                controller.show(
+                    android.view.WindowInsets.Type
+                        .systemBars(),
+                )
             }
         }
     }

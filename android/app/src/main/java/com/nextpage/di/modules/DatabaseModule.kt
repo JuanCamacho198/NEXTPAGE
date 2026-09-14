@@ -18,24 +18,29 @@ import com.nextpage.data.local.dao.ReadingStatsDao
 import com.nextpage.data.local.dao.SyncFileMappingDao
 import com.nextpage.data.local.dao.SyncOutboxDao
 
-class DatabaseModule(context: Context) {
+class DatabaseModule(
+    context: Context,
+) {
     companion object {
         private const val TAG = "DatabaseModule"
     }
 
     private val startTime = System.currentTimeMillis()
 
-    val appDatabase: AppDatabase = Room.databaseBuilder(
-        context = context.applicationContext,
-        klass = AppDatabase::class.java,
-        name = "nextpage.db"
-    ).addMigrations(*AppDatabaseMigrations.ALL).let { builder ->
-        if (BuildConfig.DEBUG) {
-            builder.fallbackToDestructiveMigration(dropAllTables = true)
-        } else {
-            builder
-        }
-    }.build()
+    val appDatabase: AppDatabase =
+        Room
+            .databaseBuilder(
+                context = context.applicationContext,
+                klass = AppDatabase::class.java,
+                name = "nextpage.db",
+            ).addMigrations(*AppDatabaseMigrations.ALL)
+            .let { builder ->
+                if (BuildConfig.DEBUG) {
+                    builder.fallbackToDestructiveMigration(dropAllTables = true)
+                } else {
+                    builder
+                }
+            }.build()
 
     val dbInitTimeMs: Long = System.currentTimeMillis() - startTime
 

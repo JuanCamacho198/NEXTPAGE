@@ -32,7 +32,7 @@ data class Book(
     /** Comma-separated tags; null when none. */
     val tags: String? = null,
     /** Publication date as ISO `yyyy-MM-dd`; null when unknown. */
-    val publishedDate: String? = null
+    val publishedDate: String? = null,
 )
 
 /** Persisted book status values stored in [Book.status]. */
@@ -48,7 +48,10 @@ object ReadingState {
     const val COMPLETED = "completed"
 }
 
-fun resolveReadingState(explicitState: String?, progressPercentage: Float): String {
+fun resolveReadingState(
+    explicitState: String?,
+    progressPercentage: Float,
+): String {
     val progress = progressPercentage.coerceIn(0f, 100f)
     return when {
         explicitState == ReadingState.COMPLETED || progress >= 100f -> ReadingState.COMPLETED
@@ -77,13 +80,14 @@ fun Book.isActiveReadingCandidate(): Boolean {
  */
 fun Book.effectiveStatus(
     minutesRead: Long,
-    readingTargetMinutes: Long = READING_TARGET_MINUTES_DEFAULT
-): String = when {
-    status != null -> status
-    minutesRead >= readingTargetMinutes -> BookStatus.COMPLETED
-    minutesRead > 0L -> BookStatus.READING
-    else -> PLAN_TO_READ_DERIVED
-}
+    readingTargetMinutes: Long = READING_TARGET_MINUTES_DEFAULT,
+): String =
+    when {
+        status != null -> status
+        minutesRead >= readingTargetMinutes -> BookStatus.COMPLETED
+        minutesRead > 0L -> BookStatus.READING
+        else -> PLAN_TO_READ_DERIVED
+    }
 
 private const val PLAN_TO_READ_DERIVED = "pending"
 private const val READING_TARGET_MINUTES_DEFAULT = 300L

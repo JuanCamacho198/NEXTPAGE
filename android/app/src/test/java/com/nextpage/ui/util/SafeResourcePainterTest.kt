@@ -13,20 +13,20 @@ import org.junit.Test
  * placeholder, record the offending source, and never mask any other failure.
  */
 class SafeResourcePainterTest {
-
     @Test
     fun `unsupported drawable degrades to fallback and reports the source`() {
         var reported: IllegalArgumentException? = null
 
-        val resolved = resolvePainterOrFallback(
-            loader = {
-                throw IllegalArgumentException(
-                    "Only VectorDrawables and rasterized asset types are supported ex. PNG, JPG, WEBP"
-                )
-            },
-            fallback = { "fallback" },
-            onUnsupported = { reported = it }
-        )
+        val resolved =
+            resolvePainterOrFallback(
+                loader = {
+                    throw IllegalArgumentException(
+                        "Only VectorDrawables and rasterized asset types are supported ex. PNG, JPG, WEBP",
+                    )
+                },
+                fallback = { "fallback" },
+                onUnsupported = { reported = it },
+            )
 
         assertEquals("fallback", resolved)
         assertNotNull("The unsupported asset must be reported", reported)
@@ -36,11 +36,12 @@ class SafeResourcePainterTest {
     fun `supported drawable returns the loaded painter without fallback`() {
         var reported = false
 
-        val resolved = resolvePainterOrFallback(
-            loader = { "real" },
-            fallback = { "fallback" },
-            onUnsupported = { reported = true }
-        )
+        val resolved =
+            resolvePainterOrFallback(
+                loader = { "real" },
+                fallback = { "fallback" },
+                onUnsupported = { reported = true },
+            )
 
         assertEquals("real", resolved)
         assertFalse("A successful load must not report an unsupported asset", reported)
@@ -52,7 +53,7 @@ class SafeResourcePainterTest {
             resolvePainterOrFallback(
                 loader = { throw IllegalStateException("boom") },
                 fallback = { "fallback" },
-                onUnsupported = { }
+                onUnsupported = { },
             )
             fail("A genuine failure must not be swallowed by the guard")
         } catch (_: IllegalStateException) {

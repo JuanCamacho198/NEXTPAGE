@@ -20,15 +20,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.nextpage.ui.icons.NextPageIcons
 import com.nextpage.presentation.theme.NextPageTheme
+import com.nextpage.ui.icons.NextPageIcons
 
 enum class NextPageButtonVariant {
     FILLED,
     OUTLINED,
     TEXT,
     TONAL,
-    ICON
+    ICON,
 }
 
 /**
@@ -78,7 +78,7 @@ fun NextPageButton(
     contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
     colors: ButtonColors? = null,
     border: BorderStroke? = null,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     when (variant) {
         NextPageButtonVariant.FILLED -> {
@@ -87,11 +87,12 @@ fun NextPageButton(
                 modifier = modifier,
                 enabled = enabled,
                 shape = shape,
-                colors = colors ?: ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                ),
-                contentPadding = contentPadding
+                colors =
+                    colors ?: ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
+                contentPadding = contentPadding,
             ) {
                 RowScopeContent(content = content)
             }
@@ -102,11 +103,12 @@ fun NextPageButton(
                 modifier = modifier,
                 enabled = enabled,
                 shape = shape,
-                colors = colors ?: ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.primary
-                ),
+                colors =
+                    colors ?: ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.primary,
+                    ),
                 border = border,
-                contentPadding = contentPadding
+                contentPadding = contentPadding,
             ) {
                 RowScopeContent(content = content)
             }
@@ -116,7 +118,7 @@ fun NextPageButton(
                 onClick = onClick,
                 modifier = modifier,
                 enabled = enabled,
-                contentPadding = contentPadding
+                contentPadding = contentPadding,
             ) {
                 RowScopeContent(content = content)
             }
@@ -127,11 +129,12 @@ fun NextPageButton(
                 modifier = modifier,
                 enabled = enabled,
                 shape = shape,
-                colors = colors ?: ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                ),
-                contentPadding = contentPadding
+                colors =
+                    colors ?: ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    ),
+                contentPadding = contentPadding,
             ) {
                 RowScopeContent(content = content)
             }
@@ -141,7 +144,7 @@ fun NextPageButton(
                 onClick = onClick,
                 modifier = modifier,
                 enabled = enabled,
-                content = content
+                content = content,
             )
         }
     }
@@ -176,13 +179,13 @@ fun NextPageButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     variant: NextPageButtonVariant = NextPageButtonVariant.FILLED,
-    enabled: Boolean = true
+    enabled: Boolean = true,
 ) {
     NextPageButton(
         onClick = onClick,
         modifier = modifier,
         variant = variant,
-        enabled = enabled
+        enabled = enabled,
     ) {
         Text(text = text)
     }
@@ -194,7 +197,7 @@ private fun NextPageButtonVariantsDarkPreview() {
     NextPageTheme(darkTheme = true) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             NextPageButton(text = "Filled", onClick = {})
             NextPageButton(text = "Outlined", onClick = {}, variant = NextPageButtonVariant.OUTLINED)
@@ -213,7 +216,7 @@ private fun NextPageButtonVariantsLightPreview() {
     NextPageTheme(darkTheme = false) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             NextPageButton(text = "Filled", onClick = {})
             NextPageButton(text = "Outlined", onClick = {}, variant = NextPageButtonVariant.OUTLINED)

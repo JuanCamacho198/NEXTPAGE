@@ -35,17 +35,18 @@ private val RIBBON_COLOR = Color(0xFFEF4444)
 
 private const val NOTCH_DEPTH_RATIO = 0.45f
 
-private val RibbonShape = GenericShape { size, _ ->
-    val w = size.width
-    val h = size.height
-    val notchDepth = w * NOTCH_DEPTH_RATIO
-    moveTo(0f, 0f)
-    lineTo(w, 0f)
-    lineTo(w, h)
-    lineTo(w / 2f, h - notchDepth)
-    lineTo(0f, h)
-    close()
-}
+private val RibbonShape =
+    GenericShape { size, _ ->
+        val w = size.width
+        val h = size.height
+        val notchDepth = w * NOTCH_DEPTH_RATIO
+        moveTo(0f, 0f)
+        lineTo(w, 0f)
+        lineTo(w, h)
+        lineTo(w / 2f, h - notchDepth)
+        lineTo(0f, h)
+        close()
+    }
 
 private const val SLIDE_IN_DURATION_MS = 350
 private const val HOLD_DURATION_MS = 1_800L
@@ -69,7 +70,7 @@ private const val FADE_OUT_DURATION_MS = 400
 fun BookmarkRibbonOverlay(
     visible: Boolean,
     onAnimationEnd: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val announcement = stringResource(R.string.bookmark_ribbon_announcement)
     var phaseVisible by remember { mutableStateOf(false) }
@@ -90,26 +91,29 @@ fun BookmarkRibbonOverlay(
 
     Box(
         modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.TopCenter
+        contentAlignment = Alignment.TopCenter,
     ) {
         AnimatedVisibility(
             visible = phaseVisible,
-            enter = slideInVertically(
-                animationSpec = tween(
-                    durationMillis = SLIDE_IN_DURATION_MS,
-                    easing = FastOutSlowInEasing
-                ),
-                initialOffsetY = { -it }
-            ) + fadeIn(animationSpec = tween(SLIDE_IN_DURATION_MS)),
-            exit = fadeOut(animationSpec = tween(FADE_OUT_DURATION_MS))
+            enter =
+                slideInVertically(
+                    animationSpec =
+                        tween(
+                            durationMillis = SLIDE_IN_DURATION_MS,
+                            easing = FastOutSlowInEasing,
+                        ),
+                    initialOffsetY = { -it },
+                ) + fadeIn(animationSpec = tween(SLIDE_IN_DURATION_MS)),
+            exit = fadeOut(animationSpec = tween(FADE_OUT_DURATION_MS)),
         ) {
             Box(
-                modifier = Modifier
-                    .padding(top = 8.dp, end = 12.dp)
-                    .size(width = 40.dp, height = 56.dp)
-                    .clip(RibbonShape)
-                    .background(RIBBON_COLOR)
-                    .semantics { contentDescription = announcement }
+                modifier =
+                    Modifier
+                        .padding(top = 8.dp, end = 12.dp)
+                        .size(width = 40.dp, height = 56.dp)
+                        .clip(RibbonShape)
+                        .background(RIBBON_COLOR)
+                        .semantics { contentDescription = announcement },
             )
         }
     }

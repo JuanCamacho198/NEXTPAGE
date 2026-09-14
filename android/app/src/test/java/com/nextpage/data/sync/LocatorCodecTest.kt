@@ -11,7 +11,6 @@ import org.junit.Test
  * Valid epubcfi(/6/N!) → 1, malformed/null → null (caller falls back to 1).
  */
 class LocatorCodecTest {
-
     @Test
     fun parseSpineIndex_validCfi_returnsIndex() {
         assertEquals(4, LocatorCodec.parseSpineIndex("epubcfi(/6/4!/4/2)"))

@@ -10,7 +10,6 @@ import com.nextpage.data.remote.addons.ManifestValidator
  * caller must fall through to the existing auth handling.
  */
 object InstallDeepLinkParser {
-
     /** The install deep-link host inside the nextpage scheme. */
     const val INSTALL_HOST = "install"
 
@@ -18,8 +17,7 @@ object InstallDeepLinkParser {
      * True when [uri] is an ACTION_VIEW target this parser owns:
      * scheme `nextpage` with host exactly `install`.
      */
-    fun isInstallUri(uri: Uri?): Boolean =
-        uri != null && uri.scheme == "nextpage" && uri.host == INSTALL_HOST
+    fun isInstallUri(uri: Uri?): Boolean = uri != null && uri.scheme == "nextpage" && uri.host == INSTALL_HOST
 
     /**
      * Extracts the https manifest URL from an install URI, or null when the

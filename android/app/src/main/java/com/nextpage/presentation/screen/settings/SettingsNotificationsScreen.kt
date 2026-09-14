@@ -27,7 +27,7 @@ import com.nextpage.ui.components.molecules.NextPageSettingsSubPage
 
 @Composable
 fun SettingsNotificationsScreen(
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     var readingReminders by remember { mutableStateOf(true) }
     var streakAlerts by remember { mutableStateOf(true) }
@@ -35,12 +35,12 @@ fun SettingsNotificationsScreen(
 
     NextPageSettingsSubPage(
         title = stringResource(R.string.settings_notifications_title),
-        onBack = onBack
+        onBack = onBack,
     ) {
         NotificationToggleRow(
             label = stringResource(R.string.notifications_mock_streak_title),
             checked = readingReminders,
-            onCheckedChange = { readingReminders = it }
+            onCheckedChange = { readingReminders = it },
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -48,7 +48,7 @@ fun SettingsNotificationsScreen(
         NotificationToggleRow(
             label = stringResource(R.string.statistics_current_streak),
             checked = streakAlerts,
-            onCheckedChange = { streakAlerts = it }
+            onCheckedChange = { streakAlerts = it },
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -56,7 +56,7 @@ fun SettingsNotificationsScreen(
         NotificationToggleRow(
             label = stringResource(R.string.notifications_mock_library_title),
             checked = newBookAlerts,
-            onCheckedChange = { newBookAlerts = it }
+            onCheckedChange = { newBookAlerts = it },
         )
     }
 }
@@ -65,27 +65,28 @@ fun SettingsNotificationsScreen(
 private fun NotificationToggleRow(
     label: String,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant
+        color = MaterialTheme.colorScheme.surfaceVariant,
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.bodyLarge
+                style = MaterialTheme.typography.bodyLarge,
             )
             Switch(
                 checked = checked,
-                onCheckedChange = onCheckedChange
+                onCheckedChange = onCheckedChange,
             )
         }
     }

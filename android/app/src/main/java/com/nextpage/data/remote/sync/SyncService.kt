@@ -21,9 +21,14 @@ import kotlinx.coroutines.flow.Flow
  */
 sealed class DriveSyncState {
     data object Idle : DriveSyncState()
+
     data object Disabled : DriveSyncState()
+
     data object Running : DriveSyncState()
-    data class Error(val message: String) : DriveSyncState()
+
+    data class Error(
+        val message: String,
+    ) : DriveSyncState()
 
     /**
      * Drive returned 401/403 and the refresh token could not re-issue access.
@@ -48,7 +53,9 @@ interface SyncService {
     val pendingCount: Flow<Int>
 
     suspend fun bootstrap(userId: String): Result<Unit>
+
     suspend fun schedulePush(): Result<Unit>
+
     suspend fun schedulePull(): Result<Unit>
 
     /**

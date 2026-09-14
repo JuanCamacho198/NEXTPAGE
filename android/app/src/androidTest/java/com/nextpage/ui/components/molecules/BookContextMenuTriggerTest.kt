@@ -30,7 +30,6 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class BookContextMenuTriggerTest {
-
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
@@ -61,7 +60,7 @@ class BookContextMenuTriggerTest {
                 onMarkCompleted = {},
                 onMarkPlanToRead = {},
                 onShare = {},
-                onDelete = {}
+                onDelete = {},
             )
         }
 
@@ -83,7 +82,7 @@ class BookContextMenuTriggerTest {
                 onMarkCompleted = {},
                 onMarkPlanToRead = {},
                 onShare = {},
-                onDelete = {}
+                onDelete = {},
             )
         }
 
@@ -107,7 +106,7 @@ class BookContextMenuTriggerTest {
                 onMarkCompleted = { otherInvocations++ },
                 onMarkPlanToRead = { otherInvocations++ },
                 onShare = { otherInvocations++ },
-                onDelete = { deleteInvocations++ }
+                onDelete = { deleteInvocations++ },
             )
         }
 
@@ -132,7 +131,7 @@ class BookContextMenuTriggerTest {
                 onMarkCompleted = { markCompletedInvocations++ },
                 onMarkPlanToRead = { markPlanToReadInvocations++ },
                 onShare = { shareInvocations++ },
-                onDelete = {}
+                onDelete = {},
             )
         }
 
@@ -155,7 +154,7 @@ class BookContextMenuTriggerTest {
                 onMarkCompleted = {},
                 onMarkPlanToRead = {},
                 onShare = {},
-                onDelete = {}
+                onDelete = {},
             )
         }
 

@@ -78,7 +78,7 @@ fun AnchoredTagInput(
     onSuggestionClick: (String) -> Unit,
     onSave: () -> Unit,
     onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -92,41 +92,44 @@ fun AnchoredTagInput(
         modifier = modifier.width(280.dp),
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 8.dp
+        shadowElevation = 8.dp,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
         ) {
             OutlinedTextField(
                 value = tag,
                 onValueChange = onTagChange,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(focusRequester),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester),
                 label = { Text(stringResource(R.string.tag_input_hint)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { onSave() }),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface
-                )
+                colors =
+                    OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    ),
             )
 
             if (suggestions.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(12.dp))
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     suggestions.forEach { suggestion ->
                         SuggestionChip(
                             label = suggestion,
-                            onClick = { onSuggestionClick(suggestion) }
+                            onClick = { onSuggestionClick(suggestion) },
                         )
                     }
                 }
@@ -137,7 +140,7 @@ fun AnchoredTagInput(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 TextButton(onClick = onDismiss) {
                     Text(stringResource(R.string.reader_cancel))
@@ -161,7 +164,7 @@ private fun AnchoredTagInputDarkPreview() {
             onTagChange = {},
             onSuggestionClick = {},
             onSave = {},
-            onDismiss = {}
+            onDismiss = {},
         )
     }
 }
@@ -176,7 +179,7 @@ private fun AnchoredTagInputLightPreview() {
             onTagChange = {},
             onSuggestionClick = {},
             onSave = {},
-            onDismiss = {}
+            onDismiss = {},
         )
     }
 }
@@ -185,23 +188,22 @@ private fun AnchoredTagInputLightPreview() {
 private fun SuggestionChip(
     label: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Text(
         text = label,
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.primary,
-        modifier = modifier
-            .border(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.outline,
-                shape = RoundedCornerShape(50)
-            )
-            .background(
-                color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                shape = RoundedCornerShape(50)
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 6.dp)
+        modifier =
+            modifier
+                .border(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outline,
+                    shape = RoundedCornerShape(50),
+                ).background(
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    shape = RoundedCornerShape(50),
+                ).clickable(onClick = onClick)
+                .padding(horizontal = 12.dp, vertical = 6.dp),
     )
 }

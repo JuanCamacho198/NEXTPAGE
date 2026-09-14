@@ -37,7 +37,7 @@ class BookImportStateHolder(
     private val scope: CoroutineScope,
     private val onImportEvent: (LibraryImportEvent) -> Unit,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
-    private val onStateChanged: (BookImportState) -> Unit = {}
+    private val onStateChanged: (BookImportState) -> Unit = {},
 ) {
     private val _state = MutableStateFlow<BookImportState>(BookImportState.Idle)
     val state: StateFlow<BookImportState> = _state.asStateFlow()
@@ -60,7 +60,7 @@ class BookImportStateHolder(
     fun importBookFromEpub(
         sourcePath: String,
         fallbackTitle: String?,
-        inputStreamProvider: suspend () -> InputStream?
+        inputStreamProvider: suspend () -> InputStream?,
     ) {
         _state.update { BookImportState.Extracting(EXTRACTING_PROGRESS) }
         onStateChanged(_state.value)
@@ -75,13 +75,15 @@ class BookImportStateHolder(
                 _state.update { BookImportState.Saving(SAVING_PROGRESS) }
                 onStateChanged(_state.value)
 
-                val result = importEpubBookUseCase(
-                    request = BookImportRequest(
-                        sourcePath = sourcePath,
-                        fallbackTitle = fallbackTitle
-                    ),
-                    inputStreamProvider = inputStreamProvider
-                )
+                val result =
+                    importEpubBookUseCase(
+                        request =
+                            BookImportRequest(
+                                sourcePath = sourcePath,
+                                fallbackTitle = fallbackTitle,
+                            ),
+                        inputStreamProvider = inputStreamProvider,
+                    )
 
                 result.fold(
                     onSuccess = { book ->
@@ -90,10 +92,10 @@ class BookImportStateHolder(
                     onFailure = { error ->
                         onImportEvent(
                             LibraryImportEvent.Failure(
-                                error.message ?: "Failed to import EPUB"
-                            )
+                                error.message ?: "Failed to import EPUB",
+                            ),
                         )
-                    }
+                    },
                 )
             } finally {
                 // Always return to Idle, even when the use case or the input
@@ -112,7 +114,7 @@ class BookImportStateHolder(
     fun importPdfBook(
         sourcePath: String,
         fallbackTitle: String?,
-        pdfFile: File
+        pdfFile: File,
     ) {
         _state.update { BookImportState.Extracting(EXTRACTING_PROGRESS) }
         onStateChanged(_state.value)
@@ -127,13 +129,15 @@ class BookImportStateHolder(
                 _state.update { BookImportState.Saving(SAVING_PROGRESS) }
                 onStateChanged(_state.value)
 
-                val result = libraryRepository.importBookFromPdf(
-                    request = BookImportRequest(
-                        sourcePath = sourcePath,
-                        fallbackTitle = fallbackTitle
-                    ),
-                    file = pdfFile
-                )
+                val result =
+                    libraryRepository.importBookFromPdf(
+                        request =
+                            BookImportRequest(
+                                sourcePath = sourcePath,
+                                fallbackTitle = fallbackTitle,
+                            ),
+                        file = pdfFile,
+                    )
 
                 result.fold(
                     onSuccess = { book ->
@@ -142,10 +146,10 @@ class BookImportStateHolder(
                     onFailure = { error ->
                         onImportEvent(
                             LibraryImportEvent.Failure(
-                                error.message ?: "Failed to import PDF"
-                            )
+                                error.message ?: "Failed to import PDF",
+                            ),
                         )
-                    }
+                    },
                 )
             } finally {
                 // Always return to Idle, even when the repository or the file

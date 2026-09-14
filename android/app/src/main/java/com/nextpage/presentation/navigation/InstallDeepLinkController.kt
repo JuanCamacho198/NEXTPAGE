@@ -9,17 +9,25 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /** UI states for the addon install deep-link flow (no silent installs). */
 sealed class InstallUiState {
     data object Idle : InstallUiState()
+
     data object Fetching : InstallUiState()
-    data class Confirming(val url: String, val manifest: AddonManifest) : InstallUiState()
-    data class Error(val code: AddonFetchErrorCode) : InstallUiState()
+
+    data class Confirming(
+        val url: String,
+        val manifest: AddonManifest,
+    ) : InstallUiState()
+
+    data class Error(
+        val code: AddonFetchErrorCode,
+    ) : InstallUiState()
 }
 
 /**
@@ -36,9 +44,8 @@ sealed class InstallUiState {
 class InstallDeepLinkController(
     private val registry: AddonRegistryLike,
     private val mainDispatcher: CoroutineDispatcher,
-    installedManifest: AddonManifest? = null
+    installedManifest: AddonManifest? = null,
 ) {
-
     constructor(registry: AddonRegistryLike) : this(registry, kotlinx.coroutines.Dispatchers.Main)
 
     private val scope = CoroutineScope(SupervisorJob() + mainDispatcher)
@@ -51,7 +58,8 @@ class InstallDeepLinkController(
     init {
         // Unused seam kept for future already-installed detection; mirrors
         // desktop preview behavior without adding dialog copy yet.
-        @Suppress("UNUSED_EXPRESSION") installedManifest
+        @Suppress("UNUSED_EXPRESSION")
+        installedManifest
     }
 
     fun onInstallUri(uri: Uri?) {
@@ -72,16 +80,17 @@ class InstallDeepLinkController(
         if (_state.value is InstallUiState.Confirming && pendingConfirming?.url == url) return
         _state.value = InstallUiState.Fetching
         scope.launch {
-            _state.value = try {
-                val manifest = registry.fetchManifest(url)
-                val confirming = InstallUiState.Confirming(url, manifest)
-                pendingConfirming = confirming
-                confirming
-            } catch (err: AddonFetchException) {
-                InstallUiState.Error(err.code)
-            } catch (err: Exception) {
-                InstallUiState.Error(AddonFetchErrorCode.NETWORK)
-            }
+            _state.value =
+                try {
+                    val manifest = registry.fetchManifest(url)
+                    val confirming = InstallUiState.Confirming(url, manifest)
+                    pendingConfirming = confirming
+                    confirming
+                } catch (err: AddonFetchException) {
+                    InstallUiState.Error(err.code)
+                } catch (err: Exception) {
+                    InstallUiState.Error(AddonFetchErrorCode.NETWORK)
+                }
         }
     }
 
@@ -89,19 +98,20 @@ class InstallDeepLinkController(
         val confirming = pendingConfirming
         if (confirming == null || confirmJob?.isActive == true) return
         _state.value = InstallUiState.Fetching
-        confirmJob = scope.launch {
-            try {
-                registry.installManifest(confirming.url, confirming.manifest)
-            } catch (err: AddonFetchException) {
-                _state.value = InstallUiState.Error(err.code)
-                return@launch
-            } catch (err: Exception) {
-                _state.value = InstallUiState.Error(AddonFetchErrorCode.NETWORK)
-                return@launch
+        confirmJob =
+            scope.launch {
+                try {
+                    registry.installManifest(confirming.url, confirming.manifest)
+                } catch (err: AddonFetchException) {
+                    _state.value = InstallUiState.Error(err.code)
+                    return@launch
+                } catch (err: Exception) {
+                    _state.value = InstallUiState.Error(AddonFetchErrorCode.NETWORK)
+                    return@launch
+                }
+                pendingConfirming = null
+                _state.value = InstallUiState.Idle
             }
-            pendingConfirming = null
-            _state.value = InstallUiState.Idle
-        }
     }
 
     fun cancel() {

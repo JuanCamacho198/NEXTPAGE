@@ -5,11 +5,13 @@ import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpHeaders
-import io.ktor.http.isSuccess
 import kotlinx.coroutines.delay
 
 /** Raw upstream result shared by both catalog datasources. */
-data class CatalogHttpResponse(val status: Int, val body: String)
+data class CatalogHttpResponse(
+    val status: Int,
+    val body: String,
+)
 
 /** Narrow HTTP boundary so datasources stay fully testable offline with fakes. */
 interface CatalogHttpTransport {
@@ -17,7 +19,10 @@ interface CatalogHttpTransport {
 }
 
 /** Search payload shared by both datasources (books + authority total). */
-data class CatalogSearchResult(val books: List<CatalogBook>, val totalCount: Int)
+data class CatalogSearchResult(
+    val books: List<CatalogBook>,
+    val totalCount: Int,
+)
 
 /**
  * Production transport over the injected Ktor client.
@@ -27,15 +32,15 @@ data class CatalogSearchResult(val books: List<CatalogBook>, val totalCount: Int
  */
 class KtorCatalogHttpTransport(
     private val client: HttpClient,
-    private val userAgent: String = ANDROID_USER_AGENT
+    private val userAgent: String = ANDROID_USER_AGENT,
 ) : CatalogHttpTransport {
-
     override suspend fun get(url: String): CatalogHttpResponse {
         try {
-            val response = client.get(url) {
-                header(HttpHeaders.UserAgent, userAgent)
-                header(HttpHeaders.Accept, "application/json")
-            }
+            val response =
+                client.get(url) {
+                    header(HttpHeaders.UserAgent, userAgent)
+                    header(HttpHeaders.Accept, "application/json")
+                }
             return CatalogHttpResponse(response.status.value, response.bodyAsText())
         } catch (err: Throwable) {
             if (isCatalogError(err)) throw err

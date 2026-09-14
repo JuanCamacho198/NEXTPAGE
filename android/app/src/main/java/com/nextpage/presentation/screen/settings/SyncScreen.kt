@@ -38,97 +38,101 @@ import com.nextpage.ui.icons.NextPageIcons
 @Composable
 fun SyncScreen(
     onBack: () -> Unit,
-    onViewLogs: (() -> Unit)? = null
+    onViewLogs: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
-    val recentEntries = listOf(
-        R.string.sync_entry_highlights to "14:30",
-        R.string.sync_entry_progress to "14:28",
-        R.string.sync_entry_book to "13:55",
-        R.string.sync_entry_highlights to "12:40",
-        R.string.sync_entry_progress to "11:15"
-    )
+    val recentEntries =
+        listOf(
+            R.string.sync_entry_highlights to "14:30",
+            R.string.sync_entry_progress to "14:28",
+            R.string.sync_entry_book to "13:55",
+            R.string.sync_entry_highlights to "12:40",
+            R.string.sync_entry_progress to "11:15",
+        )
 
     NextPageSettingsSubPage(
         title = stringResource(R.string.settings_sync_title),
-        onBack = onBack
+        onBack = onBack,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // Card Realtime Conectado
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant
+                color = MaterialTheme.colorScheme.surfaceVariant,
             ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Icon(
                             imageVector = NextPageIcons.CloudSync,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(20.dp),
                         )
                         Text(
                             text = stringResource(R.string.sync_card_realtime_title),
                             style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
                         )
                         AssistChip(
                             onClick = {},
                             label = {
                                 Text(
                                     text = stringResource(R.string.sync_realtime_connected),
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp)
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
                                 )
                             },
-                            colors = AssistChipDefaults.assistChipColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                labelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
+                            colors =
+                                AssistChipDefaults.assistChipColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                ),
                         )
                     }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text(
                             text = stringResource(R.string.sync_last_sync_label),
                             style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
                             text = stringResource(R.string.sync_last_sync_value),
                             style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Medium,
                         )
                     }
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text(
                             text = stringResource(R.string.sync_outbox_label),
                             style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
                             text = stringResource(R.string.sync_outbox_value),
                             style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Medium,
                         )
                     }
                 }
@@ -138,34 +142,35 @@ fun SyncScreen(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant
+                color = MaterialTheme.colorScheme.surfaceVariant,
             ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Text(
                         text = stringResource(R.string.sync_recent_title),
                         style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
                     )
                     recentEntries.forEach { (labelRes, time) ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
                                 text = stringResource(labelRes),
                                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
                             )
                             Text(
                                 text = time,
                                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -178,12 +183,12 @@ fun SyncScreen(
                     Toast.makeText(context, context.getString(R.string.sync_now_success), Toast.LENGTH_SHORT).show()
                 },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
             ) {
                 Icon(
                     imageVector = NextPageIcons.Sync,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(18.dp),
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(text = stringResource(R.string.sync_action_sync_now))
@@ -191,12 +196,14 @@ fun SyncScreen(
 
             OutlinedButton(
                 onClick = {
-                    if (onViewLogs != null) onViewLogs() else {
+                    if (onViewLogs != null) {
+                        onViewLogs()
+                    } else {
                         Toast.makeText(context, context.getString(R.string.debug_settings_log_viewer), Toast.LENGTH_SHORT).show()
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
             ) {
                 Text(text = stringResource(R.string.sync_action_view_logs))
             }

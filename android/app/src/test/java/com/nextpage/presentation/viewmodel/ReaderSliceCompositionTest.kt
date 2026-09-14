@@ -29,62 +29,67 @@ import org.junit.Test
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReaderSliceCompositionTest {
-
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
     @Test
-    fun `search slice mirrors holder state through VM re-export`() = runTest {
-        val viewModel = createViewModel(testScheduler)
+    fun `search slice mirrors holder state through VM re-export`() =
+        runTest {
+            val viewModel = createViewModel(testScheduler)
 
-        viewModel.searchStateHolder.onToggleSearch()
-        assertSearchMirror(
-            viewModel,
-            expectedActive = true,
-            expectedQuery = "",
-            message = "toggle must mirror into the VM re-export"
-        )
+            viewModel.searchStateHolder.onToggleSearch()
+            assertSearchMirror(
+                viewModel,
+                expectedActive = true,
+                expectedQuery = "",
+                message = "toggle must mirror into the VM re-export",
+            )
 
-        viewModel.searchStateHolder.onSearchQuery("odisea", null, null)
-        advanceTimeBy(400)
-        runCurrent()
+            viewModel.searchStateHolder.onSearchQuery("odisea", null, null)
+            advanceTimeBy(400)
+            runCurrent()
 
-        // Null publication: query mirrors, search settles with no results.
-        assertSearchMirror(
-            viewModel,
-            expectedActive = true,
-            expectedQuery = "odisea",
-            message = "query must mirror into the VM re-export"
-        )
-        assertFalse(viewModel.searchUiState.value.isSearching)
-        assertTrue(viewModel.searchUiState.value.searchResults.isEmpty())
-    }
-
-    @Test
-    fun `chrome slice mirrors holder state through VM re-export`() = runTest {
-        val viewModel = createViewModel(testScheduler)
-
-        assertFalse(viewModel.chromeUiState.value.isFullscreen)
-
-        viewModel.fullscreenManager.onToggleFullscreen()
-
-        assertTrue(viewModel.chromeUiState.value.isFullscreen)
-        // No cross-slice emission: annotation-adjacent state untouched.
-        assertFalse(viewModel.annotationUiState.value.showHighlightsSheet)
-    }
+            // Null publication: query mirrors, search settles with no results.
+            assertSearchMirror(
+                viewModel,
+                expectedActive = true,
+                expectedQuery = "odisea",
+                message = "query must mirror into the VM re-export",
+            )
+            assertFalse(viewModel.searchUiState.value.isSearching)
+            assertTrue(
+                viewModel.searchUiState.value.searchResults
+                    .isEmpty(),
+            )
+        }
 
     @Test
-    fun `settings slice mirrors holder state through VM re-export`() = runTest {
-        val viewModel = createViewModel(testScheduler)
+    fun `chrome slice mirrors holder state through VM re-export`() =
+        runTest {
+            val viewModel = createViewModel(testScheduler)
 
-        assertFalse(viewModel.settingsUiState.value.showSplitSettings)
+            assertFalse(viewModel.chromeUiState.value.isFullscreen)
 
-        viewModel.settingsManager.onToggleSplitSettings()
+            viewModel.fullscreenManager.onToggleFullscreen()
 
-        assertTrue(viewModel.settingsUiState.value.showSplitSettings)
-        // No cross-slice emission: chrome state untouched.
-        assertFalse(viewModel.chromeUiState.value.isFullscreen)
-    }
+            assertTrue(viewModel.chromeUiState.value.isFullscreen)
+            // No cross-slice emission: annotation-adjacent state untouched.
+            assertFalse(viewModel.annotationUiState.value.showHighlightsSheet)
+        }
+
+    @Test
+    fun `settings slice mirrors holder state through VM re-export`() =
+        runTest {
+            val viewModel = createViewModel(testScheduler)
+
+            assertFalse(viewModel.settingsUiState.value.showSplitSettings)
+
+            viewModel.settingsManager.onToggleSplitSettings()
+
+            assertTrue(viewModel.settingsUiState.value.showSplitSettings)
+            // No cross-slice emission: chrome state untouched.
+            assertFalse(viewModel.chromeUiState.value.isFullscreen)
+        }
 
     // ── Harness (per-slice mirror assertions; T3-T6 extend here) ────
 
@@ -92,7 +97,7 @@ class ReaderSliceCompositionTest {
         viewModel: ReaderViewModel,
         expectedActive: Boolean,
         expectedQuery: String,
-        message: String
+        message: String,
     ) {
         val reExport = viewModel.searchUiState.value
         assertEquals(message, expectedActive, reExport.isSearchActive)
@@ -100,68 +105,74 @@ class ReaderSliceCompositionTest {
     }
 
     @Test
-    fun `sleepTimer slice mirrors holder state through VM re-export`() = runTest {
-        val viewModel = createViewModel(testScheduler)
+    fun `sleepTimer slice mirrors holder state through VM re-export`() =
+        runTest {
+            val viewModel = createViewModel(testScheduler)
 
-        assertFalse(viewModel.sleepTimerUiState.value.isActive)
+            assertFalse(viewModel.sleepTimerUiState.value.isActive)
 
-        viewModel.sleepTimerManager.startTimer(
-            com.nextpage.presentation.viewmodel.reader.SleepTimerManager.END_OF_CHAPTER
-        )
+            viewModel.sleepTimerManager.startTimer(
+                com.nextpage.presentation.viewmodel.reader.SleepTimerManager.END_OF_CHAPTER,
+            )
 
-        assertTrue(viewModel.sleepTimerUiState.value.isActive)
-        // No cross-slice emission: chrome state untouched.
-        assertFalse(viewModel.chromeUiState.value.isFullscreen)
-    }
+            assertTrue(viewModel.sleepTimerUiState.value.isActive)
+            // No cross-slice emission: chrome state untouched.
+            assertFalse(viewModel.chromeUiState.value.isFullscreen)
+        }
 
     @Test
-    fun `session slice mirrors holder state through VM re-export`() = runTest {
-        val viewModel = createViewModel(testScheduler)
+    fun `session slice mirrors holder state through VM re-export`() =
+        runTest {
+            val viewModel = createViewModel(testScheduler)
 
-        viewModel.lifecycleHolder.setEpubStateForTest(
-            chapters = listOf(
-                BookChapter(0, "c1", "Ch 1", "ch1.xhtml"),
-                BookChapter(1, "c2", "Ch 2", "ch2.xhtml")
-            ),
-            currentChapterIndex = 1,
-            selectedBookId = "book-9"
-        )
+            viewModel.lifecycleHolder.setEpubStateForTest(
+                chapters =
+                    listOf(
+                        BookChapter(0, "c1", "Ch 1", "ch1.xhtml"),
+                        BookChapter(1, "c2", "Ch 2", "ch2.xhtml"),
+                    ),
+                currentChapterIndex = 1,
+                selectedBookId = "book-9",
+            )
 
-        assertEquals("book-9", viewModel.sessionUiState.value.selectedBookId)
-        assertEquals(1, viewModel.sessionUiState.value.currentChapterIndex)
-        // No cross-slice emission: chrome state untouched.
-        assertFalse(viewModel.chromeUiState.value.isFullscreen)
-    }
+            assertEquals("book-9", viewModel.sessionUiState.value.selectedBookId)
+            assertEquals(1, viewModel.sessionUiState.value.currentChapterIndex)
+            // No cross-slice emission: chrome state untouched.
+            assertFalse(viewModel.chromeUiState.value.isFullscreen)
+        }
 
     // ── Annotation slice (SDD reader-facade-split, T6) ──────────────
 
     @Test
-    fun `annotation slice mirrors holder state through VM re-export`() = runTest {
-        val viewModel = createViewModel(testScheduler)
-        val highlight = com.nextpage.domain.model.Highlight(
-            id = "hl-1",
-            bookId = "book-1",
-            cfiRange = "epubcfi(/6/2!/4/1)",
-            textContent = "highlighted",
-            note = null,
-            color = com.nextpage.domain.model.HighlightColor.YELLOW.hex,
-            updatedAtEpochMillis = 0L,
-            deletedAtEpochMillis = null
-        )
-        val holder = viewModel.interactionHolder
-        holder.testSetInitialHighlights(listOf(highlight))
-        runCurrent()
+    fun `annotation slice mirrors holder state through VM re-export`() =
+        runTest {
+            val viewModel = createViewModel(testScheduler)
+            val highlight =
+                com.nextpage.domain.model.Highlight(
+                    id = "hl-1",
+                    bookId = "book-1",
+                    cfiRange = "epubcfi(/6/2!/4/1)",
+                    textContent = "highlighted",
+                    note = null,
+                    color = com.nextpage.domain.model.HighlightColor.YELLOW.hex,
+                    updatedAtEpochMillis = 0L,
+                    deletedAtEpochMillis = null,
+                )
+            val holder = viewModel.interactionHolder
+            holder.testSetInitialHighlights(listOf(highlight))
+            runCurrent()
 
-        // Slice re-export mirrors the annotation owner (interactionHolder).
-        assertEquals(
-            "annotationUiState must mirror interactionHolder.highlights",
-            listOf("hl-1"),
-            viewModel.annotationUiState.value.highlights.map { it.id }
-        )
-        // No cross-slice emission: chrome / session state untouched.
-        assertFalse(viewModel.chromeUiState.value.isFullscreen)
-        assertNull(viewModel.sessionUiState.value.selectedBookId)
-    }
+            // Slice re-export mirrors the annotation owner (interactionHolder).
+            assertEquals(
+                "annotationUiState must mirror interactionHolder.highlights",
+                listOf("hl-1"),
+                viewModel.annotationUiState.value.highlights
+                    .map { it.id },
+            )
+            // No cross-slice emission: chrome / session state untouched.
+            assertFalse(viewModel.chromeUiState.value.isFullscreen)
+            assertNull(viewModel.sessionUiState.value.selectedBookId)
+        }
 
     // ── Helpers ─────────────────────────────────────────────────────
 
@@ -174,7 +185,7 @@ class ReaderSliceCompositionTest {
             readingStatsRepository = FakeReadingStatsRepository(),
             updateReadingProgressUseCase = UpdateReadingProgressUseCase(fake),
             defaultBookId = null,
-            mainDispatcher = dispatcher
+            mainDispatcher = dispatcher,
         )
     }
 }

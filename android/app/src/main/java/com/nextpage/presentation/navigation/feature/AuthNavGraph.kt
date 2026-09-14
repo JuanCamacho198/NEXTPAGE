@@ -6,10 +6,10 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.nextpage.di.AppContainer
-import com.nextpage.presentation.navigation.NextPageDestination
 import com.nextpage.presentation.feature.auth.AuthScreen
 import com.nextpage.presentation.feature.auth.ForgotScreen
 import com.nextpage.presentation.feature.auth.RegisterScreen
+import com.nextpage.presentation.navigation.NextPageDestination
 import com.nextpage.presentation.viewmodel.AuthViewModel
 
 /**
@@ -23,34 +23,36 @@ import com.nextpage.presentation.viewmodel.AuthViewModel
 fun NavGraphBuilder.authGraph(
     navController: NavController,
     authViewModel: AuthViewModel,
-    appContainer: AppContainer
+    appContainer: AppContainer,
 ) {
     composable(
         route = NextPageDestination.Auth.route,
         enterTransition = { fadeIn() },
         exitTransition = { fadeOut() },
         popEnterTransition = { fadeIn() },
-        popExitTransition = { fadeOut() }
+        popExitTransition = { fadeOut() },
     ) {
         AuthScreen(
             viewModel = authViewModel,
             onAuthenticated = {
-                val destination = if (appContainer.readingGoalPreferences.load() == null) {
-                    NextPageDestination.OnboardingGoal.route
-                } else {
-                    NextPageDestination.Home.route
-                }
+                val destination =
+                    if (appContainer.readingGoalPreferences.load() == null) {
+                        NextPageDestination.OnboardingGoal.route
+                    } else {
+                        NextPageDestination.Home.route
+                    }
                 navController.navigate(destination) {
                     popUpTo(NextPageDestination.Auth.route) { inclusive = true }
                 }
             },
             onContinueLocal = {
                 authViewModel.continueLocally()
-                val destination = if (appContainer.readingGoalPreferences.load() == null) {
-                    NextPageDestination.OnboardingGoal.route
-                } else {
-                    NextPageDestination.Home.route
-                }
+                val destination =
+                    if (appContainer.readingGoalPreferences.load() == null) {
+                        NextPageDestination.OnboardingGoal.route
+                    } else {
+                        NextPageDestination.Home.route
+                    }
                 navController.navigate(destination) {
                     popUpTo(NextPageDestination.Auth.route) { inclusive = true }
                 }
@@ -64,7 +66,7 @@ fun NavGraphBuilder.authGraph(
                 navController.navigate(NextPageDestination.AuthForgot.route) {
                     launchSingleTop = true
                 }
-            }
+            },
         )
     }
 
@@ -73,21 +75,22 @@ fun NavGraphBuilder.authGraph(
         enterTransition = { fadeIn() },
         exitTransition = { fadeOut() },
         popEnterTransition = { fadeIn() },
-        popExitTransition = { fadeOut() }
+        popExitTransition = { fadeOut() },
     ) {
         RegisterScreen(
             viewModel = authViewModel,
             onAuthenticated = {
-                val destination = if (appContainer.readingGoalPreferences.load() == null) {
-                    NextPageDestination.OnboardingGoal.route
-                } else {
-                    NextPageDestination.Home.route
-                }
+                val destination =
+                    if (appContainer.readingGoalPreferences.load() == null) {
+                        NextPageDestination.OnboardingGoal.route
+                    } else {
+                        NextPageDestination.Home.route
+                    }
                 navController.navigate(destination) {
                     popUpTo(NextPageDestination.Auth.route) { inclusive = true }
                 }
             },
-            onNavigateBack = { navController.popBackStack() }
+            onNavigateBack = { navController.popBackStack() },
         )
     }
 
@@ -96,21 +99,22 @@ fun NavGraphBuilder.authGraph(
         enterTransition = { fadeIn() },
         exitTransition = { fadeOut() },
         popEnterTransition = { fadeIn() },
-        popExitTransition = { fadeOut() }
+        popExitTransition = { fadeOut() },
     ) {
         ForgotScreen(
             viewModel = authViewModel,
             onAuthenticated = {
-                val destination = if (appContainer.readingGoalPreferences.load() == null) {
-                    NextPageDestination.OnboardingGoal.route
-                } else {
-                    NextPageDestination.Home.route
-                }
+                val destination =
+                    if (appContainer.readingGoalPreferences.load() == null) {
+                        NextPageDestination.OnboardingGoal.route
+                    } else {
+                        NextPageDestination.Home.route
+                    }
                 navController.navigate(destination) {
                     popUpTo(NextPageDestination.Auth.route) { inclusive = true }
                 }
             },
-            onNavigateBack = { navController.popBackStack() }
+            onNavigateBack = { navController.popBackStack() },
         )
     }
 }

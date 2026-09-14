@@ -47,7 +47,7 @@ fun AddonCapabilityDetailRoute(
     hasConsent: (String) -> Boolean,
     onConsentChange: (String, Boolean) -> Unit,
     onViewPolicy: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     var row by remember(addonId) { mutableStateOf<InstalledAddonRow?>(null) }
     var consented by remember(addonId) { mutableStateOf(hasConsent(addonId)) }
@@ -60,7 +60,7 @@ fun AddonCapabilityDetailRoute(
             text = stringResource(R.string.discover_loading),
             style = MaterialTheme.typography.bodyMedium,
             color = NextPageColors.textSecondary,
-            modifier = Modifier.padding(24.dp)
+            modifier = Modifier.padding(24.dp),
         )
         return
     }
@@ -73,7 +73,7 @@ fun AddonCapabilityDetailRoute(
             consented = granted
         },
         onViewPolicy = onViewPolicy,
-        onBack = onBack
+        onBack = onBack,
     )
 }
 
@@ -95,7 +95,7 @@ fun AddonCapabilityDetailScreen(
     onConsentChange: (Boolean) -> Unit,
     onViewPolicy: () -> Unit,
     onBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Scaffold(
         modifier = modifier,
@@ -106,54 +106,56 @@ fun AddonCapabilityDetailScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = NextPageIcons.ArrowBack,
-                            contentDescription = stringResource(R.string.settings_addons_back)
+                            contentDescription = stringResource(R.string.settings_addons_back),
                         )
                     }
-                }
+                },
             )
-        }
+        },
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
                 text = stringResource(R.string.addon_capability_detail_body),
                 style = MaterialTheme.typography.bodyMedium,
-                color = NextPageColors.textPrimary
+                color = NextPageColors.textPrimary,
             )
             AddonCapabilityBadges(capabilities = capabilities)
             androidx.compose.material3.Switch(
                 checked = hasConsent,
-                onCheckedChange = onConsentChange
+                onCheckedChange = onConsentChange,
             )
             Text(
-                text = stringResource(
-                    if (hasConsent) {
-                        R.string.addon_consent_state_granted
-                    } else {
-                        R.string.addon_consent_state_missing
-                    }
-                ),
+                text =
+                    stringResource(
+                        if (hasConsent) {
+                            R.string.addon_consent_state_granted
+                        } else {
+                            R.string.addon_consent_state_missing
+                        },
+                    ),
                 style = MaterialTheme.typography.bodySmall,
                 color = NextPageColors.textSecondary,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
             )
             Text(
                 text = stringResource(R.string.addon_consent_trust_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = NextPageColors.textSecondary,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             )
             Text(
                 text = stringResource(R.string.legal_disclaimer_view_policy),
                 style = MaterialTheme.typography.labelMedium,
                 color = NextPageColors.textAccent,
-                modifier = Modifier.clickable(onClick = onViewPolicy)
+                modifier = Modifier.clickable(onClick = onViewPolicy),
             )
         }
     }

@@ -3,8 +3,8 @@ package com.nextpage.debug
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Test
 import org.junit.Assert.fail
+import org.junit.Test
 
 /**
  * Bucketing helper edge tests (metric-vocabulary spec: an unbucketed value
@@ -12,7 +12,6 @@ import org.junit.Assert.fail
  * screen (PP-1 A9).
  */
 class SentryMetricsTest {
-
     @Test
     fun `duration buckets match the shared log-scale edges`() {
         assertEquals(100L, SentryMetrics.bucketDurationMs(0))
@@ -61,8 +60,12 @@ class SentryMetricsTest {
     }
 
     private fun expectIllegal(block: () -> Unit) {
-        try { block(); fail("expected IllegalArgumentException") }
-        catch (_: IllegalArgumentException) { /* expected */ }
+        try {
+            block()
+            fail("expected IllegalArgumentException")
+        } catch (_: IllegalArgumentException) {
+            // expected
+        }
     }
 
     @Test

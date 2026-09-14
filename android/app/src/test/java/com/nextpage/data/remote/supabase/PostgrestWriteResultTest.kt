@@ -6,7 +6,6 @@ import io.github.jan.supabase.postgrest.result.PostgrestResult
 import io.ktor.http.Headers
 import io.mockk.every
 import io.mockk.mockk
-import kotlin.reflect.KType
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
@@ -14,6 +13,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.fail
 import org.junit.Test
+import kotlin.reflect.KType
 
 /**
  * FIX 1 regression: PostgREST writes may return an empty body (204 No Content,
@@ -25,23 +25,29 @@ import org.junit.Test
  * malformed/error body.
  */
 class PostgrestWriteResultTest {
-
     @Serializable
-    private data class Row(val id: String, val value: Int = 0)
+    private data class Row(
+        val id: String,
+        val value: Int = 0,
+    )
 
     /**
      * Minimal [SupabaseSerializer] backed by kotlinx.serialization's [Json],
      * mirroring what `postgrest-kt` supplies at runtime.
      */
     private class JsonSupabaseSerializer(
-        private val json: Json = Json { ignoreUnknownKeys = true }
+        private val json: Json = Json { ignoreUnknownKeys = true },
     ) : SupabaseSerializer {
-        override fun <T> encode(type: KType, value: T): String =
-            throw UnsupportedOperationException("encode is not exercised by these tests")
+        override fun <T> encode(
+            type: KType,
+            value: T,
+        ): String = throw UnsupportedOperationException("encode is not exercised by these tests")
 
         @Suppress("UNCHECKED_CAST")
-        override fun <T> decode(type: KType, value: String): T =
-            json.decodeFromString(serializer(type), value) as T
+        override fun <T> decode(
+            type: KType,
+            value: String,
+        ): T = json.decodeFromString(serializer(type), value) as T
     }
 
     private fun result(body: String): PostgrestResult {

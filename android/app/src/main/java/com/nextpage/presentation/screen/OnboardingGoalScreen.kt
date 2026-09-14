@@ -67,22 +67,23 @@ fun OnboardingGoalScreen(
     onSave: (minutes: Int) -> Unit,
     modifier: Modifier = Modifier,
     initialMinutes: Int = DEFAULT_GOAL_MINUTES,
-    onNavigateBack: (() -> Unit)? = null
+    onNavigateBack: (() -> Unit)? = null,
 ) {
     val options = GOAL_OPTIONS
     var selectedMinutes by rememberSaveable { mutableIntStateOf(initialMinutes) }
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .verticalScroll(rememberScrollState())
-                .padding(
-                    start = NextPageDimens.spacingLg,
-                    end = NextPageDimens.spacingLg,
-                    bottom = BOTTOM_ACTION_CLEARANCE
-                )
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .verticalScroll(rememberScrollState())
+                    .padding(
+                        start = NextPageDimens.spacingLg,
+                        end = NextPageDimens.spacingLg,
+                        bottom = BOTTOM_ACTION_CLEARANCE,
+                    ),
         ) {
             GoalHeader(onNavigateBack = onNavigateBack)
 
@@ -98,7 +99,7 @@ fun OnboardingGoalScreen(
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.onBackground
+                color = MaterialTheme.colorScheme.onBackground,
             )
 
             Spacer(modifier = Modifier.height(NextPageDimens.spacingSm))
@@ -108,20 +109,20 @@ fun OnboardingGoalScreen(
                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             Spacer(modifier = Modifier.height(NextPageDimens.spacingXl))
 
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 options.forEach { option ->
                     GoalOptionCard(
                         option = option,
                         selected = selectedMinutes == option.minutes,
-                        onSelect = { selectedMinutes = option.minutes }
+                        onSelect = { selectedMinutes = option.minutes },
                     )
                 }
             }
@@ -129,7 +130,7 @@ fun OnboardingGoalScreen(
 
         GoalBottomAction(
             onConfirm = { onSave(selectedMinutes) },
-            modifier = Modifier.align(Alignment.BottomCenter)
+            modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
 }
@@ -137,17 +138,18 @@ fun OnboardingGoalScreen(
 @Composable
 private fun GoalHeader(onNavigateBack: (() -> Unit)?) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = NextPageDimens.spacingMd, bottom = NextPageDimens.spacingMd),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(top = NextPageDimens.spacingMd, bottom = NextPageDimens.spacingMd),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         if (onNavigateBack != null) {
             IconButton(onClick = onNavigateBack) {
                 Icon(
                     imageVector = NextPageIcons.ArrowBack,
                     contentDescription = stringResource(R.string.nav_back),
-                    tint = MaterialTheme.colorScheme.onBackground
+                    tint = MaterialTheme.colorScheme.onBackground,
                 )
             }
             Spacer(modifier = Modifier.width(NextPageDimens.spacingSm))
@@ -156,7 +158,7 @@ private fun GoalHeader(onNavigateBack: (() -> Unit)?) {
             text = stringResource(R.string.onboarding_goal_header),
             style = MaterialTheme.typography.headlineSmall.copy(fontSize = 20.sp),
             fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onBackground
+            color = MaterialTheme.colorScheme.onBackground,
         )
     }
 }
@@ -164,45 +166,47 @@ private fun GoalHeader(onNavigateBack: (() -> Unit)?) {
 @Composable
 private fun GoalHero() {
     val composition by rememberLottieComposition(
-        LottieCompositionSpec.RawRes(R.raw.fire_streak)
+        LottieCompositionSpec.RawRes(R.raw.fire_streak),
     )
     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         Box(
-            modifier = Modifier
-                .size(96.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(NextPageDimens.spacingMd)
-                )
+            modifier =
+                Modifier
+                    .size(96.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = RoundedCornerShape(NextPageDimens.spacingMd),
+                    ),
         ) {
             LottieAnimation(
                 composition = composition,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .size(72.dp),
-                iterations = LottieConstants.IterateForever
+                modifier =
+                    Modifier
+                        .align(Alignment.Center)
+                        .size(72.dp),
+                iterations = LottieConstants.IterateForever,
             )
             Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .offset(x = NextPageDimens.spacingXs, y = NextPageDimens.spacingXs)
-                    .size(40.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.surface,
-                        shape = RoundedCornerShape(NextPageDimens.spacingSm)
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = NextPageColors.header,
-                        shape = RoundedCornerShape(NextPageDimens.spacingSm)
-                    ),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomEnd)
+                        .offset(x = NextPageDimens.spacingXs, y = NextPageDimens.spacingXs)
+                        .size(40.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.surface,
+                            shape = RoundedCornerShape(NextPageDimens.spacingSm),
+                        ).border(
+                            width = 1.dp,
+                            color = NextPageColors.header,
+                            shape = RoundedCornerShape(NextPageDimens.spacingSm),
+                        ),
+                contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     imageVector = NextPageIcons.Flame,
                     contentDescription = null,
                     tint = NextPageColors.accentYellow,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(20.dp),
                 )
             }
         }
@@ -214,46 +218,51 @@ private fun GoalOptionCard(
     option: GoalOption,
     selected: Boolean,
     onSelect: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(72.dp)
-            .clickable(onClick = onSelect),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(72.dp)
+                .clickable(onClick = onSelect),
         shape = RoundedCornerShape(16.dp),
-        color = if (selected) {
-            MaterialTheme.colorScheme.surfaceVariant
-        } else {
-            MaterialTheme.colorScheme.surface
-        },
-        border = BorderStroke(
-            width = if (selected) 2.dp else 1.dp,
-            color = if (selected) {
-                MaterialTheme.colorScheme.primary
+        color =
+            if (selected) {
+                MaterialTheme.colorScheme.surfaceVariant
             } else {
-                MaterialTheme.colorScheme.outlineVariant
-            }
-        )
+                MaterialTheme.colorScheme.surface
+            },
+        border =
+            BorderStroke(
+                width = if (selected) 2.dp else 1.dp,
+                color =
+                    if (selected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.outlineVariant
+                    },
+            ),
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(
-                        color = option.accentColor.copy(alpha = 0.12f),
-                        shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .size(40.dp)
+                        .background(
+                            color = option.accentColor.copy(alpha = 0.12f),
+                            shape = CircleShape,
+                        ),
+                contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     imageVector = option.icon,
                     contentDescription = null,
                     tint = option.accentColor,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(20.dp),
                 )
             }
 
@@ -264,12 +273,12 @@ private fun GoalOptionCard(
                     text = stringResource(option.titleRes),
                     style = MaterialTheme.typography.titleSmall.copy(fontSize = 14.sp),
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onBackground
+                    color = MaterialTheme.colorScheme.onBackground,
                 )
                 Text(
                     text = stringResource(option.descriptionRes),
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
@@ -277,41 +286,44 @@ private fun GoalOptionCard(
 
             Surface(
                 shape = RoundedCornerShape(NextPageDimens.spacingSm),
-                color = MaterialTheme.colorScheme.surfaceVariant
+                color = MaterialTheme.colorScheme.surfaceVariant,
             ) {
                 Text(
                     text = stringResource(option.valueRes),
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp),
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(
-                        horizontal = NextPageDimens.spacingSm,
-                        vertical = NextPageDimens.spacingXs
-                    )
+                    modifier =
+                        Modifier.padding(
+                            horizontal = NextPageDimens.spacingSm,
+                            vertical = NextPageDimens.spacingXs,
+                        ),
                 )
             }
 
             Spacer(modifier = Modifier.width(NextPageDimens.spacingSm))
 
             Box(
-                modifier = Modifier
-                    .size(24.dp)
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                        shape = RoundedCornerShape(NextPageDimens.spacingXs)
-                    ),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .size(24.dp)
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                            shape = RoundedCornerShape(NextPageDimens.spacingXs),
+                        ),
+                contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     imageVector = NextPageIcons.Check,
                     contentDescription = null,
-                    tint = if (selected) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.outlineVariant
-                    },
-                    modifier = Modifier.size(16.dp)
+                    tint =
+                        if (selected) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.outlineVariant
+                        },
+                    modifier = Modifier.size(16.dp),
                 )
             }
         }
@@ -321,34 +333,36 @@ private fun GoalOptionCard(
 @Composable
 private fun GoalBottomAction(
     onConfirm: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .imePadding(),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .imePadding(),
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 3.dp,
-        shadowElevation = 8.dp
+        shadowElevation = 8.dp,
     ) {
         Column {
             NextPageDivider(modifier = Modifier.fillMaxWidth())
             Column(
-                modifier = Modifier.padding(
-                    horizontal = NextPageDimens.spacingLg,
-                    vertical = NextPageDimens.spacingMd
-                ),
-                horizontalAlignment = Alignment.CenterHorizontally
+                modifier =
+                    Modifier.padding(
+                        horizontal = NextPageDimens.spacingLg,
+                        vertical = NextPageDimens.spacingMd,
+                    ),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 NextPageButton(
                     onClick = onConfirm,
                     modifier = Modifier.fillMaxWidth().padding(16.dp).height(56.dp),
-                    shape = RoundedCornerShape(28.dp)
+                    shape = RoundedCornerShape(28.dp),
                 ) {
                     Text(
                         text = stringResource(R.string.onboarding_goal_action),
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                 }
 
@@ -357,7 +371,7 @@ private fun GoalBottomAction(
                 Text(
                     text = stringResource(R.string.onboarding_goal_footer_note),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -371,47 +385,48 @@ internal data class GoalOption(
     val descriptionRes: Int,
     val valueRes: Int,
     val icon: ImageVector,
-    val accentColor: Color
+    val accentColor: Color,
 )
 
 /** Light-blue accent for the "Serious" goal option (design token #B6C4FF). */
 private val AccentLightBlue = Color(0xFFB6C4FF)
 
 // `internal` (not `private`) so unit tests can assert the fixed option set.
-internal val GOAL_OPTIONS = listOf(
-    GoalOption(
-        minutes = 10,
-        titleRes = R.string.onboarding_goal_option_relaxed,
-        descriptionRes = R.string.onboarding_goal_option_relaxed_desc,
-        valueRes = R.string.onboarding_goal_option_relaxed_value,
-        icon = NextPageIcons.Spa,
-        accentColor = NextPageColors.accentGreen
-    ),
-    GoalOption(
-        minutes = 20,
-        titleRes = R.string.onboarding_goal_option_regular,
-        descriptionRes = R.string.onboarding_goal_option_regular_desc,
-        valueRes = R.string.onboarding_goal_option_regular_value,
-        icon = NextPageIcons.AutoStories,
-        accentColor = NextPageColors.accentYellow
-    ),
-    GoalOption(
-        minutes = 30,
-        titleRes = R.string.onboarding_goal_option_serious,
-        descriptionRes = R.string.onboarding_goal_option_serious_desc,
-        valueRes = R.string.onboarding_goal_option_serious_value,
-        icon = NextPageIcons.Book,
-        accentColor = AccentLightBlue
-    ),
-    GoalOption(
-        minutes = 45,
-        titleRes = R.string.onboarding_goal_option_intense,
-        descriptionRes = R.string.onboarding_goal_option_intense_desc,
-        valueRes = R.string.onboarding_goal_option_intense_value,
-        icon = NextPageIcons.Flame,
-        accentColor = NextPageColors.accentPurple
+internal val GOAL_OPTIONS =
+    listOf(
+        GoalOption(
+            minutes = 10,
+            titleRes = R.string.onboarding_goal_option_relaxed,
+            descriptionRes = R.string.onboarding_goal_option_relaxed_desc,
+            valueRes = R.string.onboarding_goal_option_relaxed_value,
+            icon = NextPageIcons.Spa,
+            accentColor = NextPageColors.accentGreen,
+        ),
+        GoalOption(
+            minutes = 20,
+            titleRes = R.string.onboarding_goal_option_regular,
+            descriptionRes = R.string.onboarding_goal_option_regular_desc,
+            valueRes = R.string.onboarding_goal_option_regular_value,
+            icon = NextPageIcons.AutoStories,
+            accentColor = NextPageColors.accentYellow,
+        ),
+        GoalOption(
+            minutes = 30,
+            titleRes = R.string.onboarding_goal_option_serious,
+            descriptionRes = R.string.onboarding_goal_option_serious_desc,
+            valueRes = R.string.onboarding_goal_option_serious_value,
+            icon = NextPageIcons.Book,
+            accentColor = AccentLightBlue,
+        ),
+        GoalOption(
+            minutes = 45,
+            titleRes = R.string.onboarding_goal_option_intense,
+            descriptionRes = R.string.onboarding_goal_option_intense_desc,
+            valueRes = R.string.onboarding_goal_option_intense_value,
+            icon = NextPageIcons.Flame,
+            accentColor = NextPageColors.accentPurple,
+        ),
     )
-)
 
 /** Extra bottom padding so scroll content clears the pinned action bar + system nav bar. */
 private val BOTTOM_ACTION_CLEARANCE = 180.dp
@@ -423,7 +438,7 @@ private fun OnboardingGoalScreenDarkPreview() {
     NextPageTheme(darkTheme = true) {
         OnboardingGoalScreen(
             onSave = {},
-            onNavigateBack = {}
+            onNavigateBack = {},
         )
     }
 }
@@ -434,7 +449,7 @@ private fun OnboardingGoalScreenLightPreview() {
     NextPageTheme(darkTheme = false) {
         OnboardingGoalScreen(
             onSave = {},
-            onNavigateBack = {}
+            onNavigateBack = {},
         )
     }
 }

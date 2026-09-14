@@ -44,30 +44,32 @@ fun NextPageProgressBar(
     progress: Float,
     modifier: Modifier = Modifier,
     height: Dp = 4.dp,
-    showPercentage: Boolean = true
+    showPercentage: Boolean = true,
 ) {
     val clamped = progress.coerceIn(0f, 1f)
     val shape = RoundedCornerShape(height / 2)
 
     Row(
         modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier
-                .weight(1f)
-                .height(height)
-                .clip(shape)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.CenterStart
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .height(height)
+                    .clip(shape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.CenterStart,
         ) {
             if (clamped > 0f) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth(clamped)
-                        .height(height)
-                        .clip(shape)
-                        .background(MaterialTheme.colorScheme.primary)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth(clamped)
+                            .height(height)
+                            .clip(shape)
+                            .background(MaterialTheme.colorScheme.primary),
                 )
             }
         }
@@ -76,7 +78,7 @@ fun NextPageProgressBar(
             Text(
                 text = "${(clamped * 100).roundToInt()}%",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -88,9 +90,10 @@ private fun NextPageProgressBarDarkPreview() {
     NextPageTheme(darkTheme = true) {
         NextPageProgressBar(
             progress = 0.65f,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
         )
     }
 }
@@ -101,9 +104,10 @@ private fun NextPageProgressBarLightPreview() {
     NextPageTheme(darkTheme = false) {
         NextPageProgressBar(
             progress = 0.65f,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
         )
     }
 }

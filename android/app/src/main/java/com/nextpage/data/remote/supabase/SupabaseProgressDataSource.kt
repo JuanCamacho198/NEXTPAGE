@@ -24,7 +24,6 @@ import kotlinx.serialization.Serializable
  */
 @OptIn(SupabaseExperimental::class)
 class SupabaseProgressDataSource {
-
     private val postgrest get() = SupabaseClientProvider.client.postgrest
     private val realtime get() = SupabaseClientProvider.client.realtime
 
@@ -43,10 +42,11 @@ class SupabaseProgressDataSource {
         unsubscribe()
         val channel = SupabaseClientProvider.client.channel("progress:$userId")
         changesChannel = channel
-        val flow = channel.postgresChangeFlow<PostgresAction>(schema = "public") {
-            table = "reading_progress"
-            filter("user_id", FilterOperator.EQ, userId)
-        }
+        val flow =
+            channel.postgresChangeFlow<PostgresAction>(schema = "public") {
+                table = "reading_progress"
+                filter("user_id", FilterOperator.EQ, userId)
+            }
         channel.subscribe()
         return flow
     }
@@ -66,42 +66,45 @@ class SupabaseProgressDataSource {
             .upsert(progress) {
                 onConflict = "user_id, book_id"
                 headers.append("Prefer", "return=representation")
-            }
-            .decodeSingleOrNullTolerant<ReadingProgressRow>()
+            }.decodeSingleOrNullTolerant<ReadingProgressRow>()
             ?: progress
     }
 
-    suspend fun getProgress(userId: String, bookId: String): ReadingProgressRow? {
-        return postgrest["reading_progress"]
+    suspend fun getProgress(
+        userId: String,
+        bookId: String,
+    ): ReadingProgressRow? =
+        postgrest["reading_progress"]
             .select {
                 filter {
                     eq("user_id", userId)
                     eq("book_id", bookId)
                 }
-            }
-            .decodeSingleOrNull<ReadingProgressRow>()
-    }
+            }.decodeSingleOrNull<ReadingProgressRow>()
 
-    suspend fun fetchBookState(userId: String, bookId: String): SupabaseBookState {
-        return SupabaseBookState(
+    suspend fun fetchBookState(
+        userId: String,
+        bookId: String,
+    ): SupabaseBookState =
+        SupabaseBookState(
             progress = getProgress(userId, bookId),
             bookmarks = listBookmarks(userId, bookId, includeDeleted = true),
-            highlights = listHighlights(userId, bookId, includeDeleted = true)
+            highlights = listHighlights(userId, bookId, includeDeleted = true),
         )
-    }
 
-    suspend fun listProgress(userId: String): List<ReadingProgressRow> {
-        return postgrest["reading_progress"]
+    suspend fun listProgress(userId: String): List<ReadingProgressRow> =
+        postgrest["reading_progress"]
             .select {
                 filter {
                     eq("user_id", userId)
                 }
                 order("updated_at", Order.DESCENDING)
-            }
-            .decodeList<ReadingProgressRow>()
-    }
+            }.decodeList<ReadingProgressRow>()
 
-    suspend fun deleteProgress(userId: String, bookId: String) {
+    suspend fun deleteProgress(
+        userId: String,
+        bookId: String,
+    ) {
         postgrest["reading_progress"]
             .delete {
                 filter {
@@ -119,25 +122,30 @@ class SupabaseProgressDataSource {
             .upsert(bookmark) {
                 onConflict = "user_id, book_id, cfi_location"
                 headers.append("Prefer", "return=representation")
-            }
-            .decodeSingleOrNullTolerant<BookmarkRow>()
+            }.decodeSingleOrNullTolerant<BookmarkRow>()
             ?: bookmark
     }
 
-    suspend fun getBookmark(userId: String, bookId: String, cfiLocation: String): BookmarkRow? {
-        return postgrest["bookmarks"]
+    suspend fun getBookmark(
+        userId: String,
+        bookId: String,
+        cfiLocation: String,
+    ): BookmarkRow? =
+        postgrest["bookmarks"]
             .select {
                 filter {
                     eq("user_id", userId)
                     eq("book_id", bookId)
                     eq("cfi_location", cfiLocation)
                 }
-            }
-            .decodeSingleOrNull<BookmarkRow>()
-    }
+            }.decodeSingleOrNull<BookmarkRow>()
 
-    suspend fun listBookmarks(userId: String, bookId: String? = null, includeDeleted: Boolean = false): List<BookmarkRow> {
-        return postgrest["bookmarks"]
+    suspend fun listBookmarks(
+        userId: String,
+        bookId: String? = null,
+        includeDeleted: Boolean = false,
+    ): List<BookmarkRow> =
+        postgrest["bookmarks"]
             .select {
                 filter {
                     eq("user_id", userId)
@@ -145,20 +153,23 @@ class SupabaseProgressDataSource {
                     if (!includeDeleted) exact("deleted_at", null)
                 }
                 order("updated_at", Order.DESCENDING)
-            }
-            .decodeList<BookmarkRow>()
-    }
+            }.decodeList<BookmarkRow>()
 
-    suspend fun softDeleteBookmark(id: String, userId: String) {
+    suspend fun softDeleteBookmark(
+        id: String,
+        userId: String,
+    ) {
         postgrest["bookmarks"]
             .update(
                 mapOf(
-                    "deleted_at" to java.text.SimpleDateFormat(
-                        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
-                        java.util.Locale.US
-                    ).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
-                        .format(java.util.Date())
-                )
+                    "deleted_at" to
+                        java.text
+                            .SimpleDateFormat(
+                                "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+                                java.util.Locale.US,
+                            ).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
+                            .format(java.util.Date()),
+                ),
             ) {
                 filter {
                     eq("id", id)
@@ -175,10 +186,11 @@ class SupabaseProgressDataSource {
         bookmarksChannel?.unsubscribe()
         val channel = SupabaseClientProvider.client.channel("bookmarks:$userId")
         bookmarksChannel = channel
-        val flow = channel.postgresChangeFlow<PostgresAction>(schema = "public") {
-            table = "bookmarks"
-            filter("user_id", FilterOperator.EQ, userId)
-        }
+        val flow =
+            channel.postgresChangeFlow<PostgresAction>(schema = "public") {
+                table = "bookmarks"
+                filter("user_id", FilterOperator.EQ, userId)
+            }
         channel.subscribe()
         return flow
     }
@@ -191,21 +203,22 @@ class SupabaseProgressDataSource {
             .upsert(highlight) {
                 onConflict = "id"
                 headers.append("Prefer", "return=representation")
-            }
-            .decodeSingleOrNullTolerant<HighlightRow>()
+            }.decodeSingleOrNullTolerant<HighlightRow>()
             ?: highlight
     }
 
-    suspend fun getHighlight(id: String): HighlightRow? {
-        return postgrest["highlights"]
+    suspend fun getHighlight(id: String): HighlightRow? =
+        postgrest["highlights"]
             .select {
                 filter { eq("id", id) }
-            }
-            .decodeSingleOrNull<HighlightRow>()
-    }
+            }.decodeSingleOrNull<HighlightRow>()
 
-    suspend fun listHighlights(userId: String, bookId: String? = null, includeDeleted: Boolean = false): List<HighlightRow> {
-        return postgrest["highlights"]
+    suspend fun listHighlights(
+        userId: String,
+        bookId: String? = null,
+        includeDeleted: Boolean = false,
+    ): List<HighlightRow> =
+        postgrest["highlights"]
             .select {
                 filter {
                     eq("user_id", userId)
@@ -213,20 +226,23 @@ class SupabaseProgressDataSource {
                     if (!includeDeleted) exact("deleted_at", null)
                 }
                 order("updated_at", Order.DESCENDING)
-            }
-            .decodeList<HighlightRow>()
-    }
+            }.decodeList<HighlightRow>()
 
-    suspend fun softDeleteHighlight(id: String, userId: String) {
+    suspend fun softDeleteHighlight(
+        id: String,
+        userId: String,
+    ) {
         postgrest["highlights"]
             .update(
                 mapOf(
-                    "deleted_at" to java.text.SimpleDateFormat(
-                        "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
-                        java.util.Locale.US
-                    ).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
-                        .format(java.util.Date())
-                )
+                    "deleted_at" to
+                        java.text
+                            .SimpleDateFormat(
+                                "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+                                java.util.Locale.US,
+                            ).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
+                            .format(java.util.Date()),
+                ),
             ) {
                 filter {
                     eq("id", id)
@@ -243,27 +259,29 @@ class SupabaseProgressDataSource {
         highlightsChannel?.unsubscribe()
         val channel = SupabaseClientProvider.client.channel("highlights:$userId")
         highlightsChannel = channel
-        val flow = channel.postgresChangeFlow<PostgresAction>(schema = "public") {
-            table = "highlights"
-            filter("user_id", FilterOperator.EQ, userId)
-        }
+        val flow =
+            channel.postgresChangeFlow<PostgresAction>(schema = "public") {
+                table = "highlights"
+                filter("user_id", FilterOperator.EQ, userId)
+            }
         channel.subscribe()
         return flow
     }
 
     // ─── Tags ───────────────────────────────────────────────────
 
-    suspend fun findTagByName(userId: String, name: String): TagRow? {
-        return postgrest["tags"]
+    suspend fun findTagByName(
+        userId: String,
+        name: String,
+    ): TagRow? =
+        postgrest["tags"]
             .select {
                 filter {
                     eq("user_id", userId)
                     eq("name", name)
                 }
                 limit(1)
-            }
-            .decodeSingleOrNull<TagRow>()
-    }
+            }.decodeSingleOrNull<TagRow>()
 
     suspend fun createTag(tag: TagRow): TagRow {
         // Empty response body = successful write (see decodeSingleOrNullTolerant).
@@ -272,18 +290,21 @@ class SupabaseProgressDataSource {
             .upsert(tag) {
                 onConflict = "user_id, name"
                 headers.append("Prefer", "return=representation")
-            }
-            .decodeSingleOrNullTolerant<TagRow>()
+            }.decodeSingleOrNullTolerant<TagRow>()
             ?: tag
     }
 
-    suspend fun findOrCreateTag(userId: String, name: String, color: String? = null): TagRow {
+    suspend fun findOrCreateTag(
+        userId: String,
+        name: String,
+        color: String? = null,
+    ): TagRow {
         val existing = findTagByName(userId, name)
         if (existing != null) {
             if (color != null && color != existing.color) {
                 val tagId = requireNotNull(existing.id) { "Existing tag from database is missing an id" }
                 postgrest["tags"].update(
-                    mapOf("color" to color)
+                    mapOf("color" to color),
                 ) {
                     filter {
                         eq("id", tagId)
@@ -295,33 +316,37 @@ class SupabaseProgressDataSource {
         }
         return createTag(
             TagRow(
-                id = java.util.UUID.randomUUID().toString(),
+                id =
+                    java.util.UUID
+                        .randomUUID()
+                        .toString(),
                 userId = userId,
                 name = name,
-                color = color
-            )
+                color = color,
+            ),
         )
     }
 
-    suspend fun linkTagToHighlight(highlightId: String, tagId: String) {
+    suspend fun linkTagToHighlight(
+        highlightId: String,
+        tagId: String,
+    ) {
         postgrest["highlight_tags"]
             .upsert(
                 mapOf(
                     "highlight_id" to highlightId,
-                    "tag_id" to tagId
-                )
+                    "tag_id" to tagId,
+                ),
             ) {
                 onConflict = "highlight_id, tag_id"
             }
     }
 
-    suspend fun listTagsForHighlight(highlightId: String): List<TagRow> {
-        return postgrest["highlight_tags"]
+    suspend fun listTagsForHighlight(highlightId: String): List<TagRow> =
+        postgrest["highlight_tags"]
             .select {
                 filter { eq("highlight_id", highlightId) }
-            }
-            .decodeList<TagRow>()
-    }
+            }.decodeList<TagRow>()
 
     /**
      * Batch import bookmark rows (used when seeding Supabase from Drive).
@@ -362,8 +387,7 @@ class SupabaseProgressDataSource {
             .upsert(session) {
                 onConflict = "id"
                 headers.append("Prefer", "return=representation")
-            }
-            .decodeSingleOrNullTolerant<ReadingSessionRow>()
+            }.decodeSingleOrNullTolerant<ReadingSessionRow>()
             ?: session
     }
 
@@ -375,10 +399,11 @@ class SupabaseProgressDataSource {
         sessionsChannel?.unsubscribe()
         val channel = SupabaseClientProvider.client.channel("sessions:$userId")
         sessionsChannel = channel
-        val flow = channel.postgresChangeFlow<PostgresAction>(schema = "public") {
-            table = "reading_sessions"
-            filter("user_id", FilterOperator.EQ, userId)
-        }
+        val flow =
+            channel.postgresChangeFlow<PostgresAction>(schema = "public") {
+                table = "reading_sessions"
+                filter("user_id", FilterOperator.EQ, userId)
+            }
         channel.subscribe()
         return flow
     }
@@ -420,7 +445,7 @@ data class ReadingProgressRow(
 data class SupabaseBookState(
     val progress: ReadingProgressRow?,
     val bookmarks: List<BookmarkRow>,
-    val highlights: List<HighlightRow>
+    val highlights: List<HighlightRow>,
 )
 
 /**

@@ -67,41 +67,43 @@ fun NextPageBookCover(
     coverUrl: String? = null,
     title: String? = null,
     modifier: Modifier = Modifier,
-    isLoading: Boolean = false
+    isLoading: Boolean = false,
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
     val contentDescription = title ?: stringResource(R.string.library_cover_content_description)
 
     Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant),
-        contentAlignment = Alignment.Center
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center,
     ) {
         when {
             isLoading -> {
                 CircularProgressIndicator(
                     modifier = Modifier.size(32.dp),
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
             !coverUrl.isNullOrBlank() -> {
-                val imageRequest = remember(context, density, coverUrl) {
-                    ImageRequest.Builder(context)
-                        .data(coverUrl)
-                        .size(
-                            width = with(density) { 128.dp.toPx().toInt() },
-                            height = with(density) { 180.dp.toPx().toInt() }
-                        )
-                        .memoryCachePolicy(CachePolicy.ENABLED)
-                        .diskCachePolicy(CachePolicy.ENABLED)
-                        .placeholder(R.drawable.cover_placeholder)
-                        .error(R.drawable.cover_error)
-                        .fallback(R.drawable.cover_placeholder)
-                        .crossfade(true)
-                        .build()
-                }
+                val imageRequest =
+                    remember(context, density, coverUrl) {
+                        ImageRequest
+                            .Builder(context)
+                            .data(coverUrl)
+                            .size(
+                                width = with(density) { 128.dp.toPx().toInt() },
+                                height = with(density) { 180.dp.toPx().toInt() },
+                            ).memoryCachePolicy(CachePolicy.ENABLED)
+                            .diskCachePolicy(CachePolicy.ENABLED)
+                            .placeholder(R.drawable.cover_placeholder)
+                            .error(R.drawable.cover_error)
+                            .fallback(R.drawable.cover_placeholder)
+                            .crossfade(true)
+                            .build()
+                    }
                 AsyncImage(
                     model = imageRequest,
                     onState = { state ->
@@ -111,7 +113,7 @@ fun NextPageBookCover(
                     },
                     contentDescription = contentDescription,
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+                    contentScale = ContentScale.Crop,
                 )
             }
             else -> {
@@ -119,7 +121,7 @@ fun NextPageBookCover(
                     imageVector = NextPageIcons.Book,
                     contentDescription = contentDescription,
                     modifier = Modifier.size(40.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -134,23 +136,23 @@ private fun BookCoverDarkPreview() {
     NextPageTheme(darkTheme = true) {
         Row(
             modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             NextPageBookCover(
                 coverUrl = null,
                 title = "Sample Title",
-                modifier = Modifier.size(width = 96.dp, height = 136.dp)
+                modifier = Modifier.size(width = 96.dp, height = 136.dp),
             )
             NextPageBookCover(
                 coverUrl = "https://example.com/cover.jpg",
                 title = "Sample Title",
-                modifier = Modifier.size(width = 96.dp, height = 136.dp)
+                modifier = Modifier.size(width = 96.dp, height = 136.dp),
             )
             NextPageBookCover(
                 coverUrl = null,
                 title = "Sample Title",
                 modifier = Modifier.size(width = 96.dp, height = 136.dp),
-                isLoading = true
+                isLoading = true,
             )
         }
     }
@@ -162,23 +164,23 @@ private fun BookCoverLightPreview() {
     NextPageTheme(darkTheme = false) {
         Row(
             modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             NextPageBookCover(
                 coverUrl = null,
                 title = "Sample Title",
-                modifier = Modifier.size(width = 96.dp, height = 136.dp)
+                modifier = Modifier.size(width = 96.dp, height = 136.dp),
             )
             NextPageBookCover(
                 coverUrl = "https://example.com/cover.jpg",
                 title = "Sample Title",
-                modifier = Modifier.size(width = 96.dp, height = 136.dp)
+                modifier = Modifier.size(width = 96.dp, height = 136.dp),
             )
             NextPageBookCover(
                 coverUrl = null,
                 title = "Sample Title",
                 modifier = Modifier.size(width = 96.dp, height = 136.dp),
-                isLoading = true
+                isLoading = true,
             )
         }
     }

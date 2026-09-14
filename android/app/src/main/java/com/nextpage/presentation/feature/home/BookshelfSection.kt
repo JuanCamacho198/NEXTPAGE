@@ -35,7 +35,11 @@ import com.nextpage.ui.components.atoms.NextPageButtonVariant
 import com.nextpage.ui.components.atoms.NextPageEmptyState
 
 @Composable
-fun MyBookshelfSection(books: List<Book>, onViewAll: () -> Unit, onBookSelected: (String, String, String) -> Unit) {
+fun MyBookshelfSection(
+    books: List<Book>,
+    onViewAll: () -> Unit,
+    onBookSelected: (String, String, String) -> Unit,
+) {
     Column {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text(text = stringResource(R.string.home_my_bookshelf_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
@@ -52,7 +56,10 @@ fun MyBookshelfSection(books: List<Book>, onViewAll: () -> Unit, onBookSelected:
 }
 
 @Composable
-fun BookshelfCard(book: Book, onClick: () -> Unit) {
+fun BookshelfCard(
+    book: Book,
+    onClick: () -> Unit,
+) {
     Surface(modifier = Modifier.width(120.dp).clickable(onClick = onClick), shape = RoundedCornerShape(NextPageDimens.spacingSm), color = MaterialTheme.colorScheme.surfaceVariant, tonalElevation = 1.dp) {
         Column(modifier = Modifier.padding(NextPageDimens.spacingSm), horizontalAlignment = Alignment.CenterHorizontally) {
             CoverThumbnail(coverPath = book.coverPath, modifier = Modifier.fillMaxWidth().height(100.dp).clip(RoundedCornerShape(NextPageDimens.spacingXs)))

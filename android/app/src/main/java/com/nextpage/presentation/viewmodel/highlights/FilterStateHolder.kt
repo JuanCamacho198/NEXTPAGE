@@ -3,8 +3,6 @@ package com.nextpage.presentation.viewmodel.highlights
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.HighlightColor
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 class FilterStateHolder {
@@ -46,35 +44,46 @@ class FilterStateHolder {
         book: String?,
         color: Set<String>,
         tag: String?,
-        query: String
-    ): List<Highlight> {
-        return highlights.filter { highlight ->
-            val matchesType = when (type) {
-                null, "all" -> true
-                "quotes" -> highlight.type == "quote"
-                "ideas" -> highlight.type == "idea"
-                "passages" -> highlight.type == "passage"
-                else -> true
-            }
+        query: String,
+    ): List<Highlight> =
+        highlights.filter { highlight ->
+            val matchesType =
+                when (type) {
+                    null, "all" -> true
+                    "quotes" -> highlight.type == "quote"
+                    "ideas" -> highlight.type == "idea"
+                    "passages" -> highlight.type == "passage"
+                    else -> true
+                }
             val matchesBook = book == null || highlight.bookId == book
             val matchesColor = color.isEmpty() || color.any { it.equals(highlight.color, ignoreCase = true) }
             val matchesTag = tag == null || highlight.tag.equals(tag, ignoreCase = true)
-            val matchesSearch = query.isBlank() ||
-                highlight.textContent.contains(query, ignoreCase = true) ||
-                highlight.note?.contains(query, ignoreCase = true) == true
+            val matchesSearch =
+                query.isBlank() ||
+                    highlight.textContent.contains(query, ignoreCase = true) ||
+                    highlight.note?.contains(query, ignoreCase = true) == true
             matchesType && matchesBook && matchesColor && matchesTag && matchesSearch
         }
-    }
 
-    fun computeAvailableTags(highlights: List<Highlight>): List<String> {
-        return highlights.mapNotNull { it.tag }.filter { it.isNotBlank() }.distinct().sorted()
-    }
+    fun computeAvailableTags(highlights: List<Highlight>): List<String> =
+        highlights
+            .mapNotNull {
+                it.tag
+            }.filter { it.isNotBlank() }
+            .distinct()
+            .sorted()
 
-    fun computeColorCounts(highlights: List<Highlight>): Map<String, Int> {
-        return highlights.filter { it.deletedAtEpochMillis == null }.groupBy { it.color }.mapValues { it.value.size }
-    }
+    fun computeColorCounts(highlights: List<Highlight>): Map<String, Int> =
+        highlights
+            .filter {
+                it.deletedAtEpochMillis == null
+            }.groupBy { it.color }
+            .mapValues { it.value.size }
 
-    fun computeAvailableHighlightColors(highlights: List<Highlight>): List<String> {
-        return (HighlightColor.entries.map { it.hex } + highlights.map { it.color }.distinct()).distinct()
-    }
+    fun computeAvailableHighlightColors(highlights: List<Highlight>): List<String> =
+        (
+            HighlightColor.entries.map {
+                it.hex
+            } + highlights.map { it.color }.distinct()
+        ).distinct()
 }

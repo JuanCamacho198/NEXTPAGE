@@ -8,12 +8,12 @@ enum class ErrorCategory {
     VALIDATION,
     NOT_FOUND,
     STORAGE,
-    UNKNOWN
+    UNKNOWN,
 }
 
 data class AppError(
     val category: ErrorCategory,
     val code: String,
     override val message: String,
-    val component: String
+    val component: String,
 ) : RuntimeException(message)

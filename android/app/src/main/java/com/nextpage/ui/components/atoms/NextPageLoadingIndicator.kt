@@ -2,8 +2,8 @@ package com.nextpage.ui.components.atoms
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
@@ -37,16 +37,16 @@ import com.nextpage.presentation.theme.NextPageTheme
 @Composable
 fun NextPageLoadingIndicator(
     modifier: Modifier = Modifier,
-    label: String? = null
+    label: String? = null,
 ) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         CircularProgressIndicator(
             modifier = Modifier.size(48.dp),
-            color = MaterialTheme.colorScheme.primary
+            color = MaterialTheme.colorScheme.primary,
         )
         if (!label.isNullOrBlank()) {
             Spacer(modifier = Modifier.height(12.dp))
@@ -54,7 +54,7 @@ fun NextPageLoadingIndicator(
                 text = label,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
             )
         }
     }
@@ -66,7 +66,7 @@ private fun NextPageLoadingIndicatorDarkPreview() {
     NextPageTheme(darkTheme = true) {
         NextPageLoadingIndicator(
             modifier = Modifier.fillMaxSize(),
-            label = "Loading books..."
+            label = "Loading books...",
         )
     }
 }
@@ -77,7 +77,7 @@ private fun NextPageLoadingIndicatorLightPreview() {
     NextPageTheme(darkTheme = false) {
         NextPageLoadingIndicator(
             modifier = Modifier.fillMaxSize(),
-            label = "Loading books..."
+            label = "Loading books...",
         )
     }
 }

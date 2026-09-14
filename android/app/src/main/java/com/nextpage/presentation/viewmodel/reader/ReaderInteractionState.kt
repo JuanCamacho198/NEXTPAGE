@@ -53,7 +53,7 @@ class ReaderInteractionState(
     val showDefinitionInput: Boolean = false,
     val activeDefinitionText: String = "",
     val showHighlightsSheet: Boolean = false,
-    val debugForceMenu: Boolean = false
+    val debugForceMenu: Boolean = false,
 ) {
     fun copy(
         highlights: List<Highlight> = this.highlights,
@@ -70,9 +70,9 @@ class ReaderInteractionState(
         showDefinitionInput: Boolean = this.showDefinitionInput,
         activeDefinitionText: String = this.activeDefinitionText,
         showHighlightsSheet: Boolean = this.showHighlightsSheet,
-        debugForceMenu: Boolean = this.debugForceMenu
-    ): ReaderInteractionState {
-        return ReaderInteractionState(
+        debugForceMenu: Boolean = this.debugForceMenu,
+    ): ReaderInteractionState =
+        ReaderInteractionState(
             highlights = highlights,
             bookmarks = bookmarks,
             selectionState = selectionState,
@@ -87,9 +87,8 @@ class ReaderInteractionState(
             showDefinitionInput = showDefinitionInput,
             activeDefinitionText = activeDefinitionText,
             showHighlightsSheet = showHighlightsSheet,
-            debugForceMenu = debugForceMenu
+            debugForceMenu = debugForceMenu,
         )
-    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -129,8 +128,8 @@ class ReaderInteractionState(
         return result
     }
 
-    override fun toString(): String {
-        return "ReaderInteractionState(" +
+    override fun toString(): String =
+        "ReaderInteractionState(" +
             "highlights.size=${highlights.size}, " +
             "bookmarks.size=${bookmarks.size}, " +
             "selectionState=$selectionState, " +
@@ -147,5 +146,4 @@ class ReaderInteractionState(
             "showHighlightsSheet=$showHighlightsSheet, " +
             "debugForceMenu=$debugForceMenu" +
             ")"
-    }
 }

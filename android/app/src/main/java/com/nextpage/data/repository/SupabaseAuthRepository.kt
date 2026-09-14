@@ -11,9 +11,9 @@ import com.nextpage.domain.error.ErrorCategory
 import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.repository.AuthRepository
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.providers.builtin.IDToken
-import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.auth.user.UserInfo
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -31,40 +31,37 @@ import kotlinx.serialization.json.put
  * 3. Session is persisted automatically by supabase-kt's Auth plugin.
  */
 class SupabaseAuthRepository(
-    private val sessionManager: SessionManager = SupabaseSessionManager()
+    private val sessionManager: SessionManager = SupabaseSessionManager(),
 ) : AuthRepository {
-
     private val supabase get() = SupabaseClientProvider.client
 
-    override suspend fun startGoogleSignIn(): Result<String> {
-        return Result.failure(UnsupportedOperationException("Deprecated. Use signInWithGoogleIdToken() instead."))
-    }
+    override suspend fun startGoogleSignIn(): Result<String> = Result.failure(UnsupportedOperationException("Deprecated. Use signInWithGoogleIdToken() instead."))
 
-    override suspend fun completeGoogleSignIn(callbackUri: String): Result<AuthSession?> {
-        return Result.failure(UnsupportedOperationException("Deprecated. Use signInWithGoogleIdToken() instead."))
-    }
+    override suspend fun completeGoogleSignIn(callbackUri: String): Result<AuthSession?> = Result.failure(UnsupportedOperationException("Deprecated. Use signInWithGoogleIdToken() instead."))
 
-    override suspend fun signInWithGoogle(): Result<AuthSession> {
-        return Result.failure(UnsupportedOperationException("Deprecated. Use signInWithGoogleIdToken() instead."))
-    }
+    override suspend fun signInWithGoogle(): Result<AuthSession> = Result.failure(UnsupportedOperationException("Deprecated. Use signInWithGoogleIdToken() instead."))
 
-    override suspend fun signInWithGoogleIdToken(idToken: String): Result<AuthSession> {
-        return runCatching {
+    override suspend fun signInWithGoogleIdToken(idToken: String): Result<AuthSession> =
+        runCatching {
             supabase.auth.signInWith(IDToken) {
                 this.idToken = idToken
                 provider = Google
             }
-            val session = supabase.auth.currentSessionOrNull()
-                ?: throw Exception("No session returned after Google sign-in")
-            val authSession = mapToAuthSession(session.user)
-                ?: throw Exception("No user info returned after Google sign-in")
+            val session =
+                supabase.auth.currentSessionOrNull()
+                    ?: throw Exception("No session returned after Google sign-in")
+            val authSession =
+                mapToAuthSession(session.user)
+                    ?: throw Exception("No user info returned after Google sign-in")
             sessionManager.setCurrentSession(authSession)
             authSession
         }
-    }
 
-    override suspend fun signIn(email: String, password: String): Result<AuthSession> {
-        return runCatching {
+    override suspend fun signIn(
+        email: String,
+        password: String,
+    ): Result<AuthSession> =
+        runCatching {
             try {
                 supabase.auth.signInWith(Email) {
                     this.email = email
@@ -73,15 +70,22 @@ class SupabaseAuthRepository(
             } catch (e: Exception) {
                 throw friendlyAuthError(e, "Sign in failed. Please try again.")
             }
-            val authSession = supabase.auth.currentSessionOrNull()?.user?.let { mapToAuthSession(it) }
-                ?: throw Exception("No user info returned after sign-in")
+            val authSession =
+                supabase.auth
+                    .currentSessionOrNull()
+                    ?.user
+                    ?.let { mapToAuthSession(it) }
+                    ?: throw Exception("No user info returned after sign-in")
             sessionManager.setCurrentSession(authSession)
             authSession
         }
-    }
 
-    override suspend fun signUp(email: String, password: String, fullName: String): Result<AuthSession> {
-        return runCatching {
+    override suspend fun signUp(
+        email: String,
+        password: String,
+        fullName: String,
+    ): Result<AuthSession> =
+        runCatching {
             val prior = supabase.auth.currentSessionOrNull()
             try {
                 supabase.auth.signUpWith(Email) {
@@ -105,14 +109,14 @@ class SupabaseAuthRepository(
                         category = ErrorCategory.AUTH,
                         code = SIGNUP_CONFIRMATION_PENDING_CODE,
                         message = SIGNUP_CONFIRMATION_PENDING_MESSAGE,
-                        component = COMPONENT
+                        component = COMPONENT,
                     )
                 }
                 throw AppError(
                     category = ErrorCategory.AUTH,
                     code = SIGNUP_STALE_SESSION_CODE,
                     message = SIGNUP_UNIFIED_MESSAGE,
-                    component = COMPONENT
+                    component = COMPONENT,
                 )
             }
             if (!isSignUpNewSession(prior?.user?.id, fresh.user?.id)) {
@@ -120,65 +124,59 @@ class SupabaseAuthRepository(
                     category = ErrorCategory.AUTH,
                     code = SIGNUP_STALE_SESSION_CODE,
                     message = SIGNUP_UNIFIED_MESSAGE,
-                    component = COMPONENT
+                    component = COMPONENT,
                 )
             }
-            val authSession = fresh.user?.let { mapToAuthSession(it) }
-                ?: throw Exception("No user info returned after sign-up")
+            val authSession =
+                fresh.user?.let { mapToAuthSession(it) }
+                    ?: throw Exception("No user info returned after sign-up")
             sessionManager.setCurrentSession(authSession)
             authSession
         }
-    }
 
-    override suspend fun resetPassword(email: String): Result<Unit> {
-        return runCatching {
+    override suspend fun resetPassword(email: String): Result<Unit> =
+        runCatching {
             try {
                 supabase.auth.resetPasswordForEmail(email, redirectUrl = RESET_PASSWORD_REDIRECT_URL)
             } catch (e: Exception) {
                 throw friendlyAuthError(e, "Failed to send reset email. Please try again.")
             }
         }
-    }
 
-    override suspend fun signOut(): Result<Unit> {
-        return runCatching {
+    override suspend fun signOut(): Result<Unit> =
+        runCatching {
             supabase.auth.signOut()
             sessionManager.setCurrentSession(null)
             SupabaseClientProvider.reset()
             Unit
         }
-    }
 
-    override suspend fun getCurrentSession(): Result<AuthSession?> {
-        return runCatching {
+    override suspend fun getCurrentSession(): Result<AuthSession?> =
+        runCatching {
             val session = supabase.auth.currentSessionOrNull()
             session?.let { mapToAuthSession(it.user) }
         }
-    }
 
-    override suspend fun signInLocally(): Result<AuthSession> {
-        return runCatching {
+    override suspend fun signInLocally(): Result<AuthSession> =
+        runCatching {
             supabase.auth.signInAnonymously()
             val session = supabase.auth.currentSessionOrNull()
             AuthSession(
                 userId = session?.user?.id ?: "anon-${java.util.UUID.randomUUID()}",
                 email = null,
                 displayName = null,
-                photoUrl = null
-            )
-            .also { sessionManager.setCurrentSession(it) }
+                photoUrl = null,
+            ).also { sessionManager.setCurrentSession(it) }
         }
-    }
 
     /**
      * Get the Google provider token from the current session.
      * Used by Google Drive sync operations.
      */
-    suspend fun getProviderToken(): Result<String?> {
-        return runCatching {
+    suspend fun getProviderToken(): Result<String?> =
+        runCatching {
             supabase.auth.currentSessionOrNull()?.providerToken
         }
-    }
 
     // ── Helpers ────────────────────────────────────────────────────
 
@@ -190,44 +188,50 @@ class SupabaseAuthRepository(
      * auth screens render `errorMessage` inline. Known error codes get a
      * friendly phrase; anything else falls back to [fallback].
      */
-    private fun friendlyAuthError(error: Throwable, fallback: String): AppError {
+    private fun friendlyAuthError(
+        error: Throwable,
+        fallback: String,
+    ): AppError {
         val raw = error.message.orEmpty().lowercase()
-        val code = when {
-            "over_email_send_rate_limit" in raw || "rate limit" in raw -> "AUTH_EMAIL_RATE_LIMIT"
-            "already registered" in raw || "user_already_exists" in raw -> "AUTH_EMAIL_ALREADY_REGISTERED"
-            "invalid login credentials" in raw || "invalid_credentials" in raw -> "AUTH_INVALID_CREDENTIALS"
-            "otp_expired" in raw || "link is invalid or has expired" in raw -> "AUTH_OTP_EXPIRED"
-            else -> "AUTH_FAILED"
-        }
-        val message = when (code) {
-            "AUTH_EMAIL_RATE_LIMIT" -> "Too many attempts — wait a moment and try again."
-            "AUTH_EMAIL_ALREADY_REGISTERED" -> "This email is already registered — sign in instead."
-            "AUTH_INVALID_CREDENTIALS" -> "Incorrect email or password."
-            "AUTH_OTP_EXPIRED" -> "That link has expired. Request a new one."
-            else -> fallback
-        }
+        val code =
+            when {
+                "over_email_send_rate_limit" in raw || "rate limit" in raw -> "AUTH_EMAIL_RATE_LIMIT"
+                "already registered" in raw || "user_already_exists" in raw -> "AUTH_EMAIL_ALREADY_REGISTERED"
+                "invalid login credentials" in raw || "invalid_credentials" in raw -> "AUTH_INVALID_CREDENTIALS"
+                "otp_expired" in raw || "link is invalid or has expired" in raw -> "AUTH_OTP_EXPIRED"
+                else -> "AUTH_FAILED"
+            }
+        val message =
+            when (code) {
+                "AUTH_EMAIL_RATE_LIMIT" -> "Too many attempts — wait a moment and try again."
+                "AUTH_EMAIL_ALREADY_REGISTERED" -> "This email is already registered — sign in instead."
+                "AUTH_INVALID_CREDENTIALS" -> "Incorrect email or password."
+                "AUTH_OTP_EXPIRED" -> "That link has expired. Request a new one."
+                else -> fallback
+            }
         return AppError(
             category = ErrorCategory.AUTH,
             code = code,
             message = message,
-            component = COMPONENT
+            component = COMPONENT,
         )
     }
 
-    private fun mapToAuthSession(user: UserInfo?): AuthSession? {
-        return user?.let {
+    private fun mapToAuthSession(user: UserInfo?): AuthSession? =
+        user?.let {
             AuthSession(
                 userId = it.id,
                 email = it.email,
-                displayName = it.userMetadata?.get("full_name").asMetadataString()
-                    ?: it.userMetadata?.get("name").asMetadataString(),
-                photoUrl = it.userMetadata?.get("avatar_url").asMetadataString()
-                    ?: it.userMetadata?.get("picture").asMetadataString(),
+                displayName =
+                    it.userMetadata?.get("full_name").asMetadataString()
+                        ?: it.userMetadata?.get("name").asMetadataString(),
+                photoUrl =
+                    it.userMetadata?.get("avatar_url").asMetadataString()
+                        ?: it.userMetadata?.get("picture").asMetadataString(),
                 provider = it.userMetadata?.get("provider").asMetadataString(),
-                createdAt = it.createdAt?.toString()
+                createdAt = it.createdAt?.toString(),
             )
         }
-    }
 
     companion object {
         const val COMPONENT = "SupabaseAuthRepository"
@@ -268,5 +272,7 @@ class SupabaseAuthRepository(
  * @return `true` only when a fresh session exists AND it differs from (or the
  *   prior was absent) — i.e. sign-up genuinely created a new account.
  */
-internal fun isSignUpNewSession(priorUserId: String?, freshUserId: String?): Boolean =
-    freshUserId != null && (priorUserId == null || priorUserId != freshUserId)
+internal fun isSignUpNewSession(
+    priorUserId: String?,
+    freshUserId: String?,
+): Boolean = freshUserId != null && (priorUserId == null || priorUserId != freshUserId)

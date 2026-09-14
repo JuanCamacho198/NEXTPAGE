@@ -19,6 +19,7 @@ import coil.request.ImageRequest
 import com.nextpage.R
 import com.nextpage.debug.DebugLog
 import com.nextpage.presentation.theme.NextPageTheme
+
 /**
  * Small cover thumbnail for the library grid. Loads from a local
  * file path or a remote URL via Coil with an explicit 80×120 px
@@ -50,25 +51,26 @@ import com.nextpage.presentation.theme.NextPageTheme
 fun CoverThumbnail(
     coverPath: String?,
     modifier: Modifier = Modifier,
-    onImageState: ((AsyncImagePainter.State) -> Unit)? = null
+    onImageState: ((AsyncImagePainter.State) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
-    val imageRequest = remember(context, density, coverPath) {
-        ImageRequest.Builder(context)
-            .data(coverPath?.takeIf { it.isNotBlank() })
-            .size(
-                width = with(density) { 80.dp.toPx().toInt() },
-                height = with(density) { 120.dp.toPx().toInt() }
-            )
-            .placeholder(R.drawable.cover_placeholder)
-            .error(R.drawable.cover_error)
-            .fallback(R.drawable.cover_placeholder)
-            .memoryCachePolicy(CachePolicy.ENABLED)
-            .diskCachePolicy(CachePolicy.ENABLED)
-            .crossfade(true)
-            .build()
-    }
+    val imageRequest =
+        remember(context, density, coverPath) {
+            ImageRequest
+                .Builder(context)
+                .data(coverPath?.takeIf { it.isNotBlank() })
+                .size(
+                    width = with(density) { 80.dp.toPx().toInt() },
+                    height = with(density) { 120.dp.toPx().toInt() },
+                ).placeholder(R.drawable.cover_placeholder)
+                .error(R.drawable.cover_error)
+                .fallback(R.drawable.cover_placeholder)
+                .memoryCachePolicy(CachePolicy.ENABLED)
+                .diskCachePolicy(CachePolicy.ENABLED)
+                .crossfade(true)
+                .build()
+        }
 
     AsyncImage(
         model = imageRequest,
@@ -80,7 +82,7 @@ fun CoverThumbnail(
         },
         contentDescription = stringResource(R.string.library_cover_content_description),
         contentScale = ContentScale.Crop,
-        modifier = modifier.clip(MaterialTheme.shapes.small)
+        modifier = modifier.clip(MaterialTheme.shapes.small),
     )
 }
 
@@ -92,7 +94,7 @@ private fun CoverThumbnailPlaceholderDarkPreview() {
     NextPageTheme(darkTheme = true) {
         CoverThumbnail(
             coverPath = null,
-            modifier = Modifier.size(80.dp, 120.dp)
+            modifier = Modifier.size(80.dp, 120.dp),
         )
     }
 }
@@ -103,7 +105,7 @@ private fun CoverThumbnailPlaceholderLightPreview() {
     NextPageTheme(darkTheme = false) {
         CoverThumbnail(
             coverPath = null,
-            modifier = Modifier.size(80.dp, 120.dp)
+            modifier = Modifier.size(80.dp, 120.dp),
         )
     }
 }

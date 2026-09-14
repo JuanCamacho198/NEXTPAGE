@@ -4,14 +4,12 @@ import android.app.Activity
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -21,6 +19,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -28,7 +27,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.rememberCoroutineScope
 import com.nextpage.BuildConfig
 import com.nextpage.R
 import com.nextpage.data.remote.drive.DriveAuthResult
@@ -81,11 +79,13 @@ fun SettingsDataStorageScreen(
                 isAuthorizing = false
                 when (result) {
                     is DriveAuthResult.Success -> driveAuthorized = true
-                    is DriveAuthResult.Failure -> Toast.makeText(
-                        context,
-                        oauthErrorText,
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    is DriveAuthResult.Failure ->
+                        Toast
+                            .makeText(
+                                context,
+                                oauthErrorText,
+                                Toast.LENGTH_SHORT,
+                            ).show()
                     DriveAuthResult.Canceled -> Unit // cancellation is not an error — no toast
                 }
                 driveAuthHelper.consumeResult()
@@ -93,36 +93,37 @@ fun SettingsDataStorageScreen(
         }
     }
 
-    val signInLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        // The browser task closed without a redirect (user pressed back) — canceled.
-        // Spinner off, NO toast. Redirect results arrive through driveAuthHelper.authResult.
-        if (result.resultCode != Activity.RESULT_OK) {
-            isAuthorizing = false
+    val signInLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult(),
+        ) { result ->
+            // The browser task closed without a redirect (user pressed back) — canceled.
+            // Spinner off, NO toast. Redirect results arrive through driveAuthHelper.authResult.
+            if (result.resultCode != Activity.RESULT_OK) {
+                isAuthorizing = false
+            }
         }
-    }
 
     NextPageSettingsSubPage(
         title = stringResource(R.string.settings_data_storage_title),
-        onBack = onBack
+        onBack = onBack,
     ) {
         NextPagePreferenceItem(
             icon = NextPageIcons.Storage,
             label = stringResource(R.string.settings_storage),
-            onClick = onNavigateToStorage
+            onClick = onNavigateToStorage,
         )
 
         NextPagePreferenceItem(
             icon = NextPageIcons.CloudSync,
             label = stringResource(R.string.settings_sync),
-            onClick = {}
+            onClick = {},
         )
 
         NextPagePreferenceItem(
             icon = NextPageIcons.Statistics,
             label = stringResource(R.string.settings_statistics_title),
-            onClick = onNavigateToStatistics
+            onClick = onNavigateToStatistics,
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -133,7 +134,7 @@ fun SettingsDataStorageScreen(
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(horizontal = 4.dp)
+            modifier = Modifier.padding(horizontal = 4.dp),
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -142,7 +143,7 @@ fun SettingsDataStorageScreen(
             text = stringResource(R.string.settings_drive_description),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 4.dp)
+            modifier = Modifier.padding(horizontal = 4.dp),
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -150,7 +151,7 @@ fun SettingsDataStorageScreen(
         when {
             isAuthorizing -> {
                 CircularProgressIndicator(
-                    modifier = Modifier.padding(horizontal = 4.dp)
+                    modifier = Modifier.padding(horizontal = 4.dp),
                 )
             }
             driveAuthorized -> {
@@ -160,7 +161,7 @@ fun SettingsDataStorageScreen(
                         driveAuthorized = false
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RoundedCornerShape(8.dp),
                 ) {
                     Text(text = stringResource(R.string.settings_drive_disconnect))
                 }
@@ -171,11 +172,12 @@ fun SettingsDataStorageScreen(
                     onClick = {
                         val clientId = BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID
                         if (clientId.isBlank()) {
-                            Toast.makeText(
-                                context,
-                                errorConfigText,
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            Toast
+                                .makeText(
+                                    context,
+                                    errorConfigText,
+                                    Toast.LENGTH_SHORT,
+                                ).show()
                             return@Button
                         }
 
@@ -184,13 +186,16 @@ fun SettingsDataStorageScreen(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp),
-                    enabled = !isAuthorizing
+                    enabled = !isAuthorizing,
                 ) {
-                    Text(text = if (isAuthorizing) {
-                        stringResource(R.string.settings_drive_authorizing)
-                    } else {
-                        stringResource(R.string.settings_drive_authorize)
-                    })
+                    Text(
+                        text =
+                            if (isAuthorizing) {
+                                stringResource(R.string.settings_drive_authorizing)
+                            } else {
+                                stringResource(R.string.settings_drive_authorize)
+                            },
+                    )
                 }
             }
         }
@@ -203,14 +208,14 @@ fun SettingsDataStorageScreen(
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(horizontal = 4.dp)
+                modifier = Modifier.padding(horizontal = 4.dp),
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = stringResource(R.string.settings_drive_cold_backup_description),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 4.dp)
+                modifier = Modifier.padding(horizontal = 4.dp),
             )
             Spacer(modifier = Modifier.height(12.dp))
             // Export button — writes JSON+bin via GDrive parents-fix, chunk 100 not needed for export
@@ -221,17 +226,23 @@ fun SettingsDataStorageScreen(
                         isExporting = true
                         try {
                             val result = driveColdBackupService!!.exportColdBackup(userId!!)
-                            val msg = if (result.isSuccess) context.getString(R.string.settings_drive_cold_export_success)
-                            else context.getString(R.string.settings_drive_cold_export_error)
+                            val msg =
+                                if (result.isSuccess) {
+                                    context.getString(R.string.settings_drive_cold_export_success)
+                                } else {
+                                    context.getString(R.string.settings_drive_cold_export_error)
+                                }
                             Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                         } catch (e: Exception) {
                             Toast.makeText(context, e.message ?: context.getString(R.string.settings_drive_cold_export_error), Toast.LENGTH_SHORT).show()
-                        } finally { isExporting = false }
+                        } finally {
+                            isExporting = false
+                        }
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp),
-                enabled = coldBackupAvailable && !isExporting && !isImporting
+                enabled = coldBackupAvailable && !isExporting && !isImporting,
             ) {
                 if (isExporting) CircularProgressIndicator(modifier = Modifier.padding(end = 8.dp))
                 Text(text = stringResource(if (isExporting) R.string.settings_drive_cold_exporting else R.string.settings_drive_cold_export))
@@ -244,17 +255,23 @@ fun SettingsDataStorageScreen(
                         isImporting = true
                         try {
                             val result = driveColdBackupService!!.importColdBackup(userId!!)
-                            val msg = if (result.isSuccess) context.getString(R.string.settings_drive_cold_import_success)
-                            else context.getString(R.string.settings_drive_cold_import_error)
+                            val msg =
+                                if (result.isSuccess) {
+                                    context.getString(R.string.settings_drive_cold_import_success)
+                                } else {
+                                    context.getString(R.string.settings_drive_cold_import_error)
+                                }
                             Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                         } catch (e: Exception) {
                             Toast.makeText(context, e.message ?: context.getString(R.string.settings_drive_cold_import_error), Toast.LENGTH_SHORT).show()
-                        } finally { isImporting = false }
+                        } finally {
+                            isImporting = false
+                        }
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp),
-                enabled = coldBackupAvailable && !isExporting && !isImporting
+                enabled = coldBackupAvailable && !isExporting && !isImporting,
             ) {
                 if (isImporting) CircularProgressIndicator(modifier = Modifier.padding(end = 8.dp))
                 Text(text = stringResource(if (isImporting) R.string.settings_drive_cold_importing else R.string.settings_drive_cold_import))
@@ -266,29 +283,30 @@ fun SettingsDataStorageScreen(
 // ─── Previews ─────────────────────────────────────────────────────────
 
 @Composable
-private fun previewDriveAuthHelper(): GoogleDriveAuthHelper {
-    return GoogleDriveAuthHelper(
+private fun previewDriveAuthHelper(): GoogleDriveAuthHelper =
+    GoogleDriveAuthHelper(
         context = LocalContext.current,
-        session = DriveOAuthSession(
-            clientId = BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID,
-            redirectUri = driveOAuthRedirectUri(BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID),
-            tokenStore = InMemoryDriveTokenStore(),
-            tokenApi = object : DriveTokenApi {
-                override suspend fun exchange(
-                    clientId: String,
-                    authCode: String,
-                    redirectUri: String?,
-                    codeVerifier: String?
-                ): Result<DriveTokenPair> = Result.failure(IllegalStateException("Preview stub"))
+        session =
+            DriveOAuthSession(
+                clientId = BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID,
+                redirectUri = driveOAuthRedirectUri(BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID),
+                tokenStore = InMemoryDriveTokenStore(),
+                tokenApi =
+                    object : DriveTokenApi {
+                        override suspend fun exchange(
+                            clientId: String,
+                            authCode: String,
+                            redirectUri: String?,
+                            codeVerifier: String?,
+                        ): Result<DriveTokenPair> = Result.failure(IllegalStateException("Preview stub"))
 
-                override suspend fun refresh(
-                    clientId: String,
-                    refreshToken: String
-                ): Result<DriveTokenPair> = Result.failure(IllegalStateException("Preview stub"))
-            }
-        )
+                        override suspend fun refresh(
+                            clientId: String,
+                            refreshToken: String,
+                        ): Result<DriveTokenPair> = Result.failure(IllegalStateException("Preview stub"))
+                    },
+            ),
     )
-}
 
 @Preview(showBackground = true)
 @Composable
@@ -297,7 +315,7 @@ private fun SettingsDataStorageScreenDarkPreview() {
         SettingsDataStorageScreen(
             driveAuthHelper = previewDriveAuthHelper(),
             onNavigateToStatistics = {},
-            onBack = {}
+            onBack = {},
         )
     }
 }
@@ -309,7 +327,7 @@ private fun SettingsDataStorageScreenLightPreview() {
         SettingsDataStorageScreen(
             driveAuthHelper = previewDriveAuthHelper(),
             onNavigateToStatistics = {},
-            onBack = {}
+            onBack = {},
         )
     }
 }

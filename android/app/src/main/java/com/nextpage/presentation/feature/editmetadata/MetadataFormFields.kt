@@ -22,7 +22,7 @@ internal fun FormField(
     onValueChange: (String) -> Unit,
     counter: String,
     singleLine: Boolean = false,
-    minLines: Int = 1
+    minLines: Int = 1,
 ) {
     OutlinedTextField(
         value = value,
@@ -34,10 +34,10 @@ internal fun FormField(
             Text(
                 text = counter,
                 style = MaterialTheme.typography.labelSmall,
-                fontSize = MaterialTheme.typography.labelSmall.fontSize
+                fontSize = MaterialTheme.typography.labelSmall.fontSize,
             )
         },
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
     )
 }
 
@@ -47,28 +47,31 @@ internal fun SectionHeader(text: String) {
         text = text,
         style = MaterialTheme.typography.titleSmall,
         fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurface
+        color = MaterialTheme.colorScheme.onSurface,
     )
 }
 
 @Composable
-internal fun ReadOnlyDetailRow(label: String, value: String) {
+internal fun ReadOnlyDetailRow(
+    label: String,
+    value: String,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }

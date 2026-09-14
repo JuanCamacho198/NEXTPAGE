@@ -1,18 +1,11 @@
 package com.nextpage.presentation.viewmodel
 
 import android.app.Application
-import android.app.ActivityManager
 import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +13,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 private const val MEASURE_DELAY_MS = 650L
 private const val SPARKLINE_SAMPLE_COUNT = 16
@@ -53,7 +52,7 @@ data class PerformanceTiming(
     val avgMs: Long,
     val p95Ms: Long,
     val maxMs: Long,
-    val samples: List<Float> // normalized sparkline values
+    val samples: List<Float>, // normalized sparkline values
 )
 
 data class PerformanceResources(
@@ -63,26 +62,26 @@ data class PerformanceResources(
     val cacheSizeBytes: Long,
     val cacheSizeLabel: String,
     val memoryUsageMb: Float,
-    val memoryTotalMb: Float
+    val memoryTotalMb: Float,
 )
 
 data class PerformanceSyncStatus(
     val realtimeConnected: Boolean,
     val lastSyncLabel: String,
-    val outboxPending: Int
+    val outboxPending: Int,
 )
 
 data class PerformanceCrashEntry(
     val timestamp: String,
     val name: String,
-    val stackSnippet: String
+    val stackSnippet: String,
 )
 
 data class PerformanceDiagnostics(
     val fpsScroll: Float,
     val fpsLabel: String,
     val anrCount: Int,
-    val crashes: List<PerformanceCrashEntry>
+    val crashes: List<PerformanceCrashEntry>,
 )
 
 data class PerformanceUiState(
@@ -94,16 +93,16 @@ data class PerformanceUiState(
     val resources: PerformanceResources? = null,
     val syncStatus: PerformanceSyncStatus? = null,
     val diagnostics: PerformanceDiagnostics? = null,
-    val lastMeasuredAt: String? = null
+    val lastMeasuredAt: String? = null,
 )
 
 class PerformanceViewModel(
-    application: Application
+    application: Application,
 ) : AndroidViewModel(application) {
-
-    private val dataSource: PerformanceDataSource = RealPerformanceDataSource(
-        appContext = application.applicationContext
-    )
+    private val dataSource: PerformanceDataSource =
+        RealPerformanceDataSource(
+            appContext = application.applicationContext,
+        )
 
     private val appContext: Context = application.applicationContext
 
@@ -126,7 +125,7 @@ class PerformanceViewModel(
                     resources = resources,
                     syncStatus = syncStatus,
                     diagnostics = diagnostics,
-                    lastMeasuredAt = nowLabel()
+                    lastMeasuredAt = nowLabel(),
                 )
             }
         }
@@ -145,7 +144,7 @@ class PerformanceViewModel(
                     isMeasuring = false,
                     timings = timings,
                     resources = resources,
-                    lastMeasuredAt = nowLabel()
+                    lastMeasuredAt = nowLabel(),
                 )
             }
         }
@@ -182,72 +181,97 @@ class PerformanceViewModel(
 
     private fun loadDiagnostics(): PerformanceDiagnostics = dataSource.loadDiagnostics()
 
-    private fun clearEpubCacheInternal(): Boolean = runCatching {
-        val dirs = listOf(
-            File(appContext.filesDir, "epub_cache"),
-            File(appContext.cacheDir, "epub_cache")
-        )
-        var cleared = false
-        dirs.forEach { dir ->
-            if (dir.exists()) {
-                dir.listFiles()?.forEach { it.deleteRecursively() }
-                cleared = true
-            }
-        }
-        cleared
-    }.getOrDefault(false)
-
-    private fun buildReportZip(): File? = runCatching {
-        val state = _uiState.value
-        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-        val outFile = File(appContext.cacheDir, "nextpage_performance_$timestamp.zip")
-        ZipOutputStream(outFile.outputStream().buffered()).use { zos ->
-            fun entry(name: String, content: String) {
-                zos.putNextEntry(ZipEntry(name))
-                zos.write(content.toByteArray())
-                zos.closeEntry()
-            }
-            entry("device.txt", buildString {
-                appendLine("model=${android.os.Build.MODEL}")
-                appendLine("manufacturer=${android.os.Build.MANUFACTURER}")
-                appendLine("sdk=${android.os.Build.VERSION.SDK_INT}")
-                appendLine("generated=$timestamp")
-            })
-            entry("timings.json", buildString {
-                appendLine("{")
-                state.timings.forEachIndexed { i, t ->
-                    appendLine("  \"${t.key}\": { \"avg\": ${t.avgMs}, \"p95\": ${t.p95Ms}, \"max\": ${t.maxMs} }${if (i < state.timings.lastIndex) "," else ""}")
+    private fun clearEpubCacheInternal(): Boolean =
+        runCatching {
+            val dirs =
+                listOf(
+                    File(appContext.filesDir, "epub_cache"),
+                    File(appContext.cacheDir, "epub_cache"),
+                )
+            var cleared = false
+            dirs.forEach { dir ->
+                if (dir.exists()) {
+                    dir.listFiles()?.forEach { it.deleteRecursively() }
+                    cleared = true
                 }
-                appendLine("}")
-            })
-            entry("resources.json", buildString {
-                val r = state.resources
-                appendLine("{ \"db\": \"${r?.dbSizeLabel}\", \"highlights\": ${r?.highlightsCount}, \"cache\": \"${r?.cacheSizeLabel}\", \"memUsedMb\": ${r?.memoryUsageMb} }")
-            })
-            entry("sync.json", buildString {
-                val s = state.syncStatus
-                appendLine("{ \"realtime\": ${s?.realtimeConnected}, \"lastSync\": \"${s?.lastSyncLabel}\", \"outbox\": ${s?.outboxPending} }")
-            })
-            entry("diagnostics.json", buildString {
-                val d = state.diagnostics
-                appendLine("{ \"fps\": ${d?.fpsScroll}, \"anrs\": ${d?.anrCount}, \"crashes\": ${d?.crashes?.size} }")
-            })
+            }
+            cleared
+        }.getOrDefault(false)
+
+    private fun buildReportZip(): File? =
+        runCatching {
+            val state = _uiState.value
+            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+            val outFile = File(appContext.cacheDir, "nextpage_performance_$timestamp.zip")
+            ZipOutputStream(outFile.outputStream().buffered()).use { zos ->
+                fun entry(
+                    name: String,
+                    content: String,
+                ) {
+                    zos.putNextEntry(ZipEntry(name))
+                    zos.write(content.toByteArray())
+                    zos.closeEntry()
+                }
+                entry(
+                    "device.txt",
+                    buildString {
+                        appendLine("model=${android.os.Build.MODEL}")
+                        appendLine("manufacturer=${android.os.Build.MANUFACTURER}")
+                        appendLine("sdk=${android.os.Build.VERSION.SDK_INT}")
+                        appendLine("generated=$timestamp")
+                    },
+                )
+                entry(
+                    "timings.json",
+                    buildString {
+                        appendLine("{")
+                        state.timings.forEachIndexed { i, t ->
+                            appendLine("  \"${t.key}\": { \"avg\": ${t.avgMs}, \"p95\": ${t.p95Ms}, \"max\": ${t.maxMs} }${if (i < state.timings.lastIndex) "," else ""}")
+                        }
+                        appendLine("}")
+                    },
+                )
+                entry(
+                    "resources.json",
+                    buildString {
+                        val r = state.resources
+                        appendLine("{ \"db\": \"${r?.dbSizeLabel}\", \"highlights\": ${r?.highlightsCount}, \"cache\": \"${r?.cacheSizeLabel}\", \"memUsedMb\": ${r?.memoryUsageMb} }")
+                    },
+                )
+                entry(
+                    "sync.json",
+                    buildString {
+                        val s = state.syncStatus
+                        appendLine("{ \"realtime\": ${s?.realtimeConnected}, \"lastSync\": \"${s?.lastSyncLabel}\", \"outbox\": ${s?.outboxPending} }")
+                    },
+                )
+                entry(
+                    "diagnostics.json",
+                    buildString {
+                        val d = state.diagnostics
+                        appendLine("{ \"fps\": ${d?.fpsScroll}, \"anrs\": ${d?.anrCount}, \"crashes\": ${d?.crashes?.size} }")
+                    },
+                )
+            }
+            outFile
+        }.getOrNull()
+
+    private fun nowLabel(): String = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
+
+    private fun formatBytes(bytes: Long): String =
+        when {
+            bytes >= BYTES_PER_MB -> String.format(Locale.US, "%.1f MB", bytes / BYTES_PER_MB_FLOAT)
+            bytes >= BYTES_PER_KB -> String.format(Locale.US, "%.0f KB", bytes / BYTES_PER_KB_FLOAT)
+            else -> "$bytes B"
         }
-        outFile
-    }.getOrNull()
-
-    private fun nowLabel(): String =
-        SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
-
-    private fun formatBytes(bytes: Long): String = when {
-        bytes >= BYTES_PER_MB -> String.format(Locale.US, "%.1f MB", bytes / BYTES_PER_MB_FLOAT)
-        bytes >= BYTES_PER_KB -> String.format(Locale.US, "%.0f KB", bytes / BYTES_PER_KB_FLOAT)
-        else -> "$bytes B"
-    }
 
     private fun folderSize(dir: File): Long {
         if (!dir.exists()) return 0L
-        return dir.walkTopDown().filter { it.isFile }.map { it.length() }.sum()
+        return dir
+            .walkTopDown()
+            .filter { it.isFile }
+            .map { it.length() }
+            .sum()
     }
 
     /**
@@ -263,11 +287,9 @@ class PerformanceViewModel(
      * `PerformanceViewModelConstructionTest`.
      */
     class Factory(
-        private val application: Application
+        private val application: Application,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return PerformanceViewModel(application) as T
-        }
+        override fun <T : ViewModel> create(modelClass: Class<T>): T = PerformanceViewModel(application) as T
     }
 }

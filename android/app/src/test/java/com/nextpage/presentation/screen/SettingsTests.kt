@@ -16,17 +16,17 @@ import org.junit.Test
  * so we test the data models used by the settings UI.
  */
 class SettingsTests {
-
     // ── NotificationItem model ──────────────────────────────────────
 
     @Test
     fun `notificationItem defaults to unread`() {
-        val item = NotificationItem(
-            id = "test-1",
-            icon = mockk<ImageVector>(),
-            title = "Test",
-            body = "Body"
-        )
+        val item =
+            NotificationItem(
+                id = "test-1",
+                icon = mockk<ImageVector>(),
+                title = "Test",
+                body = "Body",
+            )
         assertEquals("test-1", item.id)
         assertEquals("Test", item.title)
         assertEquals("Body", item.body)
@@ -35,13 +35,14 @@ class SettingsTests {
 
     @Test
     fun `notificationItem can be created as read`() {
-        val item = NotificationItem(
-            id = "test-2",
-            icon = mockk<ImageVector>(),
-            title = "Read",
-            body = "Body",
-            isUnread = false
-        )
+        val item =
+            NotificationItem(
+                id = "test-2",
+                icon = mockk<ImageVector>(),
+                title = "Read",
+                body = "Body",
+                isUnread = false,
+            )
         assertEquals(false, item.isUnread)
     }
 
@@ -57,11 +58,12 @@ class SettingsTests {
 
     @Test
     fun `readerSettings can be customized`() {
-        val settings = ReaderSettings(
-            fontSize = FontSizePreset.XL,
-            theme = ReaderTheme.SEPIA,
-            lineHeight = LineHeightPreset.COMFORTABLE
-        )
+        val settings =
+            ReaderSettings(
+                fontSize = FontSizePreset.XL,
+                theme = ReaderTheme.SEPIA,
+                lineHeight = LineHeightPreset.COMFORTABLE,
+            )
         assertEquals(FontSizePreset.XL, settings.fontSize)
         assertEquals(ReaderTheme.SEPIA, settings.theme)
         assertEquals(LineHeightPreset.COMFORTABLE, settings.lineHeight)

@@ -17,10 +17,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
+import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.ui.components.atoms.NextPageAvatar
 import com.nextpage.ui.components.atoms.NextPageIconButton
 import com.nextpage.ui.icons.NextPageIcons
-import com.nextpage.presentation.theme.NextPageTheme
 
 /**
  * Top app header: avatar (or initials) + title on the left, optional
@@ -68,14 +68,15 @@ fun NextPageHeader(
     avatarContentDescription: String? = null,
     onSearchClick: (() -> Unit)? = null,
     onNotificationsClick: (() -> Unit)? = null,
-    trailingActions: List<Pair<ImageVector, () -> Unit>> = emptyList()
+    trailingActions: List<Pair<ImageVector, () -> Unit>> = emptyList(),
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(top = 16.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             NextPageAvatar(
@@ -83,13 +84,13 @@ fun NextPageHeader(
                 initials = avatarInitials,
                 size = 40.dp,
                 onClick = onAvatarClick,
-                contentDescription = avatarContentDescription
+                contentDescription = avatarContentDescription,
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
             )
         }
 
@@ -100,7 +101,7 @@ fun NextPageHeader(
                     contentDescription = stringResource(R.string.search_label),
                     onClick = it,
                     size = 40.dp,
-                    iconSize = 20.dp
+                    iconSize = 20.dp,
                 )
             }
             onNotificationsClick?.let {
@@ -108,7 +109,7 @@ fun NextPageHeader(
                     icon = NextPageIcons.Notifications,
                     contentDescription = stringResource(R.string.notifications_title),
                     onClick = it,
-                    size = 40.dp
+                    size = 40.dp,
                 )
             }
             trailingActions.forEach { (icon, onClick) ->
@@ -116,7 +117,7 @@ fun NextPageHeader(
                     icon = icon,
                     contentDescription = "",
                     onClick = onClick,
-                    size = 40.dp
+                    size = 40.dp,
                 )
             }
         }
@@ -133,7 +134,7 @@ private fun NextPageHeaderDarkPreview() {
             onAvatarClick = {},
             avatarContentDescription = "Open account settings",
             onSearchClick = {},
-            onNotificationsClick = {}
+            onNotificationsClick = {},
         )
     }
 }
@@ -148,7 +149,7 @@ private fun NextPageHeaderLightPreview() {
             onAvatarClick = {},
             avatarContentDescription = "Open account settings",
             onSearchClick = {},
-            onNotificationsClick = {}
+            onNotificationsClick = {},
         )
     }
 }

@@ -1,7 +1,7 @@
 package com.nextpage.data.remote.catalog
 
-import java.net.URLEncoder
 import kotlinx.serialization.json.Json
+import java.net.URLEncoder
 
 const val GUTENDEX_BASE_URL = "https://gutendex.com"
 
@@ -12,14 +12,13 @@ const val GUTENDEX_BASE_URL = "https://gutendex.com"
 open class GutendexDataSource(
     private val transport: CatalogHttpTransport,
     private val baseUrl: String = GUTENDEX_BASE_URL,
-    private val json: Json = Json { ignoreUnknownKeys = true }
+    private val json: Json = Json { ignoreUnknownKeys = true },
 ) {
-
     /** Search PD books; in-copyright records are excluded by the mapper. */
     open suspend fun search(
         query: String,
         page: Int,
-        pageSize: Int = DEFAULT_PAGE_SIZE
+        pageSize: Int = DEFAULT_PAGE_SIZE,
     ): CatalogSearchResult {
         val size = clampPageSize(pageSize)
         val params = "search=${query.encode()}&page=$page"
@@ -36,13 +35,14 @@ open class GutendexDataSource(
     open suspend fun featured(
         sort: CatalogFeaturedSort,
         page: Int,
-        pageSize: Int = DEFAULT_PAGE_SIZE
+        pageSize: Int = DEFAULT_PAGE_SIZE,
     ): CatalogSearchResult {
         val size = clampPageSize(pageSize)
-        val sortParam = when (sort) {
-            CatalogFeaturedSort.POPULAR -> "sort=popular"
-            CatalogFeaturedSort.NEWEST -> "sort=descending"
-        }
+        val sortParam =
+            when (sort) {
+                CatalogFeaturedSort.POPULAR -> "sort=popular"
+                CatalogFeaturedSort.NEWEST -> "sort=descending"
+            }
         val res = transport.getWithRetry("$baseUrl/books/?$sortParam&page=$page")
         val data = json.decodeFromString<GutendexSearchResponse>(res.body)
         val books = data.results.mapNotNull(::mapGutendexBook).take(size)

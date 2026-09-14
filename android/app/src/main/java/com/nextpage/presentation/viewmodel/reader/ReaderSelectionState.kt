@@ -26,7 +26,7 @@ sealed interface ReaderSelectionState {
     class New(
         val rect: Rect,
         val text: String,
-        val locator: Locator?
+        val locator: Locator?,
     ) : ReaderSelectionState {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -41,7 +41,7 @@ sealed interface ReaderSelectionState {
 
     class Existing(
         val highlight: Highlight,
-        val rect: Rect
+        val rect: Rect,
     ) : ReaderSelectionState {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -56,9 +56,10 @@ sealed interface ReaderSelectionState {
 }
 
 /** Converts a Readium viewport-space [RectF] to an Android [Rect] for [ReaderSelectionState]. */
-internal fun RectF.toRect(): Rect = Rect(
-    left.toInt(),
-    top.toInt(),
-    right.toInt(),
-    bottom.toInt()
-)
+internal fun RectF.toRect(): Rect =
+    Rect(
+        left.toInt(),
+        top.toInt(),
+        right.toInt(),
+        bottom.toInt(),
+    )

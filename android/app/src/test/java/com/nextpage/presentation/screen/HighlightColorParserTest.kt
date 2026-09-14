@@ -9,7 +9,6 @@ import org.junit.Test
  * Unit tests for [resolveHighlightColorHex].
  */
 class HighlightColorParserTest {
-
     @Test
     fun sixDigitHex_parsesAsOpaque() {
         val color = resolveHighlightColorHex("#facc15")!!

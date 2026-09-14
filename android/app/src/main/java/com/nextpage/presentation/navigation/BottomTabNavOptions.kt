@@ -28,7 +28,7 @@ data class BottomTabNavOptions(
     val popUpToInclusive: Boolean = false,
     val launchSingleTop: Boolean = true,
     val restoreState: Boolean = false,
-    val saveState: Boolean = false
+    val saveState: Boolean = false,
 ) {
     companion object {
         /**
@@ -37,7 +37,10 @@ data class BottomTabNavOptions(
          * @param route The selected tab's route.
          * @param homeRoute The route of the Home (Inicio) tab.
          */
-        fun forRoute(route: String, homeRoute: String): BottomTabNavOptions =
+        fun forRoute(
+            route: String,
+            homeRoute: String,
+        ): BottomTabNavOptions =
             if (route == homeRoute) {
                 // Inicio: collapse to [home]; no save/restore of the previous tab.
                 BottomTabNavOptions(
@@ -45,7 +48,7 @@ data class BottomTabNavOptions(
                     popUpToInclusive = false,
                     launchSingleTop = true,
                     restoreState = false,
-                    saveState = false
+                    saveState = false,
                 )
             } else {
                 // Other tabs: classic bottom-nav save/restore around Home.
@@ -54,7 +57,7 @@ data class BottomTabNavOptions(
                     popUpToInclusive = false,
                     launchSingleTop = true,
                     restoreState = true,
-                    saveState = true
+                    saveState = true,
                 )
             }
     }
@@ -65,7 +68,10 @@ data class BottomTabNavOptions(
  * so the Inicio tab collapses the stack to [homeRoute] while every other tab
  * keeps its save/restore semantics.
  */
-fun NavController.navigateToBottomTab(route: String, homeRoute: String) {
+fun NavController.navigateToBottomTab(
+    route: String,
+    homeRoute: String,
+) {
     val options = BottomTabNavOptions.forRoute(route, homeRoute)
     navigate(route) {
         launchSingleTop = options.launchSingleTop

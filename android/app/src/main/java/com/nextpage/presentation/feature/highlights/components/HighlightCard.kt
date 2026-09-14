@@ -29,25 +29,28 @@ import com.nextpage.presentation.feature.highlights.utils.parseColorHex
 fun HighlightCard(
     highlight: Highlight,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
-    val colorHex = highlight.color.let { colorStr ->
-        HighlightColor.fromHex(colorStr)?.hex ?: HighlightColor.YELLOW.hex
-    }
+    val colorHex =
+        highlight.color.let { colorStr ->
+            HighlightColor.fromHex(colorStr)?.hex ?: HighlightColor.YELLOW.hex
+        }
 
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick)
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(onClick = onClick)
+                .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier
-                .size(4.dp, 48.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(parseColorHex(colorHex))
+            modifier =
+                Modifier
+                    .size(4.dp, 48.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(parseColorHex(colorHex)),
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -56,7 +59,7 @@ fun HighlightCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = Color(0xFFDDE2F8),
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -64,7 +67,7 @@ fun HighlightCard(
                 style = MaterialTheme.typography.labelSmall,
                 color = Color(0xFF718096),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }

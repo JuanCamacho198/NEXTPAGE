@@ -24,7 +24,6 @@ import org.junit.BeforeClass
 import org.junit.Test
 
 class DebugLogWiringTest {
-
     private lateinit var fakeWriter: FakeLogWriter
     private lateinit var scope: CoroutineScope
 
@@ -168,20 +167,20 @@ class DebugLogWiringTest {
     @Test
     fun `highlightsSkipped emits telemetry without a Sentry exception`() {
         assertTelemetryDoesNotCaptureException(
-            DebugEvent.HighlightsSkipped("hl1", "epubcfi(/6/2)", "bounds_out_of_viewport")
+            DebugEvent.HighlightsSkipped("hl1", "epubcfi(/6/2)", "bounds_out_of_viewport"),
         )
 
         // Local source of truth preserved: WARN entry still lands in DebugLog
         assertTrue(
             "DebugLog should still hold the local entry",
-            DebugLog.events.value.any { it.message.contains("highlights.skipped") }
+            DebugLog.events.value.any { it.message.contains("highlights.skipped") },
         )
     }
 
     @Test
     fun `highlightsApplied emits telemetry without a Sentry exception`() {
         assertTelemetryDoesNotCaptureException(
-            DebugEvent.HighlightsApplied("hl2", "epubcfi(/6/4)", true)
+            DebugEvent.HighlightsApplied("hl2", "epubcfi(/6/4)", true),
         )
         assertTrue(DebugLog.events.value.any { it.message.contains("highlights.applied") })
     }
@@ -189,7 +188,7 @@ class DebugLogWiringTest {
     @Test
     fun `syncOutboxFailed emits telemetry without a Sentry exception`() {
         assertTelemetryDoesNotCaptureException(
-            DebugEvent.SyncOutboxFailed("HIGHLIGHT", "hl1", "x".repeat(250))
+            DebugEvent.SyncOutboxFailed("HIGHLIGHT", "hl1", "x".repeat(250)),
         )
         assertTrue(DebugLog.events.value.any { it.message.contains("sync.outboxFailed") })
     }
@@ -197,7 +196,7 @@ class DebugLogWiringTest {
     @Test
     fun `footerMismatch emits telemetry without a Sentry exception`() {
         assertTelemetryDoesNotCaptureException(
-            DebugEvent.FooterMismatch("ch1.html", "Chapter One", "Chapter Two")
+            DebugEvent.FooterMismatch("ch1.html", "Chapter One", "Chapter Two"),
         )
         assertTrue(DebugLog.events.value.any { it.message.contains("reader.footerMismatch") })
     }
@@ -205,7 +204,7 @@ class DebugLogWiringTest {
     @Test
     fun `syncReceive emits telemetry without a Sentry exception`() {
         assertTelemetryDoesNotCaptureException(
-            DebugEvent.SyncReceive("hl3", "epubcfi(/6/6)", true)
+            DebugEvent.SyncReceive("hl3", "epubcfi(/6/6)", true),
         )
         assertTrue(DebugLog.events.value.any { it.message.contains("sync.receive") })
     }
@@ -213,9 +212,8 @@ class DebugLogWiringTest {
     @Test
     fun `chapterResolved emits telemetry without a Sentry exception`() {
         assertTelemetryDoesNotCaptureException(
-            DebugEvent.ChapterResolved("ch2.html", "Chapter Two", 3)
+            DebugEvent.ChapterResolved("ch2.html", "Chapter Two", 3),
         )
         assertTrue(DebugLog.events.value.any { it.message.contains("footer.chapterResolved") })
     }
 }
-

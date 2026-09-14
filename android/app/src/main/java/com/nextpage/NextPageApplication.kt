@@ -6,13 +6,14 @@ import coil.ImageLoader
 import coil.ImageLoaderFactory
 import com.nextpage.data.remote.supabase.SupabaseClientProvider
 import com.nextpage.debug.CrashLogStore
-import com.nextpage.debug.SentryPiiScrubber
-import com.nextpage.debug.SentryInitGuard
-import com.nextpage.debug.SentryMetrics
-import com.nextpage.debug.SentryPrivacyPrefs
 import com.nextpage.debug.DebugLog
 import com.nextpage.debug.FeedbackPersistence
+import com.nextpage.debug.SentryInitGuard
+import com.nextpage.debug.SentryMetrics
+import com.nextpage.debug.SentryPiiScrubber
+import com.nextpage.debug.SentryPrivacyPrefs
 import com.nextpage.presentation.theme.CoilModule
+import dagger.hilt.android.HiltAndroidApp
 import io.sentry.Sentry
 import io.sentry.SentryLevel
 import io.sentry.SentryOptions
@@ -36,9 +37,18 @@ import java.io.File
  *   file with a log snapshot to `cacheDir/crashes/`.
  * - Chains to the previous default handler so the OS still gets the
  *   crash report (and the process still dies as expected).
+ *
+ * SDD android-tooling-hygiene WS2a slice 4: Hilt root. App-scoped bindings
+ * live in `com.nextpage.di.HiltFoundationModule` (slice 4) and
+ * `com.nextpage.di.HiltSingletonsModule` (slice 5: sync + deep-link
+ * singletons); the manual [com.nextpage.di.AppContainer]
+ * still constructs entry-point graphs and delegates binding construction to the
+ * shared factories until slices 5-6 migrate consumers.
  */
-class NextPageApplication : Application(), ImageLoaderFactory {
-
+@HiltAndroidApp
+class NextPageApplication :
+    Application(),
+    ImageLoaderFactory {
     companion object {
         private const val TAG = "NextPageApplication"
         const val PREFS_NAME = "nextpage_debug_crash"
@@ -84,38 +94,42 @@ class NextPageApplication : Application(), ImageLoaderFactory {
         // FIX 4 (NEXTPAGE-ANDROID-3): never initialise the real SDK on a JVM test
         // classpath (JUnit/Robolectric instantiate this Application) — synthetic
         // test failures must not egress to the production project.
-        if (SentryInitGuard.shouldInitialize()) SentryAndroid.init(this) { options ->
-            options.dsn = BuildConfig.SENTRY_DSN.takeIf { it.isNotEmpty() }
-            // Spec C1 — cross-platform release `nextpage-android@<version>+<sha12>`.
-            // GIT_SHA is emitted by `build.gradle.kts` from `git rev-parse --short=12 HEAD`
-            // (or `unknown` fallback) and is identical to the TS web build for the same
-            // commit. See `sdd/sentry-observability-v2/design` data-flow note C.
-            options.release = "nextpage-android@${BuildConfig.VERSION_NAME}+${BuildConfig.GIT_SHA}"
-            options.environment = if (BuildConfig.DEBUG) "development" else "production"
-            options.tracesSampleRate = TRACES_SAMPLE_RATE
-            // Spec C2 — explicit session tracking (web sets autoSessionTracking=true;
-            // Android must enable it explicitly to prove sessions flow in review).
-            options.isEnableAutoSessionTracking = true
-            // No screenshots / view hierarchy: reader app, must not leak book content.
-            options.isAttachScreenshot = false
-            options.isAttachViewHierarchy = false
-            // Replay only on error, with strict PII masking defaults from the SDK.
-            options.sessionReplay.sessionSampleRate = 0.0
-            options.sessionReplay.onErrorSampleRate = ON_ERROR_REPLAY_RATE
-            // PII redaction layer (rule-5 gate) + PP-3 opt-out, THEN the
-            // DEBUG-level drop: scrubber runs first, level filter second.
-            options.beforeSend = SentryOptions.BeforeSendCallback { event, _ ->
-                if (!SentryPrivacyPrefs.isEnabled(this@NextPageApplication)) {
-                    return@BeforeSendCallback null
-                }
-                val scrubbed = SentryPiiScrubber.scrubEvent(event)
-                if (scrubbed.level == SentryLevel.DEBUG) null else scrubbed
-            }
-            options.beforeBreadcrumb = SentryOptions.BeforeBreadcrumbCallback { crumb, _ ->
-                if (!SentryPrivacyPrefs.isEnabled(this@NextPageApplication)) {
-                    return@BeforeBreadcrumbCallback null
-                }
-                SentryPiiScrubber.filterBreadcrumb(crumb)
+        if (SentryInitGuard.shouldInitialize()) {
+            SentryAndroid.init(this) { options ->
+                options.dsn = BuildConfig.SENTRY_DSN.takeIf { it.isNotEmpty() }
+                // Spec C1 — cross-platform release `nextpage-android@<version>+<sha12>`.
+                // GIT_SHA is emitted by `build.gradle.kts` from `git rev-parse --short=12 HEAD`
+                // (or `unknown` fallback) and is identical to the TS web build for the same
+                // commit. See `sdd/sentry-observability-v2/design` data-flow note C.
+                options.release = "nextpage-android@${BuildConfig.VERSION_NAME}+${BuildConfig.GIT_SHA}"
+                options.environment = if (BuildConfig.DEBUG) "development" else "production"
+                options.tracesSampleRate = TRACES_SAMPLE_RATE
+                // Spec C2 — explicit session tracking (web sets autoSessionTracking=true;
+                // Android must enable it explicitly to prove sessions flow in review).
+                options.isEnableAutoSessionTracking = true
+                // No screenshots / view hierarchy: reader app, must not leak book content.
+                options.isAttachScreenshot = false
+                options.isAttachViewHierarchy = false
+                // Replay only on error, with strict PII masking defaults from the SDK.
+                options.sessionReplay.sessionSampleRate = 0.0
+                options.sessionReplay.onErrorSampleRate = ON_ERROR_REPLAY_RATE
+                // PII redaction layer (rule-5 gate) + PP-3 opt-out, THEN the
+                // DEBUG-level drop: scrubber runs first, level filter second.
+                options.beforeSend =
+                    SentryOptions.BeforeSendCallback { event, _ ->
+                        if (!SentryPrivacyPrefs.isEnabled(this@NextPageApplication)) {
+                            return@BeforeSendCallback null
+                        }
+                        val scrubbed = SentryPiiScrubber.scrubEvent(event)
+                        if (scrubbed.level == SentryLevel.DEBUG) null else scrubbed
+                    }
+                options.beforeBreadcrumb =
+                    SentryOptions.BeforeBreadcrumbCallback { crumb, _ ->
+                        if (!SentryPrivacyPrefs.isEnabled(this@NextPageApplication)) {
+                            return@BeforeBreadcrumbCallback null
+                        }
+                        SentryPiiScrubber.filterBreadcrumb(crumb)
+                    }
             }
         }
 
@@ -160,12 +174,13 @@ class NextPageApplication : Application(), ImageLoaderFactory {
                 }
 
                 val stackTrace = Log.getStackTraceString(throwable)
-                val crashJson = JSONObject().apply {
-                    put("timestamp", System.currentTimeMillis())
-                    put("threadName", thread.name)
-                    put("message", throwable.message ?: throwable::class.java.simpleName)
-                    put("stackTrace", stackTrace)
-                }
+                val crashJson =
+                    JSONObject().apply {
+                        put("timestamp", System.currentTimeMillis())
+                        put("threadName", thread.name)
+                        put("message", throwable.message ?: throwable::class.java.simpleName)
+                        put("stackTrace", stackTrace)
+                    }
                 // Save to SharedPreferences (existing — for notification)
                 getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
                     .edit()
@@ -203,7 +218,8 @@ class NextPageApplication : Application(), ImageLoaderFactory {
      * Falls back to `"unknown"` when Sentry is uninitialized (returns
      * `SentryId.EMPTY_ID` whose string is `00000000-…`).
      */
-    private fun sentryryIdString(id: io.sentry.protocol.SentryId): String = runCatching {
-        id.toString()
-    }.getOrDefault("unknown")
+    private fun sentryryIdString(id: io.sentry.protocol.SentryId): String =
+        runCatching {
+            id.toString()
+        }.getOrDefault("unknown")
 }

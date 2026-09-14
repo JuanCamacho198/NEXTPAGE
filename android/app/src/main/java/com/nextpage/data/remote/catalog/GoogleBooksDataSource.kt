@@ -1,7 +1,7 @@
 package com.nextpage.data.remote.catalog
 
-import java.net.URLEncoder
 import kotlinx.serialization.json.Json
+import java.net.URLEncoder
 
 const val GOOGLE_BOOKS_BASE_URL = "https://www.googleapis.com/books/v1"
 
@@ -19,14 +19,13 @@ open class GoogleBooksDataSource(
     private val transport: CatalogHttpTransport,
     private val apiKey: String = "",
     private val baseUrl: String = GOOGLE_BOOKS_BASE_URL,
-    private val json: Json = Json { ignoreUnknownKeys = true }
+    private val json: Json = Json { ignoreUnknownKeys = true },
 ) {
-
     /** Search volumes; ISBN queries use the `isbn:` operator, all else raw. */
     open suspend fun search(
         query: String,
         page: Int,
-        pageSize: Int = DEFAULT_PAGE_SIZE
+        pageSize: Int = DEFAULT_PAGE_SIZE,
     ): CatalogSearchResult {
         val size = clampPageSize(pageSize)
         val startIndex = (page - 1) * size
@@ -78,8 +77,12 @@ fun buildGoogleBooksQuery(rawQuery: String): String {
     val trimmed = rawQuery.trim()
     val compact = trimmed.replace(Regex("[-\\s]"), "").uppercase()
     val digits = compact.let { if (it.endsWith("X")) it.dropLast(1) + "X" else it }
-    val isIsbn = (digits.length == ISBN10_LENGTH && digits.take(ISBN10_BODY_LENGTH).all { it.isDigit() } &&
-        (digits.last().isDigit() || digits.last() == 'X')) ||
-        (digits.length == ISBN13_LENGTH && digits.all { it.isDigit() })
+    val isIsbn =
+        (
+            digits.length == ISBN10_LENGTH &&
+                digits.take(ISBN10_BODY_LENGTH).all { it.isDigit() } &&
+                (digits.last().isDigit() || digits.last() == 'X')
+        ) ||
+            (digits.length == ISBN13_LENGTH && digits.all { it.isDigit() })
     return if (isIsbn) "isbn:$compact" else trimmed
 }

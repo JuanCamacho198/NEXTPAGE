@@ -29,13 +29,14 @@ import com.nextpage.MainActivity
 fun DeepLinkHandler(
     navController: NavController,
     isCheckingSession: Boolean,
-    isAuthenticated: Boolean
+    isAuthenticated: Boolean,
 ) {
     val context = LocalContext.current
     val launchIntent: Uri? = remember { (context as? MainActivity)?.intent?.data }
     LaunchedEffect(launchIntent, isCheckingSession) {
-        val isResetPasswordLink = launchIntent?.scheme == "nextpage" &&
-            launchIntent.path?.contains("reset-password") == true
+        val isResetPasswordLink =
+            launchIntent?.scheme == "nextpage" &&
+                launchIntent.path?.contains("reset-password") == true
         if (isResetPasswordLink && !isCheckingSession && !isAuthenticated) {
             navController.navigate(NextPageDestination.AuthForgot.route) {
                 launchSingleTop = true

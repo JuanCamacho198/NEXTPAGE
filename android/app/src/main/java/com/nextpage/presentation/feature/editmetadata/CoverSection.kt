@@ -31,47 +31,49 @@ import com.nextpage.ui.components.atoms.NextPageButtonVariant
 internal fun CoverSection(
     book: Book,
     coverUri: Uri?,
-    onChangeCover: () -> Unit
+    onChangeCover: () -> Unit,
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
-    val coverRequest = remember(context, density, coverUri, book.coverPath) {
-        ImageRequest.Builder(context)
-            .data(coverUri ?: book.coverPath?.takeIf { it.isNotBlank() })
-            .size(
-                width = with(density) { 128.dp.toPx().toInt() },
-                height = with(density) { 192.dp.toPx().toInt() }
-            )
-            .placeholder(R.drawable.cover_placeholder)
-            .error(R.drawable.cover_error)
-            .fallback(R.drawable.cover_placeholder)
-            .crossfade(true)
-            .build()
-    }
+    val coverRequest =
+        remember(context, density, coverUri, book.coverPath) {
+            ImageRequest
+                .Builder(context)
+                .data(coverUri ?: book.coverPath?.takeIf { it.isNotBlank() })
+                .size(
+                    width = with(density) { 128.dp.toPx().toInt() },
+                    height = with(density) { 192.dp.toPx().toInt() },
+                ).placeholder(R.drawable.cover_placeholder)
+                .error(R.drawable.cover_error)
+                .fallback(R.drawable.cover_placeholder)
+                .crossfade(true)
+                .build()
+        }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Box(
-            modifier = Modifier
-                .size(128.dp, 192.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
+            modifier =
+                Modifier
+                    .size(128.dp, 192.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
         ) {
             AsyncImage(
                 model = coverRequest,
                 contentDescription = stringResource(R.string.library_cover_content_description),
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
             )
         }
 
         NextPageButton(
             text = stringResource(R.string.edit_metadata_change_cover),
             onClick = onChangeCover,
-            variant = NextPageButtonVariant.OUTLINED
+            variant = NextPageButtonVariant.OUTLINED,
         )
     }
 }

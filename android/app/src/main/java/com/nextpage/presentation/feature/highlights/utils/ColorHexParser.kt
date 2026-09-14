@@ -7,16 +7,16 @@ import androidx.compose.ui.graphics.Color
  * 8-char (AARRGGBB) strings with or without leading '#'.
  * Falls back to opaque black for unsupported lengths, magenta on parse failure.
  */
-fun parseColorHex(hex: String): Color {
-    return try {
+fun parseColorHex(hex: String): Color =
+    try {
         val sanitized = hex.removePrefix("#")
-        val longHex = when (sanitized.length) {
-            6 -> "FF$sanitized"
-            8 -> sanitized
-            else -> "FF000000"
-        }
+        val longHex =
+            when (sanitized.length) {
+                6 -> "FF$sanitized"
+                8 -> sanitized
+                else -> "FF000000"
+            }
         Color(longHex.toLong(16))
     } catch (_: Exception) {
         Color.Magenta
     }
-}

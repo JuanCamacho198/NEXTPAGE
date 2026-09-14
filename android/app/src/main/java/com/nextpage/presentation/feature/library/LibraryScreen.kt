@@ -60,14 +60,26 @@ internal enum class LibraryEmptyRenderState { SKELETON, EMPTY, NONE }
  * @return [LibraryEmptyRenderState.SKELETON] while [isLoading], [LibraryEmptyRenderState.EMPTY]
  *   when loading finished with no searched book, otherwise [LibraryEmptyRenderState.NONE].
  */
-internal fun libraryEmptyRenderState(isLoading: Boolean, isSearchedEmpty: Boolean): LibraryEmptyRenderState = when {
-    isLoading -> LibraryEmptyRenderState.SKELETON
-    isSearchedEmpty -> LibraryEmptyRenderState.EMPTY
-    else -> LibraryEmptyRenderState.NONE
-}
+internal fun libraryEmptyRenderState(
+    isLoading: Boolean,
+    isSearchedEmpty: Boolean,
+): LibraryEmptyRenderState =
+    when {
+        isLoading -> LibraryEmptyRenderState.SKELETON
+        isSearchedEmpty -> LibraryEmptyRenderState.EMPTY
+        else -> LibraryEmptyRenderState.NONE
+    }
 
 @Composable
-fun LibraryScreen(contentPadding: PaddingValues, viewModel: LibraryViewModel, driveAuthHelper: GoogleDriveAuthHelper, authSession: AuthSession?, onOpenAccount: () -> Unit, onBookSelected: (String, String, String) -> Unit, onEditBook: (String) -> Unit) {
+fun LibraryScreen(
+    contentPadding: PaddingValues,
+    viewModel: LibraryViewModel,
+    driveAuthHelper: GoogleDriveAuthHelper,
+    authSession: AuthSession?,
+    onOpenAccount: () -> Unit,
+    onBookSelected: (String, String, String) -> Unit,
+    onEditBook: (String) -> Unit,
+) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val searchedBooks by viewModel.searchedBooks.collectAsStateWithLifecycle()
     val firstDownloadError by viewModel.firstDownloadError.collectAsStateWithLifecycle()
@@ -75,7 +87,37 @@ fun LibraryScreen(contentPadding: PaddingValues, viewModel: LibraryViewModel, dr
 }
 
 @Composable
-fun LibraryScreenContent(uiState: LibraryUiState, searchedBooks: List<Book>, firstDownloadError: DownloadState.Error?, contentPadding: PaddingValues, driveAuthHelper: GoogleDriveAuthHelper?, authSession: AuthSession?, onOpenAccount: () -> Unit, onBookSelected: (String, String, String) -> Unit, onEditBook: (String) -> Unit, onRefresh: () -> Unit, onSearchToggle: () -> Unit, onSearchQueryChange: (String) -> Unit, onFilterToggle: () -> Unit, onStatusFilterChanged: (String) -> Unit, onSortByChanged: (String) -> Unit, onViewToggle: () -> Unit, onRequestDeleteBook: (Book) -> Unit, onMarkCompleted: (Book) -> Unit, onMarkPlanToRead: (Book) -> Unit, onShare: (Book) -> Unit, onDownload: (String) -> Unit, onDismissDownloadError: (String) -> Unit, onDismissDelete: () -> Unit, onConfirmDelete: () -> Unit, onConfirmLocalOnly: () -> Unit, onConfirmLocalAndDrive: () -> Unit, onFormatSelected: (String) -> Unit, onImportPdf: (sourcePath: String, fallbackTitle: String?, pdfFile: File) -> Unit, onImportEpub: (sourcePath: String, fallbackTitle: String?, inputStreamProvider: suspend () -> InputStream?) -> Unit) {
+fun LibraryScreenContent(
+    uiState: LibraryUiState,
+    searchedBooks: List<Book>,
+    firstDownloadError: DownloadState.Error?,
+    contentPadding: PaddingValues,
+    driveAuthHelper: GoogleDriveAuthHelper?,
+    authSession: AuthSession?,
+    onOpenAccount: () -> Unit,
+    onBookSelected: (String, String, String) -> Unit,
+    onEditBook: (String) -> Unit,
+    onRefresh: () -> Unit,
+    onSearchToggle: () -> Unit,
+    onSearchQueryChange: (String) -> Unit,
+    onFilterToggle: () -> Unit,
+    onStatusFilterChanged: (String) -> Unit,
+    onSortByChanged: (String) -> Unit,
+    onViewToggle: () -> Unit,
+    onRequestDeleteBook: (Book) -> Unit,
+    onMarkCompleted: (Book) -> Unit,
+    onMarkPlanToRead: (Book) -> Unit,
+    onShare: (Book) -> Unit,
+    onDownload: (String) -> Unit,
+    onDismissDownloadError: (String) -> Unit,
+    onDismissDelete: () -> Unit,
+    onConfirmDelete: () -> Unit,
+    onConfirmLocalOnly: () -> Unit,
+    onConfirmLocalAndDrive: () -> Unit,
+    onFormatSelected: (String) -> Unit,
+    onImportPdf: (sourcePath: String, fallbackTitle: String?, pdfFile: File) -> Unit,
+    onImportEpub: (sourcePath: String, fallbackTitle: String?, inputStreamProvider: suspend () -> InputStream?) -> Unit,
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var showDriveConnectDialog by remember { mutableStateOf(false) }
@@ -90,7 +132,11 @@ fun LibraryScreenContent(uiState: LibraryUiState, searchedBooks: List<Book>, fir
             if (result != null) {
                 isAuthorizingDrive = false
                 when (result) {
-                    is DriveAuthResult.Success -> { val bookId = pendingDownloadId; pendingDownloadId = null; if (bookId != null) onDownload(bookId) }
+                    is DriveAuthResult.Success -> {
+                        val bookId = pendingDownloadId
+                        pendingDownloadId = null
+                        if (bookId != null) onDownload(bookId)
+                    }
                     is DriveAuthResult.Failure -> Toast.makeText(context, driveOauthErrorText, Toast.LENGTH_SHORT).show()
                     DriveAuthResult.Canceled -> Unit
                 }
@@ -98,38 +144,65 @@ fun LibraryScreenContent(uiState: LibraryUiState, searchedBooks: List<Book>, fir
             }
         }
     }
-    val importLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.OpenDocument(), onResult = { uri: Uri? ->
-        if (uri == null) return@rememberLauncherForActivityResult
-        scope.launch {
-            runCatching {
-                val fileName = getContentDisplayName(context, uri) ?: uri.lastPathSegment ?: "imported_${System.currentTimeMillis()}"
-                val mimeType = context.contentResolver.getType(uri) ?: ""
-                val isPdf = fileName.endsWith(".pdf", true) || mimeType == "application/pdf"
-                val isEpub = fileName.endsWith(".epub", true) || mimeType == "application/epub+zip"
-                if (!isPdf && !isEpub) return@runCatching
-                if (isPdf) {
-                    val pdfDir = File(context.filesDir, "pdfs"); if (!pdfDir.exists()) pdfDir.mkdirs()
-                    val pdfFile = File(pdfDir, fileName)
-                    withContext(Dispatchers.IO) { context.contentResolver.openInputStream(uri)?.use { input -> pdfFile.outputStream().use { output -> input.copyTo(output) } } }
-                    onImportPdf(pdfFile.absolutePath, fileName.removeSuffix(".pdf"), pdfFile)
-                } else {
-                    val epubDir = File(context.filesDir, "epubs"); if (!epubDir.exists()) epubDir.mkdirs()
-                    val epubFile = File(epubDir, fileName)
-                    withContext(Dispatchers.IO) { context.contentResolver.openInputStream(uri)?.use { input -> epubFile.outputStream().use { output -> input.copyTo(output) } } }
-                    onImportEpub(epubFile.absolutePath, fileName.removeSuffix(".epub"), { epubFile.inputStream() })
-                }
-            }.onFailure { }
-        }
-    })
+    val importLauncher =
+        rememberLauncherForActivityResult(contract = ActivityResultContracts.OpenDocument(), onResult = { uri: Uri? ->
+            if (uri == null) return@rememberLauncherForActivityResult
+            scope.launch {
+                runCatching {
+                    val fileName = getContentDisplayName(context, uri) ?: uri.lastPathSegment ?: "imported_${System.currentTimeMillis()}"
+                    val mimeType = context.contentResolver.getType(uri) ?: ""
+                    val isPdf = fileName.endsWith(".pdf", true) || mimeType == "application/pdf"
+                    val isEpub = fileName.endsWith(".epub", true) || mimeType == "application/epub+zip"
+                    if (!isPdf && !isEpub) return@runCatching
+                    if (isPdf) {
+                        val pdfDir = File(context.filesDir, "pdfs")
+                        if (!pdfDir.exists()) pdfDir.mkdirs()
+                        val pdfFile = File(pdfDir, fileName)
+                        withContext(Dispatchers.IO) { context.contentResolver.openInputStream(uri)?.use { input -> pdfFile.outputStream().use { output -> input.copyTo(output) } } }
+                        onImportPdf(pdfFile.absolutePath, fileName.removeSuffix(".pdf"), pdfFile)
+                    } else {
+                        val epubDir = File(context.filesDir, "epubs")
+                        if (!epubDir.exists()) epubDir.mkdirs()
+                        val epubFile = File(epubDir, fileName)
+                        withContext(Dispatchers.IO) { context.contentResolver.openInputStream(uri)?.use { input -> epubFile.outputStream().use { output -> input.copyTo(output) } } }
+                        onImportEpub(epubFile.absolutePath, fileName.removeSuffix(".epub"), { epubFile.inputStream() })
+                    }
+                }.onFailure { }
+            }
+        })
     Box(modifier = Modifier.fillMaxSize()) {
         PullToRefreshBox(isRefreshing = uiState.isRefreshing, onRefresh = onRefresh, modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
                 LibraryToolbar(showSearch = uiState.showSearch, onSearchToggle = onSearchToggle, searchQuery = uiState.searchQuery, onSearchQueryChange = onSearchQueryChange, onFilterToggle = onFilterToggle, statusFilter = uiState.statusFilter, onStatusFilterChanged = onStatusFilterChanged, sortBy = uiState.sortBy, onSortByChanged = onSortByChanged, isGridView = uiState.isGridView, onViewToggle = onViewToggle, avatarImageUrl = authSession?.photoUrl, avatarInitials = authSession?.displayName?.take(2)?.uppercase() ?: "NP", onAvatarClick = onOpenAccount, avatarContentDescription = stringResource(R.string.home_avatar_content_description))
-                BookGridSection(books = searchedBooks, readingMinutesByBook = uiState.readingMinutesByBook, progressPercentByBook = uiState.progressPercentByBook, isGridView = uiState.isGridView, onBookSelected = onBookSelected, onDelete = onRequestDeleteBook, onImportClick = { importLauncher.launch(arrayOf("application/epub+zip", "application/pdf")) }, onEdit = { book -> onEditBook(book.id) }, onMarkCompleted = onMarkCompleted, onMarkPlanToRead = onMarkPlanToRead, onShare = onShare, emptyContent = when (libraryEmptyRenderState(uiState.isLoading, searchedBooks.isEmpty())) {
-                        LibraryEmptyRenderState.SKELETON -> { { if (uiState.isGridView) BookGridSkeleton() else BookListSkeleton() } }
-                        LibraryEmptyRenderState.EMPTY -> { { EmptyShelfPlaceholder(isImporting = uiState.isImporting, onImportClick = { importLauncher.launch(arrayOf("application/epub+zip", "application/pdf")) }) } }
-                        LibraryEmptyRenderState.NONE -> null
-                    }, footerContent = { DownloadableBooksSection(books = uiState.downloadableBooks, downloadStateMap = uiState.downloadState, isLoading = uiState.isDownloadableLoading, isDriveAuthorized = driveAuthHelper == null || driveAuthHelper.isAuthorized(), onConnectDrive = { row -> pendingDownloadId = row.id; showDriveConnectDialog = true }, onConfirmDownload = onDownload) })
+                BookGridSection(
+                    books = searchedBooks,
+                    readingMinutesByBook = uiState.readingMinutesByBook,
+                    progressPercentByBook = uiState.progressPercentByBook,
+                    isGridView = uiState.isGridView,
+                    onBookSelected = onBookSelected,
+                    onDelete = onRequestDeleteBook,
+                    onImportClick = { importLauncher.launch(arrayOf("application/epub+zip", "application/pdf")) },
+                    onEdit = { book -> onEditBook(book.id) },
+                    onMarkCompleted = onMarkCompleted,
+                    onMarkPlanToRead = onMarkPlanToRead,
+                    onShare = onShare,
+                    emptyContent =
+                        when (libraryEmptyRenderState(uiState.isLoading, searchedBooks.isEmpty())) {
+                            LibraryEmptyRenderState.SKELETON -> {
+                                { if (uiState.isGridView) BookGridSkeleton() else BookListSkeleton() }
+                            }
+                            LibraryEmptyRenderState.EMPTY -> {
+                                { EmptyShelfPlaceholder(isImporting = uiState.isImporting, onImportClick = { importLauncher.launch(arrayOf("application/epub+zip", "application/pdf")) }) }
+                            }
+                            LibraryEmptyRenderState.NONE -> null
+                        },
+                    footerContent = {
+                        DownloadableBooksSection(books = uiState.downloadableBooks, downloadStateMap = uiState.downloadState, isLoading = uiState.isDownloadableLoading, isDriveAuthorized = driveAuthHelper == null || driveAuthHelper.isAuthorized(), onConnectDrive = { row ->
+                            pendingDownloadId = row.id
+                            showDriveConnectDialog = true
+                        }, onConfirmDownload = onDownload)
+                    },
+                )
             }
         }
         RemoveBookDialog(bookToDelete = uiState.bookToDelete, onDismiss = onDismissDelete, onConfirmLocalOnly = onConfirmLocalOnly, onConfirmLocalAndDrive = onConfirmLocalAndDrive)
@@ -138,6 +211,22 @@ fun LibraryScreenContent(uiState: LibraryUiState, searchedBooks: List<Book>, fir
         if (activeDownload != null) NextPageDownloadOverlay(bookTitle = (activeDownload.value as? DownloadState.Success)?.title ?: activeDownloadBook?.title ?: "", coverUrl = activeDownloadBook?.coverUrl, isCompleted = activeDownload.value is DownloadState.Success, visible = true)
         LibrarySyncStatus(syncError = uiState.syncError, isSyncing = uiState.isSyncing)
         FilterSheetContent(showFilterSheet = uiState.showFilterSheet, filterFormat = uiState.filterFormat, onFormatSelected = onFormatSelected, onDismiss = onFilterToggle)
-        if (showDriveConnectDialog) NextPageDialog(title = stringResource(R.string.drive_connect_prompt_title), body = stringResource(R.string.drive_connect_prompt_body), confirmText = stringResource(R.string.drive_connect_prompt_accept), dismissText = stringResource(R.string.drive_connect_prompt_decline), icon = NextPageIcons.CloudDownload, onConfirm = { showDriveConnectDialog = false; val helper = driveAuthHelper; val clientId = BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID; if (helper == null || clientId.isBlank()) { Toast.makeText(context, driveConfigErrorText, Toast.LENGTH_SHORT).show(); pendingDownloadId = null; return@NextPageDialog }; isAuthorizingDrive = true; driveAuthLauncher.launch(helper.beginAuth()) }, onDismiss = { showDriveConnectDialog = false; pendingDownloadId = null })
+        if (showDriveConnectDialog) {
+            NextPageDialog(title = stringResource(R.string.drive_connect_prompt_title), body = stringResource(R.string.drive_connect_prompt_body), confirmText = stringResource(R.string.drive_connect_prompt_accept), dismissText = stringResource(R.string.drive_connect_prompt_decline), icon = NextPageIcons.CloudDownload, onConfirm = {
+                showDriveConnectDialog = false
+                val helper = driveAuthHelper
+                val clientId = BuildConfig.GOOGLE_OAUTH_ANDROID_CLIENT_ID
+                if (helper == null || clientId.isBlank()) {
+                    Toast.makeText(context, driveConfigErrorText, Toast.LENGTH_SHORT).show()
+                    pendingDownloadId = null
+                    return@NextPageDialog
+                }
+                isAuthorizingDrive = true
+                driveAuthLauncher.launch(helper.beginAuth())
+            }, onDismiss = {
+                showDriveConnectDialog = false
+                pendingDownloadId = null
+            })
+        }
     }
 }

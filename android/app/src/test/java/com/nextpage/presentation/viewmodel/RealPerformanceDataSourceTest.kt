@@ -13,7 +13,6 @@ import org.junit.Test
  * must be absent so the screen renders an explicit no-data state.
  */
 class RealPerformanceDataSourceTest {
-
     @Test
     fun `timings come from in-session aggregates only`() {
         SentryMetrics.clearForTest()

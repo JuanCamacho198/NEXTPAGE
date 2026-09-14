@@ -66,19 +66,21 @@ fun SortControlRow(
     sortBy: String,
     onSortByChanged: (String) -> Unit,
     isGridView: Boolean,
-    onViewToggle: () -> Unit
+    onViewToggle: () -> Unit,
 ) {
     var showSortSelector by remember { mutableStateOf(false) }
 
-    val sortOptions = listOf(
-        SelectorOption("date_added", R.string.library_sort_date_added),
-        SelectorOption("title", R.string.library_sort_title),
-        SelectorOption("author", R.string.library_sort_author),
-        SelectorOption("last_read", R.string.library_sort_last_read)
-    )
+    val sortOptions =
+        listOf(
+            SelectorOption("date_added", R.string.library_sort_date_added),
+            SelectorOption("title", R.string.library_sort_title),
+            SelectorOption("author", R.string.library_sort_author),
+            SelectorOption("last_read", R.string.library_sort_last_read),
+        )
 
-    val selectedSortLabel = sortOptions.find { it.id == sortBy }?.labelRes
-        ?: R.string.library_sort_date_added
+    val selectedSortLabel =
+        sortOptions.find { it.id == sortBy }?.labelRes
+            ?: R.string.library_sort_date_added
 
     if (showSortSelector) {
         NextPageSelector(
@@ -89,27 +91,28 @@ fun SortControlRow(
                 onSortByChanged(option.id)
                 showSortSelector = false
             },
-            onDismiss = { showSortSelector = false }
+            onDismiss = { showSortSelector = false },
         )
     }
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = stringResource(R.string.library_sort_label),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.width(4.dp))
             NextPageButton(
                 onClick = { showSortSelector = true },
-                variant = NextPageButtonVariant.TEXT
+                variant = NextPageButtonVariant.TEXT,
             ) {
                 Text(text = stringResource(selectedSortLabel))
             }
@@ -120,16 +123,24 @@ fun SortControlRow(
                 Icon(
                     imageVector = NextPageIcons.GridView,
                     contentDescription = stringResource(R.string.library_view_grid),
-                    tint = if (isGridView) MaterialTheme.colorScheme.primary
-                           else MaterialTheme.colorScheme.onSurfaceVariant
+                    tint =
+                        if (isGridView) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                 )
             }
             IconButton(onClick = { if (isGridView) onViewToggle() }) {
                 Icon(
                     imageVector = NextPageIcons.ViewList,
                     contentDescription = stringResource(R.string.library_view_list),
-                    tint = if (!isGridView) MaterialTheme.colorScheme.primary
-                           else MaterialTheme.colorScheme.onSurfaceVariant
+                    tint =
+                        if (!isGridView) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                 )
             }
         }
@@ -142,19 +153,19 @@ private fun SortControlRowDarkPreview() {
     NextPageTheme(darkTheme = true) {
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             SortControlRow(
                 sortBy = "title",
                 onSortByChanged = {},
                 isGridView = false,
-                onViewToggle = {}
+                onViewToggle = {},
             )
             SortControlRow(
                 sortBy = "title",
                 onSortByChanged = {},
                 isGridView = true,
-                onViewToggle = {}
+                onViewToggle = {},
             )
         }
     }
@@ -166,19 +177,19 @@ private fun SortControlRowLightPreview() {
     NextPageTheme(darkTheme = false) {
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             SortControlRow(
                 sortBy = "title",
                 onSortByChanged = {},
                 isGridView = false,
-                onViewToggle = {}
+                onViewToggle = {},
             )
             SortControlRow(
                 sortBy = "title",
                 onSortByChanged = {},
                 isGridView = true,
-                onViewToggle = {}
+                onViewToggle = {},
             )
         }
     }

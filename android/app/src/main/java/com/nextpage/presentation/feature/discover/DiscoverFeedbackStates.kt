@@ -43,28 +43,30 @@ fun DiscoverEmptyState(
      * [sourceName] instead of the generic "sin resultados" copy.
      */
     legalEmpty: Boolean = false,
-    sourceName: String? = null
+    sourceName: String? = null,
 ) {
     if (legalEmpty && sourceName != null) {
         DiscoverLegalEmptyState(
             query = query,
             sourceName = sourceName,
             onSuggestionClick = onSuggestionClick,
-            modifier = modifier
+            modifier = modifier,
         )
         return
     }
-    val suggestions = listOf(
-        stringResource(R.string.discover_suggestion_1),
-        stringResource(R.string.discover_suggestion_2),
-        stringResource(R.string.discover_suggestion_3)
-    )
+    val suggestions =
+        listOf(
+            stringResource(R.string.discover_suggestion_1),
+            stringResource(R.string.discover_suggestion_2),
+            stringResource(R.string.discover_suggestion_3),
+        )
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         DiscoverIllustration(icon = NextPageIcons.Search, tint = NextPageColors.textSecondary)
         Spacer(modifier = Modifier.height(16.dp))
@@ -74,15 +76,16 @@ fun DiscoverEmptyState(
         Spacer(modifier = Modifier.height(20.dp))
         DiscoverChipRow(
             chips = suggestions.map { DiscoverChip(label = it) },
-            onChipClick = { index -> onSuggestionClick(suggestions[index]) }
+            onChipClick = { index -> onSuggestionClick(suggestions[index]) },
         )
     }
 }
 
-/** ERROR state: non-connectivity catalog failure with a retry action. */@Composable
+/** ERROR state: non-connectivity catalog failure with a retry action. */
+@Composable
 fun DiscoverErrorState(
     onRetry: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     DiscoverFeedbackState(
         icon = NextPageIcons.ErrorOutline,
@@ -90,7 +93,7 @@ fun DiscoverErrorState(
         title = stringResource(R.string.discover_error_title),
         body = stringResource(R.string.discover_error_body),
         onRetry = onRetry,
-        modifier = modifier
+        modifier = modifier,
     )
 }
 
@@ -98,7 +101,7 @@ fun DiscoverErrorState(
 @Composable
 fun DiscoverOfflineState(
     onRetry: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     DiscoverFeedbackState(
         icon = Icons.Rounded.Warning,
@@ -106,7 +109,7 @@ fun DiscoverOfflineState(
         title = stringResource(R.string.discover_offline_title),
         body = stringResource(R.string.discover_offline_body),
         onRetry = onRetry,
-        modifier = modifier
+        modifier = modifier,
     )
 }
 
@@ -117,14 +120,15 @@ private fun DiscoverFeedbackState(
     title: String,
     body: String,
     onRetry: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         DiscoverIllustration(icon = icon, tint = iconTint)
         Spacer(modifier = Modifier.height(16.dp))
@@ -135,7 +139,7 @@ private fun DiscoverFeedbackState(
         NextPageButton(
             onClick = onRetry,
             variant = NextPageButtonVariant.FILLED,
-            modifier = Modifier.width(160.dp)
+            modifier = Modifier.width(160.dp),
         ) {
             Text(text = stringResource(R.string.discover_retry))
         }
@@ -145,20 +149,21 @@ private fun DiscoverFeedbackState(
 @Composable
 private fun DiscoverIllustration(
     icon: ImageVector,
-    tint: androidx.compose.ui.graphics.Color
+    tint: androidx.compose.ui.graphics.Color,
 ) {
     Box(
-        modifier = Modifier
-            .size(120.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(NextPageColors.surface),
-        contentAlignment = Alignment.Center
+        modifier =
+            Modifier
+                .size(120.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(NextPageColors.surface),
+        contentAlignment = Alignment.Center,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             modifier = Modifier.size(48.dp),
-            tint = tint
+            tint = tint,
         )
     }
 }
@@ -170,7 +175,7 @@ private fun DiscoverFeedbackTitle(text: String) {
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.SemiBold,
         color = NextPageColors.textPrimary,
-        textAlign = TextAlign.Center
+        textAlign = TextAlign.Center,
     )
 }
 
@@ -180,7 +185,7 @@ private fun DiscoverFeedbackBody(text: String) {
         text = text,
         style = MaterialTheme.typography.bodyMedium,
         color = NextPageColors.textSecondary,
-        textAlign = TextAlign.Center
+        textAlign = TextAlign.Center,
     )
 }
 
@@ -194,19 +199,21 @@ private fun DiscoverLegalEmptyState(
     query: String,
     sourceName: String,
     onSuggestionClick: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
-    val suggestions = listOf(
-        stringResource(R.string.discover_suggestion_1),
-        stringResource(R.string.discover_suggestion_2),
-        stringResource(R.string.discover_suggestion_3)
-    )
+    val suggestions =
+        listOf(
+            stringResource(R.string.discover_suggestion_1),
+            stringResource(R.string.discover_suggestion_2),
+            stringResource(R.string.discover_suggestion_3),
+        )
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         DiscoverIllustration(icon = NextPageIcons.Search, tint = NextPageColors.textSecondary)
         Spacer(modifier = Modifier.height(16.dp))
@@ -216,7 +223,7 @@ private fun DiscoverLegalEmptyState(
         Spacer(modifier = Modifier.height(20.dp))
         DiscoverChipRow(
             chips = suggestions.map { DiscoverChip(label = it) },
-            onChipClick = { index -> onSuggestionClick(suggestions[index]) }
+            onChipClick = { index -> onSuggestionClick(suggestions[index]) },
         )
     }
 }

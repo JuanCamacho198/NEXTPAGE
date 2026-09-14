@@ -11,7 +11,6 @@ import org.junit.Test
  * the detector must report a test runtime and veto initialisation.
  */
 class SentryInitGuardTest {
-
     @Test
     fun `jvm test runtime is detected and Sentry initialisation is vetoed`() {
         assertTrue("A JUnit run must be detected as a JVM test", SentryInitGuard.isJvmTest())

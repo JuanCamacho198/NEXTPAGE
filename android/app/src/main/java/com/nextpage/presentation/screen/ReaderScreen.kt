@@ -12,14 +12,12 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +32,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nextpage.BuildConfig
 import com.nextpage.R
 import com.nextpage.debug.DebugLog
@@ -43,7 +42,6 @@ import com.nextpage.presentation.screen.reader.ReaderScreenContentHost
 import com.nextpage.presentation.screen.reader.ReaderScreenEffects
 import com.nextpage.presentation.screen.reader.ReaderScreenOverlaysHost
 import com.nextpage.presentation.screen.reader.rememberReaderSelectionCallbacks
-import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 import com.nextpage.presentation.viewmodel.reader.ReaderSelectionState
 import com.nextpage.ui.components.molecules.ReadingProgressBar
@@ -58,7 +56,7 @@ fun ReaderScreen(
     bookFormat: String = "epub",
     bookIdentitySource: String = "snapshot",
     viewModel: ReaderViewModel,
-    onNavigateBack: () -> Unit = {}
+    onNavigateBack: () -> Unit = {},
 ) {
     // SDD reader-uiState-cleanup S6: every read below uses slices; the
     // DebugPanel takes the annotation slice directly, so no uiState collect.
@@ -82,10 +80,11 @@ fun ReaderScreen(
     var controlsVisible by remember(chromeUiState.isFullscreen) { mutableStateOf(true) }
     var lastInteractionAt by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
 
-    val isSelectionActive = annotationUiState.selectionState != ReaderSelectionState.None ||
-        annotationUiState.showTagInput ||
-        annotationUiState.showDefinitionInput ||
-        annotationUiState.showColorPickerPopover
+    val isSelectionActive =
+        annotationUiState.selectionState != ReaderSelectionState.None ||
+            annotationUiState.showTagInput ||
+            annotationUiState.showDefinitionInput ||
+            annotationUiState.showColorPickerPopover
 
     val onShowChrome: () -> Unit = {
         if (!sessionUiState.isLoading && !isSelectionActive) {
@@ -104,16 +103,21 @@ fun ReaderScreen(
         viewModel.uiEvent.collect { event ->
             when (event) {
                 is com.nextpage.presentation.UiEvent.ShowToast -> {
-                    android.widget.Toast.makeText(context, event.message, android.widget.Toast.LENGTH_SHORT).show()
+                    android.widget.Toast
+                        .makeText(context, event.message, android.widget.Toast.LENGTH_SHORT)
+                        .show()
                 }
                 is com.nextpage.presentation.UiEvent.ShowSnackbar -> {
-                    android.widget.Toast.makeText(context, event.message, android.widget.Toast.LENGTH_SHORT).show()
+                    android.widget.Toast
+                        .makeText(context, event.message, android.widget.Toast.LENGTH_SHORT)
+                        .show()
                 }
                 is com.nextpage.presentation.UiEvent.ShareText -> {
-                    val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                        type = "text/plain"
-                        putExtra(android.content.Intent.EXTRA_TEXT, event.text)
-                    }
+                    val shareIntent =
+                        android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(android.content.Intent.EXTRA_TEXT, event.text)
+                        }
                     context.startActivity(android.content.Intent.createChooser(shareIntent, null))
                 }
                 else -> {}
@@ -137,7 +141,7 @@ fun ReaderScreen(
         onControlsVisibleChange = { controlsVisible = it },
         onLastInteractionChange = { lastInteractionAt = it },
         onBookmarkRibbonVisibleChange = { bookmarkRibbonVisible = it },
-        onShowChrome = onShowChrome
+        onShowChrome = onShowChrome,
     )
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -156,7 +160,7 @@ fun ReaderScreen(
                     },
                     onToggleSplitSettings = { viewModel.settingsManager.onToggleSplitSettings() },
                     onToggleToc = { viewModel.lifecycleHolder.onToggleTocSheet() },
-                    onToggleDebugPanel = { debugPanelVisible = !debugPanelVisible }
+                    onToggleDebugPanel = { debugPanelVisible = !debugPanelVisible },
                 )
             },
             footer = {
@@ -166,10 +170,14 @@ fun ReaderScreen(
                     onRotateScreen = {
                         val activity = context as Activity
                         val portrait = activity.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_PORTRAIT
-                        activity.requestedOrientation = if (portrait) ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-                        else ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                        activity.requestedOrientation =
+                            if (portrait) {
+                                ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                            } else {
+                                ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                            }
                     },
-                    onProgressChange = { viewModel.lifecycleHolder.onProgressChange(it) }
+                    onProgressChange = { viewModel.lifecycleHolder.onProgressChange(it) },
                 )
             },
             content = {
@@ -184,7 +192,7 @@ fun ReaderScreen(
                     logWebViewTreeTrigger = logWebViewTreeTrigger,
                     onRetry = {
                         viewModel.loadBookWithFallback(selectedBookId, bookFilePath, bookFormat)
-                    }
+                    },
                 )
             },
             overlays = {
@@ -221,26 +229,27 @@ fun ReaderScreen(
                         goToPageError = null
                     },
                     bookmarkRibbonVisible = bookmarkRibbonVisible,
-                    onBookmarkRibbonEnd = { bookmarkRibbonVisible = false }
+                    onBookmarkRibbonEnd = { bookmarkRibbonVisible = false },
                 )
-            }
+            },
         )
 
         if (BuildConfig.DEBUG && DebugPrefs.isEnabled(context)) {
             Surface(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(bottom = 16.dp, end = 12.dp)
-                    .clickable { debugPanelVisible = !debugPanelVisible },
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(bottom = 16.dp, end = 12.dp)
+                        .clickable { debugPanelVisible = !debugPanelVisible },
                 color = Color(0xFFEF4444),
-                shape = RoundedCornerShape(6.dp)
+                shape = RoundedCornerShape(6.dp),
             ) {
                 Text(
                     text = stringResource(R.string.debug_chip_label),
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     fontSize = 11.sp,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                 )
             }
         }
@@ -257,12 +266,13 @@ fun ReaderScreen(
                     if (first == null) {
                         DebugLog.warn("Debug", "Simulate-tap: no highlights to simulate")
                     } else {
-                        val fakeRect = android.graphics.RectF(
-                            annotationUiState.selectionRect?.left?.toFloat() ?: 200f,
-                            annotationUiState.selectionRect?.top?.toFloat() ?: 200f,
-                            (annotationUiState.selectionRect?.right ?: 600).toFloat(),
-                            (annotationUiState.selectionRect?.bottom ?: 250).toFloat()
-                        )
+                        val fakeRect =
+                            android.graphics.RectF(
+                                annotationUiState.selectionRect?.left?.toFloat() ?: 200f,
+                                annotationUiState.selectionRect?.top?.toFloat() ?: 200f,
+                                (annotationUiState.selectionRect?.right ?: 600).toFloat(),
+                                (annotationUiState.selectionRect?.bottom ?: 250).toFloat(),
+                            )
                         DebugLog.info("Debug", "Simulate-tap: forcing onHighlightTapped for id=${first.id}")
                         viewModel.interactionHolder.onHighlightTapped(first, fakeRect)
                     }
@@ -274,7 +284,7 @@ fun ReaderScreen(
                     DebugLog.success("Debug", "Log copied to clipboard")
                 },
                 onInspectHighlightsHtml = { inspectHighlightsHtmlTrigger.tryEmit(Unit) },
-                onLogWebViewTree = { logWebViewTreeTrigger.tryEmit(Unit) }
+                onLogWebViewTree = { logWebViewTreeTrigger.tryEmit(Unit) },
             )
         }
 

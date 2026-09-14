@@ -1,0 +1,42 @@
+# SDD android-tooling-hygiene WS5 slice 7: Kotlin formatting contract.
+# Base [*] block mirrors desktop/.editorconfig verbatim (read-only reference);
+# [*.{kt,kts}] uses indent 4 per design (WS5-R1).
+root = true
+
+[*]
+indent_style = space
+indent_size = 2
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.{kt,kts}]
+indent_size = 4
+# detekt stays analysis-authoritative (see config/detekt/detekt.yml); never
+# enable detekt's formatting rule set. ktlint is the formatter here, so its
+# non-autocorrectable analysis rules defer to detekt:
+# - no-wildcard-imports: NOT disabled — exclusions mirror detekt's
+#   style.WildcardImport excludeImports exactly (compose foundation.layout /
+#   material3 / runtime, kotlinx.coroutines, java.util) via the rule's own
+#   on-demand-packages property. ktlint 1.5.0 (Spotless 7.2.1 default).
+ij_kotlin_packages_to_use_import_on_demand = java.util.*,kotlinx.coroutines.*,androidx.compose.foundation.layout.*,androidx.compose.material3.*,androidx.compose.runtime.*
+# - function-naming: PascalCase is the Compose convention and the tree keeps
+#   one dunder-prefixed test hook (GoogleDriveStorageRemoteDataSource
+#   __resetGDriveFolderCache, called from tests); renaming it by hand would mix
+#   manual edits into the mechanical reformat, so the rule stays disabled and
+#   defers to detekt/review.
+ktlint_standard_function-naming = disabled
+# - if-else-wrapping: the one remaining hit (LibraryScreen single-line if with
+#   a complex then-branch) needs a manual restructure, out of scope for the
+#   mechanical reformat; disabled, defers to detekt/review.
+ktlint_standard_if-else-wrapping = disabled
+# - filename / max-line-length / no-consecutive-comments / property-naming /
+#   backing-property-naming / value-parameter-comment: none is autocorrectable
+#   either, same deferral for the same reason (see above).
+ktlint_standard_filename = disabled
+ktlint_standard_max-line-length = disabled
+ktlint_standard_no-consecutive-comments = disabled
+ktlint_standard_property-naming = disabled
+ktlint_standard_backing-property-naming = disabled
+ktlint_standard_value-parameter-comment = disabled

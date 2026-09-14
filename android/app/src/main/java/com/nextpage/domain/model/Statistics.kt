@@ -5,7 +5,7 @@ package com.nextpage.domain.model
  */
 data class DailyReadingActivity(
     val dateEpochMillis: Long,
-    val minutesRead: Int
+    val minutesRead: Int,
 )
 
 /**
@@ -17,5 +17,5 @@ data class Statistics(
     val booksRead: Int = 0,
     val weeklyActivity: List<DailyReadingActivity> = emptyList(),
     val goalProgress: Float = 0f,
-    val favoriteGenres: List<String> = emptyList()
+    val favoriteGenres: List<String> = emptyList(),
 )

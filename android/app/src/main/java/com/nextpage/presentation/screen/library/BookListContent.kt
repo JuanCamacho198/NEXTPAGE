@@ -32,14 +32,15 @@ fun BookList(
     onMarkPlanToRead: (Book) -> Unit,
     onShare: (Book) -> Unit,
     emptyContent: (@Composable () -> Unit)? = null,
-    footerContent: (@Composable () -> Unit)? = null
+    footerContent: (@Composable () -> Unit)? = null,
 ) {
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(bottom = 16.dp)
+        contentPadding = PaddingValues(bottom = 16.dp),
     ) {
         if (books.isEmpty() && emptyContent != null) {
             item(key = "empty_state", contentType = { "empty" }) {
@@ -56,7 +57,7 @@ fun BookList(
                 onEdit = { onEdit(book) },
                 onMarkCompleted = { onMarkCompleted(book) },
                 onMarkPlanToRead = { onMarkPlanToRead(book) },
-                onShare = { onShare(book) }
+                onShare = { onShare(book) },
             )
         }
         // The add-book card is the primary import affordance when the shelf
@@ -77,26 +78,27 @@ fun BookList(
 
 // ─── Previews ─────────────────────────────────────────────────────────
 
-private val PreviewBooks = listOf(
-    Book(
-        id = "preview-book-1",
-        title = "The Hobbit",
-        author = "J.R.R. Tolkien",
-        coverPath = null,
-        filePath = "/preview/the-hobbit.epub",
-        format = "epub",
-        updatedAtEpochMillis = 0L
-    ),
-    Book(
-        id = "preview-book-2",
-        title = "1984",
-        author = "George Orwell",
-        coverPath = null,
-        filePath = "/preview/1984.epub",
-        format = "epub",
-        updatedAtEpochMillis = 0L
+private val PreviewBooks =
+    listOf(
+        Book(
+            id = "preview-book-1",
+            title = "The Hobbit",
+            author = "J.R.R. Tolkien",
+            coverPath = null,
+            filePath = "/preview/the-hobbit.epub",
+            format = "epub",
+            updatedAtEpochMillis = 0L,
+        ),
+        Book(
+            id = "preview-book-2",
+            title = "1984",
+            author = "George Orwell",
+            coverPath = null,
+            filePath = "/preview/1984.epub",
+            format = "epub",
+            updatedAtEpochMillis = 0L,
+        ),
     )
-)
 
 @Preview(showBackground = true)
 @Composable
@@ -111,7 +113,7 @@ private fun BookListContentDarkPreview() {
             onEdit = {},
             onMarkCompleted = {},
             onMarkPlanToRead = {},
-            onShare = {}
+            onShare = {},
         )
     }
 }
@@ -129,7 +131,7 @@ private fun BookListContentLightPreview() {
             onEdit = {},
             onMarkCompleted = {},
             onMarkPlanToRead = {},
-            onShare = {}
+            onShare = {},
         )
     }
 }

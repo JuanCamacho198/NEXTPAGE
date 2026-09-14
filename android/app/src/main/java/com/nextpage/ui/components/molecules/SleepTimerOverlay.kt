@@ -48,32 +48,34 @@ import com.nextpage.presentation.theme.NextPageTheme
  */
 @Composable
 fun SleepTimerOverlay(
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f))
-            .clickable(onClick = onDismiss),
-        contentAlignment = Alignment.Center
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f))
+                .clickable(onClick = onDismiss),
+        contentAlignment = Alignment.Center,
     ) {
         Card(
             modifier = Modifier.padding(32.dp),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            colors =
+                CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
         ) {
             Column(
                 modifier = Modifier.padding(32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 // Timer icon (emoji for simplicity, no extra dependency)
                 Text(
                     text = "\u23F0",
                     fontSize = 48.sp,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -83,7 +85,7 @@ fun SleepTimerOverlay(
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -92,7 +94,7 @@ fun SleepTimerOverlay(
                     text = stringResource(R.string.reader_sleep_timer_tap_to_dismiss),
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }

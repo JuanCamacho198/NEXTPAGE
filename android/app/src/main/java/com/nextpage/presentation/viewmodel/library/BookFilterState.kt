@@ -12,5 +12,5 @@ data class BookFilterState(
     val debouncedSearchQuery: String = "",
     val showSearch: Boolean = false,
     val showFilterSheet: Boolean = false,
-    val filterFormat: String = "all"
+    val filterFormat: String = "all",
 )

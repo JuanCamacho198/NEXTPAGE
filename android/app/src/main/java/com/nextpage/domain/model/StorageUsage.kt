@@ -10,7 +10,7 @@ package com.nextpage.domain.model
 data class BookStorageItem(
     val bookId: String,
     val title: String,
-    val sizeBytes: Long
+    val sizeBytes: Long,
 )
 
 /**
@@ -22,7 +22,7 @@ data class BookStorageItem(
 data class CacheUsage(
     val discoverCacheBytes: Long = 0L,
     val imageCacheBytes: Long = 0L,
-    val readerCacheBytes: Long = 0L
+    val readerCacheBytes: Long = 0L,
 ) {
     val totalBytes: Long get() = discoverCacheBytes + imageCacheBytes + readerCacheBytes
 }

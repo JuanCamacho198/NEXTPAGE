@@ -27,31 +27,34 @@ fun HighlightsListSection(
     onViewInBook: (Highlight) -> Unit,
     onAddHighlightTag: (Highlight) -> Unit,
     onDeleteHighlight: (Highlight) -> Unit,
-    onTagFilterChanged: (String?) -> Unit
+    onTagFilterChanged: (String?) -> Unit,
 ) {
-    val bookMap = remember(uiState.books) {
-        uiState.books.associate { it.id to it.title }
-    }
+    val bookMap =
+        remember(uiState.books) {
+            uiState.books.associate { it.id to it.title }
+        }
 
     if (uiState.filteredHighlights.isEmpty()) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp),
-            contentAlignment = Alignment.Center
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+            contentAlignment = Alignment.Center,
         ) {
             NextPageEmptyState(
                 icon = NextPageIcons.Quote,
                 title = stringResource(R.string.highlights_empty),
-                subtitle = stringResource(R.string.highlights_empty_subtitle)
+                subtitle = stringResource(R.string.highlights_empty_subtitle),
             )
         }
     } else {
         for (highlight in uiState.filteredHighlights) {
             NextPageHighlightCard(
-                content = stripSurroundingQuotes(
-                    highlight.textContent.replace("\\n", " ").replace("\n", " ")
-                ),
+                content =
+                    stripSurroundingQuotes(
+                        highlight.textContent.replace("\\n", " ").replace("\n", " "),
+                    ),
                 accentColor = parseHighlightListColor(highlight.color),
                 note = highlight.note,
                 tag = highlight.tag,
@@ -62,7 +65,7 @@ fun HighlightsListSection(
                 onViewInBook = { onViewInBook(highlight) },
                 onAddTag = { onAddHighlightTag(highlight) },
                 onDelete = { onDeleteHighlight(highlight) },
-                onTagClick = { tag -> onTagFilterChanged(tag) }
+                onTagClick = { tag -> onTagFilterChanged(tag) },
             )
             Spacer(modifier = Modifier.height(12.dp))
         }
@@ -71,13 +74,9 @@ fun HighlightsListSection(
 }
 
 @Composable
-private fun parseHighlightListColor(hex: String): Color {
-    return resolveHighlightColorHex(hex) ?: MaterialTheme.colorScheme.primary
-}
+private fun parseHighlightListColor(hex: String): Color = resolveHighlightColorHex(hex) ?: MaterialTheme.colorScheme.primary
 
-internal fun stripSurroundingQuotes(text: String): String {
-    return text.removeSurrounding("\"").removeSurrounding("'")
-}
+internal fun stripSurroundingQuotes(text: String): String = text.removeSurrounding("\"").removeSurrounding("'")
 
 internal fun resolveHighlightColorHex(hex: String): Color? {
     val s = hex.trim().removePrefix("#")

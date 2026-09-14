@@ -11,5 +11,5 @@ data class DictionaryWordEntity(
     val word: String,
     val addedAtEpochMillis: Long,
     @ColumnInfo(name = "definition")
-    val definition: String? = null
+    val definition: String? = null,
 )

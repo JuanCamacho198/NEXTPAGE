@@ -59,17 +59,27 @@ fun NavGraphBuilder.discoverGraph(
             },
             onNavigateToLegalPolicy = {
                 navController.navigate(NextPageDestination.SettingsLegal.route)
-            }
+            },
         )
     }
 
     composable(
         route = NextPageDestination.DiscoverSection.route,
-        arguments = listOf(
-            navArgument("sectionTitle") { type = NavType.StringType; defaultValue = "" },
-            navArgument("sort") { type = NavType.StringType; defaultValue = "" },
-            navArgument("sourceId") { type = NavType.StringType; defaultValue = "" },
-        ),
+        arguments =
+            listOf(
+                navArgument("sectionTitle") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
+                navArgument("sort") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
+                navArgument("sourceId") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
+            ),
         enterTransition = { fadeIn() },
         exitTransition = { fadeOut() },
         popEnterTransition = { fadeIn() },
@@ -81,19 +91,21 @@ fun NavGraphBuilder.discoverGraph(
         val sortRaw = args?.getString("sort").orEmpty()
         val sort = CatalogFeaturedSort.entries.firstOrNull { it.name == sortRaw }
 
-        val sectionViewModel: DiscoverSectionViewModel = viewModel(
-            factory = DiscoverSectionViewModelFactory(
-                catalogProvider = catalogProvider,
-                sectionTitle = sectionTitle,
-                sort = sort,
-                sourceId = sourceId,
-                downloadAndImportBookUseCase = downloadAndImportBookUseCase
+        val sectionViewModel: DiscoverSectionViewModel =
+            viewModel(
+                factory =
+                    DiscoverSectionViewModelFactory(
+                        catalogProvider = catalogProvider,
+                        sectionTitle = sectionTitle,
+                        sort = sort,
+                        sourceId = sourceId,
+                        downloadAndImportBookUseCase = downloadAndImportBookUseCase,
+                    ),
             )
-        )
         DiscoverSectionScreen(
             contentPadding = contentPadding,
             viewModel = sectionViewModel,
-            onBack = { navController.popBackStack() }
+            onBack = { navController.popBackStack() },
         )
     }
 }
@@ -107,11 +119,11 @@ fun NavGraphBuilder.discoverGraph(
 internal fun discoverSectionRoute(
     sectionTitle: String,
     sort: CatalogFeaturedSort?,
-    sourceId: String?
-): String = "discover/section" +
-    "?sectionTitle=${encodeQueryValue(sectionTitle)}" +
-    "&sort=${encodeQueryValue(sort?.name.orEmpty())}" +
-    "&sourceId=${encodeQueryValue(sourceId.orEmpty())}"
+    sourceId: String?,
+): String =
+    "discover/section" +
+        "?sectionTitle=${encodeQueryValue(sectionTitle)}" +
+        "&sort=${encodeQueryValue(sort?.name.orEmpty())}" +
+        "&sourceId=${encodeQueryValue(sourceId.orEmpty())}"
 
-internal fun encodeQueryValue(value: String): String =
-    URLEncoder.encode(value, Charsets.UTF_8.name()).replace("+", "%20")
+internal fun encodeQueryValue(value: String): String = URLEncoder.encode(value, Charsets.UTF_8.name()).replace("+", "%20")

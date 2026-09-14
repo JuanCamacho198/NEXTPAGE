@@ -6,6 +6,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
@@ -14,21 +18,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import com.nextpage.R
 import com.nextpage.presentation.screen.ReadiumPdfReaderContent
 import com.nextpage.presentation.screen.ReadiumReaderContent
 import com.nextpage.presentation.screen.readium.buildNavigatorConfig
-import com.nextpage.ui.components.molecules.SelectionOverlay
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 import com.nextpage.presentation.viewmodel.reader.AnnotationUiState
 import com.nextpage.presentation.viewmodel.reader.SessionUiState
 import com.nextpage.presentation.viewmodel.reader.SettingsUiState
+import com.nextpage.ui.components.molecules.SelectionOverlay
 import kotlinx.coroutines.flow.MutableSharedFlow
-
 
 @Composable
 fun ReaderScreenContentHost(
@@ -41,7 +40,7 @@ fun ReaderScreenContentHost(
     inspectHighlightsHtmlTrigger: MutableSharedFlow<Unit>,
     logWebViewTreeTrigger: MutableSharedFlow<Unit>,
     onRetry: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val currentOnShowChrome by rememberUpdatedState(onShowChrome)
 
@@ -78,7 +77,7 @@ fun ReaderScreenContentHost(
             onDismissTagInput = selectionCallbacks.onDismissTag,
             onDefinitionTextChanged = selectionCallbacks.onDefinitionTextChanged,
             onSaveDefinition = selectionCallbacks.onSaveDefinition,
-            onDismissDefinitionInput = selectionCallbacks.onDismissDefinition
+            onDismissDefinitionInput = selectionCallbacks.onDismissDefinition,
         )
     }
 
@@ -97,7 +96,7 @@ fun ReaderScreenContentHost(
                     readerSettings = settingsUiState.readerSettings,
                     viewModel = viewModel,
                     onShowChrome = { currentOnShowChrome() },
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
                 )
                 SharedSelectionOverlay()
             }
@@ -114,7 +113,7 @@ fun ReaderScreenContentHost(
                     inspectHighlightsHtmlTrigger = inspectHighlightsHtmlTrigger,
                     logWebViewTreeTrigger = logWebViewTreeTrigger,
                     onShowChrome = { currentOnShowChrome() },
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
                 )
                 SharedSelectionOverlay()
             }
@@ -123,7 +122,7 @@ fun ReaderScreenContentHost(
             ErrorContent(
                 error = error ?: stringResource(R.string.error_unknown),
                 onRetry = onRetry,
-                modifier = modifier
+                modifier = modifier,
             )
         }
     }
@@ -132,12 +131,12 @@ fun ReaderScreenContentHost(
 @Composable
 private fun LoadingContent(
     loadTimeMs: Long?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         CircularProgressIndicator(color = Color(0xFFADC6FF))
         if (loadTimeMs != null) {
@@ -145,7 +144,7 @@ private fun LoadingContent(
             Text(
                 text = stringResource(R.string.reader_loaded_in, loadTimeMs),
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF718096)
+                color = Color(0xFF718096),
             )
         }
     }
@@ -155,17 +154,17 @@ private fun LoadingContent(
 private fun ErrorContent(
     error: String,
     onRetry: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
             text = error,
             style = MaterialTheme.typography.bodyLarge,
-            color = Color(0xFFEF4444)
+            color = Color(0xFFEF4444),
         )
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = onRetry) {

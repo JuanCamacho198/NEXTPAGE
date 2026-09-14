@@ -27,7 +27,7 @@ import kotlin.math.roundToInt
 @Composable
 internal fun ReadingProgressSection(
     progress: ReadingProgress?,
-    book: Book
+    book: Book,
 ) {
     val percentage = progress?.percentage ?: book.progressPercentage
 
@@ -35,36 +35,37 @@ internal fun ReadingProgressSection(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(NextPageDimens.cardCornerRadius),
         color = MaterialTheme.colorScheme.surfaceVariant,
-        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = stringResource(R.string.book_detail_progress_label),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
                 )
                 Text(
                     text = stringResource(R.string.format_percent, percentage.toInt()),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
 
             LinearProgressIndicator(
                 progress = { (percentage / 100f).coerceIn(0f, 1f) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(9999.dp)),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(9999.dp)),
                 color = MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.outline,
             )
@@ -73,28 +74,30 @@ internal fun ReadingProgressSection(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     book.chapterCount?.let { chapters ->
                         Text(
-                            text = stringResource(
-                                R.string.book_detail_chapter_x_of_y,
-                                estimatedChapter(percentage, chapters),
-                                chapters
-                            ),
+                            text =
+                                stringResource(
+                                    R.string.book_detail_chapter_x_of_y,
+                                    estimatedChapter(percentage, chapters),
+                                    chapters,
+                                ),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     book.totalPages?.let { total ->
                         Text(
-                            text = stringResource(
-                                R.string.book_detail_pages_of,
-                                estimatedCurrentPage(progress, total),
-                                total
-                            ),
+                            text =
+                                stringResource(
+                                    R.string.book_detail_pages_of,
+                                    estimatedCurrentPage(progress, total),
+                                    total,
+                                ),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -104,11 +107,16 @@ internal fun ReadingProgressSection(
 }
 
 /** Estimated current chapter from progress %, clamped to the chapter count. */
-private fun estimatedChapter(percentage: Float, chapterCount: Int): Int =
-    (percentage / 100f * chapterCount).roundToInt().coerceIn(1, chapterCount)
+private fun estimatedChapter(
+    percentage: Float,
+    chapterCount: Int,
+): Int = (percentage / 100f * chapterCount).roundToInt().coerceIn(1, chapterCount)
 
 /** Real current page when the reader reports one; else estimated from progress %. */
-private fun estimatedCurrentPage(progress: ReadingProgress?, totalPages: Int): Int {
+private fun estimatedCurrentPage(
+    progress: ReadingProgress?,
+    totalPages: Int,
+): Int {
     progress?.currentPage?.takeIf { it > 0 }?.let { return it }
     val percentage = progress?.percentage ?: 0f
     return (percentage / 100f * totalPages).roundToInt().coerceIn(0, totalPages)

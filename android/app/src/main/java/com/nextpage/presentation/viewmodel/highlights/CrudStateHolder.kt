@@ -6,15 +6,13 @@ import com.nextpage.presentation.UiEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class CrudStateHolder(
     private val readerRepository: ReaderRepository,
     private val scope: CoroutineScope,
-    private val uiEvent: MutableSharedFlow<UiEvent>
+    private val uiEvent: MutableSharedFlow<UiEvent>,
 ) {
     val highlightToEdit = MutableStateFlow<Highlight?>(null)
     val highlightToDelete = MutableStateFlow<Highlight?>(null)
@@ -35,10 +33,11 @@ class CrudStateHolder(
 
     fun onSaveHighlightNote(text: String) {
         val highlight = highlightToEdit.value ?: return
-        val updated = highlight.copy(
-            note = text.ifBlank { null },
-            updatedAtEpochMillis = System.currentTimeMillis()
-        )
+        val updated =
+            highlight.copy(
+                note = text.ifBlank { null },
+                updatedAtEpochMillis = System.currentTimeMillis(),
+            )
         scope.launch { readerRepository.upsertHighlight(updated) }
         highlightToEdit.update { null }
         editNoteText.update { "" }
@@ -54,10 +53,11 @@ class CrudStateHolder(
 
     fun confirmDeleteHighlight() {
         val highlight = highlightToDelete.value ?: return
-        val updated = highlight.copy(
-            deletedAtEpochMillis = System.currentTimeMillis(),
-            updatedAtEpochMillis = System.currentTimeMillis()
-        )
+        val updated =
+            highlight.copy(
+                deletedAtEpochMillis = System.currentTimeMillis(),
+                updatedAtEpochMillis = System.currentTimeMillis(),
+            )
         scope.launch {
             readerRepository.upsertHighlight(updated)
             uiEvent.emit(UiEvent.ShowSnackbar("Highlight deleted"))
@@ -79,10 +79,11 @@ class CrudStateHolder(
 
     fun onConfirmColorChange(newColor: String) {
         val highlight = highlightToChangeColor.value ?: return
-        val updated = highlight.copy(
-            color = newColor,
-            updatedAtEpochMillis = System.currentTimeMillis()
-        )
+        val updated =
+            highlight.copy(
+                color = newColor,
+                updatedAtEpochMillis = System.currentTimeMillis(),
+            )
         scope.launch {
             readerRepository.upsertHighlight(updated)
             uiEvent.emit(UiEvent.ShowSnackbar("Color changed"))
@@ -106,10 +107,11 @@ class CrudStateHolder(
 
     fun onSaveHighlightTag(tag: String) {
         val highlight = highlightToEditTag.value ?: return
-        val updated = highlight.copy(
-            tag = tag.ifBlank { null },
-            updatedAtEpochMillis = System.currentTimeMillis()
-        )
+        val updated =
+            highlight.copy(
+                tag = tag.ifBlank { null },
+                updatedAtEpochMillis = System.currentTimeMillis(),
+            )
         scope.launch {
             readerRepository.upsertHighlight(updated)
             uiEvent.emit(UiEvent.ShowSnackbar("Tag saved"))

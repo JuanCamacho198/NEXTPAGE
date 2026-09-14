@@ -1,55 +1,60 @@
 package com.nextpage.data.epub
 
-import java.io.ByteArrayInputStream
-import java.io.InputStream
-import javax.xml.XMLConstants
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 import org.w3c.dom.Node
+import java.io.ByteArrayInputStream
+import java.io.InputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
+import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
 
 class ZipEpubParserService : EpubParserService {
-    override suspend fun extractMetadata(inputStream: InputStream): Result<EpubMetadata> = runCatching {
-        val zipBytes = inputStream.use { it.readBytes() }
-        val rootFilePath = readRootFilePath(zipBytes)
-            ?: throw IllegalArgumentException("Invalid EPUB: missing rootfile in container.xml")
+    override suspend fun extractMetadata(inputStream: InputStream): Result<EpubMetadata> =
+        runCatching {
+            val zipBytes = inputStream.use { it.readBytes() }
+            val rootFilePath =
+                readRootFilePath(zipBytes)
+                    ?: throw IllegalArgumentException("Invalid EPUB: missing rootfile in container.xml")
 
-        val packageDocument = readZipEntryBytes(zipBytes, rootFilePath)
-            ?: throw IllegalArgumentException("Invalid EPUB: missing OPF package document")
+            val packageDocument =
+                readZipEntryBytes(zipBytes, rootFilePath)
+                    ?: throw IllegalArgumentException("Invalid EPUB: missing OPF package document")
 
-        val parsed = parsePackageDocument(packageDocument)
-        val title = parsed.title?.takeIf { it.isNotBlank() }
-            ?: throw IllegalArgumentException("Invalid EPUB: metadata title missing")
+            val parsed = parsePackageDocument(packageDocument)
+            val title =
+                parsed.title?.takeIf { it.isNotBlank() }
+                    ?: throw IllegalArgumentException("Invalid EPUB: metadata title missing")
 
-        val coverBytes = parsed.coverHref
-            ?.let { href ->
-                resolvePath(rootFilePath, href)
-            }
-            ?.let { coverPath -> readZipEntryBytes(zipBytes, coverPath) }
+            val coverBytes =
+                parsed.coverHref
+                    ?.let { href ->
+                        resolvePath(rootFilePath, href)
+                    }?.let { coverPath -> readZipEntryBytes(zipBytes, coverPath) }
 
-        // ── Page estimation ──────────────────────────────────────
-        val estimatedPageCount = estimatePages(
-            zipBytes = zipBytes,
-            rootFilePath = rootFilePath,
-            spineItemRefs = parsed.spineItemRefs,
-            manifestById = parsed.manifestById
-        )
+            // ── Page estimation ──────────────────────────────────────
+            val estimatedPageCount =
+                estimatePages(
+                    zipBytes = zipBytes,
+                    rootFilePath = rootFilePath,
+                    spineItemRefs = parsed.spineItemRefs,
+                    manifestById = parsed.manifestById,
+                )
 
-        EpubMetadata(
-            title = title,
-            author = parsed.author?.takeIf { it.isNotBlank() },
-            description = parsed.description?.takeIf { it.isNotBlank() },
-            chapterCount = parsed.spineItemCount,
-            estimatedPageCount = estimatedPageCount,
-            coverImageBytes = coverBytes,
-            language = parsed.language?.takeIf { it.isNotBlank() },
-            publisher = parsed.publisher?.takeIf { it.isNotBlank() },
-            tags = parsed.subjects,
-            publishedDate = parsed.publishedDate?.takeIf { it.isNotBlank() }
-        )
-    }
+            EpubMetadata(
+                title = title,
+                author = parsed.author?.takeIf { it.isNotBlank() },
+                description = parsed.description?.takeIf { it.isNotBlank() },
+                chapterCount = parsed.spineItemCount,
+                estimatedPageCount = estimatedPageCount,
+                coverImageBytes = coverBytes,
+                language = parsed.language?.takeIf { it.isNotBlank() },
+                publisher = parsed.publisher?.takeIf { it.isNotBlank() },
+                tags = parsed.subjects,
+                publishedDate = parsed.publishedDate?.takeIf { it.isNotBlank() },
+            )
+        }
 
     private fun readRootFilePath(zipBytes: ByteArray): String? {
         val containerXml = readZipEntryBytes(zipBytes, CONTAINER_XML_PATH) ?: return null
@@ -74,10 +79,11 @@ class ZipEpubParserService : EpubParserService {
         val publishedDate = firstElementTextByLocalName(document, "date")
         // All dc:subject matches become tags; commas inside a subject are
         // stripped so the comma-separated encoding cannot be corrupted.
-        val subjects = allElementsTextByLocalName(document, "subject")
-            .map { it.replace(",", "").trim() }
-            .filter { it.isNotEmpty() }
-            .distinct()
+        val subjects =
+            allElementsTextByLocalName(document, "subject")
+                .map { it.replace(",", "").trim() }
+                .filter { it.isNotEmpty() }
+                .distinct()
         val manifestById = mutableMapOf<String, String>()
         val allElements = document.getElementsByTagName("*")
         var coverItemId: String? = null
@@ -118,11 +124,14 @@ class ZipEpubParserService : EpubParserService {
             coverHref = coverItemId?.let(manifestById::get),
             spineItemCount = spineItemRefs.size,
             spineItemRefs = spineItemRefs,
-            manifestById = manifestById
+            manifestById = manifestById,
         )
     }
 
-    private fun readZipEntryBytes(zipBytes: ByteArray, entryPath: String): ByteArray? {
+    private fun readZipEntryBytes(
+        zipBytes: ByteArray,
+        entryPath: String,
+    ): ByteArray? {
         ZipInputStream(ByteArrayInputStream(zipBytes)).use { zis ->
             var entry: ZipEntry? = zis.nextEntry
             while (entry != null) {
@@ -136,16 +145,21 @@ class ZipEpubParserService : EpubParserService {
         return null
     }
 
-    private fun resolvePath(basePath: String, relativePath: String): String {
+    private fun resolvePath(
+        basePath: String,
+        relativePath: String,
+    ): String {
         if (!relativePath.contains("../")) {
             val baseDir = basePath.substringBeforeLast('/', "")
             return if (baseDir.isBlank()) relativePath else "$baseDir/$relativePath"
         }
 
-        val baseParts = basePath.substringBeforeLast('/', "")
-            .split('/')
-            .filter { it.isNotBlank() }
-            .toMutableList()
+        val baseParts =
+            basePath
+                .substringBeforeLast('/', "")
+                .split('/')
+                .filter { it.isNotBlank() }
+                .toMutableList()
         val relativeParts = relativePath.split('/').filter { it.isNotBlank() }
 
         relativeParts.forEach { part ->
@@ -160,17 +174,21 @@ class ZipEpubParserService : EpubParserService {
     }
 
     private fun parseXml(bytes: ByteArray): Document {
-        val factory = DocumentBuilderFactory.newInstance().apply {
-            isNamespaceAware = true
-            // setFeature may throw on Android depending on the XML parser implementation
-            runCatching { setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true) }
-            runCatching { setFeature("http://xml.org/sax/features/external-general-entities", false) }
-            runCatching { setFeature("http://xml.org/sax/features/external-parameter-entities", false) }
-        }
+        val factory =
+            DocumentBuilderFactory.newInstance().apply {
+                isNamespaceAware = true
+                // setFeature may throw on Android depending on the XML parser implementation
+                runCatching { setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true) }
+                runCatching { setFeature("http://xml.org/sax/features/external-general-entities", false) }
+                runCatching { setFeature("http://xml.org/sax/features/external-parameter-entities", false) }
+            }
         return factory.newDocumentBuilder().parse(ByteArrayInputStream(bytes))
     }
 
-    private fun firstElementTextByLocalName(document: Document, localName: String): String? {
+    private fun firstElementTextByLocalName(
+        document: Document,
+        localName: String,
+    ): String? {
         val allElements = document.getElementsByTagName("*")
         for (index in 0 until allElements.length) {
             val node = allElements.item(index)
@@ -184,7 +202,10 @@ class ZipEpubParserService : EpubParserService {
         return null
     }
 
-    private fun allElementsTextByLocalName(document: Document, localName: String): List<String> {
+    private fun allElementsTextByLocalName(
+        document: Document,
+        localName: String,
+    ): List<String> {
         val allElements = document.getElementsByTagName("*")
         val values = mutableListOf<String>()
         for (index in 0 until allElements.length) {
@@ -212,7 +233,7 @@ class ZipEpubParserService : EpubParserService {
         val coverHref: String?,
         val spineItemCount: Int = 0,
         val spineItemRefs: List<String> = emptyList(),
-        val manifestById: Map<String, String> = emptyMap()
+        val manifestById: Map<String, String> = emptyMap(),
     )
 
     /**
@@ -224,7 +245,7 @@ class ZipEpubParserService : EpubParserService {
         zipBytes: ByteArray,
         rootFilePath: String,
         spineItemRefs: List<String>,
-        manifestById: Map<String, String>
+        manifestById: Map<String, String>,
     ): Int? {
         if (spineItemRefs.isEmpty()) return null
         var totalChars = 0

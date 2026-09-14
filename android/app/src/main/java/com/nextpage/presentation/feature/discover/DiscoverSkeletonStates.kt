@@ -39,29 +39,30 @@ fun DiscoverSkeletonState(modifier: Modifier = Modifier) {
         columns = GridCells.Fixed(2),
         modifier = modifier.fillMaxSize(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         items(SKELETON_CARD_COUNT) {
             DiscoverSkeletonCard()
         }
         item(span = { GridItemSpan(maxLineSpan) }) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 16.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
                 horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(18.dp),
                     strokeWidth = 2.dp,
-                    color = NextPageColors.primary
+                    color = NextPageColors.primary,
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = stringResource(R.string.discover_searching),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = NextPageColors.textSecondary
+                    color = NextPageColors.textSecondary,
                 )
             }
         }
@@ -72,22 +73,25 @@ fun DiscoverSkeletonState(modifier: Modifier = Modifier) {
 private fun DiscoverSkeletonCard() {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         NextPageSkeletonBox(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(109f / 168f),
-            radius = 8.dp
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(109f / 168f),
+            radius = 8.dp,
         )
         NextPageSkeletonBox(
-            modifier = Modifier
-                .fillMaxWidth(fraction = 0.9f)
-                .height(10.dp),
-            radius = 4.dp
+            modifier =
+                Modifier
+                    .fillMaxWidth(fraction = 0.9f)
+                    .height(10.dp),
+            radius = 4.dp,
         )
         NextPageSkeletonBox(
-            modifier = Modifier
-                .width(64.dp)
-                .height(8.dp),
-            radius = 4.dp
+            modifier =
+                Modifier
+                    .width(64.dp)
+                    .height(8.dp),
+            radius = 4.dp,
         )
     }
 }
@@ -100,19 +104,21 @@ private fun DiscoverSkeletonCard() {
 fun DiscoverLoadingMoreFooter(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         NextPageSkeletonBox(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(28.dp),
-            radius = 8.dp
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(28.dp),
+            radius = 8.dp,
         )
         NextPageSkeletonBox(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(28.dp),
-            radius = 8.dp
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(28.dp),
+            radius = 8.dp,
         )
     }
 }

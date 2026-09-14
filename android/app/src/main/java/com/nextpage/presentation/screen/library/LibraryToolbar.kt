@@ -28,7 +28,7 @@ fun LibraryToolbar(
     avatarImageUrl: String? = null,
     avatarInitials: String = "NP",
     onAvatarClick: (() -> Unit)? = null,
-    avatarContentDescription: String? = null
+    avatarContentDescription: String? = null,
 ) {
     Column {
         LibraryHeader(
@@ -40,12 +40,12 @@ fun LibraryToolbar(
             avatarImageUrl = avatarImageUrl,
             avatarInitials = avatarInitials,
             onAvatarClick = onAvatarClick,
-            avatarContentDescription = avatarContentDescription
+            avatarContentDescription = avatarContentDescription,
         )
 
         StatusChipRow(
             selectedTab = statusFilter,
-            onTabSelected = onStatusFilterChanged
+            onTabSelected = onStatusFilterChanged,
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -54,7 +54,7 @@ fun LibraryToolbar(
             sortBy = sortBy,
             onSortByChanged = onSortByChanged,
             isGridView = isGridView,
-            onViewToggle = onViewToggle
+            onViewToggle = onViewToggle,
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -78,7 +78,7 @@ private fun LibraryToolbarDarkPreview() {
             sortBy = "recent",
             onSortByChanged = {},
             isGridView = true,
-            onViewToggle = {}
+            onViewToggle = {},
         )
     }
 }
@@ -98,7 +98,7 @@ private fun LibraryToolbarLightPreview() {
             sortBy = "recent",
             onSortByChanged = {},
             isGridView = true,
-            onViewToggle = {}
+            onViewToggle = {},
         )
     }
 }

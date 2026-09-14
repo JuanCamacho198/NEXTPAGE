@@ -11,15 +11,15 @@ import com.nextpage.ui.components.molecules.NextPageSettingsSubPage
 @Composable
 fun SettingsStatisticsScreen(
     viewModel: StatisticsViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     NextPageSettingsSubPage(
         title = stringResource(R.string.statistics_title),
-        onBack = onBack
+        onBack = onBack,
     ) {
         StatisticsScreen(
             contentPadding = PaddingValues(),
-            viewModel = viewModel
+            viewModel = viewModel,
         )
     }
 }

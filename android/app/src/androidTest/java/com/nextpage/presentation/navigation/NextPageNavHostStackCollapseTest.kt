@@ -26,24 +26,24 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class NextPageNavHostStackCollapseTest {
-
     @get:Rule
     val composeRule = createComposeRule()
 
     private lateinit var navController: TestNavHostController
 
-    private val otherTabs = listOf(
-        NextPageDestination.Library.route,
-        NextPageDestination.Highlights.route,
-        NextPageDestination.Settings.route
-    )
+    private val otherTabs =
+        listOf(
+            NextPageDestination.Library.route,
+            NextPageDestination.Highlights.route,
+            NextPageDestination.Settings.route,
+        )
 
     private fun launchMiniGraph() {
         composeRule.setContent {
             navController = TestNavHostController(LocalContext.current)
             NavHost(
                 navController = navController,
-                startDestination = NextPageDestination.Home.route
+                startDestination = NextPageDestination.Home.route,
             ) {
                 composable(NextPageDestination.Home.route) { Text("Home") }
                 composable(NextPageDestination.Library.route) { Text("Library") }
@@ -59,7 +59,7 @@ class NextPageNavHostStackCollapseTest {
         composeRule.runOnUiThread {
             navController.navigateToBottomTab(
                 route = route,
-                homeRoute = NextPageDestination.Home.route
+                homeRoute = NextPageDestination.Home.route,
             )
         }
         composeRule.waitForIdle()
@@ -83,7 +83,7 @@ class NextPageNavHostStackCollapseTest {
             assertEquals(
                 "expected [home, $tab] before tapping Inicio",
                 listOf(NextPageDestination.Home.route, tab),
-                currentStack()
+                currentStack(),
             )
 
             // The fix: Inicio tap must collapse the stack to [home].
@@ -91,7 +91,7 @@ class NextPageNavHostStackCollapseTest {
             assertEquals(
                 "Inicio tap from $tab must collapse the stack to [home]",
                 listOf(NextPageDestination.Home.route),
-                currentStack()
+                currentStack(),
             )
         }
     }

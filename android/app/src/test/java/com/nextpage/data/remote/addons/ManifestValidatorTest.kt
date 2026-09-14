@@ -1,9 +1,9 @@
 package com.nextpage.data.remote.addons
 
+import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.json.JSONObject
 import java.nio.charset.StandardCharsets
 
 /**
@@ -13,8 +13,8 @@ import java.nio.charset.StandardCharsets
  * desktop/test fixtures).
  */
 class ManifestValidatorTest {
-
-    private val validManifest = """
+    private val validManifest =
+        """
         {
           "id": "example-books",
           "name": "Example Books",
@@ -22,11 +22,14 @@ class ManifestValidatorTest {
           "catalogs": [{ "type": "book-catalog", "id": "main", "name": "Example Catalog" }],
           "resources": ["search", "book-details"]
         }
-    """.trimIndent()
+        """.trimIndent()
 
     private fun bytes(json: String) = json.toByteArray(StandardCharsets.UTF_8)
 
-    private fun assertCode(code: AddonFetchErrorCode, block: () -> Unit) {
+    private fun assertCode(
+        code: AddonFetchErrorCode,
+        block: () -> Unit,
+    ) {
         try {
             block()
             throw AssertionError("expected AddonFetchException with code $code")
@@ -143,14 +146,15 @@ class ManifestValidatorTest {
 
     @Test
     fun `rejects wrong-typed fields`() {
-        val cases = listOf(
-            """{"id":42,"name":"n","version":"1","catalogs":[{"type":"t","id":"i","name":"n"}],"resources":["r"]}""",
-            """{"id":"i","name":"","version":"1","catalogs":[{"type":"t","id":"i","name":"n"}],"resources":["r"]}""",
-            """{"id":"i","name":"n","version":null,"catalogs":[{"type":"t","id":"i","name":"n"}],"resources":["r"]}""",
-            """{"id":"i","name":"n","version":"1","catalogs":"main","resources":["r"]}""",
-            """{"id":"i","name":"n","version":"1","catalogs":[],"resources":["r"]}""",
-            """{"id":"i","name":"n","version":"1","catalogs":[{"type":"t","id":"i","name":"n"}],"resources":"search"}"""
-        )
+        val cases =
+            listOf(
+                """{"id":42,"name":"n","version":"1","catalogs":[{"type":"t","id":"i","name":"n"}],"resources":["r"]}""",
+                """{"id":"i","name":"","version":"1","catalogs":[{"type":"t","id":"i","name":"n"}],"resources":["r"]}""",
+                """{"id":"i","name":"n","version":null,"catalogs":[{"type":"t","id":"i","name":"n"}],"resources":["r"]}""",
+                """{"id":"i","name":"n","version":"1","catalogs":"main","resources":["r"]}""",
+                """{"id":"i","name":"n","version":"1","catalogs":[],"resources":["r"]}""",
+                """{"id":"i","name":"n","version":"1","catalogs":[{"type":"t","id":"i","name":"n"}],"resources":"search"}""",
+            )
         for (json in cases) {
             assertCode(AddonFetchErrorCode.INVALID_MANIFEST) {
                 ManifestValidator.validate(bytes(json), "application/json")
@@ -160,12 +164,13 @@ class ManifestValidatorTest {
 
     @Test
     fun `rejects catalog entries missing type id name`() {
-        val cases = listOf(
-            """[{"type":"t","id":"i"}]""",
-            """[{"type":"t","name":"n"}]""",
-            """[{"id":"i","name":"n"}]""",
-            """[{"type":1,"id":"i","name":"n"}]"""
-        )
+        val cases =
+            listOf(
+                """[{"type":"t","id":"i"}]""",
+                """[{"type":"t","name":"n"}]""",
+                """[{"id":"i","name":"n"}]""",
+                """[{"type":1,"id":"i","name":"n"}]""",
+            )
         for (catalogs in cases) {
             val json = """{"id":"i","name":"n","version":"1","catalogs":$catalogs,"resources":["r"]}"""
             assertCode(AddonFetchErrorCode.INVALID_MANIFEST) {
@@ -176,7 +181,8 @@ class ManifestValidatorTest {
 
     @Test
     fun `ignores unknown fields`() {
-        val json = """
+        val json =
+            """
             {
               "id": "example-books",
               "name": "Example Books",
@@ -186,34 +192,45 @@ class ManifestValidatorTest {
               "futureTopLevelField": { "nested": true },
               "another": 7
             }
-        """.trimIndent()
+            """.trimIndent()
         val manifest = ManifestValidator.validate(bytes(json), "application/json")
         assertEquals("example-books", manifest.id)
     }
 
     @Test
     fun `shared fixtures produce the shared outcome`() {
-        val names = listOf(
-            "valid", "unknown-fields", "http-url", "oversize",
-            "html-content-type", "missing-fields", "catalog-entry-missing-name"
-        )
+        val names =
+            listOf(
+                "valid",
+                "unknown-fields",
+                "http-url",
+                "oversize",
+                "html-content-type",
+                "missing-fields",
+                "catalog-entry-missing-name",
+            )
         for (name in names) {
-            val fixtureJson = javaClass.getResourceAsStream("/addons/fixtures/$name.json")
-                ?.bufferedReader(Charsets.UTF_8)?.readText()
-                ?: throw AssertionError("missing fixture $name")
+            val fixtureJson =
+                javaClass
+                    .getResourceAsStream("/addons/fixtures/$name.json")
+                    ?.bufferedReader(Charsets.UTF_8)
+                    ?.readText()
+                    ?: throw AssertionError("missing fixture $name")
             val fixture = JSONObject(fixtureJson)
             val expect = fixture.getString("expect")
             try {
                 when {
                     fixture.has("url") -> ManifestValidator.assertHttpsInstallUrl(fixture.getString("url"))
-                    fixture.has("rawBytesLength") -> ManifestValidator.validate(
-                        ByteArray(fixture.getInt("rawBytesLength")),
-                        fixture.optString("contentType", "application/json")
-                    )
-                    else -> ManifestValidator.validate(
-                        fixture.getJSONObject("manifest").toString().toByteArray(StandardCharsets.UTF_8),
-                        fixture.optString("contentType", "application/json")
-                    )
+                    fixture.has("rawBytesLength") ->
+                        ManifestValidator.validate(
+                            ByteArray(fixture.getInt("rawBytesLength")),
+                            fixture.optString("contentType", "application/json"),
+                        )
+                    else ->
+                        ManifestValidator.validate(
+                            fixture.getJSONObject("manifest").toString().toByteArray(StandardCharsets.UTF_8),
+                            fixture.optString("contentType", "application/json"),
+                        )
                 }
                 assertEquals("fixture $name should pass", "pass", expect)
             } catch (err: AddonFetchException) {

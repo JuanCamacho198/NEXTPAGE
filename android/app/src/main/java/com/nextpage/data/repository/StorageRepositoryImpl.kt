@@ -23,50 +23,55 @@ class StorageRepositoryImpl(
     private val appContext: Context,
     private val bookDao: BookDao,
     private val settleGate: SyncSettleGate,
-    private val nowMillis: () -> Long = System::currentTimeMillis
+    private val nowMillis: () -> Long = System::currentTimeMillis,
 ) : StorageRepository {
-
-    override suspend fun bookStorageUsage(): List<BookStorageItem> = withContext(Dispatchers.IO) {
-        // Dedupe by absolute path: a cover that equals the backing file, or a
-        // file shared by two rows, must not be counted twice. The first book
-        // that references a path owns its bytes; later references count 0.
-        val seenPaths = mutableSetOf<String>()
-        bookDao.observeAllBooks().first().map { entity ->
-            var sizeBytes = 0L
-            for (path in listOfNotNull(entity.filePath, entity.coverPath)) {
-                if (path.isBlank()) continue
-                if (!seenPaths.add(path)) continue
-                sizeBytes += File(path).length()
-            }
-            BookStorageItem(bookId = entity.id, title = entity.title, sizeBytes = sizeBytes)
-        }
-    }
-
-    override suspend fun sweepOrphanBookFiles(): Int = withContext(Dispatchers.IO) {
-        // Never sweep mid-sync: a download may be renaming into place.
-        if (!settleGate.awaitSettled()) return@withContext 0
-
-        val referenced = bookDao.observeAllBooks().first()
-            .mapNotNull { it.filePath }
-            .toSet()
-        val cutoff = nowMillis() - IN_FLIGHT_GRACE_MS
-
-        var deleted = 0
-        for (dir in managedBookDirs()) {
-            if (!dir.isDirectory) continue
-            for (candidate in dir.listFiles().orEmpty()) {
-                if (!candidate.isFile) continue
-                if (candidate.name.endsWith(PART_SUFFIX)) continue
-                if (candidate.absolutePath in referenced) continue
-                if (candidate.lastModified() > cutoff) continue
-                if (candidate.delete()) deleted++
+    override suspend fun bookStorageUsage(): List<BookStorageItem> =
+        withContext(Dispatchers.IO) {
+            // Dedupe by absolute path: a cover that equals the backing file, or a
+            // file shared by two rows, must not be counted twice. The first book
+            // that references a path owns its bytes; later references count 0.
+            val seenPaths = mutableSetOf<String>()
+            bookDao.observeAllBooks().first().map { entity ->
+                var sizeBytes = 0L
+                for (path in listOfNotNull(entity.filePath, entity.coverPath)) {
+                    if (path.isBlank()) continue
+                    if (!seenPaths.add(path)) continue
+                    sizeBytes += File(path).length()
+                }
+                BookStorageItem(bookId = entity.id, title = entity.title, sizeBytes = sizeBytes)
             }
         }
-        deleted
-    }
 
-    private fun managedBookDirs(): List<File> = listOf(CATALOG_DIR, PDFS_DIR, EPUBS_DIR)
-        .map { File(appContext.filesDir, it) }
+    override suspend fun sweepOrphanBookFiles(): Int =
+        withContext(Dispatchers.IO) {
+            // Never sweep mid-sync: a download may be renaming into place.
+            if (!settleGate.awaitSettled()) return@withContext 0
+
+            val referenced =
+                bookDao
+                    .observeAllBooks()
+                    .first()
+                    .mapNotNull { it.filePath }
+                    .toSet()
+            val cutoff = nowMillis() - IN_FLIGHT_GRACE_MS
+
+            var deleted = 0
+            for (dir in managedBookDirs()) {
+                if (!dir.isDirectory) continue
+                for (candidate in dir.listFiles().orEmpty()) {
+                    if (!candidate.isFile) continue
+                    if (candidate.name.endsWith(PART_SUFFIX)) continue
+                    if (candidate.absolutePath in referenced) continue
+                    if (candidate.lastModified() > cutoff) continue
+                    if (candidate.delete()) deleted++
+                }
+            }
+            deleted
+        }
+
+    private fun managedBookDirs(): List<File> =
+        listOf(CATALOG_DIR, PDFS_DIR, EPUBS_DIR)
+            .map { File(appContext.filesDir, it) }
 
     companion object {
         /** A file modified within this window may still be an in-flight import. */

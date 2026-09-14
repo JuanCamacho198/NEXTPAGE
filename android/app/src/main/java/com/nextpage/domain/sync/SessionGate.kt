@@ -40,5 +40,7 @@ sealed interface SessionEvent {
     data object Lost : SessionEvent
 
     /** A refresh attempt failed with the given reason string. */
-    data class Expired(val reason: String) : SessionEvent
+    data class Expired(
+        val reason: String,
+    ) : SessionEvent
 }

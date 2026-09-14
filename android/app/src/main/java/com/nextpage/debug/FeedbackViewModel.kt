@@ -36,32 +36,34 @@ class FeedbackViewModel(
     private val initialBook: FeedbackEvent.BookMeta,
     private val initialEventId: String?,
     private val captureFn: (FeedbackEvent.FeedbackEntry) -> SentryId? = ::defaultCapture,
-    private val maxChars: Int = MAX_CHARS
+    private val maxChars: Int = MAX_CHARS,
 ) : ViewModel() {
-
     private val queue: FeedbackQueue = FeedbackQueue(initialQueue, initialDismissed)
 
-    private val _state = MutableStateFlow<FeedbackEvent.FeedbackSheetState>(
-        if (initialEventId != null && !queue.isDismissed(initialEventId)) {
-            FeedbackEvent.FeedbackSheetState.Editing("")
-        } else {
-            FeedbackEvent.FeedbackSheetState.Idle
-        }
-    )
+    private val _state =
+        MutableStateFlow<FeedbackEvent.FeedbackSheetState>(
+            if (initialEventId != null && !queue.isDismissed(initialEventId)) {
+                FeedbackEvent.FeedbackSheetState.Editing("")
+            } else {
+                FeedbackEvent.FeedbackSheetState.Idle
+            },
+        )
     val state: StateFlow<FeedbackEvent.FeedbackSheetState> = _state.asStateFlow()
 
     /** Live counter — exposed so the UI binds `n / 240` from a single source. */
-    val charCount: StateFlow<Int> = MutableStateFlow(0).also { counter ->
-        // Mirror the editing state's text length into the counter so tests can
-        // observe it without spinning up Compose.
-        viewModelScope.launch {
-            _state.collect { s ->
-                if (s is FeedbackEvent.FeedbackSheetState.Editing) {
-                    counter.value = s.text.length
+    val charCount: StateFlow<Int> =
+        MutableStateFlow(0)
+            .also { counter ->
+                // Mirror the editing state's text length into the counter so tests can
+                // observe it without spinning up Compose.
+                viewModelScope.launch {
+                    _state.collect { s ->
+                        if (s is FeedbackEvent.FeedbackSheetState.Editing) {
+                            counter.value = s.text.length
+                        }
+                    }
                 }
-            }
-        }
-    }.asStateFlow()
+            }.asStateFlow()
 
     /** The book context the sheet should display (auto-context card). */
     val bookMeta: FeedbackEvent.BookMeta = initialBook
@@ -70,13 +72,15 @@ class FeedbackViewModel(
     val eventId: String? = initialEventId
 
     /** Whether the user is allowed to submit at this moment. */
-    val canSubmit: StateFlow<Boolean> = MutableStateFlow(false).also { gate ->
-        viewModelScope.launch {
-            _state.collect { s ->
-                gate.value = s is FeedbackEvent.FeedbackSheetState.Editing
-            }
-        }
-    }.asStateFlow()
+    val canSubmit: StateFlow<Boolean> =
+        MutableStateFlow(false)
+            .also { gate ->
+                viewModelScope.launch {
+                    _state.collect { s ->
+                        gate.value = s is FeedbackEvent.FeedbackSheetState.Editing
+                    }
+                }
+            }.asStateFlow()
 
     /** Queue size — exposed so the ViewModel can decide whether to auto-flush. */
     fun queuedCount(): Int = queue.size()
@@ -95,19 +99,21 @@ class FeedbackViewModel(
      * Returns the new state for test assertions.
      */
     fun submit(): FeedbackEvent.FeedbackSheetState {
-        val editing = _state.value as? FeedbackEvent.FeedbackSheetState.Editing
-            ?: return _state.value
+        val editing =
+            _state.value as? FeedbackEvent.FeedbackSheetState.Editing
+                ?: return _state.value
         _state.value = FeedbackEvent.FeedbackSheetState.Sending
-        val entry = FeedbackEvent.FeedbackEntry(
-            eventId = initialEventId ?: "",
-            text = editing.text,
-            timestamp = System.currentTimeMillis(),
-            bookId = initialBook.bookId,
-            chapterIndex = initialBook.chapterIndex,
-            page = initialBook.page,
-            title = initialBook.title,
-            chapterLabel = initialBook.chapterLabel
-        )
+        val entry =
+            FeedbackEvent.FeedbackEntry(
+                eventId = initialEventId ?: "",
+                text = editing.text,
+                timestamp = System.currentTimeMillis(),
+                bookId = initialBook.bookId,
+                chapterIndex = initialBook.chapterIndex,
+                page = initialBook.page,
+                title = initialBook.title,
+                chapterLabel = initialBook.chapterLabel,
+            )
         return try {
             val sentId = captureFn(entry)
             if (sentId != null) {
@@ -154,8 +160,7 @@ class FeedbackViewModel(
     }
 
     /** Snapshot the current queue + dismissed sets for persistence write-back. */
-    fun exportForPersistence(): Pair<List<FeedbackEvent.FeedbackEntry>, Set<String>> =
-        queue.export()
+    fun exportForPersistence(): Pair<List<FeedbackEvent.FeedbackEntry>, Set<String>> = queue.export()
 
     @VisibleForTesting
     internal fun queueStateForTest(): List<FeedbackEvent.FeedbackEntry> = queue.snapshot()
@@ -174,8 +179,7 @@ class FeedbackViewModel(
          * Injected as a seam so tests can swap in a mock without touching
          * the Sentry SDK directly.
          */
-        private fun defaultCapture(entry: FeedbackEvent.FeedbackEntry): SentryId? =
-            FeedbackCapture.submit(entry)
+        private fun defaultCapture(entry: FeedbackEvent.FeedbackEntry): SentryId? = FeedbackCapture.submit(entry)
 
         /**
          * Factory — Compose-style. The Activity/Application owns persistence
@@ -187,18 +191,18 @@ class FeedbackViewModel(
             initialDismissed: Set<String>,
             book: FeedbackEvent.BookMeta,
             eventId: String?,
-            captureFn: (FeedbackEvent.FeedbackEntry) -> SentryId? = ::defaultCapture
-        ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
-            @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return FeedbackViewModel(
-                    initialQueue = initialQueue,
-                    initialDismissed = initialDismissed,
-                    initialBook = book,
-                    initialEventId = eventId,
-                    captureFn = captureFn
-                ) as T
+            captureFn: (FeedbackEvent.FeedbackEntry) -> SentryId? = ::defaultCapture,
+        ): ViewModelProvider.Factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                    FeedbackViewModel(
+                        initialQueue = initialQueue,
+                        initialDismissed = initialDismissed,
+                        initialBook = book,
+                        initialEventId = eventId,
+                        captureFn = captureFn,
+                    ) as T
             }
-        }
     }
 }

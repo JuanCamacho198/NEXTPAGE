@@ -63,47 +63,52 @@ fun NextPageAvatar(
     modifier: Modifier = Modifier,
     size: Dp = 48.dp,
     onClick: (() -> Unit)? = null,
-    contentDescription: String? = null
+    contentDescription: String? = null,
 ) {
     // The interactive (clickable) wrapper is at least 48dp so the touch
     // target meets the accessibility minimum even when the visual circle
     // is smaller (e.g. 40dp in headers). The visual disc keeps [size].
     val interactiveSize = if (onClick != null && size < 48.dp) 48.dp else size
     Box(
-        modifier = modifier
-            .size(if (onClick != null) interactiveSize else size)
-            .then(
-                if (onClick != null) {
-                    Modifier.clickable(onClick = onClick)
-                } else Modifier
-            )
-            .then(
-                if (contentDescription != null) {
-                    Modifier.semantics { this.contentDescription = contentDescription }
-                } else Modifier
-            ),
-        contentAlignment = Alignment.Center
+        modifier =
+            modifier
+                .size(if (onClick != null) interactiveSize else size)
+                .then(
+                    if (onClick != null) {
+                        Modifier.clickable(onClick = onClick)
+                    } else {
+                        Modifier
+                    },
+                ).then(
+                    if (contentDescription != null) {
+                        Modifier.semantics { this.contentDescription = contentDescription }
+                    } else {
+                        Modifier
+                    },
+                ),
+        contentAlignment = Alignment.Center,
     ) {
         Box(
-            modifier = Modifier
-                .size(size)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary),
-            contentAlignment = Alignment.Center
+            modifier =
+                Modifier
+                    .size(size)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary),
+            contentAlignment = Alignment.Center,
         ) {
             if (!imageUrl.isNullOrBlank()) {
                 AsyncImage(
                     model = imageUrl,
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.matchParentSize()
+                    modifier = Modifier.matchParentSize(),
                 )
             } else {
                 Text(
                     text = initials.take(2).uppercase(),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimary
+                    color = MaterialTheme.colorScheme.onPrimary,
                 )
             }
         }
@@ -116,13 +121,13 @@ private fun NextPageAvatarDarkPreview() {
     NextPageTheme(darkTheme = true) {
         Row(
             modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(24.dp)
+            horizontalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             NextPageAvatar(imageUrl = null, initials = "JS")
             NextPageAvatar(
                 imageUrl = "https://example.com/avatar.png",
                 initials = "JS",
-                onClick = {}
+                onClick = {},
             )
         }
     }
@@ -134,13 +139,13 @@ private fun NextPageAvatarLightPreview() {
     NextPageTheme(darkTheme = false) {
         Row(
             modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(24.dp)
+            horizontalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             NextPageAvatar(imageUrl = null, initials = "JS")
             NextPageAvatar(
                 imageUrl = "https://example.com/avatar.png",
                 initials = "JS",
-                onClick = {}
+                onClick = {},
             )
         }
     }

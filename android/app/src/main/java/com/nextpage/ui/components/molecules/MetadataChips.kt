@@ -50,7 +50,7 @@ fun GenreChips(
     max: Int,
     onAdd: (String) -> Unit,
     onRemove: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     EditableChipRow(
         items = genres,
@@ -59,7 +59,7 @@ fun GenreChips(
         showColorDot = true,
         onAdd = onAdd,
         onRemove = onRemove,
-        modifier = modifier
+        modifier = modifier,
     )
 }
 
@@ -74,7 +74,7 @@ fun TagChips(
     max: Int,
     onAdd: (String) -> Unit,
     onRemove: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     EditableChipRow(
         items = tags,
@@ -83,7 +83,7 @@ fun TagChips(
         showColorDot = false,
         onAdd = onAdd,
         onRemove = onRemove,
-        modifier = modifier
+        modifier = modifier,
     )
 }
 
@@ -96,12 +96,12 @@ fun TagChips(
 @Composable
 fun GenreChipsDisplay(
     genres: List<String>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     ChipRowDisplay(
         items = genres,
         showColorDot = true,
-        modifier = modifier
+        modifier = modifier,
     )
 }
 
@@ -113,12 +113,12 @@ fun GenreChipsDisplay(
 @Composable
 fun TagChipsDisplay(
     tags: List<String>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     ChipRowDisplay(
         items = tags,
         showColorDot = false,
-        modifier = modifier
+        modifier = modifier,
     )
 }
 
@@ -128,36 +128,37 @@ fun TagChipsDisplay(
 private fun ChipRowDisplay(
     items: List<String>,
     showColorDot: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     FlowRow(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items.forEach { item ->
             Surface(
                 shape = MaterialTheme.shapes.small,
                 color = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(start = 12.dp, end = 12.dp)
+                    modifier = Modifier.padding(start = 12.dp, end = 12.dp),
                 ) {
                     if (showColorDot) {
                         Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary)
+                            modifier =
+                                Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary),
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                     }
                     Text(
                         text = item,
                         style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.padding(vertical = 8.dp)
+                        modifier = Modifier.padding(vertical = 8.dp),
                     )
                 }
             }
@@ -174,7 +175,7 @@ private fun EditableChipRow(
     showColorDot: Boolean,
     onAdd: (String) -> Unit,
     onRemove: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
     var draft by remember { mutableStateOf("") }
@@ -183,41 +184,42 @@ private fun EditableChipRow(
     FlowRow(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items.forEach { item ->
             Surface(
                 shape = MaterialTheme.shapes.small,
                 color = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(start = 12.dp, end = 4.dp)
+                    modifier = Modifier.padding(start = 12.dp, end = 4.dp),
                 ) {
                     if (showColorDot) {
                         Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary)
+                            modifier =
+                                Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary),
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                     }
                     Text(
                         text = item,
                         style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.padding(vertical = 8.dp)
+                        modifier = Modifier.padding(vertical = 8.dp),
                     )
                     IconButton(
                         onClick = { onRemove(item) },
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(28.dp),
                     ) {
                         Icon(
                             imageVector = NextPageIcons.Close,
                             contentDescription = removeLabel,
                             tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(18.dp),
                         )
                     }
                 }
@@ -232,12 +234,12 @@ private fun EditableChipRow(
                 },
                 shape = MaterialTheme.shapes.small,
                 color = MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             ) {
                 Text(
                     text = addLabel,
                     style = MaterialTheme.typography.labelLarge,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
                 )
             }
         }
@@ -252,7 +254,7 @@ private fun EditableChipRow(
                     value = draft,
                     onValueChange = { draft = it },
                     label = { Text(text = addLabel) },
-                    singleLine = true
+                    singleLine = true,
                 )
             },
             confirmButton = {
@@ -261,7 +263,7 @@ private fun EditableChipRow(
                         onAdd(draft)
                         draft = ""
                         showAddDialog = false
-                    }
+                    },
                 ) {
                     Text(text = stringResource(R.string.edit_metadata_add))
                 }
@@ -270,7 +272,7 @@ private fun EditableChipRow(
                 TextButton(onClick = { showAddDialog = false }) {
                     Text(text = stringResource(R.string.action_cancel))
                 }
-            }
+            },
         )
     }
 }
@@ -283,7 +285,7 @@ private fun MetadataChipsDarkPreview() {
     NextPageTheme(darkTheme = true) {
         androidx.compose.foundation.layout.Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             GenreChips(genres = listOf("Fiction", "Adventure", "Classics"), max = 5, onAdd = {}, onRemove = {})
             TagChips(tags = listOf("favorites", "read-later"), max = 10, onAdd = {}, onRemove = {})
@@ -299,7 +301,7 @@ private fun MetadataChipsLightPreview() {
     NextPageTheme(darkTheme = false) {
         androidx.compose.foundation.layout.Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             GenreChips(genres = listOf("Fiction", "Adventure"), max = 5, onAdd = {}, onRemove = {})
             TagChips(tags = listOf("favorites"), max = 10, onAdd = {}, onRemove = {})

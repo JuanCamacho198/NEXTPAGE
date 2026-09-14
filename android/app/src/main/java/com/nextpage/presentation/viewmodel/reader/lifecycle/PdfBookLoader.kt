@@ -4,7 +4,6 @@ import android.app.Application
 import android.util.Log
 import com.nextpage.presentation.UiEvent
 import com.nextpage.presentation.viewmodel.reader.ReaderLifecycleState
-import java.io.File
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -14,6 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.readium.adapter.pdfium.document.PdfiumDocumentFactory
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.util.AbsoluteUrl
@@ -21,7 +21,7 @@ import org.readium.r2.shared.util.asset.AssetRetriever
 import org.readium.r2.shared.util.http.DefaultHttpClient
 import org.readium.r2.streamer.PublicationOpener
 import org.readium.r2.streamer.parser.DefaultPublicationParser
-import org.readium.adapter.pdfium.document.PdfiumDocumentFactory
+import java.io.File
 
 /**
  * PDF loader via Readium PublicationOpener with PdfiumDocumentFactory.
@@ -34,9 +34,9 @@ class PdfBookLoader(
     private val mainDispatcher: CoroutineDispatcher,
     private val onErrorEvent: (UiEvent) -> Unit,
     private val onBookLoaded: (String) -> Unit,
-    private val onProgressDisplay: () -> Unit
-) : BookLoader, Clearable {
-
+    private val onProgressDisplay: () -> Unit,
+) : BookLoader,
+    Clearable {
     private val _isLoading = MutableStateFlow(false)
     override val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
     private val _loadTimeMs = MutableStateFlow<Long?>(null)
@@ -53,36 +53,44 @@ class PdfBookLoader(
     override suspend fun open(
         bookId: String,
         filePath: String,
-        format: String
-    ): Result<Pair<Publication, Locator?>> {
-        return try {
+        format: String,
+    ): Result<Pair<Publication, Locator?>> =
+        try {
             val file = File(filePath)
             if (!file.exists()) throw Exception("File not found. Try importing the book again.")
-            val fileUri = android.net.Uri.fromFile(file).toString()
+            val fileUri =
+                android.net.Uri
+                    .fromFile(file)
+                    .toString()
             val httpClient = DefaultHttpClient()
             val assetRetriever = AssetRetriever(application.contentResolver, httpClient)
             val url = AbsoluteUrl(fileUri) ?: throw Exception("Invalid file URI: $fileUri")
             val retrieveResult = withContext(Dispatchers.IO) { assetRetriever.retrieve(url) }
             val asset = retrieveResult.getOrNull() ?: throw Exception("Failed to retrieve PDF asset")
-            val parser = DefaultPublicationParser(
-                context = application,
-                httpClient = httpClient,
-                assetRetriever = assetRetriever,
-                pdfFactory = PdfiumDocumentFactory(application)
-            )
+            val parser =
+                DefaultPublicationParser(
+                    context = application,
+                    httpClient = httpClient,
+                    assetRetriever = assetRetriever,
+                    pdfFactory = PdfiumDocumentFactory(application),
+                )
             val opener = PublicationOpener(parser)
             val openResult = withContext(Dispatchers.IO) { opener.open(asset, allowUserInteraction = false) }
-            val publication: Publication = openResult.fold(
-                onSuccess = { it },
-                onFailure = { throw Exception("Readium PDF open failed: ${it.message}") }
-            )
+            val publication: Publication =
+                openResult.fold(
+                    onSuccess = { it },
+                    onFailure = { throw Exception("Readium PDF open failed: ${it.message}") },
+                )
             Result.success(publication to null)
         } catch (e: Exception) {
             Result.failure(e)
         }
-    }
 
-    fun loadPdfBook(bookId: String, filePath: String, startTime: Long) {
+    fun loadPdfBook(
+        bookId: String,
+        filePath: String,
+        startTime: Long,
+    ) {
         scope.launch(mainDispatcher) {
             try {
                 val file = File(filePath)
@@ -93,39 +101,51 @@ class PdfBookLoader(
                     onErrorEvent(UiEvent.ShowSnackbar(message))
                     return@launch
                 }
-                val fileUri = android.net.Uri.fromFile(file).toString()
+                val fileUri =
+                    android.net.Uri
+                        .fromFile(file)
+                        .toString()
                 val httpClient = DefaultHttpClient()
                 val assetRetriever = AssetRetriever(application.contentResolver, httpClient)
-                val url = AbsoluteUrl(fileUri)
-                    ?: throw Exception("Invalid file URI: $fileUri")
+                val url =
+                    AbsoluteUrl(fileUri)
+                        ?: throw Exception("Invalid file URI: $fileUri")
                 val retrieveResult = withContext(Dispatchers.IO) { assetRetriever.retrieve(url) }
                 val asset = retrieveResult.getOrNull() ?: throw Exception("Failed to retrieve PDF asset")
-                val parser = DefaultPublicationParser(
-                    context = application,
-                    httpClient = httpClient,
-                    assetRetriever = assetRetriever,
-                    pdfFactory = PdfiumDocumentFactory(application)
-                )
+                val parser =
+                    DefaultPublicationParser(
+                        context = application,
+                        httpClient = httpClient,
+                        assetRetriever = assetRetriever,
+                        pdfFactory = PdfiumDocumentFactory(application),
+                    )
                 val opener = PublicationOpener(parser)
-                val openResult = withContext(Dispatchers.IO) {
-                    opener.open(asset, allowUserInteraction = false)
-                }
-                val publication: Publication = openResult.fold(
-                    onSuccess = { it },
-                    onFailure = { error -> throw Exception("Readium PDF open failed: ${error.message}") }
-                )
+                val openResult =
+                    withContext(Dispatchers.IO) {
+                        opener.open(asset, allowUserInteraction = false)
+                    }
+                val publication: Publication =
+                    openResult.fold(
+                        onSuccess = { it },
+                        onFailure = { error -> throw Exception("Readium PDF open failed: ${error.message}") },
+                    )
                 val loadTime = System.currentTimeMillis() - startTime
 
                 // A2/A3 - reader open + native TTFP (loadBook -> publication-ready).
-                val bucketedLoad = com.nextpage.debug.SentryMetrics.bucketDurationMs(loadTime)
-                val readerTags = mapOf(
-                    "source" to "reader",
-                    "engine" to "readium",
-                    "format" to "pdf",
-                    "platform" to "android"
-                )
-                com.nextpage.debug.SentryMetrics.distribution("reader_open", bucketedLoad, readerTags)
-                com.nextpage.debug.SentryMetrics.distribution("reader_ttfp_native", bucketedLoad, readerTags)
+                val bucketedLoad =
+                    com.nextpage.debug.SentryMetrics
+                        .bucketDurationMs(loadTime)
+                val readerTags =
+                    mapOf(
+                        "source" to "reader",
+                        "engine" to "readium",
+                        "format" to "pdf",
+                        "platform" to "android",
+                    )
+                com.nextpage.debug.SentryMetrics
+                    .distribution("reader_open", bucketedLoad, readerTags)
+                com.nextpage.debug.SentryMetrics
+                    .distribution("reader_ttfp_native", bucketedLoad, readerTags)
                 Log.d(TAG, "Readium loaded PDF in ${loadTime}ms")
                 val chapters = TocBuilder.buildChaptersFromPublication(publication)
                 state.update {
@@ -134,7 +154,7 @@ class PdfBookLoader(
                         chapters = chapters,
                         currentChapterIndex = 0,
                         isLoading = false,
-                        loadTimeMs = loadTime
+                        loadTimeMs = loadTime,
                     )
                 }
                 _isLoading.value = false

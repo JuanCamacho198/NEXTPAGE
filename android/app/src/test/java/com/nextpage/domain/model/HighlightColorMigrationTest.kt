@@ -16,7 +16,6 @@ import org.junit.Test
  *   RED:    (new)     #EF4444
  */
 class HighlightColorMigrationTest {
-
     // ── New enum values ─────────────────────────────────────────────
 
     @Test

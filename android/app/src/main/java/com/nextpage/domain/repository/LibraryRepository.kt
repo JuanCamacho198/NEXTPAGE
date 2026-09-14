@@ -1,8 +1,8 @@
 package com.nextpage.domain.repository
 
 import androidx.paging.PagingData
-import com.nextpage.domain.model.BookImportRequest
 import com.nextpage.domain.model.Book
+import com.nextpage.domain.model.BookImportRequest
 import com.nextpage.domain.model.ReadingProgress
 import kotlinx.coroutines.flow.Flow
 import java.io.InputStream
@@ -22,12 +22,12 @@ interface LibraryRepository {
 
     suspend fun importBookFromEpub(
         request: BookImportRequest,
-        inputStreamProvider: suspend () -> InputStream?
+        inputStreamProvider: suspend () -> InputStream?,
     ): Result<Book>
 
     suspend fun importBookFromPdf(
         request: BookImportRequest,
-        file: java.io.File
+        file: java.io.File,
     ): Result<Book>
 
     suspend fun deleteBook(bookId: String): Result<Unit>
@@ -35,9 +35,15 @@ interface LibraryRepository {
     /** Local-only delete: soft-delete locally without queuing a cloud tombstone. */
     suspend fun deleteBookLocalOnly(bookId: String): Result<Unit>
 
-    suspend fun updateBookRating(bookId: String, rating: Int?)
+    suspend fun updateBookRating(
+        bookId: String,
+        rating: Int?,
+    )
 
-    suspend fun updateBookStatus(bookId: String, status: String?): Result<Unit>
+    suspend fun updateBookStatus(
+        bookId: String,
+        status: String?,
+    ): Result<Unit>
 
     suspend fun updateBookMetadata(
         bookId: String,
@@ -49,7 +55,7 @@ interface LibraryRepository {
         language: String?,
         publisher: String?,
         tags: String?,
-        publishedDate: String?
+        publishedDate: String?,
     ): Result<Unit>
 
     suspend fun getBookById(bookId: String): Book?
@@ -62,11 +68,17 @@ interface LibraryRepository {
      * Default `null` keeps lightweight fakes and partial implementations
      * compiling; the production repository overrides it.
      */
-    suspend fun findBookByTitleAndAuthor(title: String, author: String?): Book? = null
+    suspend fun findBookByTitleAndAuthor(
+        title: String,
+        author: String?,
+    ): Book? = null
 
     suspend fun startReading(bookId: String): Result<Unit> = Result.success(Unit)
 
-    suspend fun updateReadingProgress(bookId: String, progress: Float): Result<Unit> = Result.success(Unit)
+    suspend fun updateReadingProgress(
+        bookId: String,
+        progress: Float,
+    ): Result<Unit> = Result.success(Unit)
 
     suspend fun completeReading(bookId: String): Result<Unit> = Result.success(Unit)
 }

@@ -32,7 +32,8 @@ internal const val MAX_TAGS = 10
  * into its individual values, trimmed and with blanks dropped.
  */
 internal fun parseChipList(value: String?): List<String> =
-    value?.split(',')
+    value
+        ?.split(',')
         ?.map { it.trim() }
         ?.filter { it.isNotEmpty() }
         ?: emptyList()
@@ -41,16 +42,19 @@ internal fun parseChipList(value: String?): List<String> =
  * Sanitizes a single user-entered chip value: strips embedded commas, trims,
  * and rejects values that become empty (REQ-data-model-8).
  */
-internal fun sanitizeChipValue(value: String): String? =
-    value.replace(",", "").trim().takeIf { it.isNotEmpty() }
+internal fun sanitizeChipValue(value: String): String? = value.replace(",", "").trim().takeIf { it.isNotEmpty() }
 
 /**
  * Sanitizes a whole chip list: strips commas, trims, dedupes case-insensitively,
  * and caps at [max] (REQ-data-model-8 — "input con coma se normaliza; duplicados
  * se colapsan"; UI limits 5 genres / 10 tags).
  */
-internal fun sanitizeChipList(values: List<String>, max: Int): List<String> =
-    values.mapNotNull { sanitizeChipValue(it) }
+internal fun sanitizeChipList(
+    values: List<String>,
+    max: Int,
+): List<String> =
+    values
+        .mapNotNull { sanitizeChipValue(it) }
         .distinctBy { it.lowercase() }
         .take(max)
 
@@ -73,7 +77,7 @@ data class EditBookMetadataUiState(
     val publishedDate: String? = null,
     val coverUri: Uri? = null,
     val coverBytes: ByteArray? = null,
-    val isSaving: Boolean = false
+    val isSaving: Boolean = false,
 )
 
 /**
@@ -92,13 +96,13 @@ class EditBookMetadataViewModel(
     private val coverStorage: CoverStorage,
     private val appContext: Context,
     private val onSaved: () -> Unit = {},
-    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
+    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow(EditBookMetadataUiState())
     val uiState: StateFlow<EditBookMetadataUiState> = _uiState.asStateFlow()
 
     private val _uiEvent = MutableSharedFlow<UiEvent>(extraBufferCapacity = 1)
+
     /** One-shot UI events (snackbars) emitted by save. */
     val uiEvent: SharedFlow<UiEvent> = _uiEvent.asSharedFlow()
 
@@ -125,7 +129,7 @@ class EditBookMetadataViewModel(
                             tags = sanitizeChipList(parseChipList(book.tags), MAX_TAGS),
                             language = book.language,
                             publisher = book.publisher.orEmpty(),
-                            publishedDate = book.publishedDate
+                            publishedDate = book.publishedDate,
                         )
                     }
                 } else {
@@ -136,15 +140,22 @@ class EditBookMetadataViewModel(
     }
 
     fun onTitleChange(value: String) = _uiState.update { it.copy(title = value) }
+
     fun onAuthorChange(value: String) = _uiState.update { it.copy(author = value) }
+
     fun onDescriptionChange(value: String) = _uiState.update { it.copy(description = value) }
+
     fun onPublisherChange(value: String) = _uiState.update { it.copy(publisher = value) }
+
     fun onLanguageChange(value: String) = _uiState.update { it.copy(language = value) }
+
     fun onPublishedDateChange(value: String?) = _uiState.update { it.copy(publishedDate = value) }
 
     /** Registers a newly picked cover (preview uri + bytes read from the picker). */
-    fun onCoverSelected(uri: Uri?, bytes: ByteArray?) =
-        _uiState.update { it.copy(coverUri = uri, coverBytes = bytes) }
+    fun onCoverSelected(
+        uri: Uri?,
+        bytes: ByteArray?,
+    ) = _uiState.update { it.copy(coverUri = uri, coverBytes = bytes) }
 
     /** Adds a genre value after sanitization; ignores duplicates and over-cap input. */
     fun onGenreAdd(value: String) {
@@ -156,8 +167,7 @@ class EditBookMetadataViewModel(
     }
 
     /** Removes the given genre value, if present. */
-    fun onGenreRemove(value: String) =
-        _uiState.update { it.copy(genres = it.genres.filterNot { v -> v.equals(value, ignoreCase = true) }) }
+    fun onGenreRemove(value: String) = _uiState.update { it.copy(genres = it.genres.filterNot { v -> v.equals(value, ignoreCase = true) }) }
 
     /** Adds a tag value after sanitization; ignores duplicates and over-cap input. */
     fun onTagAdd(value: String) {
@@ -169,8 +179,7 @@ class EditBookMetadataViewModel(
     }
 
     /** Removes the given tag value, if present. */
-    fun onTagRemove(value: String) =
-        _uiState.update { it.copy(tags = it.tags.filterNot { v -> v.equals(value, ignoreCase = true) }) }
+    fun onTagRemove(value: String) = _uiState.update { it.copy(tags = it.tags.filterNot { v -> v.equals(value, ignoreCase = true) }) }
 
     /**
      * Persists the form: saves a new cover (when picked), updates metadata via
@@ -185,39 +194,41 @@ class EditBookMetadataViewModel(
         _uiState.update { it.copy(isSaving = true) }
 
         viewModelScope.launch(mainDispatcher) {
-            val coverPath = current.coverBytes?.let { bytes ->
-                coverStorage.saveCover(bookId = book.id, coverBytes = bytes).getOrNull()
-            } ?: book.coverPath
+            val coverPath =
+                current.coverBytes?.let { bytes ->
+                    coverStorage.saveCover(bookId = book.id, coverBytes = bytes).getOrNull()
+                } ?: book.coverPath
 
-            val result = libraryRepository.updateBookMetadata(
-                bookId = book.id,
-                title = current.title.trim().ifBlank { book.title },
-                author = current.author.trim().ifBlank { null },
-                description = current.description.trim().ifBlank { null },
-                coverPath = coverPath,
-                genre = current.genres.joinToString(", ").ifBlank { null },
-                language = current.language?.trim()?.ifBlank { null },
-                publisher = current.publisher.trim().ifBlank { null },
-                tags = current.tags.joinToString(", ").ifBlank { null },
-                publishedDate = current.publishedDate
-            )
+            val result =
+                libraryRepository.updateBookMetadata(
+                    bookId = book.id,
+                    title = current.title.trim().ifBlank { book.title },
+                    author = current.author.trim().ifBlank { null },
+                    description = current.description.trim().ifBlank { null },
+                    coverPath = coverPath,
+                    genre = current.genres.joinToString(", ").ifBlank { null },
+                    language = current.language?.trim()?.ifBlank { null },
+                    publisher = current.publisher.trim().ifBlank { null },
+                    tags = current.tags.joinToString(", ").ifBlank { null },
+                    publishedDate = current.publishedDate,
+                )
 
             _uiState.update { it.copy(isSaving = false) }
 
             result.fold(
                 onSuccess = {
                     _uiEvent.tryEmit(
-                        UiEvent.ShowSnackbar(appContext.getString(R.string.library_snackbar_metadata_saved))
+                        UiEvent.ShowSnackbar(appContext.getString(R.string.library_snackbar_metadata_saved)),
                     )
                     onSaved()
                 },
                 onFailure = { error ->
                     _uiEvent.tryEmit(
                         UiEvent.ShowSnackbar(
-                            error.message ?: appContext.getString(R.string.edit_metadata_save_failed)
-                        )
+                            error.message ?: appContext.getString(R.string.edit_metadata_save_failed),
+                        ),
                     )
-                }
+                },
             )
         }
     }
@@ -227,17 +238,16 @@ class EditBookMetadataViewModel(
         private val libraryRepository: LibraryRepository,
         private val coverStorage: CoverStorage,
         private val appContext: Context,
-        private val onSaved: () -> Unit = {}
+        private val onSaved: () -> Unit = {},
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return EditBookMetadataViewModel(
+        override fun <T : ViewModel> create(modelClass: Class<T>): T =
+            EditBookMetadataViewModel(
                 bookId = bookId,
                 libraryRepository = libraryRepository,
                 coverStorage = coverStorage,
                 appContext = appContext,
-                onSaved = onSaved
+                onSaved = onSaved,
             ) as T
-        }
     }
 }

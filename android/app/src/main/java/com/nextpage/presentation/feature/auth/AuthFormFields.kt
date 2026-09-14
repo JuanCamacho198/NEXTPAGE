@@ -25,7 +25,7 @@ fun PasswordTextField(
     onValueChange: (String) -> Unit,
     label: String,
     hint: String? = null,
-    errorMessage: String? = null
+    errorMessage: String? = null,
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
     NextPageTextField(
@@ -36,16 +36,18 @@ fun PasswordTextField(
         errorMessage = errorMessage,
         leadingIcon = NextPageIcons.Lock,
         trailingIcon = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-        trailingIconContentDescription = stringResource(
-            if (passwordVisible) R.string.auth_password_hide else R.string.auth_password_show
-        ),
+        trailingIconContentDescription =
+            stringResource(
+                if (passwordVisible) R.string.auth_password_hide else R.string.auth_password_show,
+            ),
         trailingIconOnClick = { passwordVisible = !passwordVisible },
-        visualTransformation = if (passwordVisible) {
-            VisualTransformation.None
-        } else {
-            PasswordVisualTransformation()
-        },
+        visualTransformation =
+            if (passwordVisible) {
+                VisualTransformation.None
+            } else {
+                PasswordVisualTransformation()
+            },
         singleLine = true,
-        modifier = Modifier.fillMaxWidth().testTag(AuthTags.PASSWORD)
+        modifier = Modifier.fillMaxWidth().testTag(AuthTags.PASSWORD),
     )
 }

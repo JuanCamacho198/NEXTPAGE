@@ -13,12 +13,12 @@ import org.junit.Test
  * migration) and payloads carrying them must round-trip byte-for-byte.
  */
 class CatalogBookLenientDecodeTest {
-
     private val json = Json { ignoreUnknownKeys = true }
 
     @Test
     fun `decodes legacy payload without new fields using defaults`() {
-        val legacy = """
+        val legacy =
+            """
             {
               "results": [
                 {
@@ -35,7 +35,7 @@ class CatalogBookLenientDecodeTest {
               "nextPage": null,
               "totalCount": 1
             }
-        """.trimIndent()
+            """.trimIndent()
 
         val decoded = json.decodeFromString<PagedResult>(legacy)
 
@@ -47,21 +47,23 @@ class CatalogBookLenientDecodeTest {
 
     @Test
     fun `round-trips payload carrying the new fields`() {
-        val book = CatalogBook(
-            id = "gutendex:11",
-            provider = "builtin:gutendex",
-            title = "Alice's Adventures in Wonderland",
-            authors = listOf("Lewis Carroll"),
-            coverUrl = null,
-            languages = listOf("en"),
-            subjects = listOf("Fantasy"),
-            downloadUrl = "https://www.gutenberg.org/ebooks/11.epub.noimages",
-            description = "A curious tale.",
-            isPublicDomain = true,
-            formats = mapOf(
-                "application/epub+zip" to "https://www.gutenberg.org/ebooks/11.epub.noimages"
+        val book =
+            CatalogBook(
+                id = "gutendex:11",
+                provider = "builtin:gutendex",
+                title = "Alice's Adventures in Wonderland",
+                authors = listOf("Lewis Carroll"),
+                coverUrl = null,
+                languages = listOf("en"),
+                subjects = listOf("Fantasy"),
+                downloadUrl = "https://www.gutenberg.org/ebooks/11.epub.noimages",
+                description = "A curious tale.",
+                isPublicDomain = true,
+                formats =
+                    mapOf(
+                        "application/epub+zip" to "https://www.gutenberg.org/ebooks/11.epub.noimages",
+                    ),
             )
-        )
         val page = PagedResult(results = listOf(book), nextPage = null, totalCount = 1)
 
         val decoded = json.decodeFromString<PagedResult>(json.encodeToString(page))
@@ -71,16 +73,18 @@ class CatalogBookLenientDecodeTest {
 
     @Test
     fun `mapGutendexBook forwards summaries copyright and formats`() {
-        val record = GutendexRecord(
-            id = 11,
-            title = "Alice's Adventures in Wonderland",
-            copyright = false,
-            summaries = listOf("Down the rabbit hole.", "A trial in Wonderland."),
-            formats = mapOf(
-                "application/epub+zip" to "https://www.gutenberg.org/ebooks/11.epub.noimages",
-                "text/html" to "https://www.gutenberg.org/ebooks/11.html.images"
+        val record =
+            GutendexRecord(
+                id = 11,
+                title = "Alice's Adventures in Wonderland",
+                copyright = false,
+                summaries = listOf("Down the rabbit hole.", "A trial in Wonderland."),
+                formats =
+                    mapOf(
+                        "application/epub+zip" to "https://www.gutenberg.org/ebooks/11.epub.noimages",
+                        "text/html" to "https://www.gutenberg.org/ebooks/11.html.images",
+                    ),
             )
-        )
 
         val book = mapGutendexBook(record)
 

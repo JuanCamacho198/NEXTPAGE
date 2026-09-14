@@ -69,19 +69,21 @@ fun AddonManagementRoute(
     hasConsent: (String) -> Boolean = { false },
     onConsentChange: (String, Boolean) -> Unit = { _, _ -> },
     onNavigateToLegal: () -> Unit = {},
-    onOpenCapabilities: (String) -> Unit = {}
+    onOpenCapabilities: (String) -> Unit = {},
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    val viewModel: AddonSettingsViewModel = viewModel(
-        factory = AddonSettingsViewModelFactory(
-            registry = registry,
-            onError = { errorMessage = it },
-            hasConsent = hasConsent,
-            onConsentChange = onConsentChange
+    val viewModel: AddonSettingsViewModel =
+        viewModel(
+            factory =
+                AddonSettingsViewModelFactory(
+                    registry = registry,
+                    onError = { errorMessage = it },
+                    hasConsent = hasConsent,
+                    onConsentChange = onConsentChange,
+                ),
         )
-    )
 
     LaunchedEffect(viewModel) { viewModel.refresh() }
     LaunchedEffect(errorMessage) {
@@ -102,7 +104,7 @@ fun AddonManagementRoute(
         onConsentChange = viewModel::setConsent,
         onNavigateToLegal = onNavigateToLegal,
         onOpenCapabilities = onOpenCapabilities,
-        onBack = onBack
+        onBack = onBack,
     )
 }
 
@@ -111,7 +113,7 @@ class AddonSettingsViewModelFactory(
     private val registry: AddonRegistryLike,
     private val onError: (String) -> Unit,
     private val hasConsent: (String) -> Boolean = { false },
-    private val onConsentChange: (String, Boolean) -> Unit = { _, _ -> }
+    private val onConsentChange: (String, Boolean) -> Unit = { _, _ -> },
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -140,7 +142,7 @@ fun AddonManagementScreen(
     onConsentChange: (String, Boolean) -> Unit = { _, _ -> },
     onNavigateToLegal: () -> Unit = {},
     onOpenCapabilities: (String) -> Unit = {},
-    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     Scaffold(
         modifier = modifier,
@@ -151,29 +153,30 @@ fun AddonManagementScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = NextPageIcons.ArrowBack,
-                            contentDescription = stringResource(R.string.settings_addons_back)
+                            contentDescription = stringResource(R.string.settings_addons_back),
                         )
                     }
-                }
+                },
             )
         },
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState) { data ->
                 NextPageSnackbar(snackbarData = data)
             }
-        }
+        },
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
                 text = stringResource(R.string.settings_addons_description),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             NextPageTextField(
@@ -181,20 +184,21 @@ fun AddonManagementScreen(
                 onValueChange = onUrlChange,
                 label = stringResource(R.string.settings_addons_url_label),
                 placeholder = stringResource(R.string.settings_addons_url_placeholder),
-                enabled = !uiState.isBusy
+                enabled = !uiState.isBusy,
             )
 
             NextPageButton(
-                text = stringResource(
-                    if (uiState.isBusy) {
-                        R.string.settings_addons_installing
-                    } else {
-                        R.string.settings_addons_install
-                    }
-                ),
+                text =
+                    stringResource(
+                        if (uiState.isBusy) {
+                            R.string.settings_addons_installing
+                        } else {
+                            R.string.settings_addons_install
+                        },
+                    ),
                 onClick = onInstall,
                 enabled = !uiState.isBusy && uiState.url.isNotBlank(),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             )
 
             BuiltInSourcesSection()
@@ -203,12 +207,12 @@ fun AddonManagementScreen(
                 Text(
                     text = stringResource(R.string.settings_addons_empty),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(uiState.installed, key = { it.id }) { row ->
                         AddonRow(
@@ -218,7 +222,7 @@ fun AddonManagementScreen(
                             onToggle = onToggle,
                             onUninstall = onUninstall,
                             onConsentChange = onConsentChange,
-                            onOpenCapabilities = onOpenCapabilities
+                            onOpenCapabilities = onOpenCapabilities,
                         )
                     }
                 }
@@ -238,16 +242,16 @@ fun AddonManagementScreen(
 @Composable
 fun BuiltInSourcesSection(
     modifier: Modifier = Modifier,
-    sources: List<BuiltInSource> = builtInSources
+    sources: List<BuiltInSource> = builtInSources,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
             text = stringResource(R.string.settings_addons_builtin_title),
             style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
         )
         sources.forEach { source ->
             Card(modifier = Modifier.fillMaxWidth()) {
@@ -255,13 +259,13 @@ fun BuiltInSourcesSection(
                     Text(
                         text = source.name,
                         style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(
                         text = stringResource(source.roleResId),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -277,40 +281,43 @@ private fun AddonRow(
     onToggle: (String, Boolean) -> Unit,
     onUninstall: (String) -> Unit,
     onConsentChange: (String, Boolean) -> Unit,
-    onOpenCapabilities: (String) -> Unit
+    onOpenCapabilities: (String) -> Unit,
 ) {
     var showUninstallDialog by remember { mutableStateOf(false) }
-    val toggleDescription = stringResource(
-        if (row.enabled) R.string.settings_addons_disable else R.string.settings_addons_enable
-    )
-    val stateCaption = stringResource(
-        if (row.enabled) R.string.settings_addons_state_enabled else R.string.settings_addons_state_disabled
-    )
-    val consentCaption = stringResource(
-        if (hasConsent) {
-            R.string.addon_consent_state_granted
-        } else {
-            R.string.addon_consent_state_missing
-        }
-    )
+    val toggleDescription =
+        stringResource(
+            if (row.enabled) R.string.settings_addons_disable else R.string.settings_addons_enable,
+        )
+    val stateCaption =
+        stringResource(
+            if (row.enabled) R.string.settings_addons_state_enabled else R.string.settings_addons_state_disabled,
+        )
+    val consentCaption =
+        stringResource(
+            if (hasConsent) {
+                R.string.addon_consent_state_granted
+            } else {
+                R.string.addon_consent_state_missing
+            },
+        )
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = row.manifest.name,
                         style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(
                         text = "v${row.manifest.version} \u00B7 $stateCaption",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
 
@@ -320,18 +327,18 @@ private fun AddonRow(
                     checked = row.enabled,
                     onCheckedChange = { checked -> onToggle(row.id, checked) },
                     enabled = !isBusy,
-                    modifier = Modifier.semantics { contentDescription = toggleDescription }
+                    modifier = Modifier.semantics { contentDescription = toggleDescription },
                 )
 
                 Spacer(Modifier.width(8.dp))
 
                 TextButton(
                     onClick = { showUninstallDialog = true },
-                    enabled = !isBusy
+                    enabled = !isBusy,
                 ) {
                     Text(
                         text = stringResource(R.string.settings_addons_uninstall),
-                        color = MaterialTheme.colorScheme.error
+                        color = MaterialTheme.colorScheme.error,
                     )
                 }
             }
@@ -344,24 +351,24 @@ private fun AddonRow(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Switch(
                     checked = hasConsent,
                     onCheckedChange = { granted -> onConsentChange(row.id, granted) },
                     enabled = !isBusy,
-                    modifier = Modifier.semantics { contentDescription = consentCaption }
+                    modifier = Modifier.semantics { contentDescription = consentCaption },
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = consentCaption,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
                 TextButton(
                     onClick = { onOpenCapabilities(row.id) },
-                    enabled = !isBusy
+                    enabled = !isBusy,
                 ) {
                     Text(text = stringResource(R.string.addon_capabilities_title))
                 }
@@ -380,7 +387,7 @@ private fun AddonRow(
                 showUninstallDialog = false
             },
             onDismiss = { showUninstallDialog = false },
-            variant = NextPageDialogVariant.DESTRUCTIVE
+            variant = NextPageDialogVariant.DESTRUCTIVE,
         )
     }
 }

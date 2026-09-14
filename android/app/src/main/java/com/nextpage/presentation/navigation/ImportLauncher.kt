@@ -1,6 +1,5 @@
 package com.nextpage.presentation.navigation
 
-import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -10,10 +9,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import com.nextpage.presentation.util.getContentDisplayName
 import com.nextpage.presentation.viewmodel.LibraryViewModel
-import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 /**
  * Hoists the OpenDocument import launcher out of the Home composable.
@@ -30,9 +29,7 @@ import kotlinx.coroutines.withContext
  * ```
  */
 @Composable
-fun rememberImportLauncher(
-    libraryViewModel: LibraryViewModel
-): ManagedActivityResultLauncher<Array<String>, Uri?> {
+fun rememberImportLauncher(libraryViewModel: LibraryViewModel): ManagedActivityResultLauncher<Array<String>, Uri?> {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -43,9 +40,10 @@ fun rememberImportLauncher(
 
             scope.launch {
                 runCatching {
-                    val fileName = getContentDisplayName(context, uri)
-                        ?: uri.lastPathSegment
-                        ?: "imported_book"
+                    val fileName =
+                        getContentDisplayName(context, uri)
+                            ?: uri.lastPathSegment
+                            ?: "imported_book"
                     val mimeType = context.contentResolver.getType(uri)
 
                     if (fileName.endsWith(".pdf", true) || mimeType == "application/pdf") {
@@ -62,7 +60,7 @@ fun rememberImportLauncher(
                         libraryViewModel.importPdfBook(
                             sourcePath = pdfFile.absolutePath,
                             fallbackTitle = fileName.removeSuffix(".pdf"),
-                            pdfFile = pdfFile
+                            pdfFile = pdfFile,
                         )
                     } else {
                         val epubDir = File(context.filesDir, "epubs")
@@ -78,17 +76,18 @@ fun rememberImportLauncher(
                         libraryViewModel.importBookFromEpub(
                             sourcePath = epubFile.absolutePath,
                             fallbackTitle = fileName.removeSuffix(".epub"),
-                            inputStreamProvider = { epubFile.inputStream() }
+                            inputStreamProvider = { epubFile.inputStream() },
                         )
                     }
                 }.onFailure { error ->
-                    android.widget.Toast.makeText(
-                        context,
-                        "Import failed: ${error.message}",
-                        android.widget.Toast.LENGTH_SHORT
-                    ).show()
+                    android.widget.Toast
+                        .makeText(
+                            context,
+                            "Import failed: ${error.message}",
+                            android.widget.Toast.LENGTH_SHORT,
+                        ).show()
                 }
             }
-        }
+        },
     )
 }

@@ -1,10 +1,10 @@
 plugins {
-    id("com.android.application") version "8.11.1" apply false
-    id("org.jetbrains.kotlin.android") version "2.2.21" apply false
-    id("org.jetbrains.kotlin.plugin.compose") version "2.2.21" apply false
-    id("org.jetbrains.kotlin.plugin.serialization") version "2.2.21" apply false
-    id("com.google.devtools.ksp") version "2.2.21-2.0.5" apply false
-    id("io.gitlab.arturbosch.detekt") version "1.23.7" apply false
+    alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.kotlin.android) apply false
+    alias(libs.plugins.kotlin.compose) apply false
+    alias(libs.plugins.kotlin.serialization) apply false
+    alias(libs.plugins.ksp) apply false
+    alias(libs.plugins.detekt) apply false
 
     // Sentry Android Gradle Plugin (SAGP). Resolved to the latest stable
     // version on Maven Central at the time of PR 3 (sentry-cross-platform):
@@ -12,5 +12,17 @@ plugins {
     // io.sentry:sentry-android runtime via Gradle dependency resolution;
     // we additionally pin sentry-android:8.54.0 in app/build.gradle.kts
     // for explicit version control.
-    id("io.sentry.android.gradle") version "6.21.0" apply false
+    alias(libs.plugins.sentry.gradle) apply false
+
+    // SDD android-tooling-hygiene WS2a slice 4: Hilt (declared in the catalog;
+    // applied in app/build.gradle.kts).
+    alias(libs.plugins.hilt) apply false
+
+    // SDD android-tooling-hygiene WS5 slice 7: Spotless (declared in the
+    // catalog; applied in app/build.gradle.kts).
+    alias(libs.plugins.spotless) apply false
+
+    // SDD android-tooling-hygiene WS4 slice 9: Kover report-only coverage
+    // (declared in the catalog; applied in app/build.gradle.kts).
+    alias(libs.plugins.kover) apply false
 }

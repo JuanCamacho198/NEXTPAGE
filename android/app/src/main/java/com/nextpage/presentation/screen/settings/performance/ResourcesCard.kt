@@ -33,28 +33,28 @@ fun ResourcesCard(
     resources: PerformanceResources?,
     isClearingCache: Boolean,
     onClearCache: (Context) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Column {
                 Text(
                     text = stringResource(R.string.performance_card_resources_title),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
                 )
                 Text(
                     text = stringResource(R.string.performance_card_resources_subtitle),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
@@ -69,24 +69,24 @@ fun ResourcesCard(
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column {
                             Text(
                                 text = stringResource(R.string.performance_cache_size),
                                 style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Medium,
                             )
                             Text(
                                 text = resources.cacheSizeLabel,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                         androidx.compose.ui.platform.LocalContext.current.let { ctx ->
                             OutlinedButton(
                                 onClick = { onClearCache(ctx) },
-                                enabled = !isClearingCache
+                                enabled = !isClearingCache,
                             ) {
                                 if (isClearingCache) {
                                     CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
@@ -98,7 +98,7 @@ fun ResourcesCard(
                     }
                     ResourceRow(
                         label = stringResource(R.string.performance_memory),
-                        value = String.format(Locale.US, "%.0f / %.0f MB", resources.memoryUsageMb, resources.memoryTotalMb)
+                        value = String.format(Locale.US, "%.0f / %.0f MB", resources.memoryUsageMb, resources.memoryTotalMb),
                     )
                 }
             }
@@ -107,21 +107,24 @@ fun ResourcesCard(
 }
 
 @Composable
-private fun ResourceRow(label: String, value: String) {
+private fun ResourceRow(
+    label: String,
+    value: String,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
         )
     }
 }

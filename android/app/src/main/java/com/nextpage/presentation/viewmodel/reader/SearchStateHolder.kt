@@ -7,11 +7,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -34,7 +34,7 @@ data class SearchState(
     val isSearchActive: Boolean = false,
     val searchQuery: String = "",
     val searchResults: List<SearchResult> = emptyList(),
-    val isSearching: Boolean = false
+    val isSearching: Boolean = false,
 )
 
 /**
@@ -55,7 +55,7 @@ class SearchStateHolder(
     private val onNavigateToLocator: (Locator) -> Unit,
     private val onGoToChapter: (Int) -> Unit,
     private val onGoToPdfPage: (Int) -> Unit,
-    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
+    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
 ) {
     private val _state = MutableStateFlow(SearchState())
     val state: StateFlow<SearchState> = _state.asStateFlow()
@@ -87,7 +87,7 @@ class SearchStateHolder(
     fun onSearchQuery(
         query: String,
         publication: Publication?,
-        bookFormat: String?
+        bookFormat: String?,
     ) {
         if (query.isBlank()) {
             searchJob?.cancel()
@@ -98,11 +98,12 @@ class SearchStateHolder(
         _state.update { it.copy(searchQuery = query, isSearching = true) }
 
         searchJob?.cancel()
-        searchJob = scope.launch(mainDispatcher) {
-            delay(SEARCH_DEBOUNCE_MS)
-            val results = searchReadiumPublication(query, publication, bookFormat)
-            _state.update { it.copy(searchResults = results, isSearching = false) }
-        }
+        searchJob =
+            scope.launch(mainDispatcher) {
+                delay(SEARCH_DEBOUNCE_MS)
+                val results = searchReadiumPublication(query, publication, bookFormat)
+                _state.update { it.copy(searchResults = results, isSearching = false) }
+            }
     }
 
     /**
@@ -129,23 +130,24 @@ class SearchStateHolder(
      * @param json Raw JSON string from the PDF renderer callback
      */
     fun onPdfSearchResults(json: String) {
-        val results = try {
-            val arr = JSONArray(json)
-            (0 until arr.length()).map { i ->
-                val obj = arr.getJSONObject(i)
-                SearchResult(
-                    text = obj.optString("snippet", ""),
-                    offset = 0,
-                    page = obj.optInt("pageIndex", 0).toFloat(),
-                    chapterIndex = 0,
-                    chapterTitle = obj.optString("pageLabel", ""),
-                    cfi = "pdfpage:${obj.optInt("pageIndex", 0)}"
-                )
+        val results =
+            try {
+                val arr = JSONArray(json)
+                (0 until arr.length()).map { i ->
+                    val obj = arr.getJSONObject(i)
+                    SearchResult(
+                        text = obj.optString("snippet", ""),
+                        offset = 0,
+                        page = obj.optInt("pageIndex", 0).toFloat(),
+                        chapterIndex = 0,
+                        chapterTitle = obj.optString("pageLabel", ""),
+                        cfi = "pdfpage:${obj.optInt("pageIndex", 0)}",
+                    )
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to parse PDF search results", e)
+                emptyList()
             }
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to parse PDF search results", e)
-            emptyList()
-        }
         _state.update { it.copy(searchResults = results, isSearching = false) }
     }
 
@@ -161,7 +163,7 @@ class SearchStateHolder(
         result: SearchResult,
         publication: Publication?,
         bookFormat: String?,
-        currentChapterIndex: Int
+        currentChapterIndex: Int,
     ) {
         if (bookFormat == "pdf") {
             val pageIndex = result.cfi.removePrefix("pdfpage:").toIntOrNull() ?: return
@@ -186,7 +188,7 @@ class SearchStateHolder(
     private suspend fun searchReadiumPublication(
         query: String,
         publication: Publication?,
-        bookFormat: String?
+        bookFormat: String?,
     ): List<SearchResult> {
         if (publication == null || bookFormat != "epub") return emptyList()
 
@@ -204,18 +206,20 @@ class SearchStateHolder(
                         val lowerQuery = query.lowercase()
                         val snippetStart = lowerHtml.indexOf(lowerQuery)
                         val snippetEnd = minOf(snippetStart + query.length + 80, html.length)
-                        val snippet = html.substring(maxOf(0, snippetStart - 40), snippetEnd)
-                            .replace(Regex("<[^>]*>"), "")
-                            .replace(Regex("\\s+"), " ")
-                            .trim()
+                        val snippet =
+                            html
+                                .substring(maxOf(0, snippetStart - 40), snippetEnd)
+                                .replace(Regex("<[^>]*>"), "")
+                                .replace(Regex("\\s+"), " ")
+                                .trim()
                         results.add(
                             SearchResult(
                                 text = snippet,
                                 offset = snippetStart,
                                 chapterIndex = index,
                                 chapterTitle = link.title ?: "Chapter $index",
-                                cfi = "/${index}/4/${snippetStart}"
-                            )
+                                cfi = "/$index/4/$snippetStart",
+                            ),
                         )
                     }
                 } catch (_: Exception) {
@@ -233,25 +237,32 @@ class SearchStateHolder(
     private fun resolveLocatorForSearchResult(
         result: SearchResult,
         publication: Publication,
-        currentChapterIndex: Int
+        currentChapterIndex: Int,
     ): Locator? {
         val link = publication.readingOrder.getOrNull(result.chapterIndex) ?: return null
         // Build via JSON to avoid depending on Readium's internal
         // [Url] and [MediaType] constructor types directly.
-        val json = JSONObject().apply {
-            put("href", link.href.toString())
-            put("mediaType", link.mediaType?.toString() ?: "application/xhtml+xml")
-            put("title", result.chapterTitle)
-            put("locations", JSONObject().apply {
-                put("progression", 0.0)
-                put("totalProgression", result.chapterIndex.toDouble() / publication.readingOrder.size)
-            })
-            put("text", JSONObject().apply {
-                put("before", "")
-                put("highlight", result.text.take(LOCATOR_HIGHLIGHT_LIMIT))
-                put("after", "")
-            })
-        }
+        val json =
+            JSONObject().apply {
+                put("href", link.href.toString())
+                put("mediaType", link.mediaType?.toString() ?: "application/xhtml+xml")
+                put("title", result.chapterTitle)
+                put(
+                    "locations",
+                    JSONObject().apply {
+                        put("progression", 0.0)
+                        put("totalProgression", result.chapterIndex.toDouble() / publication.readingOrder.size)
+                    },
+                )
+                put(
+                    "text",
+                    JSONObject().apply {
+                        put("before", "")
+                        put("highlight", result.text.take(LOCATOR_HIGHLIGHT_LIMIT))
+                        put("after", "")
+                    },
+                )
+            }
         return Locator.fromJSON(json)
     }
 }

@@ -31,45 +31,45 @@ import com.nextpage.domain.model.ReaderTheme
 fun ThemeCirclesSection(
     settings: ReaderSettings,
     onSettingsChanged: (ReaderSettings) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier) {
         Text(
             text = stringResource(R.string.reader_settings_theme_section),
             style = MaterialTheme.typography.labelLarge,
             color = Color(0xFF718096),
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.SemiBold,
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
+            horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             ThemeCircle(
                 color = "#FFFFFF",
                 label = stringResource(R.string.reader_theme_light),
                 isSelected = settings.theme == ReaderTheme.LIGHT,
-                onClick = { onSettingsChanged(settings.copy(theme = ReaderTheme.LIGHT)) }
+                onClick = { onSettingsChanged(settings.copy(theme = ReaderTheme.LIGHT)) },
             )
             ThemeCircle(
                 color = "#F4ECD8",
                 label = stringResource(R.string.reader_theme_sepia),
                 isSelected = settings.theme == ReaderTheme.SEPIA,
-                onClick = { onSettingsChanged(settings.copy(theme = ReaderTheme.SEPIA)) }
+                onClick = { onSettingsChanged(settings.copy(theme = ReaderTheme.SEPIA)) },
             )
             ThemeCircle(
                 color = "#121212",
                 label = stringResource(R.string.reader_theme_dark),
                 isSelected = settings.theme == ReaderTheme.DARK,
-                onClick = { onSettingsChanged(settings.copy(theme = ReaderTheme.DARK)) }
+                onClick = { onSettingsChanged(settings.copy(theme = ReaderTheme.DARK)) },
             )
             ThemeCircle(
                 color = "#0D1322",
                 label = stringResource(R.string.theme_oled),
                 isSelected = settings.theme == ReaderTheme.OLED,
-                onClick = { onSettingsChanged(settings.copy(theme = ReaderTheme.OLED)) }
+                onClick = { onSettingsChanged(settings.copy(theme = ReaderTheme.OLED)) },
             )
         }
     }
@@ -81,43 +81,46 @@ private fun ThemeCircle(
     label: String,
     isSelected: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
-            modifier = Modifier
-                .size(48.dp)
-                .clip(CircleShape)
-                .background(parseColorHex(color))
-                .then(
-                    if (isSelected) Modifier.border(2.dp, Color(0xFFADC6FF), CircleShape)
-                    else Modifier
-                )
-                .clickable(onClick = onClick)
+            modifier =
+                Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(parseColorHex(color))
+                    .then(
+                        if (isSelected) {
+                            Modifier.border(2.dp, Color(0xFFADC6FF), CircleShape)
+                        } else {
+                            Modifier
+                        },
+                    ).clickable(onClick = onClick),
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = label,
             color = if (isSelected) Color(0xFFADC6FF) else Color(0xFF718096),
             fontSize = 10.sp,
-            maxLines = 1
+            maxLines = 1,
         )
     }
 }
 
-private fun parseColorHex(hex: String): Color {
-    return try {
+private fun parseColorHex(hex: String): Color =
+    try {
         val sanitized = hex.removePrefix("#")
-        val longHex = when (sanitized.length) {
-            6 -> "FF$sanitized"
-            8 -> sanitized
-            else -> "FF000000"
-        }
+        val longHex =
+            when (sanitized.length) {
+                6 -> "FF$sanitized"
+                8 -> sanitized
+                else -> "FF000000"
+            }
         Color(longHex.toLong(16))
     } catch (_: Exception) {
         Color.Magenta
     }
-}

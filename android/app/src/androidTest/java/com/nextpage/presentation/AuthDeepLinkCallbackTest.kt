@@ -13,7 +13,6 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class AuthDeepLinkCallbackTest {
-
     @get:Rule
     val composeRule = createAndroidComposeRule<MainActivity>()
 
@@ -22,13 +21,14 @@ class AuthDeepLinkCallbackTest {
         composeRule.onNodeWithText("Continue with Google").assertIsDisplayed()
 
         composeRule.activityRule.scenario.onActivity { activity ->
-            val callbackIntent = Intent(
-                Intent.ACTION_VIEW,
-                Uri.parse("nextpage://auth/callback?access_token=test-token&user_id=deeplink-user")
-            ).apply {
-                setClass(activity, MainActivity::class.java)
-                addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            }
+            val callbackIntent =
+                Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse("nextpage://auth/callback?access_token=test-token&user_id=deeplink-user"),
+                ).apply {
+                    setClass(activity, MainActivity::class.java)
+                    addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                }
             activity.startActivity(callbackIntent)
         }
 

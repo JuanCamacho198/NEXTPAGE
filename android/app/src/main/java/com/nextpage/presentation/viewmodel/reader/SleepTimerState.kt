@@ -16,7 +16,7 @@ data class SleepTimerState(
     val remainingSecs: Int = 0,
     val isFinished: Boolean = false,
     val isEndOfChapter: Boolean = false,
-    val presetMinutes: Int? = null
+    val presetMinutes: Int? = null,
 )
 
 /**

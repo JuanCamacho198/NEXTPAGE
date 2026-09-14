@@ -31,44 +31,51 @@ import java.io.File
 @Composable
 fun PerformanceScreen(
     onBack: () -> Unit,
-    viewModel: PerformanceViewModel = viewModel(
-        factory = PerformanceViewModel.Factory(
-            LocalContext.current.applicationContext as Application
-        )
-    )
+    viewModel: PerformanceViewModel =
+        viewModel(
+            factory =
+                PerformanceViewModel.Factory(
+                    LocalContext.current.applicationContext as Application,
+                ),
+        ),
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
     NextPageSettingsSubPage(
         title = stringResource(R.string.settings_performance_title),
-        onBack = onBack
+        onBack = onBack,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             TimingsCard(
                 timings = uiState.timings,
                 lastMeasuredAt = uiState.lastMeasuredAt,
                 isMeasuring = uiState.isMeasuring,
-                onMeasureNow = { viewModel.measureNow() }
+                onMeasureNow = { viewModel.measureNow() },
             )
             ResourcesCard(
                 resources = uiState.resources,
                 isClearingCache = uiState.isClearingCache,
                 onClearCache = { ctx ->
                     viewModel.clearCache { success, _ ->
-                        Toast.makeText(
-                            ctx,
-                            if (success) ctx.getString(R.string.performance_cache_cleared)
-                            else ctx.getString(R.string.performance_cache_clear_error),
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        Toast
+                            .makeText(
+                                ctx,
+                                if (success) {
+                                    ctx.getString(R.string.performance_cache_cleared)
+                                } else {
+                                    ctx.getString(R.string.performance_cache_clear_error)
+                                },
+                                Toast.LENGTH_SHORT,
+                            ).show()
                     }
-                }
+                },
             )
             SyncCard(syncStatus = uiState.syncStatus)
             DiagnosticsCard(
@@ -78,36 +85,42 @@ fun PerformanceScreen(
                 onGenerateReport = { ctx ->
                     viewModel.generateReport { file ->
                         if (file != null) {
-                            Toast.makeText(
-                                ctx,
-                                ctx.getString(R.string.performance_report_generated, file.name),
-                                Toast.LENGTH_LONG
-                            ).show()
+                            Toast
+                                .makeText(
+                                    ctx,
+                                    ctx.getString(R.string.performance_report_generated, file.name),
+                                    Toast.LENGTH_LONG,
+                                ).show()
                             shareFile(ctx, file)
                         } else {
-                            Toast.makeText(
-                                ctx,
-                                ctx.getString(R.string.performance_report_error),
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            Toast
+                                .makeText(
+                                    ctx,
+                                    ctx.getString(R.string.performance_report_error),
+                                    Toast.LENGTH_SHORT,
+                                ).show()
                         }
                     }
                 },
-                onShareFile = { ctx, file -> shareFile(ctx, file) }
+                onShareFile = { ctx, file -> shareFile(ctx, file) },
             )
             Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
 
-private fun shareFile(context: android.content.Context, file: File) {
+private fun shareFile(
+    context: android.content.Context,
+    file: File,
+) {
     runCatching {
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-        val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "application/zip"
-            putExtra(Intent.EXTRA_STREAM, uri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
+        val intent =
+            Intent(Intent.ACTION_SEND).apply {
+                type = "application/zip"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
         context.startActivity(Intent.createChooser(intent, context.getString(R.string.performance_share_report)))
     }
 }

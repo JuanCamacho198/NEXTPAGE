@@ -35,7 +35,10 @@ enum class StarFill { EMPTY, HALF, FULL }
  * Examples: 9 → stars 1-4 FULL + star 5 HALF; 8 → stars 1-4 FULL, star 5 EMPTY;
  * null → all EMPTY.
  */
-internal fun starFillAt(rating: Int?, starIndex: Int): StarFill {
+internal fun starFillAt(
+    rating: Int?,
+    starIndex: Int,
+): StarFill {
     val value = rating ?: return StarFill.EMPTY
     val fullStars = value / 2
     return when {
@@ -54,8 +57,10 @@ internal fun starFillAt(rating: Int?, starIndex: Int): StarFill {
  * Examples: left half of star 5 → 8 (4.0); right half of star 5 → 9 (4.5);
  * left half of star 1 → 0.
  */
-internal fun ratingValueFromTap(starIndex: Int, isLeftHalf: Boolean): Int =
-    if (isLeftHalf) (starIndex - 1) * 2 else starIndex * 2 - 1
+internal fun ratingValueFromTap(
+    starIndex: Int,
+    isLeftHalf: Boolean,
+): Int = if (isLeftHalf) (starIndex - 1) * 2 else starIndex * 2 - 1
 
 /** Converts half-units to the displayed 0.0..5.0 value (`rating / 2.0`); null stays null. */
 internal fun ratingDisplayValue(rating: Int?): Double? = rating?.let { it / 2.0 }
@@ -78,42 +83,46 @@ fun StarRating(
     rating: Int?,
     onRatingChanged: ((Int) -> Unit)? = null,
     modifier: Modifier = Modifier,
-    size: Dp = 28.dp
+    size: Dp = 28.dp,
 ) {
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         (1..5).forEach { starIndex ->
             val fill = starFillAt(rating, starIndex)
-            val contentDescription = when (fill) {
-                StarFill.FULL -> stringResource(R.string.book_detail_rating_star_full, starIndex)
-                StarFill.HALF -> stringResource(R.string.book_detail_rating_star_half, starIndex - 0.5f)
-                StarFill.EMPTY -> null
-            }
-            val tapModifier = onRatingChanged?.let { callback ->
-                Modifier.pointerInput(starIndex, size) {
-                    detectTapGestures { offset ->
-                        callback(ratingValueFromTap(starIndex, offset.x < size.toPx() / 2f))
-                    }
+            val contentDescription =
+                when (fill) {
+                    StarFill.FULL -> stringResource(R.string.book_detail_rating_star_full, starIndex)
+                    StarFill.HALF -> stringResource(R.string.book_detail_rating_star_half, starIndex - 0.5f)
+                    StarFill.EMPTY -> null
                 }
-            } ?: Modifier
+            val tapModifier =
+                onRatingChanged?.let { callback ->
+                    Modifier.pointerInput(starIndex, size) {
+                        detectTapGestures { offset ->
+                            callback(ratingValueFromTap(starIndex, offset.x < size.toPx() / 2f))
+                        }
+                    }
+                } ?: Modifier
 
             Box(
-                modifier = Modifier
-                    .size(size)
-                    .then(tapModifier),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .size(size)
+                        .then(tapModifier),
+                contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = when (fill) {
-                        StarFill.FULL -> NextPageIcons.Star
-                        StarFill.HALF -> NextPageIcons.StarHalf
-                        StarFill.EMPTY -> NextPageIcons.StarBorder
-                    },
+                    imageVector =
+                        when (fill) {
+                            StarFill.FULL -> NextPageIcons.Star
+                            StarFill.HALF -> NextPageIcons.StarHalf
+                            StarFill.EMPTY -> NextPageIcons.StarBorder
+                        },
                     contentDescription = contentDescription,
                     tint = if (fill == StarFill.EMPTY) MaterialTheme.colorScheme.outline else AccentYellow,
-                    modifier = Modifier.size(size)
+                    modifier = Modifier.size(size),
                 )
             }
         }

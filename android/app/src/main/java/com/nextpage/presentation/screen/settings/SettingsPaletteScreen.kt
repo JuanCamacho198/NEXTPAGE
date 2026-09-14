@@ -19,11 +19,11 @@ fun SettingsPaletteScreen(
     onAddCustomHighlightColor: () -> Unit,
     onDeleteCustomHighlightColor: (Int) -> Unit,
     onResetCustomHighlightColors: () -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     NextPageSettingsSubPage(
         title = stringResource(R.string.palette_section_title),
-        onBack = onBack
+        onBack = onBack,
     ) {
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -34,7 +34,7 @@ fun SettingsPaletteScreen(
             },
             onAddColor = onAddCustomHighlightColor,
             onDeleteColor = onDeleteCustomHighlightColor,
-            onReset = onResetCustomHighlightColors
+            onReset = onResetCustomHighlightColors,
         )
     }
 }
@@ -51,7 +51,7 @@ private fun SettingsPaletteScreenDarkPreview() {
             onAddCustomHighlightColor = {},
             onDeleteCustomHighlightColor = {},
             onResetCustomHighlightColors = {},
-            onBack = {}
+            onBack = {},
         )
     }
 }
@@ -66,7 +66,7 @@ private fun SettingsPaletteScreenLightPreview() {
             onAddCustomHighlightColor = {},
             onDeleteCustomHighlightColor = {},
             onResetCustomHighlightColors = {},
-            onBack = {}
+            onBack = {},
         )
     }
 }

@@ -14,16 +14,15 @@ data class AddonSettingsUiState(
     val installed: List<InstalledAddonRow> = emptyList(),
     val isBusy: Boolean = false,
     /** U5: addon ids with recorded capability-disclosure consent. */
-    val consentedIds: Set<String> = emptySet()
+    val consentedIds: Set<String> = emptySet(),
 )
 
 class AddonSettingsViewModel(
     private val registry: AddonRegistryLike,
     private val onError: (message: String) -> Unit = {},
     private val hasConsent: (addonId: String) -> Boolean = { false },
-    private val onConsentChange: (addonId: String, granted: Boolean) -> Unit = { _, _ -> }
+    private val onConsentChange: (addonId: String, granted: Boolean) -> Unit = { _, _ -> },
 ) : ViewModel() {
-
     private val _uiState = MutableStateFlow(AddonSettingsUiState())
     val uiState: StateFlow<AddonSettingsUiState> = _uiState.asStateFlow()
 
@@ -34,10 +33,11 @@ class AddonSettingsViewModel(
     fun refresh() {
         viewModelScope.launch {
             val installed = registry.listInstalled()
-            _uiState.value = _uiState.value.copy(
-                installed = installed,
-                consentedIds = installed.map { it.id }.filter(hasConsent).toSet()
-            )
+            _uiState.value =
+                _uiState.value.copy(
+                    installed = installed,
+                    consentedIds = installed.map { it.id }.filter(hasConsent).toSet(),
+                )
         }
     }
 
@@ -57,7 +57,10 @@ class AddonSettingsViewModel(
         }
     }
 
-    fun toggle(id: String, enabled: Boolean) {
+    fun toggle(
+        id: String,
+        enabled: Boolean,
+    ) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isBusy = true)
             try {
@@ -85,16 +88,20 @@ class AddonSettingsViewModel(
      * U5: records or revokes capability-disclosure consent for [id], then
      * refreshes the consented set. Persisted durably by the caller's store.
      */
-    fun setConsent(id: String, granted: Boolean) {
+    fun setConsent(
+        id: String,
+        granted: Boolean,
+    ) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isBusy = true)
             try {
                 onConsentChange(id, granted)
                 val installed = registry.listInstalled()
-                _uiState.value = _uiState.value.copy(
-                    installed = installed,
-                    consentedIds = installed.map { it.id }.filter(hasConsent).toSet()
-                )
+                _uiState.value =
+                    _uiState.value.copy(
+                        installed = installed,
+                        consentedIds = installed.map { it.id }.filter(hasConsent).toSet(),
+                    )
             } finally {
                 _uiState.value = _uiState.value.copy(isBusy = false)
             }

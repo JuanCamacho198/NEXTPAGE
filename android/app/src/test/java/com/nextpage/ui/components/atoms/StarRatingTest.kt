@@ -8,7 +8,6 @@ import org.junit.Test
  * SCEN-rating-half): fill resolution and tap-half → half-unit conversion.
  */
 class StarRatingTest {
-
     // ── starFillAt: display math ───────────────────────────────────────
 
     @Test

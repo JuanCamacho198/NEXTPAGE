@@ -6,14 +6,14 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.navigation.NavController
-import androidx.navigation.NavType
 import androidx.navigation.NavGraphBuilder
+import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.nextpage.di.AppContainer
-import com.nextpage.presentation.navigation.NextPageDestination
 import com.nextpage.presentation.feature.bookdetail.BookDetailScreen
 import com.nextpage.presentation.feature.editmetadata.EditBookMetadataScreen
+import com.nextpage.presentation.navigation.NextPageDestination
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 
 /**
@@ -28,7 +28,7 @@ fun NavGraphBuilder.bookDetailGraph(
     appContainer: AppContainer,
     readerViewModel: ReaderViewModel,
     contentPadding: PaddingValues,
-    onSelectBook: (String, String?, String) -> Unit
+    onSelectBook: (String, String?, String) -> Unit,
 ) {
     composable(
         route = NextPageDestination.BookDetail.route,
@@ -36,7 +36,7 @@ fun NavGraphBuilder.bookDetailGraph(
         enterTransition = { slideInHorizontally { it } + fadeIn() },
         exitTransition = { slideOutHorizontally { it } + fadeOut() },
         popEnterTransition = { slideInHorizontally { -it } + fadeIn() },
-        popExitTransition = { slideOutHorizontally { -it } + fadeOut() }
+        popExitTransition = { slideOutHorizontally { -it } + fadeOut() },
     ) { backStackEntry ->
         val bookId = backStackEntry.arguments?.getString("bookId") ?: return@composable
         BookDetailScreen(
@@ -50,7 +50,7 @@ fun NavGraphBuilder.bookDetailGraph(
                 navController.navigate(NextPageDestination.Reader.routeFor(id, filePath, format)) {
                     popUpTo(NextPageDestination.Reader.route) { inclusive = true }
                 }
-            }
+            },
         )
     }
 
@@ -60,7 +60,7 @@ fun NavGraphBuilder.bookDetailGraph(
         enterTransition = { slideInHorizontally { it } + fadeIn() },
         exitTransition = { slideOutHorizontally { it } + fadeOut() },
         popEnterTransition = { slideInHorizontally { -it } + fadeIn() },
-        popExitTransition = { slideOutHorizontally { -it } + fadeOut() }
+        popExitTransition = { slideOutHorizontally { -it } + fadeOut() },
     ) { backStackEntry ->
         val bookId = backStackEntry.arguments?.getString("bookId") ?: return@composable
         EditBookMetadataScreen(
@@ -68,7 +68,7 @@ fun NavGraphBuilder.bookDetailGraph(
             bookId = bookId,
             libraryRepository = appContainer.libraryRepository,
             coverStorage = appContainer.coverStorage,
-            onNavigateBack = { navController.popBackStack() }
+            onNavigateBack = { navController.popBackStack() },
         )
     }
 }

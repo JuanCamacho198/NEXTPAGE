@@ -38,9 +38,8 @@ import kotlinx.coroutines.launch
  */
 class GoogleDriveAuthHelper(
     private val context: Context,
-    private val session: DriveOAuthSession
+    private val session: DriveOAuthSession,
 ) {
-
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     /** The in-flight [AuthStart] between [beginAuth] and the redirect — singleton-pending. */
@@ -87,10 +86,11 @@ class GoogleDriveAuthHelper(
      * result on [authResult].
      */
     fun onRedirect(uri: Uri?) {
-        val pending = pendingAuth ?: run {
-            Log.w(TAG, "Drive OAuth redirect received with no pending authorization — ignoring")
-            return
-        }
+        val pending =
+            pendingAuth ?: run {
+                Log.w(TAG, "Drive OAuth redirect received with no pending authorization — ignoring")
+                return
+            }
         pendingAuth = null
 
         if (uri == null) {
@@ -115,7 +115,9 @@ class GoogleDriveAuthHelper(
     }
 
     private fun buildAuthUrl(auth: AuthStart): String =
-        Uri.parse(GoogleDriveConfig.GOOGLE_OAUTH_AUTH_ENDPOINT).buildUpon()
+        Uri
+            .parse(GoogleDriveConfig.GOOGLE_OAUTH_AUTH_ENDPOINT)
+            .buildUpon()
             .appendQueryParameter("client_id", session.clientId)
             .appendQueryParameter("redirect_uri", session.redirectUri)
             .appendQueryParameter("response_type", "code")
@@ -128,16 +130,18 @@ class GoogleDriveAuthHelper(
             .build()
             .toString()
 
-    private fun userDeniedError(error: String): AppError = AppError(
-        category = ErrorCategory.AUTH,
-        code = if (error == "access_denied") "DRIVE_OAUTH_DENIED" else "DRIVE_OAUTH_ERROR",
-        message = if (error == "access_denied") {
-            "Google Drive authorization was declined."
-        } else {
-            "Google Drive authorization failed: $error"
-        },
-        component = COMPONENT
-    )
+    private fun userDeniedError(error: String): AppError =
+        AppError(
+            category = ErrorCategory.AUTH,
+            code = if (error == "access_denied") "DRIVE_OAUTH_DENIED" else "DRIVE_OAUTH_ERROR",
+            message =
+                if (error == "access_denied") {
+                    "Google Drive authorization was declined."
+                } else {
+                    "Google Drive authorization failed: $error"
+                },
+            component = COMPONENT,
+        )
 
     companion object {
         private const val TAG = "GoogleDriveAuthHelper"
@@ -153,13 +157,18 @@ class GoogleDriveAuthHelper(
 class InMemoryDriveTokenStore : DriveTokenStore {
     private var access: String? = null
     private var refresh: String? = null
+
     override fun accessToken(): String? = access
+
     override fun refreshToken(): String? = refresh
+
     override fun isAuthorized(): Boolean = !access.isNullOrBlank()
+
     override fun persist(pair: DriveTokenPair) {
         access = pair.accessToken
         refresh = pair.refreshToken
     }
+
     override fun clear() {
         refresh = null
         access = null

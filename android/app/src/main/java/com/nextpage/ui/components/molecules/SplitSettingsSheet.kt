@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -49,39 +48,43 @@ fun SplitSettingsSheet(
     previewText: String,
     onSettingsChanged: (ReaderSettings) -> Unit,
     onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .shadow(12.dp, RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .shadow(12.dp, RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
     ) {
         // Preview 0.4
         PreviewSection(
             settings = settings,
             previewText = previewText,
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(0.4f)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .weight(0.4f),
         )
 
         // Config 0.6 — straight edge, scrollable inside weight
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(0.6f)
-                .background(color = Color(0xFF191F2F))
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 32.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .weight(0.6f)
+                    .background(color = Color(0xFF191F2F))
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 32.dp),
         ) {
             Box(
-                modifier = Modifier
-                    .width(40.dp)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(Color(0xFF4A5568))
-                    .align(Alignment.CenterHorizontally)
+                modifier =
+                    Modifier
+                        .width(40.dp)
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(Color(0xFF4A5568))
+                        .align(Alignment.CenterHorizontally),
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -89,19 +92,19 @@ fun SplitSettingsSheet(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = stringResource(R.string.reader_typography),
                     style = MaterialTheme.typography.titleMedium,
                     color = Color(0xFFDDE2F8),
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
                 IconButton(onClick = onDismiss) {
                     Icon(
                         imageVector = NextPageIcons.Close,
                         contentDescription = stringResource(R.string.aa_close_settings),
-                        tint = Color(0xFF718096)
+                        tint = Color(0xFF718096),
                     )
                 }
             }
@@ -133,7 +136,7 @@ private fun SplitSettingsSheetDarkPreview() {
             settings = ReaderSettings(),
             previewText = "The quick brown fox jumps over the lazy dog.",
             onSettingsChanged = {},
-            onDismiss = {}
+            onDismiss = {},
         )
     }
 }
@@ -146,7 +149,7 @@ private fun SplitSettingsSheetLightPreview() {
             settings = ReaderSettings(),
             previewText = "The quick brown fox jumps over the lazy dog.",
             onSettingsChanged = {},
-            onDismiss = {}
+            onDismiss = {},
         )
     }
 }

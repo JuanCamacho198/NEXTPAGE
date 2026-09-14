@@ -4,11 +4,11 @@ import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
@@ -37,29 +37,29 @@ fun DiagnosticsCard(
     reportPath: String?,
     onGenerateReport: (Context) -> Unit,
     onShareFile: (Context, File) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Column {
                 Text(
                     text = stringResource(R.string.performance_card_diagnostics_title),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
                 )
                 Text(
                     text = stringResource(R.string.performance_card_diagnostics_subtitle),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
@@ -74,36 +74,37 @@ fun DiagnosticsCard(
                     Text(
                         text = stringResource(R.string.performance_crashes_title),
                         style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
                     )
                     if (diagnostics.crashes.isEmpty()) {
                         Text(
                             text = stringResource(R.string.performance_no_crashes),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     } else {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             diagnostics.crashes.forEach { crash ->
                                 Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(8.dp)
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .padding(8.dp),
                                 ) {
                                     Text(
                                         text = crash.name,
                                         style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.Medium
+                                        fontWeight = FontWeight.Medium,
                                     )
                                     Text(
                                         text = crash.timestamp,
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                     Text(
                                         text = crash.stackSnippet,
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
@@ -116,7 +117,7 @@ fun DiagnosticsCard(
             OutlinedButton(
                 onClick = { onGenerateReport(context) },
                 enabled = !isGenerating,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 if (isGenerating) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
@@ -130,11 +131,11 @@ fun DiagnosticsCard(
                         val f = File(reportPath)
                         if (f.exists()) onShareFile(context, f)
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
                         text = stringResource(R.string.performance_report_path, File(reportPath).name),
-                        style = MaterialTheme.typography.labelSmall
+                        style = MaterialTheme.typography.labelSmall,
                     )
                 }
             }
@@ -143,21 +144,24 @@ fun DiagnosticsCard(
 }
 
 @Composable
-private fun ResourceRow(label: String, value: String) {
+private fun ResourceRow(
+    label: String,
+    value: String,
+) {
     androidx.compose.foundation.layout.Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
         )
     }
 }

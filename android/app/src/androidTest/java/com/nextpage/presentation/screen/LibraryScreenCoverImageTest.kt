@@ -1,21 +1,20 @@
 package com.nextpage.presentation.screen
 
 import android.graphics.Bitmap
-import com.nextpage.ui.components.atoms.CoverThumbnail
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.nextpage.R
-import java.io.File
+import com.nextpage.ui.components.atoms.CoverThumbnail
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class LibraryScreenCoverImageTest {
-
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
@@ -27,7 +26,7 @@ class LibraryScreenCoverImageTest {
         composeRule.setContent {
             CoverThumbnail(
                 coverPath = null,
-                onImageState = { state -> states += state::class.simpleName.orEmpty() }
+                onImageState = { state -> states += state::class.simpleName.orEmpty() },
             )
         }
 
@@ -46,7 +45,7 @@ class LibraryScreenCoverImageTest {
         composeRule.setContent {
             CoverThumbnail(
                 coverPath = coverFile.absolutePath,
-                onImageState = { state -> states += state::class.simpleName.orEmpty() }
+                onImageState = { state -> states += state::class.simpleName.orEmpty() },
             )
         }
 
@@ -64,7 +63,7 @@ class LibraryScreenCoverImageTest {
         composeRule.setContent {
             CoverThumbnail(
                 coverPath = "/tmp/nextpage-does-not-exist-cover.png",
-                onImageState = { state -> states += state::class.simpleName.orEmpty() }
+                onImageState = { state -> states += state::class.simpleName.orEmpty() },
             )
         }
 

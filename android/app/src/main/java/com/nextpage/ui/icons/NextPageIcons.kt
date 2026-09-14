@@ -53,8 +53,8 @@ import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Laptop
-import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.LightMode
+import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.MenuBook
@@ -106,16 +106,17 @@ object NextPageIcons {
         autoMirror: Boolean = false,
         viewportWidth: Float = 24f,
         viewportHeight: Float = 24f,
-        block: ImageVector.Builder.() -> ImageVector.Builder
+        block: ImageVector.Builder.() -> ImageVector.Builder,
     ): ImageVector {
-        val builder = ImageVector.Builder(
-            name = "NextPageIcons.$name",
-            defaultWidth = 24.dp,
-            defaultHeight = 24.dp,
-            viewportWidth = viewportWidth,
-            viewportHeight = viewportHeight,
-            autoMirror = autoMirror
-        )
+        val builder =
+            ImageVector.Builder(
+                name = "NextPageIcons.$name",
+                defaultWidth = 24.dp,
+                defaultHeight = 24.dp,
+                viewportWidth = viewportWidth,
+                viewportHeight = viewportHeight,
+                autoMirror = autoMirror,
+            )
         block(builder)
         return builder.build()
     }
@@ -130,7 +131,7 @@ object NextPageIcons {
     private fun ImageVector.Builder.filledPathFromXml(pathData: String): ImageVector.Builder =
         addPath(
             pathData = PathParser().parsePathString(pathData).toNodes(),
-            fill = SolidColor(Color.Black)
+            fill = SolidColor(Color.Black),
         )
 
     // ── Icons ported verbatim from user XML drawables ──
@@ -138,142 +139,158 @@ object NextPageIcons {
     /**
      * Bottom nav "Home" tab. Filled house. Source: `ic_home.xml`, 512 viewport.
      */
-    val Home = nextPageIcon("Home", viewportWidth = 512f, viewportHeight = 512f) {
-        filledPathFromXml("M256,319.84c-35.35,0 -64,28.65 -64,64v128h128v-128C320,348.49 291.35,319.84 256,319.84z")
-        filledPathFromXml("M362.67,383.84v128H448c35.35,0 64,-28.65 64,-64V253.26c0,-11.08 -4.3,-21.73 -12.01,-29.7l-181.29,-195.99c-31.99,-34.61 -85.98,-36.74 -120.59,-4.75c-1.64,1.52 -3.23,3.1 -4.75,4.75L12.4,223.5C4.45,231.5 -0,242.31 0,253.58v194.26c0,35.35 28.65,64 64,64h85.33v-128c0.4,-58.17 47.37,-105.68 104.07,-107.04C312.01,275.38 362.22,323.7 362.67,383.84z")
-        filledPathFromXml("M256,319.84c-35.35,0 -64,28.65 -64,64v128h128v-128C320,348.49 291.35,319.84 256,319.84z")
-    }
+    val Home =
+        nextPageIcon("Home", viewportWidth = 512f, viewportHeight = 512f) {
+            filledPathFromXml("M256,319.84c-35.35,0 -64,28.65 -64,64v128h128v-128C320,348.49 291.35,319.84 256,319.84z")
+            filledPathFromXml("M362.67,383.84v128H448c35.35,0 64,-28.65 64,-64V253.26c0,-11.08 -4.3,-21.73 -12.01,-29.7l-181.29,-195.99c-31.99,-34.61 -85.98,-36.74 -120.59,-4.75c-1.64,1.52 -3.23,3.1 -4.75,4.75L12.4,223.5C4.45,231.5 -0,242.31 0,253.58v194.26c0,35.35 28.65,64 64,64h85.33v-128c0.4,-58.17 47.37,-105.68 104.07,-107.04C312.01,275.38 362.22,323.7 362.67,383.84z")
+            filledPathFromXml("M256,319.84c-35.35,0 -64,28.65 -64,64v128h128v-128C320,348.49 291.35,319.84 256,319.84z")
+        }
 
     /**
      * Bottom nav "Library" tab — bookshelf with two rows of books. Filled.
      * Source: `ic_library.xml`, 24 viewport.
      */
-    val Library = nextPageIcon("Library") {
-        filledPathFromXml("m8,12c0,0.552 -0.447,1 -1,1h-2v2c0,0.552 -0.447,1 -1,1s-1,-0.448 -1,-1v-2L1,13c-0.553,0 -1,-0.448 -1,-1s0.447,-1 1,-1h2v-2c0,-0.552 0.447,-1 1,-1s1,0.448 1,1v2h2c0.553,0 1,0.448 1,1ZM3,21c0,1.657 1.343,3 3,3h2v-5L3,19v2ZM3,3v2h5L8,0h-2c-1.657,0 -3,1.343 -3,3ZM10,17h5L15,7h-5v10ZM10,24h2c1.657,0 3,-1.343 3,-3v-2h-5v5ZM20.941,6.091l-5.601,1.064 2.169,10.859 5.601,-1.064 -2.169,-10.859ZM23.965,21.308l-0.479,-2.393 -5.601,1.064 0.48,2.396c0.207,1.084 1.254,1.796 2.338,1.59l1.672,-0.317c1.086,-0.206 1.798,-1.254 1.591,-2.34ZM20.566,4.127l-0.477,-2.5c-0.206,-1.085 -1.253,-1.797 -2.338,-1.591l-1.672,0.317c-0.684,0.13 -1.219,0.595 -1.47,1.193 -0.513,-0.918 -1.482,-1.546 -2.609,-1.546h-2v5h5.967l4.599,-0.874Z")
-    }
+    val Library =
+        nextPageIcon("Library") {
+            filledPathFromXml("m8,12c0,0.552 -0.447,1 -1,1h-2v2c0,0.552 -0.447,1 -1,1s-1,-0.448 -1,-1v-2L1,13c-0.553,0 -1,-0.448 -1,-1s0.447,-1 1,-1h2v-2c0,-0.552 0.447,-1 1,-1s1,0.448 1,1v2h2c0.553,0 1,0.448 1,1ZM3,21c0,1.657 1.343,3 3,3h2v-5L3,19v2ZM3,3v2h5L8,0h-2c-1.657,0 -3,1.343 -3,3ZM10,17h5L15,7h-5v10ZM10,24h2c1.657,0 3,-1.343 3,-3v-2h-5v5ZM20.941,6.091l-5.601,1.064 2.169,10.859 5.601,-1.064 -2.169,-10.859ZM23.965,21.308l-0.479,-2.393 -5.601,1.064 0.48,2.396c0.207,1.084 1.254,1.796 2.338,1.59l1.672,-0.317c1.086,-0.206 1.798,-1.254 1.591,-2.34ZM20.566,4.127l-0.477,-2.5c-0.206,-1.085 -1.253,-1.797 -2.338,-1.591l-1.672,0.317c-0.684,0.13 -1.219,0.595 -1.47,1.193 -0.513,-0.918 -1.482,-1.546 -2.609,-1.546h-2v5h5.967l4.599,-0.874Z")
+        }
 
     /**
      * Bottom nav "Highlights" tab — highlighter marker. Filled.
      * Source: `ic_highlights.xml`, 24 viewport.
      */
-    val Highlights = nextPageIcon("Highlights") {
-        filledPathFromXml("M8.02,19c1.78,0 3.48,-0.76 4.7,-2.13l7.1,-8.52c1.65,-1.9 1.55,-4.79 -0.23,-6.58l-0.37,-0.37c-1.78,-1.78 -4.67,-1.88 -6.55,-0.25L4.09,8.31c-1.33,1.18 -2.09,2.88 -2.09,4.66v3.9l-1.56,1.56c-0.59,0.59 -0.59,1.54 0,2.12 0.29,0.29 0.68,0.44 1.06,0.44s0.77,-0.15 1.06,-0.44l1.56,-1.56h3.9ZM6.05,10.59L14.61,3.45c0.72,-0.62 1.81,-0.59 2.49,0.09l0.37,0.37c0.67,0.67 0.71,1.77 0.07,2.51l-7.09,8.5c-0.23,0.25 -0.49,0.47 -0.78,0.64l-4.22,-4.22c0.16,-0.28 0.37,-0.53 0.6,-0.74ZM24,22.5c0,0.83 -0.67,1.5 -1.5,1.5L5.5,24c-0.83,0 -1.5,-0.67 -1.5,-1.5s0.67,-1.5 1.5,-1.5L22.5,21c0.83,0 1.5,0.67 1.5,1.5Z")
-    }
+    val Highlights =
+        nextPageIcon("Highlights") {
+            filledPathFromXml("M8.02,19c1.78,0 3.48,-0.76 4.7,-2.13l7.1,-8.52c1.65,-1.9 1.55,-4.79 -0.23,-6.58l-0.37,-0.37c-1.78,-1.78 -4.67,-1.88 -6.55,-0.25L4.09,8.31c-1.33,1.18 -2.09,2.88 -2.09,4.66v3.9l-1.56,1.56c-0.59,0.59 -0.59,1.54 0,2.12 0.29,0.29 0.68,0.44 1.06,0.44s0.77,-0.15 1.06,-0.44l1.56,-1.56h3.9ZM6.05,10.59L14.61,3.45c0.72,-0.62 1.81,-0.59 2.49,0.09l0.37,0.37c0.67,0.67 0.71,1.77 0.07,2.51l-7.09,8.5c-0.23,0.25 -0.49,0.47 -0.78,0.64l-4.22,-4.22c0.16,-0.28 0.37,-0.53 0.6,-0.74ZM24,22.5c0,0.83 -0.67,1.5 -1.5,1.5L5.5,24c-0.83,0 -1.5,-0.67 -1.5,-1.5s0.67,-1.5 1.5,-1.5L22.5,21c0.83,0 1.5,0.67 1.5,1.5Z")
+        }
 
     /**
      * Bottom nav "Settings" tab — gear. Filled. Source: `ic_settings.xml`,
      * 512 viewport.
      */
-    val Settings = nextPageIcon("Settings", viewportWidth = 512f, viewportHeight = 512f) {
-        filledPathFromXml("M34.28,384c17.65,30.63 56.78,41.15 87.4,23.5c0.02,-0.01 0.04,-0.02 0.06,-0.04l9.49,-5.48c17.92,15.33 38.52,27.22 60.76,35.07V448c0,35.35 28.65,64 64,64s64,-28.65 64,-64v-10.94c22.24,-7.86 42.84,-19.77 60.76,-35.12l9.54,5.5c30.63,17.67 69.79,7.17 87.47,-23.47c17.67,-30.63 7.17,-69.79 -23.47,-87.47l0,0l-9.47,-5.46c4.26,-23.2 4.26,-46.99 0,-70.19l9.47,-5.46c30.63,-17.67 41.14,-56.83 23.47,-87.47c-17.67,-30.63 -56.83,-41.14 -87.47,-23.47l-9.49,5.48C362.86,94.64 342.25,82.77 320,74.94V64c0,-35.35 -28.65,-64 -64,-64s-64,28.65 -64,64v10.94c-22.24,7.86 -42.84,19.77 -60.76,35.12l-9.54,-5.53C91.07,86.86 51.91,97.37 34.24,128s-7.17,69.79 23.47,87.47l0,0l9.47,5.46c-4.26,23.2 -4.26,46.99 0,70.19l-9.47,5.46C27.16,314.3 16.69,353.38 34.28,384zM256,170.67c47.13,0 85.33,38.21 85.33,85.33S303.13,341.33 256,341.33S170.67,303.13 170.67,256S208.87,170.67 256,170.67z")
-    }
+    val Settings =
+        nextPageIcon("Settings", viewportWidth = 512f, viewportHeight = 512f) {
+            filledPathFromXml("M34.28,384c17.65,30.63 56.78,41.15 87.4,23.5c0.02,-0.01 0.04,-0.02 0.06,-0.04l9.49,-5.48c17.92,15.33 38.52,27.22 60.76,35.07V448c0,35.35 28.65,64 64,64s64,-28.65 64,-64v-10.94c22.24,-7.86 42.84,-19.77 60.76,-35.12l9.54,5.5c30.63,17.67 69.79,7.17 87.47,-23.47c17.67,-30.63 7.17,-69.79 -23.47,-87.47l0,0l-9.47,-5.46c4.26,-23.2 4.26,-46.99 0,-70.19l9.47,-5.46c30.63,-17.67 41.14,-56.83 23.47,-87.47c-17.67,-30.63 -56.83,-41.14 -87.47,-23.47l-9.49,5.48C362.86,94.64 342.25,82.77 320,74.94V64c0,-35.35 -28.65,-64 -64,-64s-64,28.65 -64,64v10.94c-22.24,7.86 -42.84,19.77 -60.76,35.12l-9.54,-5.53C91.07,86.86 51.91,97.37 34.24,128s-7.17,69.79 23.47,87.47l0,0l9.47,5.46c-4.26,23.2 -4.26,46.99 0,70.19l-9.47,5.46C27.16,314.3 16.69,353.38 34.28,384zM256,170.67c47.13,0 85.33,38.21 85.33,85.33S303.13,341.33 256,341.33S170.67,303.13 170.67,256S208.87,170.67 256,170.67z")
+        }
 
     /**
      * Bottom nav "Statistics" tab — bar chart. Filled. Source:
      * `ic_statistics.xml`, 24 viewport.
      */
-    val Statistics = nextPageIcon("Statistics") {
-        filledPathFromXml("M23,22H5a3,3 0,0 1,-3 -3V1A1,1 0,0 0,0 1V19a5.006,5.006 0,0 0,5 5H23a1,1 0,0 0,0 -2Z")
-        filledPathFromXml("M6,20a1,1 0,0 0,1 -1V12a1,1 0,0 0,-2 0v7A1,1 0,0 0,6 20Z")
-        filledPathFromXml("M10,10v9a1,1 0,0 0,2 0V10a1,1 0,0 0,-2 0Z")
-        filledPathFromXml("M15,13v6a1,1 0,0 0,2 0V13a1,1 0,0 0,-2 0Z")
-        filledPathFromXml("M20,9V19a1,1 0,0 0,2 0V9a1,1 0,0 0,-2 0Z")
-        filledPathFromXml("M6,9a1,1 0,0 0,0.707 -0.293l3.586,-3.586a1.025,1.025 0,0 1,1.414 0l2.172,2.172a3,3 0,0 0,4.242 0l5.586,-5.586A1,1 0,0 0,22.293 0.293L16.707,5.878a1,1 0,0 1,-1.414 0L13.121,3.707a3,3 0,0 0,-4.242 0L5.293,7.293A1,1 0,0 0,6 9Z")
-    }
+    val Statistics =
+        nextPageIcon("Statistics") {
+            filledPathFromXml("M23,22H5a3,3 0,0 1,-3 -3V1A1,1 0,0 0,0 1V19a5.006,5.006 0,0 0,5 5H23a1,1 0,0 0,0 -2Z")
+            filledPathFromXml("M6,20a1,1 0,0 0,1 -1V12a1,1 0,0 0,-2 0v7A1,1 0,0 0,6 20Z")
+            filledPathFromXml("M10,10v9a1,1 0,0 0,2 0V10a1,1 0,0 0,-2 0Z")
+            filledPathFromXml("M15,13v6a1,1 0,0 0,2 0V13a1,1 0,0 0,-2 0Z")
+            filledPathFromXml("M20,9V19a1,1 0,0 0,2 0V9a1,1 0,0 0,-2 0Z")
+            filledPathFromXml("M6,9a1,1 0,0 0,0.707 -0.293l3.586,-3.586a1.025,1.025 0,0 1,1.414 0l2.172,2.172a3,3 0,0 0,4.242 0l5.586,-5.586A1,1 0,0 0,22.293 0.293L16.707,5.878a1,1 0,0 1,-1.414 0L13.121,3.707a3,3 0,0 0,-4.242 0L5.293,7.293A1,1 0,0 0,6 9Z")
+        }
 
     /**
      * Search field magnifier. Filled. Source: `ic_search.xml`, 24 viewport.
      */
-    val Search = nextPageIcon("Search") {
-        filledPathFromXml("M23.707,22.293l-5.969,-5.969a10.016,10.016 0,1 0,-1.414 1.414l5.969,5.969a1,1 0,0 0,1.414 -1.414ZM10,18a8,8 0,1 1,8 -8A8.009,8.009 0,0 1,10 18Z")
-    }
+    val Search =
+        nextPageIcon("Search") {
+            filledPathFromXml("M23.707,22.293l-5.969,-5.969a10.016,10.016 0,1 0,-1.414 1.414l5.969,5.969a1,1 0,0 0,1.414 -1.414ZM10,18a8,8 0,1 1,8 -8A8.009,8.009 0,0 1,10 18Z")
+        }
 
     /**
      * Share — three connected dots. Filled. Source: `ic_share.xml`,
      * 24 viewport.
      */
-    val Share = nextPageIcon("Share") {
-        filledPathFromXml("M19.333,14.667a4.66,4.66 0,0 0,-3.839 2.024L8.985,13.752a4.574,4.574 0,0 0,0.005 -3.488l6.5,-2.954a4.66,4.66 0,1 0,-0.827 -2.643,4.633 4.633,0 0,0 0.08,0.786L7.833,8.593a4.668,4.668 0,1 0,-0.015 6.827l6.928,3.128a4.736,4.736 0,0 0,-0.079 0.785,4.667 4.667,0 1,0 4.666,-4.666ZM19.333,2a2.667,2.667 0,1 1,-2.666 2.667A2.669,2.669 0,0 1,19.333 2ZM4.667,14.667A2.667,2.667 0,1 1,7.333 12,2.67 2.67,0 0,1 4.667,14.667ZM19.333,22A2.667,2.667 0,1 1,22 19.333,2.669 2.669,0 0,1 19.333,22Z")
-    }
+    val Share =
+        nextPageIcon("Share") {
+            filledPathFromXml("M19.333,14.667a4.66,4.66 0,0 0,-3.839 2.024L8.985,13.752a4.574,4.574 0,0 0,0.005 -3.488l6.5,-2.954a4.66,4.66 0,1 0,-0.827 -2.643,4.633 4.633,0 0,0 0.08,0.786L7.833,8.593a4.668,4.668 0,1 0,-0.015 6.827l6.928,3.128a4.736,4.736 0,0 0,-0.079 0.785,4.667 4.667,0 1,0 4.666,-4.666ZM19.333,2a2.667,2.667 0,1 1,-2.666 2.667A2.669,2.669 0,0 1,19.333 2ZM4.667,14.667A2.667,2.667 0,1 1,7.333 12,2.67 2.67,0 0,1 4.667,14.667ZM19.333,22A2.667,2.667 0,1 1,22 19.333,2.669 2.669,0 0,1 19.333,22Z")
+        }
 
     /**
      * Trash can — lid, body, ribs. Filled. Source: `ic_trash.xml`,
      * 24 viewport.
      */
-    val Trash = nextPageIcon("Trash") {
-        filledPathFromXml("M21,4L17.9,4A5.009,5.009 0,0 0,13 0L11,0A5.009,5.009 0,0 0,6.1 4L3,4A1,1 0,0 0,3 6L4,6L4,19a5.006,5.006 0,0 0,5 5h6a5.006,5.006 0,0 0,5 -5L20,6h1a1,1 0,0 0,0 -2ZM11,2h2a3.006,3.006 0,0 1,2.829 2L8.171,4A3.006,3.006 0,0 1,11 2ZM18,19a3,3 0,0 1,-3 3L9,22a3,3 0,0 1,-3 -3L6,6L18,6Z")
-        filledPathFromXml("M10,18a1,1 0,0 0,1 -1V11a1,1 0,0 0,-2 0v6A1,1 0,0 0,10 18Z")
-        filledPathFromXml("M14,18a1,1 0,0 0,1 -1V11a1,1 0,0 0,-2 0v6A1,1 0,0 0,14 18Z")
-    }
+    val Trash =
+        nextPageIcon("Trash") {
+            filledPathFromXml("M21,4L17.9,4A5.009,5.009 0,0 0,13 0L11,0A5.009,5.009 0,0 0,6.1 4L3,4A1,1 0,0 0,3 6L4,6L4,19a5.006,5.006 0,0 0,5 5h6a5.006,5.006 0,0 0,5 -5L20,6h1a1,1 0,0 0,0 -2ZM11,2h2a3.006,3.006 0,0 1,2.829 2L8.171,4A3.006,3.006 0,0 1,11 2ZM18,19a3,3 0,0 1,-3 3L9,22a3,3 0,0 1,-3 -3L6,6L18,6Z")
+            filledPathFromXml("M10,18a1,1 0,0 0,1 -1V11a1,1 0,0 0,-2 0v6A1,1 0,0 0,10 18Z")
+            filledPathFromXml("M14,18a1,1 0,0 0,1 -1V11a1,1 0,0 0,-2 0v6A1,1 0,0 0,14 18Z")
+        }
 
     /**
      * Auth route icon — user/account circle. Filled. Source:
      * `ic_account.xml`, 24 viewport.
      */
-    val Person = nextPageIcon("Person") {
-        filledPathFromXml("M12,12A6,6 0,1 0,6 6,6.006 6.006,0 0,0 12,12ZM12,2A4,4 0,1 1,8 6,4 4,0 0,1 12,2Z")
-        filledPathFromXml("M12,14a9.01,9.01 0,0 0,-9 9,1 1,0 0,0 2,0 7,7 0,0 1,14 0,1 1,0 0,0 2,0A9.01,9.01 0,0 0,12 14Z")
-    }
+    val Person =
+        nextPageIcon("Person") {
+            filledPathFromXml("M12,12A6,6 0,1 0,6 6,6.006 6.006,0 0,0 12,12ZM12,2A4,4 0,1 1,8 6,4 4,0 0,1 12,2Z")
+            filledPathFromXml("M12,14a9.01,9.01 0,0 0,-9 9,1 1,0 0,0 2,0 7,7 0,0 1,14 0,1 1,0 0,0 2,0A9.01,9.01 0,0 0,12 14Z")
+        }
 
     /**
      * Envelope. Filled. Source: `ic_email.xml`, 24 viewport.
      */
-    val Email = nextPageIcon("Email") {
-        filledPathFromXml("M19,1H5A5.006,5.006 0,0 0,0 6V18a5.006,5.006 0,0 0,5 5H19a5.006,5.006 0,0 0,5 -5V6A5.006,5.006 0,0 0,19 1ZM5,3H19a3,3 0,0 1,2.78 1.887l-7.658,7.659a3.007,3.007 0,0 1,-4.244 0L2.22,4.887A3,3 0,0 1,5 3ZM19,21H5a3,3 0,0 1,-3 -3V7.5L8.464,13.96a5.007,5.007 0,0 0,7.072 0L22,7.5V18A3,3 0,0 1,19 21Z")
-    }
+    val Email =
+        nextPageIcon("Email") {
+            filledPathFromXml("M19,1H5A5.006,5.006 0,0 0,0 6V18a5.006,5.006 0,0 0,5 5H19a5.006,5.006 0,0 0,5 -5V6A5.006,5.006 0,0 0,19 1ZM5,3H19a3,3 0,0 1,2.78 1.887l-7.658,7.659a3.007,3.007 0,0 1,-4.244 0L2.22,4.887A3,3 0,0 1,5 3ZM19,21H5a3,3 0,0 1,-3 -3V7.5L8.464,13.96a5.007,5.007 0,0 0,7.072 0L22,7.5V18A3,3 0,0 1,19 21Z")
+        }
 
     /**
      * Bookmark ribbon (outline — default reader bookmark). Filled.
      * Source: `ic_marcador.xml`, 24 viewport.
      */
-    val Bookmark = nextPageIcon("Bookmark") {
-        filledPathFromXml("M20.137,24a2.8,2.8 0,0 1,-1.987 -0.835L12,17.051 5.85,23.169a2.8,2.8 0,0 1,-3.095 0.609A2.8,2.8 0,0 1,1 21.154V5A5,5 0,0 1,6 0H18a5,5 0,0 1,5 5V21.154a2.8,2.8 0,0 1,-1.751 2.624A2.867,2.867 0,0 1,20.137 24ZM6,2A3,3 0,0 0,3 5V21.154a0.843,0.843 0,0 0,1.437 0.6h0L11.3,14.933a1,1 0,0 1,1.41 0l6.855,6.819a0.843,0.843 0,0 0,1.437 -0.6V5a3,3 0,0 0,-3 -3Z")
-    }
+    val Bookmark =
+        nextPageIcon("Bookmark") {
+            filledPathFromXml("M20.137,24a2.8,2.8 0,0 1,-1.987 -0.835L12,17.051 5.85,23.169a2.8,2.8 0,0 1,-3.095 0.609A2.8,2.8 0,0 1,1 21.154V5A5,5 0,0 1,6 0H18a5,5 0,0 1,5 5V21.154a2.8,2.8 0,0 1,-1.751 2.624A2.867,2.867 0,0 1,20.137 24ZM6,2A3,3 0,0 0,3 5V21.154a0.843,0.843 0,0 0,1.437 0.6h0L11.3,14.933a1,1 0,0 1,1.41 0l6.855,6.819a0.843,0.843 0,0 0,1.437 -0.6V5a3,3 0,0 0,-3 -3Z")
+        }
 
     /**
      * Filled variant of [Bookmark] — used by the reader bookmark toggle
      * animation. Filled. Source: `ic_marcador_relleno.xml`, 24 viewport.
      */
-    val BookmarkFilled = nextPageIcon("BookmarkFilled") {
-        filledPathFromXml("M2.849,23.55a2.954,2.954 0,0 0,3.266 -0.644L12,17.053l5.885,5.853a2.956,2.956 0,0 0,2.1 0.881,3.05 3.05,0 0,0 1.17,-0.237A2.953,2.953 0,0 0,23 20.779V5a5.006,5.006 0,0 0,-5 -5H6A5.006,5.006 0,0 0,1 5V20.779A2.953,2.953 0,0 0,2.849 23.55Z")
-    }
+    val BookmarkFilled =
+        nextPageIcon("BookmarkFilled") {
+            filledPathFromXml("M2.849,23.55a2.954,2.954 0,0 0,3.266 -0.644L12,17.053l5.885,5.853a2.956,2.956 0,0 0,2.1 0.881,3.05 3.05,0 0,0 1.17,-0.237A2.953,2.953 0,0 0,23 20.779V5a5.006,5.006 0,0 0,-5 -5H6A5.006,5.006 0,0 0,1 5V20.779A2.953,2.953 0,0 0,2.849 23.55Z")
+        }
 
     /**
      * Hamburger menu — three stacked lines. Filled. Source:
      * `ic_menu_burger.xml`, 512 viewport.
      */
-    val MenuBurger = nextPageIcon("MenuBurger", viewportWidth = 512f, viewportHeight = 512f) {
-        filledPathFromXml("M480,224H32c-17.67,0 -32,14.33 -32,32s14.33,32 32,32h448c17.67,0 32,-14.33 32,-32S497.67,224 480,224z")
-        filledPathFromXml("M32,138.67h448c17.67,0 32,-14.33 32,-32s-14.33,-32 -32,-32H32c-17.67,0 -32,14.33 -32,32S14.33,138.67 32,138.67z")
-        filledPathFromXml("M480,373.33H32c-17.67,0 -32,14.33 -32,32s14.33,32 32,32h448c17.67,0 32,-14.33 32,-32S497.67,373.33 480,373.33z")
-    }
+    val MenuBurger =
+        nextPageIcon("MenuBurger", viewportWidth = 512f, viewportHeight = 512f) {
+            filledPathFromXml("M480,224H32c-17.67,0 -32,14.33 -32,32s14.33,32 32,32h448c17.67,0 32,-14.33 32,-32S497.67,224 480,224z")
+            filledPathFromXml("M32,138.67h448c17.67,0 32,-14.33 32,-32s-14.33,-32 -32,-32H32c-17.67,0 -32,14.33 -32,32S14.33,138.67 32,138.67z")
+            filledPathFromXml("M480,373.33H32c-17.67,0 -32,14.33 -32,32s14.33,32 32,32h448c17.67,0 32,-14.33 32,-32S497.67,373.33 480,373.33z")
+        }
 
     /**
      * Upload — tray with up arrow. Filled. Source: `ic_subir_archivo.xml`,
      * 24 viewport.
      */
-    val Upload = nextPageIcon("Upload") {
-        filledPathFromXml("M11.007,2.578 L11,18.016a1,1 0,0 0,1 1h0a1,1 0,0 0,1 -1l0.007,-15.421 2.912,2.913a1,1 0,0 0,1.414 0h0a1,1 0,0 0,0 -1.414L14.122,0.879a3,3 0,0 0,-4.244 0L6.667,4.091a1,1 0,0 0,0 1.414h0a1,1 0,0 0,1.414 0Z")
-        filledPathFromXml("M22,17v4a1,1 0,0 1,-1 1H3a1,1 0,0 1,-1 -1V17a1,1 0,0 0,-1 -1H1a1,1 0,0 0,-1 1v4a3,3 0,0 0,3 3H21a3,3 0,0 0,3 -3V17a1,1 0,0 0,-1 -1h0A1,1 0,0 0,22 17Z")
-    }
+    val Upload =
+        nextPageIcon("Upload") {
+            filledPathFromXml("M11.007,2.578 L11,18.016a1,1 0,0 0,1 1h0a1,1 0,0 0,1 -1l0.007,-15.421 2.912,2.913a1,1 0,0 0,1.414 0h0a1,1 0,0 0,0 -1.414L14.122,0.879a3,3 0,0 0,-4.244 0L6.667,4.091a1,1 0,0 0,0 1.414h0a1,1 0,0 0,1.414 0Z")
+            filledPathFromXml("M22,17v4a1,1 0,0 1,-1 1H3a1,1 0,0 1,-1 -1V17a1,1 0,0 0,-1 -1H1a1,1 0,0 0,-1 1v4a3,3 0,0 0,3 3H21a3,3 0,0 0,3 -3V17a1,1 0,0 0,-1 -1h0A1,1 0,0 0,22 17Z")
+        }
 
     /**
      * Dismiss/clear X in a circle. Filled. Source: `ic_cross_circle.xml`,
      * 512 viewport.
      */
-    val Close = nextPageIcon("Close", viewportWidth = 512f, viewportHeight = 512f) {
-        filledPathFromXml("M256,0C114.61,0 0,114.61 0,256s114.61,256 256,256s256,-114.61 256,-256C511.85,114.68 397.32,0.15 256,0zM341.33,311.19c8.67,7.98 9.23,21.48 1.25,30.14c-7.98,8.67 -21.48,9.23 -30.14,1.25c-0.43,-0.4 -0.85,-0.82 -1.25,-1.25L256,286.17l-55.17,55.17c-8.48,8.19 -21.98,7.95 -30.17,-0.52c-7.98,-8.27 -7.98,-21.37 0,-29.64L225.84,256l-55.17,-55.17c-8.19,-8.48 -7.95,-21.98 0.52,-30.17c8.27,-7.98 21.37,-7.98 29.64,0L256,225.84l55.19,-55.17c7.98,-8.67 21.48,-9.23 30.14,-1.25c8.67,7.98 9.23,21.48 1.25,30.14c-0.4,0.43 -0.82,0.85 -1.25,1.25L286.17,256L341.33,311.19z")
-    }
+    val Close =
+        nextPageIcon("Close", viewportWidth = 512f, viewportHeight = 512f) {
+            filledPathFromXml("M256,0C114.61,0 0,114.61 0,256s114.61,256 256,256s256,-114.61 256,-256C511.85,114.68 397.32,0.15 256,0zM341.33,311.19c8.67,7.98 9.23,21.48 1.25,30.14c-7.98,8.67 -21.48,9.23 -30.14,1.25c-0.43,-0.4 -0.85,-0.82 -1.25,-1.25L256,286.17l-55.17,55.17c-8.48,8.19 -21.98,7.95 -30.17,-0.52c-7.98,-8.27 -7.98,-21.37 0,-29.64L225.84,256l-55.17,-55.17c-8.19,-8.48 -7.95,-21.98 0.52,-30.17c8.27,-7.98 21.37,-7.98 29.64,0L256,225.84l55.19,-55.17c7.98,-8.67 21.48,-9.23 30.14,-1.25c8.67,7.98 9.23,21.48 1.25,30.14c-0.4,0.43 -0.82,0.85 -1.25,1.25L286.17,256L341.33,311.19z")
+        }
 
     /**
      * Help — question mark in a circle. Filled. Source:
      * `ic_interrogation.xml`, 24 viewport.
      */
-    val Help = nextPageIcon("Help") {
-        filledPathFromXml("M12,0A12,12 0,1 0,24 12,12.013 12.013,0 0,0 12,0ZM12,22A10,10 0,1 1,22 12,10.011 10.011,0 0,1 12,22Z")
-        filledPathFromXml("M12.717,5.063A4,4 0,0 0,8 9a1,1 0,0 0,2 0,2 2,0 0,1 2.371,-1.967 2.024,2.024 0,0 1,1.6 1.595,2 2,0 0,1 -1,2.125A3.954,3.954 0,0 0,11 14.257V15a1,1 0,0 0,2 0v-0.743a1.982,1.982 0,0 1,0.93 -1.752,4 4,0 0,0 -1.213,-7.442Z")
-        filledPathFromXml("M12,17L12,17A1,1 0,0 1,13 18L13,18A1,1 0,0 1,12 19L12,19A1,1 0,0 1,11 18L11,18A1,1 0,0 1,12 17z")
-    }
+    val Help =
+        nextPageIcon("Help") {
+            filledPathFromXml("M12,0A12,12 0,1 0,24 12,12.013 12.013,0 0,0 12,0ZM12,22A10,10 0,1 1,22 12,10.011 10.011,0 0,1 12,22Z")
+            filledPathFromXml("M12.717,5.063A4,4 0,0 0,8 9a1,1 0,0 0,2 0,2 2,0 0,1 2.371,-1.967 2.024,2.024 0,0 1,1.6 1.595,2 2,0 0,1 -1,2.125A3.954,3.954 0,0 0,11 14.257V15a1,1 0,0 0,2 0v-0.743a1.982,1.982 0,0 1,0.93 -1.752,4 4,0 0,0 -1.213,-7.442Z")
+            filledPathFromXml("M12,17L12,17A1,1 0,0 1,13 18L13,18A1,1 0,0 1,12 19L12,19A1,1 0,0 1,11 18L11,18A1,1 0,0 1,12 17z")
+        }
 
     // ── Icons delegated to official Material icons (material-icons-extended) ──
 
@@ -465,107 +482,109 @@ object NextPageIcons {
 @Composable
 private fun NextPageIconsGalleryDarkPreview() {
     NextPageTheme(darkTheme = true) {
-        val icons = listOf<Pair<String, ImageVector>>(
-            "Home" to NextPageIcons.Home,
-            "Library" to NextPageIcons.Library,
-            "Highlights" to NextPageIcons.Highlights,
-            "Settings" to NextPageIcons.Settings,
-            "Statistics" to NextPageIcons.Statistics,
-            "BookOpen" to NextPageIcons.BookOpen,
-            "Book" to NextPageIcons.Book,
-            "Person" to NextPageIcons.Person,
-            "Search" to NextPageIcons.Search,
-            "Close" to NextPageIcons.Close,
-            "MoreVert" to NextPageIcons.MoreVert,
-            "Add" to NextPageIcons.Add,
-            "FilterList" to NextPageIcons.FilterList,
-            "Notifications" to NextPageIcons.Notifications,
-            "GridView" to NextPageIcons.GridView,
-            "ViewList" to NextPageIcons.ViewList,
-            "Clock" to NextPageIcons.Clock,
-            "ChartLine" to NextPageIcons.ChartLine,
-            "ChartBar" to NextPageIcons.ChartBar,
-            "Bookmark" to NextPageIcons.Bookmark,
-            "Upload" to NextPageIcons.Upload,
-            "Sparkle" to NextPageIcons.Sparkle,
-            "Quote" to NextPageIcons.Quote,
-            "Lightbulb" to NextPageIcons.Lightbulb,
-            "Check" to NextPageIcons.Check,
-            "ErrorOutline" to NextPageIcons.ErrorOutline,
-            "Trophy" to NextPageIcons.Trophy,
-            "Palette" to NextPageIcons.Palette,
-            "Copy" to NextPageIcons.Copy,
-            "Tag" to NextPageIcons.Tag,
-            "Pencil" to NextPageIcons.Pencil,
-            "Share" to NextPageIcons.Share,
-            "Trash" to NextPageIcons.Trash,
-            "LibraryBooks" to NextPageIcons.LibraryBooks,
-            "CloudDownload" to NextPageIcons.CloudDownload,
-            "Devices" to NextPageIcons.Devices,
-            "DarkMode" to NextPageIcons.DarkMode,
-            "LightMode" to NextPageIcons.LightMode,
-            "BrightnessAuto" to NextPageIcons.BrightnessAuto,
-            "Language" to NextPageIcons.Language,
-            "Storage" to NextPageIcons.Storage,
-            "Info" to NextPageIcons.Info,
-            "BugReport" to NextPageIcons.BugReport,
-            "SignOut" to NextPageIcons.SignOut,
-            "Smartphone" to NextPageIcons.Smartphone,
-            "Monitor" to NextPageIcons.Monitor,
-            "Laptop" to NextPageIcons.Laptop,
-            "ChevronRight" to NextPageIcons.ChevronRight,
-            "ArrowBack" to NextPageIcons.ArrowBack,
-            "ArrowRight" to NextPageIcons.ArrowRight,
-            "Sync" to NextPageIcons.Sync,
-            "CloudSync" to NextPageIcons.CloudSync,
-            "TextAa" to NextPageIcons.TextAa,
-            "AlignLeft" to NextPageIcons.AlignLeft,
-            "AlignCenter" to NextPageIcons.AlignCenter,
-            "AlignRight" to NextPageIcons.AlignRight,
-            "AlignJustify" to NextPageIcons.AlignJustify,
-            "ArrowLeft" to NextPageIcons.ArrowLeft,
-            "ArrowForward" to NextPageIcons.ArrowForward,
-            "TextSize" to NextPageIcons.TextSize,
-            "ListBullets" to NextPageIcons.ListBullets,
-            "Star" to NextPageIcons.Star,
-            "StarBorder" to NextPageIcons.StarBorder,
-            "StarHalf" to NextPageIcons.StarHalf,
-            "ScreenRotation" to NextPageIcons.ScreenRotation,
-            "Flame" to NextPageIcons.Flame,
-            "ChevronUp" to NextPageIcons.ChevronUp,
-            "ChevronDown" to NextPageIcons.ChevronDown,
-            "Email" to NextPageIcons.Email,
-            "BookmarkFilled" to NextPageIcons.BookmarkFilled,
-            "Help" to NextPageIcons.Help,
-            "MenuBurger" to NextPageIcons.MenuBurger
-        )
+        val icons =
+            listOf<Pair<String, ImageVector>>(
+                "Home" to NextPageIcons.Home,
+                "Library" to NextPageIcons.Library,
+                "Highlights" to NextPageIcons.Highlights,
+                "Settings" to NextPageIcons.Settings,
+                "Statistics" to NextPageIcons.Statistics,
+                "BookOpen" to NextPageIcons.BookOpen,
+                "Book" to NextPageIcons.Book,
+                "Person" to NextPageIcons.Person,
+                "Search" to NextPageIcons.Search,
+                "Close" to NextPageIcons.Close,
+                "MoreVert" to NextPageIcons.MoreVert,
+                "Add" to NextPageIcons.Add,
+                "FilterList" to NextPageIcons.FilterList,
+                "Notifications" to NextPageIcons.Notifications,
+                "GridView" to NextPageIcons.GridView,
+                "ViewList" to NextPageIcons.ViewList,
+                "Clock" to NextPageIcons.Clock,
+                "ChartLine" to NextPageIcons.ChartLine,
+                "ChartBar" to NextPageIcons.ChartBar,
+                "Bookmark" to NextPageIcons.Bookmark,
+                "Upload" to NextPageIcons.Upload,
+                "Sparkle" to NextPageIcons.Sparkle,
+                "Quote" to NextPageIcons.Quote,
+                "Lightbulb" to NextPageIcons.Lightbulb,
+                "Check" to NextPageIcons.Check,
+                "ErrorOutline" to NextPageIcons.ErrorOutline,
+                "Trophy" to NextPageIcons.Trophy,
+                "Palette" to NextPageIcons.Palette,
+                "Copy" to NextPageIcons.Copy,
+                "Tag" to NextPageIcons.Tag,
+                "Pencil" to NextPageIcons.Pencil,
+                "Share" to NextPageIcons.Share,
+                "Trash" to NextPageIcons.Trash,
+                "LibraryBooks" to NextPageIcons.LibraryBooks,
+                "CloudDownload" to NextPageIcons.CloudDownload,
+                "Devices" to NextPageIcons.Devices,
+                "DarkMode" to NextPageIcons.DarkMode,
+                "LightMode" to NextPageIcons.LightMode,
+                "BrightnessAuto" to NextPageIcons.BrightnessAuto,
+                "Language" to NextPageIcons.Language,
+                "Storage" to NextPageIcons.Storage,
+                "Info" to NextPageIcons.Info,
+                "BugReport" to NextPageIcons.BugReport,
+                "SignOut" to NextPageIcons.SignOut,
+                "Smartphone" to NextPageIcons.Smartphone,
+                "Monitor" to NextPageIcons.Monitor,
+                "Laptop" to NextPageIcons.Laptop,
+                "ChevronRight" to NextPageIcons.ChevronRight,
+                "ArrowBack" to NextPageIcons.ArrowBack,
+                "ArrowRight" to NextPageIcons.ArrowRight,
+                "Sync" to NextPageIcons.Sync,
+                "CloudSync" to NextPageIcons.CloudSync,
+                "TextAa" to NextPageIcons.TextAa,
+                "AlignLeft" to NextPageIcons.AlignLeft,
+                "AlignCenter" to NextPageIcons.AlignCenter,
+                "AlignRight" to NextPageIcons.AlignRight,
+                "AlignJustify" to NextPageIcons.AlignJustify,
+                "ArrowLeft" to NextPageIcons.ArrowLeft,
+                "ArrowForward" to NextPageIcons.ArrowForward,
+                "TextSize" to NextPageIcons.TextSize,
+                "ListBullets" to NextPageIcons.ListBullets,
+                "Star" to NextPageIcons.Star,
+                "StarBorder" to NextPageIcons.StarBorder,
+                "StarHalf" to NextPageIcons.StarHalf,
+                "ScreenRotation" to NextPageIcons.ScreenRotation,
+                "Flame" to NextPageIcons.Flame,
+                "ChevronUp" to NextPageIcons.ChevronUp,
+                "ChevronDown" to NextPageIcons.ChevronDown,
+                "Email" to NextPageIcons.Email,
+                "BookmarkFilled" to NextPageIcons.BookmarkFilled,
+                "Help" to NextPageIcons.Help,
+                "MenuBurger" to NextPageIcons.MenuBurger,
+            )
 
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             icons.chunked(6).forEach { rowIcons ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     rowIcons.forEach { (name, icon) ->
                         Column(
                             modifier = Modifier.weight(1f),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             Icon(
                                 imageVector = icon,
                                 contentDescription = null,
-                                tint = Color(0xFF000000)
+                                tint = Color(0xFF000000),
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = name,
-                                style = MaterialTheme.typography.labelSmall
+                                style = MaterialTheme.typography.labelSmall,
                             )
                         }
                     }
@@ -579,107 +598,109 @@ private fun NextPageIconsGalleryDarkPreview() {
 @Composable
 private fun NextPageIconsGalleryLightPreview() {
     NextPageTheme(darkTheme = false) {
-        val icons = listOf<Pair<String, ImageVector>>(
-            "Home" to NextPageIcons.Home,
-            "Library" to NextPageIcons.Library,
-            "Highlights" to NextPageIcons.Highlights,
-            "Settings" to NextPageIcons.Settings,
-            "Statistics" to NextPageIcons.Statistics,
-            "BookOpen" to NextPageIcons.BookOpen,
-            "Book" to NextPageIcons.Book,
-            "Person" to NextPageIcons.Person,
-            "Search" to NextPageIcons.Search,
-            "Close" to NextPageIcons.Close,
-            "MoreVert" to NextPageIcons.MoreVert,
-            "Add" to NextPageIcons.Add,
-            "FilterList" to NextPageIcons.FilterList,
-            "Notifications" to NextPageIcons.Notifications,
-            "GridView" to NextPageIcons.GridView,
-            "ViewList" to NextPageIcons.ViewList,
-            "Clock" to NextPageIcons.Clock,
-            "ChartLine" to NextPageIcons.ChartLine,
-            "ChartBar" to NextPageIcons.ChartBar,
-            "Bookmark" to NextPageIcons.Bookmark,
-            "Upload" to NextPageIcons.Upload,
-            "Sparkle" to NextPageIcons.Sparkle,
-            "Quote" to NextPageIcons.Quote,
-            "Lightbulb" to NextPageIcons.Lightbulb,
-            "Check" to NextPageIcons.Check,
-            "ErrorOutline" to NextPageIcons.ErrorOutline,
-            "Trophy" to NextPageIcons.Trophy,
-            "Palette" to NextPageIcons.Palette,
-            "Copy" to NextPageIcons.Copy,
-            "Tag" to NextPageIcons.Tag,
-            "Pencil" to NextPageIcons.Pencil,
-            "Share" to NextPageIcons.Share,
-            "Trash" to NextPageIcons.Trash,
-            "LibraryBooks" to NextPageIcons.LibraryBooks,
-            "CloudDownload" to NextPageIcons.CloudDownload,
-            "Devices" to NextPageIcons.Devices,
-            "DarkMode" to NextPageIcons.DarkMode,
-            "LightMode" to NextPageIcons.LightMode,
-            "BrightnessAuto" to NextPageIcons.BrightnessAuto,
-            "Language" to NextPageIcons.Language,
-            "Storage" to NextPageIcons.Storage,
-            "Info" to NextPageIcons.Info,
-            "BugReport" to NextPageIcons.BugReport,
-            "SignOut" to NextPageIcons.SignOut,
-            "Smartphone" to NextPageIcons.Smartphone,
-            "Monitor" to NextPageIcons.Monitor,
-            "Laptop" to NextPageIcons.Laptop,
-            "ChevronRight" to NextPageIcons.ChevronRight,
-            "ArrowBack" to NextPageIcons.ArrowBack,
-            "ArrowRight" to NextPageIcons.ArrowRight,
-            "Sync" to NextPageIcons.Sync,
-            "CloudSync" to NextPageIcons.CloudSync,
-            "TextAa" to NextPageIcons.TextAa,
-            "AlignLeft" to NextPageIcons.AlignLeft,
-            "AlignCenter" to NextPageIcons.AlignCenter,
-            "AlignRight" to NextPageIcons.AlignRight,
-            "AlignJustify" to NextPageIcons.AlignJustify,
-            "ArrowLeft" to NextPageIcons.ArrowLeft,
-            "ArrowForward" to NextPageIcons.ArrowForward,
-            "TextSize" to NextPageIcons.TextSize,
-            "ListBullets" to NextPageIcons.ListBullets,
-            "Star" to NextPageIcons.Star,
-            "StarBorder" to NextPageIcons.StarBorder,
-            "StarHalf" to NextPageIcons.StarHalf,
-            "ScreenRotation" to NextPageIcons.ScreenRotation,
-            "Flame" to NextPageIcons.Flame,
-            "ChevronUp" to NextPageIcons.ChevronUp,
-            "ChevronDown" to NextPageIcons.ChevronDown,
-            "Email" to NextPageIcons.Email,
-            "BookmarkFilled" to NextPageIcons.BookmarkFilled,
-            "Help" to NextPageIcons.Help,
-            "MenuBurger" to NextPageIcons.MenuBurger
-        )
+        val icons =
+            listOf<Pair<String, ImageVector>>(
+                "Home" to NextPageIcons.Home,
+                "Library" to NextPageIcons.Library,
+                "Highlights" to NextPageIcons.Highlights,
+                "Settings" to NextPageIcons.Settings,
+                "Statistics" to NextPageIcons.Statistics,
+                "BookOpen" to NextPageIcons.BookOpen,
+                "Book" to NextPageIcons.Book,
+                "Person" to NextPageIcons.Person,
+                "Search" to NextPageIcons.Search,
+                "Close" to NextPageIcons.Close,
+                "MoreVert" to NextPageIcons.MoreVert,
+                "Add" to NextPageIcons.Add,
+                "FilterList" to NextPageIcons.FilterList,
+                "Notifications" to NextPageIcons.Notifications,
+                "GridView" to NextPageIcons.GridView,
+                "ViewList" to NextPageIcons.ViewList,
+                "Clock" to NextPageIcons.Clock,
+                "ChartLine" to NextPageIcons.ChartLine,
+                "ChartBar" to NextPageIcons.ChartBar,
+                "Bookmark" to NextPageIcons.Bookmark,
+                "Upload" to NextPageIcons.Upload,
+                "Sparkle" to NextPageIcons.Sparkle,
+                "Quote" to NextPageIcons.Quote,
+                "Lightbulb" to NextPageIcons.Lightbulb,
+                "Check" to NextPageIcons.Check,
+                "ErrorOutline" to NextPageIcons.ErrorOutline,
+                "Trophy" to NextPageIcons.Trophy,
+                "Palette" to NextPageIcons.Palette,
+                "Copy" to NextPageIcons.Copy,
+                "Tag" to NextPageIcons.Tag,
+                "Pencil" to NextPageIcons.Pencil,
+                "Share" to NextPageIcons.Share,
+                "Trash" to NextPageIcons.Trash,
+                "LibraryBooks" to NextPageIcons.LibraryBooks,
+                "CloudDownload" to NextPageIcons.CloudDownload,
+                "Devices" to NextPageIcons.Devices,
+                "DarkMode" to NextPageIcons.DarkMode,
+                "LightMode" to NextPageIcons.LightMode,
+                "BrightnessAuto" to NextPageIcons.BrightnessAuto,
+                "Language" to NextPageIcons.Language,
+                "Storage" to NextPageIcons.Storage,
+                "Info" to NextPageIcons.Info,
+                "BugReport" to NextPageIcons.BugReport,
+                "SignOut" to NextPageIcons.SignOut,
+                "Smartphone" to NextPageIcons.Smartphone,
+                "Monitor" to NextPageIcons.Monitor,
+                "Laptop" to NextPageIcons.Laptop,
+                "ChevronRight" to NextPageIcons.ChevronRight,
+                "ArrowBack" to NextPageIcons.ArrowBack,
+                "ArrowRight" to NextPageIcons.ArrowRight,
+                "Sync" to NextPageIcons.Sync,
+                "CloudSync" to NextPageIcons.CloudSync,
+                "TextAa" to NextPageIcons.TextAa,
+                "AlignLeft" to NextPageIcons.AlignLeft,
+                "AlignCenter" to NextPageIcons.AlignCenter,
+                "AlignRight" to NextPageIcons.AlignRight,
+                "AlignJustify" to NextPageIcons.AlignJustify,
+                "ArrowLeft" to NextPageIcons.ArrowLeft,
+                "ArrowForward" to NextPageIcons.ArrowForward,
+                "TextSize" to NextPageIcons.TextSize,
+                "ListBullets" to NextPageIcons.ListBullets,
+                "Star" to NextPageIcons.Star,
+                "StarBorder" to NextPageIcons.StarBorder,
+                "StarHalf" to NextPageIcons.StarHalf,
+                "ScreenRotation" to NextPageIcons.ScreenRotation,
+                "Flame" to NextPageIcons.Flame,
+                "ChevronUp" to NextPageIcons.ChevronUp,
+                "ChevronDown" to NextPageIcons.ChevronDown,
+                "Email" to NextPageIcons.Email,
+                "BookmarkFilled" to NextPageIcons.BookmarkFilled,
+                "Help" to NextPageIcons.Help,
+                "MenuBurger" to NextPageIcons.MenuBurger,
+            )
 
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             icons.chunked(6).forEach { rowIcons ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     rowIcons.forEach { (name, icon) ->
                         Column(
                             modifier = Modifier.weight(1f),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             Icon(
                                 imageVector = icon,
                                 contentDescription = null,
-                                tint = Color(0xFF000000)
+                                tint = Color(0xFF000000),
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = name,
-                                style = MaterialTheme.typography.labelSmall
+                                style = MaterialTheme.typography.labelSmall,
                             )
                         }
                     }

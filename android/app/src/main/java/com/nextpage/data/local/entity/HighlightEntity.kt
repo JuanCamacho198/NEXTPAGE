@@ -13,10 +13,10 @@ import androidx.room.PrimaryKey
             entity = BookEntity::class,
             parentColumns = ["id"],
             childColumns = ["book_id"],
-            onDelete = ForeignKey.CASCADE
-        )
+            onDelete = ForeignKey.CASCADE,
+        ),
     ],
-    indices = [Index(value = ["book_id", "deleted_at"])]
+    indices = [Index(value = ["book_id", "deleted_at"])],
 )
 data class HighlightEntity(
     @PrimaryKey
@@ -38,5 +38,5 @@ data class HighlightEntity(
     @ColumnInfo(name = "type")
     val type: String? = null,
     @ColumnInfo(name = "tag")
-    val tag: String? = null
+    val tag: String? = null,
 )

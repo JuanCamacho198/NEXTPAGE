@@ -40,13 +40,14 @@ private val ACCESS_GROUP_ORDER = listOf(AccessGroup.FREE, AccessGroup.BUY, Acces
 
 /** Localized label for an [AccessGroup] (reuses the U3 group strings). */
 @Composable
-internal fun accessGroupLabel(group: AccessGroup): String = stringResource(
-    when (group) {
-        AccessGroup.FREE -> R.string.access_group_free
-        AccessGroup.BUY -> R.string.access_group_buy
-        AccessGroup.SUBSCRIBE -> R.string.access_group_subscribe
-    }
-)
+internal fun accessGroupLabel(group: AccessGroup): String =
+    stringResource(
+        when (group) {
+            AccessGroup.FREE -> R.string.access_group_free
+            AccessGroup.BUY -> R.string.access_group_buy
+            AccessGroup.SUBSCRIBE -> R.string.access_group_subscribe
+        },
+    )
 
 /**
  * Availability badge for cards and rails (U5).
@@ -58,7 +59,7 @@ internal fun accessGroupLabel(group: AccessGroup): String = stringResource(
 @Composable
 fun AccessBadge(
     book: CatalogBook,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val access = remember(book) { resolveAccess(book) }
     AccessBadge(access = access, modifier = modifier)
@@ -68,34 +69,36 @@ fun AccessBadge(
 @Composable
 fun AccessBadge(
     access: LegalAccess,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
-    val label = when {
-        access.canDownloadInApp -> stringResource(R.string.access_badge_download)
-        else -> access.options.firstOrNull()?.let { firstGroupLabel(it.group) }
-    } ?: return
+    val label =
+        when {
+            access.canDownloadInApp -> stringResource(R.string.access_badge_download)
+            else -> access.options.firstOrNull()?.let { firstGroupLabel(it.group) }
+        } ?: return
     val icon = if (access.canDownloadInApp) Icons.Rounded.Download else null
     Row(
-        modifier = modifier
-            .clip(RoundedCornerShape(4.dp))
-            .background(NextPageColors.backgroundGreenTransparent)
-            .padding(horizontal = 6.dp, vertical = 2.dp),
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(4.dp))
+                .background(NextPageColors.backgroundGreenTransparent)
+                .padding(horizontal = 6.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         icon?.let {
             Icon(
                 imageVector = it,
                 contentDescription = null,
                 tint = NextPageColors.accentGreen,
-                modifier = Modifier.size(12.dp)
+                modifier = Modifier.size(12.dp),
             )
         }
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
             fontWeight = FontWeight.Medium,
-            color = NextPageColors.accentGreen
+            color = NextPageColors.accentGreen,
         )
     }
 }
@@ -111,23 +114,25 @@ private fun firstGroupLabel(group: AccessGroup): String = accessGroupLabel(group
 @Composable
 fun ProviderLogo(
     label: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
-    val initial = remember(label) {
-        label.trim().firstOrNull()?.uppercase() ?: PROVIDER_LOGO_FALLBACK
-    }
+    val initial =
+        remember(label) {
+            label.trim().firstOrNull()?.uppercase() ?: PROVIDER_LOGO_FALLBACK
+        }
     Box(
-        modifier = modifier
-            .size(40.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(NextPageColors.surfaceVariant),
-        contentAlignment = Alignment.Center
+        modifier =
+            modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(NextPageColors.surfaceVariant),
+        contentAlignment = Alignment.Center,
     ) {
         Text(
             text = initial,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = NextPageColors.primary
+            color = NextPageColors.primary,
         )
     }
 }
@@ -141,15 +146,16 @@ fun ProviderLogo(
 fun AccessCtaButton(
     option: AccessOption,
     onOpenExternal: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .clickable { onOpenExternal(option.url) }
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .clickable { onOpenExternal(option.url) }
+                .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         ProviderLogo(label = option.title)
         Spacer(modifier = Modifier.width(12.dp))
@@ -158,13 +164,13 @@ fun AccessCtaButton(
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium,
             color = NextPageColors.textPrimary,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
         )
         Icon(
             imageVector = Icons.Rounded.OpenInNew,
             contentDescription = stringResource(R.string.read_access_open),
             tint = NextPageColors.textSecondary,
-            modifier = Modifier.size(16.dp)
+            modifier = Modifier.size(16.dp),
         )
     }
 }
@@ -178,11 +184,11 @@ fun AccessCtaButton(
 fun BookAccessList(
     access: LegalAccess,
     onOpenExternal: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         ACCESS_GROUP_ORDER.forEach { group ->
             val rows = access.options.filter { it.group == group }
@@ -191,7 +197,7 @@ fun BookAccessList(
                     text = accessGroupLabel(group),
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                     color = NextPageColors.textSecondary,
-                    modifier = Modifier.padding(top = 8.dp)
+                    modifier = Modifier.padding(top = 8.dp),
                 )
                 rows.forEach { option ->
                     AccessCtaButton(option = option, onOpenExternal = onOpenExternal)

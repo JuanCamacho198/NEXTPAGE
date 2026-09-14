@@ -17,9 +17,8 @@ internal class ShareDictionaryManager(
     private val dictionaryRepository: DictionaryRepository?,
     private val scope: CoroutineScope,
     private val onEvent: (UiEvent) -> Unit,
-    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
+    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
 ) : Clearable {
-
     fun onShareSelectedText(selectedText: String?) {
         val text = selectedText
         if (text.isNullOrBlank()) {
@@ -38,7 +37,10 @@ internal class ShareDictionaryManager(
 
     fun onAddToDictionary() {
         val repo = dictionaryRepository ?: return
-        val text = store.value.selectedText?.trim()?.takeIf { it.isNotBlank() } ?: return
+        val text =
+            store.value.selectedText
+                ?.trim()
+                ?.takeIf { it.isNotBlank() } ?: return
         scope.launch(mainDispatcher) {
             if (repo.exists(text)) {
                 onEvent(UiEvent.ShowSnackbar("\"$text\" ya está en tu diccionario"))
@@ -66,7 +68,7 @@ internal class ShareDictionaryManager(
             } else {
                 repo.save(text, trimmedDefinition).fold(
                     onSuccess = { onEvent(UiEvent.ShowSnackbar("Added to dictionary")) },
-                    onFailure = { e -> onEvent(UiEvent.ShowSnackbar(e.message ?: "Failed to add to dictionary")) }
+                    onFailure = { e -> onEvent(UiEvent.ShowSnackbar(e.message ?: "Failed to add to dictionary")) },
                 )
             }
         }

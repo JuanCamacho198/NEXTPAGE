@@ -13,14 +13,14 @@ import androidx.compose.ui.unit.dp
 @Composable
 internal fun DetailChipsSection(
     title: String,
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
     Column {
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onBackground,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.SemiBold,
         )
         Spacer(modifier = Modifier.height(12.dp))
         content()

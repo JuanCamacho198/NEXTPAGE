@@ -8,9 +8,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import com.nextpage.presentation.feature.home.HomeScreen
 import com.nextpage.presentation.navigation.NextPageDestination
 import com.nextpage.presentation.navigation.rememberImportLauncher
-import com.nextpage.presentation.feature.home.HomeScreen
 import com.nextpage.presentation.screen.library.RemoveBookDialog
 import com.nextpage.presentation.viewmodel.HomeViewModel
 import com.nextpage.presentation.viewmodel.LibraryViewModel
@@ -27,14 +27,14 @@ fun NavGraphBuilder.homeGraph(
     libraryViewModel: LibraryViewModel,
     contentPadding: PaddingValues,
     onSelectBook: (String, String?, String) -> Unit,
-    onSettingsInitialRoute: (String) -> Unit
+    onSettingsInitialRoute: (String) -> Unit,
 ) {
     composable(
         route = NextPageDestination.Home.route,
         enterTransition = { fadeIn() },
         exitTransition = { fadeOut() },
         popEnterTransition = { fadeIn() },
-        popExitTransition = { fadeOut() }
+        popExitTransition = { fadeOut() },
     ) {
         val importLauncher = rememberImportLauncher(libraryViewModel)
         // Delete-dialog state lives in LibraryViewModel (shared shelf menu backend).
@@ -82,13 +82,13 @@ fun NavGraphBuilder.homeGraph(
             onMarkCompleted = libraryViewModel::onMenuMarkCompleted,
             onMarkPlanToRead = libraryViewModel::onMenuMarkPlanToRead,
             onShareBook = libraryViewModel::onMenuShare,
-            onRequestDeleteBook = libraryViewModel::requestDeleteBook
+            onRequestDeleteBook = libraryViewModel::requestDeleteBook,
         )
         RemoveBookDialog(
             bookToDelete = libraryUiState.bookToDelete,
             onDismiss = libraryViewModel::dismissDeleteDialog,
             onConfirmLocalOnly = libraryViewModel::confirmDeleteLocalOnly,
-            onConfirmLocalAndDrive = libraryViewModel::confirmDeleteLocalAndDrive
+            onConfirmLocalAndDrive = libraryViewModel::confirmDeleteLocalAndDrive,
         )
     }
 }

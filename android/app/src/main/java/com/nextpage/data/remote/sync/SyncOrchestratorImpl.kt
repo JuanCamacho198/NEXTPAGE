@@ -7,7 +7,6 @@ import com.nextpage.debug.DebugLog
 import com.nextpage.domain.sync.SessionEvent
 import com.nextpage.domain.sync.SessionGate
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -48,7 +47,6 @@ class SyncOrchestratorImpl(
     private val outboxDao: SyncOutboxDao,
     private val externalScope: CoroutineScope,
 ) : SyncOrchestrator {
-
     private val orchestratorScope: CoroutineScope =
         CoroutineScope(externalScope.coroutineContext + SupervisorJob())
 
@@ -80,7 +78,8 @@ class SyncOrchestratorImpl(
             .onEach { domains -> recompute(domains) }
             .launchIn(orchestratorScope)
 
-        gate.sessionEvents()
+        gate
+            .sessionEvents()
             .onEach { event ->
                 when (event) {
                     is SessionEvent.Lost -> _state.value = SyncState.Gated("session_lost")
@@ -90,8 +89,7 @@ class SyncOrchestratorImpl(
                         recompute(snapshotDomains())
                     }
                 }
-            }
-            .launchIn(orchestratorScope)
+            }.launchIn(orchestratorScope)
     }
 
     override suspend fun start(userId: String) {
@@ -136,26 +134,30 @@ class SyncOrchestratorImpl(
 
         // Start the pendingCount collector (single shared DAO table).
         pendingCountJob?.cancel()
-        pendingCountJob = outboxDao.observePendingCount()
-            .distinctUntilChanged()
-            .onEach { count ->
-                _pendingCount.value = count
-                // A5 - outbox depth gauge: bucketed, emitted only on bucket change.
-                val bucket = com.nextpage.debug.SentryMetrics.bucketDepth(count)
-                if (bucket != lastEmittedDepthBucket) {
-                    lastEmittedDepthBucket = bucket
-                    com.nextpage.debug.SentryMetrics.notePendingCount(count)
-                    com.nextpage.debug.SentryMetrics.gauge(
-                        "outbox_depth",
-                        bucket,
-                        mapOf(
-                            "source" to "sync",
-                            "platform" to "android"
+        pendingCountJob =
+            outboxDao
+                .observePendingCount()
+                .distinctUntilChanged()
+                .onEach { count ->
+                    _pendingCount.value = count
+                    // A5 - outbox depth gauge: bucketed, emitted only on bucket change.
+                    val bucket =
+                        com.nextpage.debug.SentryMetrics
+                            .bucketDepth(count)
+                    if (bucket != lastEmittedDepthBucket) {
+                        lastEmittedDepthBucket = bucket
+                        com.nextpage.debug.SentryMetrics
+                            .notePendingCount(count)
+                        com.nextpage.debug.SentryMetrics.gauge(
+                            "outbox_depth",
+                            bucket,
+                            mapOf(
+                                "source" to "sync",
+                                "platform" to "android",
+                            ),
                         )
-                    )
-                }
-            }
-            .launchIn(orchestratorScope)
+                    }
+                }.launchIn(orchestratorScope)
     }
 
     override suspend fun stop() {
@@ -210,18 +212,20 @@ class SyncOrchestratorImpl(
      * Snapshot of the current per-domain state by reading each facade's
      * StateFlow value. Used by the gate-driven re-reduce (no emission needed).
      */
-    private fun snapshotDomains(): DomainStates = DomainStates(
-        drive = mapDrive(drive.syncState.let { (it as? kotlinx.coroutines.flow.StateFlow<DriveSyncState>)?.value ?: DriveSyncState.Idle }),
-        catalog = mapCatalog(catalog.state.value),
-        progress = mapProgress(progress.state.value),
-    )
+    private fun snapshotDomains(): DomainStates =
+        DomainStates(
+            drive = mapDrive(drive.syncState.let { (it as? kotlinx.coroutines.flow.StateFlow<DriveSyncState>)?.value ?: DriveSyncState.Idle }),
+            catalog = mapCatalog(catalog.state.value),
+            progress = mapProgress(progress.state.value),
+        )
 
     private fun recompute(domains: DomainStates) {
-        _state.value = reduce(
-            stopFlag = stopped,
-            gateLive = gate.hasLiveSession(),
-            domains = domains,
-        )
+        _state.value =
+            reduce(
+                stopFlag = stopped,
+                gateLive = gate.hasLiveSession(),
+                domains = domains,
+            )
     }
 
     companion object {
@@ -270,9 +274,16 @@ class SyncOrchestratorImpl(
  */
 sealed interface DomainState {
     data object Idle : DomainState
+
     data object Running : DomainState
-    data class Gated(val reason: String) : DomainState
-    data class Error(val message: String) : DomainState
+
+    data class Gated(
+        val reason: String,
+    ) : DomainState
+
+    data class Error(
+        val message: String,
+    ) : DomainState
 }
 
 data class DomainStates(
@@ -292,10 +303,11 @@ data class DomainStates(
             catalog is DomainState.Running ||
             progress is DomainState.Running
 
-    fun mostRecentGateReason(): String? = when (val p = progress) {
-        is DomainState.Gated -> p.reason
-        else -> null
-    }
+    fun mostRecentGateReason(): String? =
+        when (val p = progress) {
+            is DomainState.Gated -> p.reason
+            else -> null
+        }
 }
 
 /**
@@ -303,31 +315,34 @@ data class DomainStates(
  * [DomainState]. AuthorizationNeeded is mapped to Error so it surfaces in the
  * union (DebugViewModel can still distinguish by message text).
  */
-fun mapDrive(state: DriveSyncState): DomainState = when (state) {
-    is DriveSyncState.Idle -> DomainState.Idle
-    is DriveSyncState.Disabled -> DomainState.Idle
-    is DriveSyncState.Running -> DomainState.Running
-    is DriveSyncState.Error -> DomainState.Error(state.message)
-    is DriveSyncState.AuthorizationNeeded -> DomainState.Error("Drive authorization needed")
-}
+fun mapDrive(state: DriveSyncState): DomainState =
+    when (state) {
+        is DriveSyncState.Idle -> DomainState.Idle
+        is DriveSyncState.Disabled -> DomainState.Idle
+        is DriveSyncState.Running -> DomainState.Running
+        is DriveSyncState.Error -> DomainState.Error(state.message)
+        is DriveSyncState.AuthorizationNeeded -> DomainState.Error("Drive authorization needed")
+    }
 
 /**
  * Map SupabaseProgressSync.State into the orchestrator's common
  * [DomainState]. Preserves the Gated reason verbatim (DebugViewModel contract).
  */
-fun mapProgress(state: SupabaseProgressSync.State): DomainState = when (state) {
-    is SupabaseProgressSync.State.Idle -> DomainState.Idle
-    is SupabaseProgressSync.State.Running -> DomainState.Running
-    is SupabaseProgressSync.State.Gated -> DomainState.Gated(state.reason)
-    is SupabaseProgressSync.State.Error -> DomainState.Error(state.message)
-}
+fun mapProgress(state: SupabaseProgressSync.State): DomainState =
+    when (state) {
+        is SupabaseProgressSync.State.Idle -> DomainState.Idle
+        is SupabaseProgressSync.State.Running -> DomainState.Running
+        is SupabaseProgressSync.State.Gated -> DomainState.Gated(state.reason)
+        is SupabaseProgressSync.State.Error -> DomainState.Error(state.message)
+    }
 
 /**
  * Map SupabaseBookCatalogSync.State into the orchestrator's common
  * [DomainState].
  */
-fun mapCatalog(state: SupabaseBookCatalogSync.State): DomainState = when (state) {
-    is SupabaseBookCatalogSync.State.Idle -> DomainState.Idle
-    is SupabaseBookCatalogSync.State.Running -> DomainState.Running
-    is SupabaseBookCatalogSync.State.Error -> DomainState.Error(state.message)
-}
+fun mapCatalog(state: SupabaseBookCatalogSync.State): DomainState =
+    when (state) {
+        is SupabaseBookCatalogSync.State.Idle -> DomainState.Idle
+        is SupabaseBookCatalogSync.State.Running -> DomainState.Running
+        is SupabaseBookCatalogSync.State.Error -> DomainState.Error(state.message)
+    }

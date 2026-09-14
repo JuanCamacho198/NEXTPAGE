@@ -49,37 +49,40 @@ import com.nextpage.presentation.theme.NextPageTheme
 @Composable
 fun SyncStatusIndicator(
     syncState: DriveSyncState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
-    val (dotColor, labelRes) = when (syncState) {
-        is DriveSyncState.Idle -> Color(0xFF4ADE80) to R.string.sync_status_synced
-        is DriveSyncState.Disabled -> Color(0xFF9CA3AF) to R.string.sync_status_off
-        is DriveSyncState.Running -> Color(0xFF60A5FA) to R.string.sync_status_syncing
-        is DriveSyncState.Error -> Color(0xFFF87171) to R.string.sync_status_error
-        is DriveSyncState.AuthorizationNeeded -> Color(0xFFFBBF24) to R.string.sync_status_authorization_needed
-    }
+    val (dotColor, labelRes) =
+        when (syncState) {
+            is DriveSyncState.Idle -> Color(0xFF4ADE80) to R.string.sync_status_synced
+            is DriveSyncState.Disabled -> Color(0xFF9CA3AF) to R.string.sync_status_off
+            is DriveSyncState.Running -> Color(0xFF60A5FA) to R.string.sync_status_syncing
+            is DriveSyncState.Error -> Color(0xFFF87171) to R.string.sync_status_error
+            is DriveSyncState.AuthorizationNeeded -> Color(0xFFFBBF24) to R.string.sync_status_authorization_needed
+        }
     val label = stringResource(labelRes)
 
     Row(
-        modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
-            .padding(horizontal = 10.dp, vertical = 4.dp),
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                .padding(horizontal = 10.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         // Status dot
         Box(
-            modifier = Modifier
-                .size(8.dp)
-                .clip(CircleShape)
-                .background(dotColor)
+            modifier =
+                Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(dotColor),
         )
 
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -90,7 +93,7 @@ private fun SyncStatusIndicatorDarkPreview() {
     NextPageTheme(darkTheme = true) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             SyncStatusIndicator(syncState = DriveSyncState.Idle)
             SyncStatusIndicator(syncState = DriveSyncState.Running)
@@ -105,7 +108,7 @@ private fun SyncStatusIndicatorLightPreview() {
     NextPageTheme(darkTheme = false) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             SyncStatusIndicator(syncState = DriveSyncState.Idle)
             SyncStatusIndicator(syncState = DriveSyncState.Running)

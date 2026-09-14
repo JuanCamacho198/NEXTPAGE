@@ -36,54 +36,62 @@ fun GlobalEventCollector(
     navController: NavController,
     snackbarHostState: SnackbarHostState,
     context: Context,
-    onOpenBookAtLocation: suspend (UiEvent.OpenBookAtLocation) -> Unit
+    onOpenBookAtLocation: suspend (UiEvent.OpenBookAtLocation) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    val flows = listOf(
-        libraryUiEvent,
-        readerUiEvent,
-        highlightsUiEvent,
-        statisticsUiEvent,
-        homeUiEvent,
-        authUiEvent
-    )
+    val flows =
+        listOf(
+            libraryUiEvent,
+            readerUiEvent,
+            highlightsUiEvent,
+            statisticsUiEvent,
+            homeUiEvent,
+            authUiEvent,
+        )
     flows.forEach { flow ->
         LaunchedEffect(flow) {
             flow.collect { event ->
                 when (event) {
                     is UiEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
-                    is UiEvent.ShowToast -> android.widget.Toast.makeText(
-                        context, event.message, android.widget.Toast.LENGTH_SHORT
-                    ).show()
+                    is UiEvent.ShowToast ->
+                        android.widget.Toast
+                            .makeText(
+                                context,
+                                event.message,
+                                android.widget.Toast.LENGTH_SHORT,
+                            ).show()
                     is UiEvent.ShareText -> {
-                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, event.text)
-                        }
+                        val shareIntent =
+                            Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, event.text)
+                            }
                         context.startActivity(
                             Intent.createChooser(
                                 shareIntent,
-                                context.getString(com.nextpage.R.string.context_menu_share)
-                            )
+                                context.getString(com.nextpage.R.string.context_menu_share),
+                            ),
                         )
                     }
                     is UiEvent.ShareFile -> {
                         val file = java.io.File(event.filePath)
-                        val uri = androidx.core.content.FileProvider.getUriForFile(
-                            context,
-                            "${context.packageName}.fileprovider",
-                            file
-                        )
-                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                            type = event.mimeType
-                            putExtra(Intent.EXTRA_STREAM, uri)
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        }
+                        val uri =
+                            androidx.core.content.FileProvider.getUriForFile(
+                                context,
+                                "${context.packageName}.fileprovider",
+                                file,
+                            )
+                        val shareIntent =
+                            Intent(Intent.ACTION_SEND).apply {
+                                type = event.mimeType
+                                putExtra(Intent.EXTRA_STREAM, uri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
                         context.startActivity(
                             Intent.createChooser(
                                 shareIntent,
-                                context.getString(com.nextpage.R.string.library_share_chooser_title)
-                            )
+                                context.getString(com.nextpage.R.string.library_share_chooser_title),
+                            ),
                         )
                     }
                     is UiEvent.CopyToClipboard -> {

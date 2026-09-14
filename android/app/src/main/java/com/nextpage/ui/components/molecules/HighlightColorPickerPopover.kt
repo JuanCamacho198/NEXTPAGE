@@ -46,7 +46,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.gestures.detectTapGestures
 import com.nextpage.R
 import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.ui.components.molecules.highlight.ColorPickerState
@@ -58,13 +57,14 @@ import com.nextpage.ui.components.molecules.highlight.rememberColorPickerState
 import com.nextpage.ui.components.molecules.highlight.spectrumColorAt
 
 /** Default Pencil kixeV design color presets (5 hex values). */
-val DEFAULT_HIGHLIGHT_PRESETS = listOf(
-    "#4ADE80",
-    "#3B82F6",
-    "#F97316",
-    "#EF4444",
-    "#FACC15"
-)
+val DEFAULT_HIGHLIGHT_PRESETS =
+    listOf(
+        "#4ADE80",
+        "#3B82F6",
+        "#F97316",
+        "#EF4444",
+        "#FACC15",
+    )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,36 +73,39 @@ fun ColorPickerContent(
     state: ColorPickerState,
     onColorSelected: (String) -> Unit,
     onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val focusManager = LocalFocusManager.current
 
     Column(
         modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
+            horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             presets.take(5).forEach { hex ->
                 val isActive = hex.equals(state.selectedColor, ignoreCase = true)
                 Box(
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clip(CircleShape)
-                        .background(parseColorHex(hex))
-                        .then(
-                            if (isActive) Modifier.border(2.dp, MaterialTheme.colorScheme.outline, CircleShape)
-                            else Modifier
-                        )
-                        .clickable {
-                            state.selectedColor = hex
-                            state.hexInput = hex.removePrefix("#")
-                            state.hue = hueFromHex(hex)
-                            onColorSelected(hex)
-                            onDismiss()
-                        }
+                    modifier =
+                        Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(parseColorHex(hex))
+                            .then(
+                                if (isActive) {
+                                    Modifier.border(2.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                                } else {
+                                    Modifier
+                                },
+                            ).clickable {
+                                state.selectedColor = hex
+                                state.hexInput = hex.removePrefix("#")
+                                state.hue = hueFromHex(hex)
+                                onColorSelected(hex)
+                                onDismiss()
+                            },
                 )
             }
         }
@@ -117,7 +120,7 @@ fun ColorPickerContent(
                 state.selectedColor = spectrumColorAt(pos, state.hue)
                 state.hexInput = state.selectedColor.removePrefix("#")
             },
-            modifier = Modifier.fillMaxWidth().height(128.dp)
+            modifier = Modifier.fillMaxWidth().height(128.dp),
         )
 
         Spacer(Modifier.height(8.dp))
@@ -129,7 +132,7 @@ fun ColorPickerContent(
                 state.selectedColor = hslToHex(newHue)
                 state.hexInput = state.selectedColor.removePrefix("#")
             },
-            modifier = Modifier.fillMaxWidth().height(20.dp)
+            modifier = Modifier.fillMaxWidth().height(20.dp),
         )
 
         Spacer(Modifier.height(8.dp))
@@ -145,36 +148,40 @@ fun ColorPickerContent(
                     state.hue = hueFromHex(hex)
                 }
             },
-            textStyle = TextStyle(
-                fontFamily = FontFamily.Monospace,
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center
-            ),
+            textStyle =
+                TextStyle(
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center,
+                ),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                focusedBorderColor = Color.Transparent,
-                unfocusedBorderColor = Color.Transparent
-            ),
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Text,
-                imeAction = ImeAction.Done
-            ),
+            colors =
+                OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent,
+                ),
+            keyboardOptions =
+                KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                    imeAction = ImeAction.Done,
+                ),
             keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
             leadingIcon = {
                 Text(
                     text = "#",
-                    style = TextStyle(
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    style =
+                        TextStyle(
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
                 )
-            }
+            },
         )
 
         Spacer(Modifier.height(4.dp))
@@ -183,7 +190,7 @@ fun ColorPickerContent(
             text = stringResource(R.string.color_picker_confirm),
             fontSize = 10.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
         )
     }
 }
@@ -196,24 +203,25 @@ fun HighlightColorPickerPopover(
     onDismiss: () -> Unit,
     anchorX: Int = 0,
     anchorY: Int = 0,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val presets = (customColors?.takeIf { it.size >= 5 } ?: DEFAULT_HIGHLIGHT_PRESETS).take(5)
     val pickerState = rememberColorPickerState(presets.first())
 
     Column(
-        modifier = modifier
-            .width(220.dp)
-            .shadow(12.dp, RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
-            .padding(12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier =
+            modifier
+                .width(220.dp)
+                .shadow(12.dp, RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
+                .padding(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         ColorPickerContent(
             presets = presets,
             state = pickerState,
             onColorSelected = onColorSelected,
-            onDismiss = onDismiss
+            onDismiss = onDismiss,
         )
     }
 }
@@ -239,43 +247,44 @@ private fun SpectrumBar(
     currentPosition: Float,
     hue: Float,
     onPositionChange: (Float) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val thumbRadius = 8.dp
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Canvas(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(128.dp)
-                // awaitPointerEventScope merging detectTapGestures + drag, keyed pointerInput(Unit)
-                .pointerInput(Unit) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            val down = awaitPointerEvent().changes.firstOrNull() ?: continue
-                            if (!down.pressed) {
-                                awaitPointerEvent()
-                                continue
-                            }
-                            // tap via detectTapGestures semantics: immediate position update
-                            val tapPos = (down.position.x / size.width).coerceIn(0f, 1f)
-                            onPositionChange(tapPos)
-                            // drag continuation — detectTapGestures + horizontal drag merged
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(128.dp)
+                    // awaitPointerEventScope merging detectTapGestures + drag, keyed pointerInput(Unit)
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
                             while (true) {
-                                val event = awaitPointerEvent()
-                                val change = event.changes.firstOrNull() ?: break
-                                if (!change.pressed) break
-                                val pos = (change.position.x / size.width).coerceIn(0f, 1f)
-                                onPositionChange(pos)
-                                change.consume()
+                                val down = awaitPointerEvent().changes.firstOrNull() ?: continue
+                                if (!down.pressed) {
+                                    awaitPointerEvent()
+                                    continue
+                                }
+                                // tap via detectTapGestures semantics: immediate position update
+                                val tapPos = (down.position.x / size.width).coerceIn(0f, 1f)
+                                onPositionChange(tapPos)
+                                // drag continuation — detectTapGestures + horizontal drag merged
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    val change = event.changes.firstOrNull() ?: break
+                                    if (!change.pressed) break
+                                    val pos = (change.position.x / size.width).coerceIn(0f, 1f)
+                                    onPositionChange(pos)
+                                    change.consume()
+                                }
                             }
                         }
-                    }
-                }
+                    },
         ) {
             val saturatedColor = hslToColor(hue, 1f, 0.5f)
             drawRect(
                 brush = Brush.horizontalGradient(colors = listOf(Color.Black, saturatedColor, Color.White)),
-                size = size
+                size = size,
             )
             val thumbX = currentPosition * size.width
             val thumbCenter = Offset(thumbX, size.height / 2f)
@@ -284,7 +293,7 @@ private fun SpectrumBar(
                 color = Color(0xFF1F2937),
                 radius = thumbRadius.toPx(),
                 center = thumbCenter,
-                style = Stroke(width = 2.dp.toPx())
+                style = Stroke(width = 2.dp.toPx()),
             )
         }
     }
@@ -295,31 +304,39 @@ private fun SpectrumBar(
 private fun HueSlider(
     hue: Float,
     onHueChange: (Float) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val rainbowColors = remember { List(12) { i -> hslToColor(i * 30f, 1f, 0.5f) } }
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Box(
-            modifier = Modifier.fillMaxWidth().height(6.dp)
-                .clip(RoundedCornerShape(3.dp))
-                .background(Brush.horizontalGradient(rainbowColors))
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(Brush.horizontalGradient(rainbowColors)),
         )
         Slider(
             value = hue,
             onValueChange = onHueChange,
             valueRange = 0f..360f,
             modifier = Modifier.fillMaxWidth(),
-            colors = SliderDefaults.colors(
-                thumbColor = Color.White,
-                activeTrackColor = Color.Transparent,
-                inactiveTrackColor = Color.Transparent
-            ),
+            colors =
+                SliderDefaults.colors(
+                    thumbColor = Color.White,
+                    activeTrackColor = Color.Transparent,
+                    inactiveTrackColor = Color.Transparent,
+                ),
             thumb = {
                 Box(
-                    modifier = Modifier.size(16.dp).clip(CircleShape)
-                        .background(Color.White).border(2.dp, Color(0xFFD1D5DB), CircleShape)
+                    modifier =
+                        Modifier
+                            .size(16.dp)
+                            .clip(CircleShape)
+                            .background(Color.White)
+                            .border(2.dp, Color(0xFFD1D5DB), CircleShape),
                 )
-            }
+            },
         )
     }
 }

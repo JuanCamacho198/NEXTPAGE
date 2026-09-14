@@ -9,7 +9,6 @@ import java.io.RandomAccessFile
 import java.util.Locale
 
 class BookFormatUtilsTest {
-
     // ── helpers ────────────────────────────────────────────────────────
 
     private fun createTempFileWithSize(bytes: Long): File {
@@ -19,16 +18,20 @@ class BookFormatUtilsTest {
         return f
     }
 
-    private fun book(format: String, totalPages: Int?): Book = Book(
-        id = "b1",
-        title = "T",
-        author = null,
-        coverPath = null,
-        filePath = "/tmp/b.epub",
-        format = format,
-        totalPages = totalPages,
-        updatedAtEpochMillis = 1L
-    )
+    private fun book(
+        format: String,
+        totalPages: Int?,
+    ): Book =
+        Book(
+            id = "b1",
+            title = "T",
+            author = null,
+            coverPath = null,
+            filePath = "/tmp/b.epub",
+            format = format,
+            totalPages = totalPages,
+            updatedAtEpochMillis = 1L,
+        )
 
     // ── formatSizeMb ─────────────────────────────────────────────────
 

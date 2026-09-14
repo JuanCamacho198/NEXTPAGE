@@ -47,12 +47,12 @@ private data class SettingsRow(
     val labelRes: Int,
     val icon: ImageVector,
     val value: String? = null,
-    val onClick: () -> Unit = {}
+    val onClick: () -> Unit = {},
 )
 
 private data class SettingsGroup(
     val titleRes: Int,
-    val rows: List<SettingsRow>
+    val rows: List<SettingsRow>,
 )
 
 @Composable
@@ -73,159 +73,171 @@ fun SettingsListScreen(
     onNavigateToPerformance: () -> Unit = {},
     onNavigateToLogViewer: () -> Unit = {},
     onNavigateToStorage: () -> Unit = onNavigateToDataStorage,
-    onNavigateToSync: () -> Unit = {}
+    onNavigateToSync: () -> Unit = {},
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val langPrefs = androidx.compose.runtime.remember { AppLanguagePreferences(context = context) }
 
-    val currentLanguageLabel = when (langPrefs.load()) {
-        "es" -> R.string.settings_language_spanish
-        "en" -> R.string.settings_language_english
-        else -> R.string.settings_language_system
-    }
-
-    val currentThemeLabel = when (appThemeMode) {
-        ThemeMode.LIGHT -> R.string.settings_theme_light
-        ThemeMode.DARK -> R.string.settings_theme_dark
-        ThemeMode.SYSTEM -> R.string.settings_theme_system
-    }
-
-    val currentGoalValue = readingGoalPreferences?.load()?.let { minutes ->
-        when (minutes) {
-            10 -> stringResource(R.string.onboarding_goal_option_relaxed_value)
-            20 -> stringResource(R.string.onboarding_goal_option_regular_value)
-            30 -> stringResource(R.string.onboarding_goal_option_serious_value)
-            45 -> stringResource(R.string.onboarding_goal_option_intense_value)
-            else -> "$minutes min/día"
+    val currentLanguageLabel =
+        when (langPrefs.load()) {
+            "es" -> R.string.settings_language_spanish
+            "en" -> R.string.settings_language_english
+            else -> R.string.settings_language_system
         }
-    }
 
-    val groups = listOf(
-        SettingsGroup(
-            titleRes = R.string.settings_account_section,
-            rows = listOf(
-                SettingsRow(
-                    labelRes = R.string.settings_account_title,
-                    icon = NextPageIcons.Person,
-                    onClick = onNavigateToAccount
-                ),
-                SettingsRow(
-                    labelRes = R.string.settings_devices_title,
-                    icon = NextPageIcons.Devices,
-                    onClick = onNavigateToDevices
-                )
-            )
-        ),
-        SettingsGroup(
-            titleRes = R.string.settings_apariencia_section,
-            rows = listOf(
-                SettingsRow(
-                    labelRes = R.string.settings_pref_theme,
-                    icon = NextPageIcons.DarkMode,
-                    value = stringResource(currentThemeLabel),
-                    onClick = onNavigateToTheme
-                ),
-                SettingsRow(
-                    labelRes = R.string.settings_pref_language,
-                    icon = NextPageIcons.Language,
-                    value = stringResource(currentLanguageLabel),
-                    onClick = onNavigateToLanguage
-                ),
-                SettingsRow(
-                    labelRes = R.string.palette_section_title,
-                    icon = NextPageIcons.Palette,
-                    onClick = onNavigateToPalette
-                )
-            )
-        ),
-        SettingsGroup(
-            titleRes = R.string.settings_lectura_section,
-            rows = listOf(
-                SettingsRow(
-                    labelRes = R.string.settings_daily_goal_title,
-                    icon = NextPageIcons.Clock,
-                    value = currentGoalValue,
-                    onClick = onNavigateToDailyGoal
-                )
-            )
-        ),
-        SettingsGroup(
-            titleRes = R.string.settings_datos_section,
-            rows = listOf(
-                SettingsRow(
-                    labelRes = R.string.settings_storage_title,
-                    icon = NextPageIcons.Storage,
-                    onClick = onNavigateToStorage
-                ),
-                SettingsRow(
-                    labelRes = R.string.settings_sync_title,
-                    icon = NextPageIcons.Sync,
-                    onClick = onNavigateToSync
-                ),
-                SettingsRow(
-                    labelRes = R.string.settings_data_storage_title,
-                    icon = NextPageIcons.CloudSync,
-                    onClick = onNavigateToDataStorage
-                ),
-                SettingsRow(
-                    labelRes = R.string.settings_pref_notifications,
-                    icon = NextPageIcons.Notifications,
-                    onClick = onNavigateToNotifications
-                ),
-                SettingsRow(
-                    labelRes = R.string.settings_dictionary_label,
-                    icon = NextPageIcons.LibraryBooks,
-                    onClick = onNavigateToDictionary
-                )
-            ) + if (BuildConfig.DEBUG) {
-                listOf(
-                    SettingsRow(
-                        labelRes = R.string.settings_performance_title,
-                        icon = NextPageIcons.Performance,
-                        onClick = onNavigateToPerformance
-                    )
-                )
-            } else {
-                emptyList()
+    val currentThemeLabel =
+        when (appThemeMode) {
+            ThemeMode.LIGHT -> R.string.settings_theme_light
+            ThemeMode.DARK -> R.string.settings_theme_dark
+            ThemeMode.SYSTEM -> R.string.settings_theme_system
+        }
+
+    val currentGoalValue =
+        readingGoalPreferences?.load()?.let { minutes ->
+            when (minutes) {
+                10 -> stringResource(R.string.onboarding_goal_option_relaxed_value)
+                20 -> stringResource(R.string.onboarding_goal_option_regular_value)
+                30 -> stringResource(R.string.onboarding_goal_option_serious_value)
+                45 -> stringResource(R.string.onboarding_goal_option_intense_value)
+                else -> "$minutes min/día"
             }
-        ),
-        SettingsGroup(
-            titleRes = R.string.settings_info_section,
-            rows = listOf(
-                SettingsRow(
-                    labelRes = R.string.settings_pref_about,
-                    icon = NextPageIcons.Info,
-                    onClick = onNavigateToAbout
-                )
-            )
+        }
+
+    val groups =
+        listOf(
+            SettingsGroup(
+                titleRes = R.string.settings_account_section,
+                rows =
+                    listOf(
+                        SettingsRow(
+                            labelRes = R.string.settings_account_title,
+                            icon = NextPageIcons.Person,
+                            onClick = onNavigateToAccount,
+                        ),
+                        SettingsRow(
+                            labelRes = R.string.settings_devices_title,
+                            icon = NextPageIcons.Devices,
+                            onClick = onNavigateToDevices,
+                        ),
+                    ),
+            ),
+            SettingsGroup(
+                titleRes = R.string.settings_apariencia_section,
+                rows =
+                    listOf(
+                        SettingsRow(
+                            labelRes = R.string.settings_pref_theme,
+                            icon = NextPageIcons.DarkMode,
+                            value = stringResource(currentThemeLabel),
+                            onClick = onNavigateToTheme,
+                        ),
+                        SettingsRow(
+                            labelRes = R.string.settings_pref_language,
+                            icon = NextPageIcons.Language,
+                            value = stringResource(currentLanguageLabel),
+                            onClick = onNavigateToLanguage,
+                        ),
+                        SettingsRow(
+                            labelRes = R.string.palette_section_title,
+                            icon = NextPageIcons.Palette,
+                            onClick = onNavigateToPalette,
+                        ),
+                    ),
+            ),
+            SettingsGroup(
+                titleRes = R.string.settings_lectura_section,
+                rows =
+                    listOf(
+                        SettingsRow(
+                            labelRes = R.string.settings_daily_goal_title,
+                            icon = NextPageIcons.Clock,
+                            value = currentGoalValue,
+                            onClick = onNavigateToDailyGoal,
+                        ),
+                    ),
+            ),
+            SettingsGroup(
+                titleRes = R.string.settings_datos_section,
+                rows =
+                    listOf(
+                        SettingsRow(
+                            labelRes = R.string.settings_storage_title,
+                            icon = NextPageIcons.Storage,
+                            onClick = onNavigateToStorage,
+                        ),
+                        SettingsRow(
+                            labelRes = R.string.settings_sync_title,
+                            icon = NextPageIcons.Sync,
+                            onClick = onNavigateToSync,
+                        ),
+                        SettingsRow(
+                            labelRes = R.string.settings_data_storage_title,
+                            icon = NextPageIcons.CloudSync,
+                            onClick = onNavigateToDataStorage,
+                        ),
+                        SettingsRow(
+                            labelRes = R.string.settings_pref_notifications,
+                            icon = NextPageIcons.Notifications,
+                            onClick = onNavigateToNotifications,
+                        ),
+                        SettingsRow(
+                            labelRes = R.string.settings_dictionary_label,
+                            icon = NextPageIcons.LibraryBooks,
+                            onClick = onNavigateToDictionary,
+                        ),
+                    ) +
+                        if (BuildConfig.DEBUG) {
+                            listOf(
+                                SettingsRow(
+                                    labelRes = R.string.settings_performance_title,
+                                    icon = NextPageIcons.Performance,
+                                    onClick = onNavigateToPerformance,
+                                ),
+                            )
+                        } else {
+                            emptyList()
+                        },
+            ),
+            SettingsGroup(
+                titleRes = R.string.settings_info_section,
+                rows =
+                    listOf(
+                        SettingsRow(
+                            labelRes = R.string.settings_pref_about,
+                            icon = NextPageIcons.Info,
+                            onClick = onNavigateToAbout,
+                        ),
+                    ),
+            ),
         )
-    )
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingMd)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingMd),
     ) {
         val scrollState = rememberScrollState()
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingMd)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState),
+            verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingMd),
         ) {
             Spacer(modifier = Modifier.height(8.dp))
 
             NextPageHeader(
                 title = stringResource(R.string.home_nextpage_title),
-                avatarInitials = stringResource(R.string.app_logo_initials)
+                avatarInitials = stringResource(R.string.app_logo_initials),
             )
 
             TitleSection()
 
             AccountSection(
                 authSession = authSession,
-                onClick = onNavigateToAccount
+                onClick = onNavigateToAccount,
             )
 
             groups.forEach { group ->
@@ -242,12 +254,12 @@ fun SettingsListScreen(
                 Text(
                     text = stringResource(R.string.debug_panel_title),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
                 )
                 NextPagePreferenceItem(
                     icon = NextPageIcons.BugReport,
                     label = stringResource(R.string.debug_settings_log_viewer),
-                    onClick = onNavigateToLogViewer
+                    onClick = onNavigateToLogViewer,
                 )
             }
 
@@ -262,13 +274,13 @@ private fun TitleSection() {
         Text(
             text = stringResource(R.string.settings_title),
             style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = stringResource(R.string.settings_subtitle),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -276,45 +288,49 @@ private fun TitleSection() {
 @Composable
 private fun AccountSection(
     authSession: AuthSession?,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = stringResource(R.string.settings_account_section),
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.SemiBold,
         )
 
         Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onClick),
             shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant
+            color = MaterialTheme.colorScheme.surfaceVariant,
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 NextPageAvatar(
                     imageUrl = authSession?.photoUrl,
-                    initials = (authSession?.displayName ?: stringResource(R.string.settings_user_default))
-                        .take(2).uppercase(),
-                    size = 48.dp
+                    initials =
+                        (authSession?.displayName ?: stringResource(R.string.settings_user_default))
+                            .take(2)
+                            .uppercase(),
+                    size = 48.dp,
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = authSession?.displayName ?: stringResource(R.string.settings_user_default),
                         style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
                     )
                     Text(
                         text = authSession?.email ?: stringResource(R.string.settings_email_placeholder),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -328,7 +344,7 @@ private fun SettingsGroupBlock(group: SettingsGroup) {
         Text(
             text = stringResource(group.titleRes),
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.SemiBold,
         )
 
         group.rows.forEach { row ->
@@ -336,7 +352,7 @@ private fun SettingsGroupBlock(group: SettingsGroup) {
                 icon = row.icon,
                 label = stringResource(row.labelRes),
                 value = row.value,
-                onClick = row.onClick
+                onClick = row.onClick,
             )
         }
     }
@@ -350,30 +366,31 @@ private fun DebugModeSection(context: android.content.Context) {
         Text(
             text = stringResource(R.string.debug_mode_title),
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.SemiBold,
         )
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant
+            color = MaterialTheme.colorScheme.surfaceVariant,
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.debug_mode_title),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
                         text = stringResource(R.string.debug_mode_subtitle),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 androidx.compose.material3.Switch(
@@ -381,7 +398,7 @@ private fun DebugModeSection(context: android.content.Context) {
                     onCheckedChange = { enabled ->
                         debugEnabled = enabled
                         DebugPrefs.setEnabled(context, enabled)
-                    }
+                    },
                 )
             }
         }
@@ -403,7 +420,7 @@ private fun SettingsListScreenDarkPreview() {
             onNavigateToPalette = {},
             onNavigateToDataStorage = {},
             onNavigateToNotifications = {},
-            onNavigateToAbout = {}
+            onNavigateToAbout = {},
         )
     }
 }
@@ -421,64 +438,72 @@ private fun SettingsListScreenLightPreview() {
             onNavigateToPalette = {},
             onNavigateToDataStorage = {},
             onNavigateToNotifications = {},
-            onNavigateToAbout = {}
+            onNavigateToAbout = {},
         )
     }
 }
 
 @Composable
 private fun PrivacyTelemetrySection(context: android.content.Context) {
-    var enabled by remember { mutableStateOf(com.nextpage.debug.SentryPrivacyPrefs.isEnabled(context)) }
+    var enabled by remember {
+        mutableStateOf(
+            com.nextpage.debug.SentryPrivacyPrefs
+                .isEnabled(context),
+        )
+    }
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant
+        color = MaterialTheme.colorScheme.surfaceVariant,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
                 text = stringResource(R.string.settings_privacy_title),
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
             )
             Text(
                 text = stringResource(R.string.settings_privacy_collected),
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodySmall,
             )
             Text(
                 text = stringResource(R.string.settings_privacy_never),
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodySmall,
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = stringResource(R.string.settings_privacy_toggle_label),
                     style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
                 )
                 Switch(
                     checked = enabled,
                     onCheckedChange = { checked ->
                         enabled = checked
-                        com.nextpage.debug.SentryPrivacyPrefs.setEnabled(context, checked)
-                    }
+                        com.nextpage.debug.SentryPrivacyPrefs
+                            .setEnabled(context, checked)
+                    },
                 )
             }
             Text(
-                text = if (enabled) {
-                    stringResource(R.string.settings_privacy_toggle_hint_on)
-                } else {
-                    stringResource(R.string.settings_privacy_toggle_hint_off)
-                },
+                text =
+                    if (enabled) {
+                        stringResource(R.string.settings_privacy_toggle_hint_on)
+                    } else {
+                        stringResource(R.string.settings_privacy_toggle_hint_off)
+                    },
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

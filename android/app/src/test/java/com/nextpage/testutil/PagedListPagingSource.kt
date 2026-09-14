@@ -14,7 +14,7 @@ import androidx.paging.PagingState
  */
 @Suppress("UNCHECKED_CAST")
 class PagedListPagingSource<T : Any>(
-    private val items: List<T>
+    private val items: List<T>,
 ) : PagingSource<Int, T>() {
     override fun getRefreshKey(state: PagingState<Int, T>): Int? {
         val anchor = state.anchorPosition ?: return 0
@@ -29,7 +29,7 @@ class PagedListPagingSource<T : Any>(
             return LoadResult.Page(
                 data = emptyList(),
                 prevKey = if (key == 0) null else key - 1,
-                nextKey = null
+                nextKey = null,
             )
         }
         val to = minOf(from + params.loadSize, items.size)
@@ -39,7 +39,7 @@ class PagedListPagingSource<T : Any>(
         return LoadResult.Page(
             data = page,
             prevKey = prevKey,
-            nextKey = nextKey
+            nextKey = nextKey,
         )
     }
 }

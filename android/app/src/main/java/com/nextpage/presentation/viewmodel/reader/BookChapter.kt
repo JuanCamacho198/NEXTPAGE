@@ -22,5 +22,5 @@ data class BookChapter(
     val id: String,
     val title: String,
     val href: String,
-    val depth: Int = 0
+    val depth: Int = 0,
 )

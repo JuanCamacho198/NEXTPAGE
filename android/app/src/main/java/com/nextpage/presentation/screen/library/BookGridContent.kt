@@ -30,7 +30,7 @@ fun BookGridSection(
     onMarkPlanToRead: (Book) -> Unit,
     onShare: (Book) -> Unit,
     emptyContent: (@Composable () -> Unit)? = null,
-    footerContent: (@Composable () -> Unit)? = null
+    footerContent: (@Composable () -> Unit)? = null,
 ) {
     if (isGridView) {
         BookGrid(
@@ -45,7 +45,7 @@ fun BookGridSection(
             onMarkPlanToRead = onMarkPlanToRead,
             onShare = onShare,
             emptyContent = emptyContent,
-            footerContent = footerContent
+            footerContent = footerContent,
         )
     } else {
         BookList(
@@ -60,7 +60,7 @@ fun BookGridSection(
             onMarkPlanToRead = onMarkPlanToRead,
             onShare = onShare,
             emptyContent = emptyContent,
-            footerContent = footerContent
+            footerContent = footerContent,
         )
     }
 }
@@ -85,16 +85,17 @@ fun BookGrid(
     onMarkPlanToRead: (Book) -> Unit,
     onShare: (Book) -> Unit,
     emptyContent: (@Composable () -> Unit)? = null,
-    footerContent: (@Composable () -> Unit)? = null
+    footerContent: (@Composable () -> Unit)? = null,
 ) {
     LazyVerticalStaggeredGrid(
         columns = StaggeredGridCells.Fixed(2),
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalItemSpacing = 16.dp,
-        contentPadding = PaddingValues(bottom = 16.dp)
+        contentPadding = PaddingValues(bottom = 16.dp),
     ) {
         if (books.isEmpty() && emptyContent != null) {
             item(span = StaggeredGridItemSpan.FullLine, key = "empty_state", contentType = { "empty" }) {
@@ -111,7 +112,7 @@ fun BookGrid(
                 onEdit = { onEdit(book) },
                 onMarkCompleted = { onMarkCompleted(book) },
                 onMarkPlanToRead = { onMarkPlanToRead(book) },
-                onShare = { onShare(book) }
+                onShare = { onShare(book) },
             )
         }
         // The add-book card is the primary import affordance when the shelf
@@ -132,26 +133,27 @@ fun BookGrid(
 
 // ─── Previews ─────────────────────────────────────────────────────────
 
-private val PreviewBooks = listOf(
-    Book(
-        id = "preview-book-1",
-        title = "The Hobbit",
-        author = "J.R.R. Tolkien",
-        coverPath = null,
-        filePath = "/preview/the-hobbit.epub",
-        format = "epub",
-        updatedAtEpochMillis = 0L
-    ),
-    Book(
-        id = "preview-book-2",
-        title = "1984",
-        author = "George Orwell",
-        coverPath = null,
-        filePath = "/preview/1984.epub",
-        format = "epub",
-        updatedAtEpochMillis = 0L
+private val PreviewBooks =
+    listOf(
+        Book(
+            id = "preview-book-1",
+            title = "The Hobbit",
+            author = "J.R.R. Tolkien",
+            coverPath = null,
+            filePath = "/preview/the-hobbit.epub",
+            format = "epub",
+            updatedAtEpochMillis = 0L,
+        ),
+        Book(
+            id = "preview-book-2",
+            title = "1984",
+            author = "George Orwell",
+            coverPath = null,
+            filePath = "/preview/1984.epub",
+            format = "epub",
+            updatedAtEpochMillis = 0L,
+        ),
     )
-)
 
 @Preview(showBackground = true)
 @Composable
@@ -167,7 +169,7 @@ private fun BookGridContentDarkPreview() {
             onEdit = {},
             onMarkCompleted = {},
             onMarkPlanToRead = {},
-            onShare = {}
+            onShare = {},
         )
     }
 }
@@ -186,7 +188,7 @@ private fun BookGridContentLightPreview() {
             onEdit = {},
             onMarkCompleted = {},
             onMarkPlanToRead = {},
-            onShare = {}
+            onShare = {},
         )
     }
 }

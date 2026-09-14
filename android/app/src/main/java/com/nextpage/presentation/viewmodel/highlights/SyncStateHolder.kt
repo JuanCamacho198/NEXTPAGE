@@ -13,13 +13,15 @@ private const val SYNCED_DISPLAY_DURATION_MS = 3000L
 
 sealed interface HighlightsSyncState {
     data object Idle : HighlightsSyncState
+
     data object Syncing : HighlightsSyncState
+
     data object Synced : HighlightsSyncState
 }
 
 class SyncStateHolder(
     private val supabaseSync: SupabaseProgressSync?,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
 ) {
     private val _syncState = MutableStateFlow<HighlightsSyncState>(HighlightsSyncState.Idle)
     val syncState: StateFlow<HighlightsSyncState> = _syncState.asStateFlow()
@@ -32,18 +34,20 @@ class SyncStateHolder(
         if (syncJob?.isActive == true && !force) return
         syncJob?.cancel()
         syncedResetJob?.cancel()
-        syncJob = scope.launch {
-            _syncState.value = HighlightsSyncState.Syncing
-            try {
-                sync.pullAllHighlights()
-                _syncState.value = HighlightsSyncState.Synced
-                syncedResetJob = scope.launch {
-                    delay(SYNCED_DISPLAY_DURATION_MS)
+        syncJob =
+            scope.launch {
+                _syncState.value = HighlightsSyncState.Syncing
+                try {
+                    sync.pullAllHighlights()
+                    _syncState.value = HighlightsSyncState.Synced
+                    syncedResetJob =
+                        scope.launch {
+                            delay(SYNCED_DISPLAY_DURATION_MS)
+                            _syncState.value = HighlightsSyncState.Idle
+                        }
+                } catch (_: Exception) {
                     _syncState.value = HighlightsSyncState.Idle
                 }
-            } catch (_: Exception) {
-                _syncState.value = HighlightsSyncState.Idle
             }
-        }
     }
 }

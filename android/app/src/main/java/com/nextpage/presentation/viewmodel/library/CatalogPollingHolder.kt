@@ -18,15 +18,16 @@ class CatalogPollingHolder(
     private val ioDispatcher: CoroutineDispatcher,
     private val onFastList: (List<UserBookRow>) -> Unit,
     private val onEnriched: (List<UserBookRow>) -> Unit,
-    private val onLoadingDone: () -> Unit
+    private val onLoadingDone: () -> Unit,
 ) {
     private var job: Job? = null
 
     fun start(scope: CoroutineScope) {
         if (job?.isActive == true) return
-        job = scope.launch {
-            pollLoop()
-        }
+        job =
+            scope.launch {
+                pollLoop()
+            }
     }
 
     fun stop() {
@@ -40,7 +41,8 @@ class CatalogPollingHolder(
         while (currentCoroutineContext().isActive) {
             currentCoroutineContext().ensureActive()
             try {
-                catalogSync.getDownloadableBooks()
+                catalogSync
+                    .getDownloadableBooks()
                     .onSuccess { books ->
                         currentCoroutineContext().ensureActive()
                         onFastList(books)
@@ -49,10 +51,11 @@ class CatalogPollingHolder(
                             val userId = catalogSync.currentUserId()
                             if (userId != null) {
                                 coroutineScope {
-                                    val deferred = async(ioDispatcher) {
-                                        currentCoroutineContext().ensureActive()
-                                        catalogSync.enrichFileSizes(books, userId)
-                                    }
+                                    val deferred =
+                                        async(ioDispatcher) {
+                                            currentCoroutineContext().ensureActive()
+                                            catalogSync.enrichFileSizes(books, userId)
+                                        }
                                     val enriched = deferred.await()
                                     currentCoroutineContext().ensureActive()
                                     if (enriched != books) {
@@ -61,8 +64,7 @@ class CatalogPollingHolder(
                                 }
                             }
                         }
-                    }
-                    .onFailure {
+                    }.onFailure {
                         currentCoroutineContext().ensureActive()
                         onLoadingDone()
                     }

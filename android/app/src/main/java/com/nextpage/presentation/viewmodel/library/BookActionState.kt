@@ -9,5 +9,5 @@ import com.nextpage.domain.model.Book
  */
 data class BookActionState(
     val bookToDelete: Book? = null,
-    val bookToShare: Book? = null
+    val bookToShare: Book? = null,
 )

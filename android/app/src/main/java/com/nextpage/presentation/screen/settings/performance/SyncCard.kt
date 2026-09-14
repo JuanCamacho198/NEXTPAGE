@@ -32,28 +32,28 @@ import com.nextpage.presentation.viewmodel.PerformanceSyncStatus
 @Composable
 fun SyncCard(
     syncStatus: PerformanceSyncStatus?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Column {
                 Text(
                     text = stringResource(R.string.performance_card_sync_title),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
                 )
                 Text(
                     text = stringResource(R.string.performance_card_sync_subtitle),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
@@ -65,38 +65,47 @@ fun SyncCard(
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Icon(
                             imageVector = if (syncStatus.realtimeConnected) Icons.Rounded.CheckCircle else Icons.Rounded.ErrorOutline,
                             contentDescription = null,
                             tint = if (syncStatus.realtimeConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(20.dp),
                         )
                         Text(
-                            text = if (syncStatus.realtimeConnected)
-                                stringResource(R.string.performance_realtime_connected)
-                            else
-                                stringResource(R.string.performance_realtime_disconnected),
+                            text =
+                                if (syncStatus.realtimeConnected) {
+                                    stringResource(R.string.performance_realtime_connected)
+                                } else {
+                                    stringResource(R.string.performance_realtime_disconnected)
+                                },
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = if (syncStatus.realtimeConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                            color = if (syncStatus.realtimeConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                         )
                         AssistChip(
                             onClick = {},
                             label = {
                                 Text(
-                                    text = if (syncStatus.realtimeConnected) stringResource(R.string.performance_status_connected)
-                                    else stringResource(R.string.performance_status_disconnected),
-                                    style = MaterialTheme.typography.labelSmall
+                                    text =
+                                        if (syncStatus.realtimeConnected) {
+                                            stringResource(R.string.performance_status_connected)
+                                        } else {
+                                            stringResource(R.string.performance_status_disconnected)
+                                        },
+                                    style = MaterialTheme.typography.labelSmall,
                                 )
                             },
-                            colors = AssistChipDefaults.assistChipColors(
-                                containerColor = if (syncStatus.realtimeConnected)
-                                    MaterialTheme.colorScheme.primaryContainer
-                                else
-                                    MaterialTheme.colorScheme.errorContainer
-                            )
+                            colors =
+                                AssistChipDefaults.assistChipColors(
+                                    containerColor =
+                                        if (syncStatus.realtimeConnected) {
+                                            MaterialTheme.colorScheme.primaryContainer
+                                        } else {
+                                            MaterialTheme.colorScheme.errorContainer
+                                        },
+                                ),
                         )
                     }
                     ResourceRow(label = stringResource(R.string.performance_last_sync), value = syncStatus.lastSyncLabel)
@@ -108,21 +117,24 @@ fun SyncCard(
 }
 
 @Composable
-private fun ResourceRow(label: String, value: String) {
+private fun ResourceRow(
+    label: String,
+    value: String,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
         )
     }
 }

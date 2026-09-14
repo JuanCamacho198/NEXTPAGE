@@ -14,12 +14,15 @@ import androidx.compose.runtime.Immutable
  * | ORANGE   | —       | #F97316 |
  * | RED      | —       | #EF4444 |
  */
-enum class HighlightColor(val hex: String) {
+enum class HighlightColor(
+    val hex: String,
+) {
     YELLOW("#FACC15"),
     GREEN("#4ADE80"),
     BLUE("#3B82F6"),
     ORANGE("#F97316"),
-    RED("#EF4444");
+    RED("#EF4444"),
+    ;
 
     companion object {
         /**
@@ -44,7 +47,8 @@ enum class HighlightColor(val hex: String) {
             val upper = sanitized.uppercase()
 
             // 1) Exact match
-            entries.find { it.hex.removePrefix("#").equals(upper, ignoreCase = true) }
+            entries
+                .find { it.hex.removePrefix("#").equals(upper, ignoreCase = true) }
                 ?.let { return it }
 
             // 2) Nearest-match by RGB Euclidean distance
@@ -83,5 +87,5 @@ data class Highlight(
     val deletedAtEpochMillis: Long?,
     val tag: String? = null,
     val locatorJson: String? = null,
-    val type: String? = null
+    val type: String? = null,
 )

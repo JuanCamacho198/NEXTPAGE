@@ -4,11 +4,11 @@ import android.util.Log
 import io.sentry.Sentry
 import io.sentry.SentryLevel
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 /**
  * In-memory debug event log + Logcat sink.
@@ -24,14 +24,13 @@ import kotlinx.coroutines.flow.update
  *   [MAX_ERROR_EVENTS].
  */
 object DebugLog {
-
     enum class Level { INFO, WARN, ERROR, SUCCESS }
 
     data class DebugEvent(
         val timestamp: Long,
         val level: Level,
         val tag: String,
-        val message: String
+        val message: String,
     )
 
     private const val MAX_EVENTS = 500
@@ -41,6 +40,7 @@ object DebugLog {
     val events: StateFlow<List<DebugEvent>> = _events.asStateFlow()
 
     private val _errorEvents = MutableStateFlow<List<DebugEvent>>(emptyList())
+
     /** Only `ERROR`-level events, newest first. Survives INFO/WARN flood. */
     val errorEvents: StateFlow<List<DebugEvent>> = _errorEvents.asStateFlow()
 
@@ -53,7 +53,10 @@ object DebugLog {
      * @param scope  CoroutineScope (typically SupervisorJob + Dispatchers.IO)
      * @param writer LogWriter implementation (typically CrashLogStore)
      */
-    fun init(scope: CoroutineScope, writer: LogWriter) {
+    fun init(
+        scope: CoroutineScope,
+        writer: LogWriter,
+    ) {
         this.scope = scope
         this.writer = writer
     }
@@ -64,13 +67,18 @@ object DebugLog {
         scope = null
     }
 
-    fun log(level: Level, tag: String, message: String) {
-        val event = DebugEvent(
-            timestamp = System.currentTimeMillis(),
-            level = level,
-            tag = tag,
-            message = message
-        )
+    fun log(
+        level: Level,
+        tag: String,
+        message: String,
+    ) {
+        val event =
+            DebugEvent(
+                timestamp = System.currentTimeMillis(),
+                level = level,
+                tag = tag,
+                message = message,
+            )
         _events.update { current ->
             val updated = ArrayList<DebugEvent>(minOf(current.size + 1, MAX_EVENTS))
             updated.add(event)
@@ -94,12 +102,13 @@ object DebugLog {
             // Sentry.captureException directly at the call site.
             runCatching { Sentry.captureMessage(message, SentryLevel.ERROR) }
         }
-        val priority = when (level) {
-            Level.INFO -> Log.INFO
-            Level.WARN -> Log.WARN
-            Level.ERROR -> Log.ERROR
-            Level.SUCCESS -> Log.INFO
-        }
+        val priority =
+            when (level) {
+                Level.INFO -> Log.INFO
+                Level.WARN -> Log.WARN
+                Level.ERROR -> Log.ERROR
+                Level.SUCCESS -> Log.INFO
+            }
         // android.util.Log is not mocked in JVM unit tests; swallow the failure so
         // the in-memory event log still works there (tests assert on events, not logcat).
         runCatching {
@@ -114,10 +123,25 @@ object DebugLog {
         }
     }
 
-    fun info(tag: String, message: String) = log(Level.INFO, tag, message)
-    fun warn(tag: String, message: String) = log(Level.WARN, tag, message)
-    fun error(tag: String, message: String) = log(Level.ERROR, tag, message)
-    fun success(tag: String, message: String) = log(Level.SUCCESS, tag, message)
+    fun info(
+        tag: String,
+        message: String,
+    ) = log(Level.INFO, tag, message)
+
+    fun warn(
+        tag: String,
+        message: String,
+    ) = log(Level.WARN, tag, message)
+
+    fun error(
+        tag: String,
+        message: String,
+    ) = log(Level.ERROR, tag, message)
+
+    fun success(
+        tag: String,
+        message: String,
+    ) = log(Level.SUCCESS, tag, message)
 
     fun clear() {
         _events.update { emptyList() }
@@ -132,7 +156,8 @@ object DebugLog {
         if (list.isEmpty()) return "(empty)"
         val sb = StringBuilder()
         for (e in list) {
-            sb.append('[')
+            sb
+                .append('[')
                 .append(e.level.name)
                 .append("] ")
                 .append(e.tag)

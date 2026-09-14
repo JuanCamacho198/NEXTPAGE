@@ -7,5 +7,5 @@ data class ReadingProgress(
     val percentage: Float,
     val currentPage: Int? = null,
     val updatedAtEpochMillis: Long,
-    val locatorJson: String? = null
+    val locatorJson: String? = null,
 )

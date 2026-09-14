@@ -12,10 +12,7 @@ import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 class ReadiumLocatorMappersTest {
-
-    private fun mockLink(href: String = "chapter.xhtml"): Link {
-        return mockk(relaxed = true)
-    }
+    private fun mockLink(href: String = "chapter.xhtml"): Link = mockk(relaxed = true)
 
     @Test
     fun fallbackLocatorFromCfi_readiumHref_returnsLocator() {

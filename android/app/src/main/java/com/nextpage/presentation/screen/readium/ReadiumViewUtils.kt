@@ -17,9 +17,21 @@ import com.nextpage.debug.DebugLog
  * being created at all, so only our custom [com.nextpage.presentation.screen.SelectionOverlay] is shown.
  */
 private object SuppressSelectionActionMode : ActionMode.Callback {
-    override fun onCreateActionMode(mode: ActionMode, menu: Menu): Boolean = false
-    override fun onPrepareActionMode(mode: ActionMode, menu: Menu): Boolean = false
-    override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean = false
+    override fun onCreateActionMode(
+        mode: ActionMode,
+        menu: Menu,
+    ): Boolean = false
+
+    override fun onPrepareActionMode(
+        mode: ActionMode,
+        menu: Menu,
+    ): Boolean = false
+
+    override fun onActionItemClicked(
+        mode: ActionMode,
+        item: MenuItem,
+    ): Boolean = false
+
     override fun onDestroyActionMode(mode: ActionMode) = Unit
 }
 
@@ -50,36 +62,43 @@ internal fun View.findWebView(): WebView? {
  * [org.readium.r2.navigator.SelectableNavigator.currentSelection()].
  */
 internal fun installActionModeCallback(root: View) {
-    val webView = root.findWebView() ?: run {
-        Log.d("ReadiumReaderContent", "No WebView found in navigator fragment")
-        DebugLog.warn("ActionMode", "No WebView found in EPUB navigator")
-        return
-    }
+    val webView =
+        root.findWebView() ?: run {
+            Log.d("ReadiumReaderContent", "No WebView found in navigator fragment")
+            DebugLog.warn("ActionMode", "No WebView found in EPUB navigator")
+            return
+        }
     installEpubCallbackOnWebView(webView)
 
     // Re-install the callback whenever the view is attached or the layout
     // changes — defensive against Readium recreating or swapping the WebView.
-    val attachListener = object : View.OnAttachStateChangeListener {
-        override fun onViewAttachedToWindow(v: View) {
-            DebugLog.info("Readium", "WebView attached — re-installing callback")
-            installEpubCallbackOnWebView(v as? WebView ?: return)
+    val attachListener =
+        object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) {
+                DebugLog.info("Readium", "WebView attached — re-installing callback")
+                installEpubCallbackOnWebView(v as? WebView ?: return)
+            }
+
+            override fun onViewDetachedFromWindow(v: View) {
+                // no-op
+            }
         }
-        override fun onViewDetachedFromWindow(v: View) {
-            // no-op
+    val layoutListener =
+        android.view.ViewTreeObserver.OnGlobalLayoutListener {
+            if (webView.parent == null) return@OnGlobalLayoutListener
+            val current =
+                try {
+                    webView::class.java
+                        .getMethod("getCustomSelectionActionModeCallback")
+                        .invoke(webView)
+                } catch (_: Throwable) {
+                    null
+                }
+            if (current !== SuppressSelectionActionMode) {
+                DebugLog.warn("Readium", "WebView callback lost — re-installing")
+                installEpubCallbackOnWebView(webView)
+            }
         }
-    }
-    val layoutListener = android.view.ViewTreeObserver.OnGlobalLayoutListener {
-        if (webView.parent == null) return@OnGlobalLayoutListener
-        val current = try {
-            webView::class.java
-                .getMethod("getCustomSelectionActionModeCallback")
-                .invoke(webView)
-        } catch (_: Throwable) { null }
-        if (current !== SuppressSelectionActionMode) {
-            DebugLog.warn("Readium", "WebView callback lost — re-installing")
-            installEpubCallbackOnWebView(webView)
-        }
-    }
     webView.addOnAttachStateChangeListener(attachListener)
     webView.viewTreeObserver.addOnGlobalLayoutListener(layoutListener)
 }
@@ -94,11 +113,12 @@ internal fun installActionModeCallback(root: View) {
  * to fully disable long-press handling, unlike EPUB which keeps `isLongClickable=true`.
  */
 internal fun installPdfActionModeCallback(root: View) {
-    val webView = root.findWebView() ?: run {
-        Log.d("ReadiumPdfReaderContent", "No WebView in PDF navigator — ActionMode not applicable")
-        DebugLog.info("ActionMode", "WebView not found in ${root.javaClass.simpleName}")
-        return
-    }
+    val webView =
+        root.findWebView() ?: run {
+            Log.d("ReadiumPdfReaderContent", "No WebView in PDF navigator — ActionMode not applicable")
+            DebugLog.info("ActionMode", "WebView not found in ${root.javaClass.simpleName}")
+            return
+        }
     installPdfCallbackOnWebView(webView)
 }
 
@@ -108,17 +128,18 @@ private fun installEpubCallbackOnWebView(webView: WebView) {
         // (which may hide or override the parent) does not block access.
         // getMethod only finds public methods; getDeclaredMethod finds
         // all methods including package-private overrides.
-        val method = try {
-            webView.javaClass.getDeclaredMethod(
-                "setCustomSelectionActionModeCallback",
-                ActionMode.Callback::class.java
-            )
-        } catch (e: NoSuchMethodException) {
-            WebView::class.java.getDeclaredMethod(
-                "setCustomSelectionActionModeCallback",
-                ActionMode.Callback::class.java
-            )
-        }
+        val method =
+            try {
+                webView.javaClass.getDeclaredMethod(
+                    "setCustomSelectionActionModeCallback",
+                    ActionMode.Callback::class.java,
+                )
+            } catch (e: NoSuchMethodException) {
+                WebView::class.java.getDeclaredMethod(
+                    "setCustomSelectionActionModeCallback",
+                    ActionMode.Callback::class.java,
+                )
+            }
         method.isAccessible = true
         method.invoke(webView, SuppressSelectionActionMode)
         // Do NOT consume long-press: isLongClickable must stay true and no
@@ -142,19 +163,20 @@ private fun installEpubCallbackOnWebView(webView: WebView) {
 
 private fun installPdfCallbackOnWebView(webView: WebView) {
     try {
-        val method = try {
-            // First try the actual runtime class (handles R2WebView overrides)
-            webView.javaClass.getDeclaredMethod(
-                "setCustomSelectionActionModeCallback",
-                ActionMode.Callback::class.java
-            )
-        } catch (e: NoSuchMethodException) {
-            // Fallback to the public WebView class
-            WebView::class.java.getDeclaredMethod(
-                "setCustomSelectionActionModeCallback",
-                ActionMode.Callback::class.java
-            )
-        }
+        val method =
+            try {
+                // First try the actual runtime class (handles R2WebView overrides)
+                webView.javaClass.getDeclaredMethod(
+                    "setCustomSelectionActionModeCallback",
+                    ActionMode.Callback::class.java,
+                )
+            } catch (e: NoSuchMethodException) {
+                // Fallback to the public WebView class
+                WebView::class.java.getDeclaredMethod(
+                    "setCustomSelectionActionModeCallback",
+                    ActionMode.Callback::class.java,
+                )
+            }
         method.isAccessible = true
         method.invoke(webView, SuppressSelectionActionMode)
         runCatching { webView.isLongClickable = false }

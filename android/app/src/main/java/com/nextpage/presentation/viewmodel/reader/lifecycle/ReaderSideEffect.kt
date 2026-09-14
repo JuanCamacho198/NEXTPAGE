@@ -9,14 +9,22 @@ import org.readium.r2.shared.publication.Locator
  * instead of direct ViewModel references.
  */
 sealed interface ReaderSideEffect {
-    data class NavigateToLocator(val locator: Locator) : ReaderSideEffect
-    data class ShowError(val message: String) : ReaderSideEffect
+    data class NavigateToLocator(
+        val locator: Locator,
+    ) : ReaderSideEffect
+
+    data class ShowError(
+        val message: String,
+    ) : ReaderSideEffect
 }
 
 interface NavigatorCallbacks {
     fun onChapterChanged()
+
     fun onNavigateToLocator(locator: Locator)
+
     fun onSelectionCleared()
+
     fun onBookLoaded(bookId: String)
 }
 

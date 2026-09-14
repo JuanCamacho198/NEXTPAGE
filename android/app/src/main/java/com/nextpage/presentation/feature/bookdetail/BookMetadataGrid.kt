@@ -38,56 +38,56 @@ internal fun BookMetadataGrid(book: Book) {
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(NextPageDimens.cardCornerRadius),
         color = MaterialTheme.colorScheme.surfaceVariant,
-        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 MetadataCell(
                     icon = NextPageIcons.Book,
                     label = stringResource(R.string.book_detail_meta_format),
                     value = book.format.uppercase(),
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
                 MetadataCell(
                     icon = NextPageIcons.Language,
                     label = stringResource(R.string.book_detail_meta_language),
                     value = remember(book.language, na) { languageDisplayName(book.language, na) },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
                 MetadataCell(
                     icon = NextPageIcons.Info,
                     label = stringResource(R.string.book_detail_meta_publisher),
                     value = book.publisher ?: na,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 MetadataCell(
                     icon = NextPageIcons.Clock,
                     label = stringResource(R.string.book_detail_meta_published),
                     value = remember(book.publishedDate, na) { publishedYear(book.publishedDate, na) },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
                 MetadataCell(
                     icon = NextPageIcons.ListBullets,
                     label = stringResource(R.string.book_detail_meta_pages),
                     value = remember(book) { getPagesDisplayText(book, na) },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
                 MetadataCell(
                     icon = NextPageIcons.Storage,
                     label = stringResource(R.string.book_detail_meta_size),
                     value = remember(book.filePath, na) { formatSizeMb(book.filePath, na) },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
             }
         }
@@ -99,17 +99,17 @@ private fun MetadataCell(
     icon: ImageVector,
     label: String,
     value: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(20.dp),
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
@@ -118,7 +118,7 @@ private fun MetadataCell(
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
         )
         Spacer(modifier = Modifier.height(2.dp))
         Text(
@@ -127,7 +127,7 @@ private fun MetadataCell(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }

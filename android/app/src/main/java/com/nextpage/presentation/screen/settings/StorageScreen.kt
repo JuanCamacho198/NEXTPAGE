@@ -54,20 +54,20 @@ fun StorageScreen(
     onDismissDelete: () -> Unit,
     onConfirmLocalOnly: () -> Unit,
     onConfirmLocalAndDrive: () -> Unit,
-    onSweepOrphans: () -> Unit = {}
+    onSweepOrphans: () -> Unit = {},
 ) {
     StorageScreenContent(
         uiState = uiState,
         onBack = onBack,
         onClearCache = onClearCache,
         onRequestDeleteBook = onRequestDeleteBook,
-        onSweepOrphans = onSweepOrphans
+        onSweepOrphans = onSweepOrphans,
     )
     RemoveBookDialog(
         bookToDelete = uiState.bookToDelete,
         onDismiss = onDismissDelete,
         onConfirmLocalOnly = onConfirmLocalOnly,
-        onConfirmLocalAndDrive = onConfirmLocalAndDrive
+        onConfirmLocalAndDrive = onConfirmLocalAndDrive,
     )
 }
 
@@ -77,46 +77,49 @@ private fun StorageScreenContent(
     onBack: () -> Unit,
     onClearCache: () -> Unit,
     onRequestDeleteBook: (String) -> Unit,
-    onSweepOrphans: () -> Unit
+    onSweepOrphans: () -> Unit,
 ) {
     val context = LocalContext.current
 
     NextPageSettingsSubPage(
         title = stringResource(R.string.settings_storage_title),
-        onBack = onBack
+        onBack = onBack,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // Header — total measured live, never a hardcoded number.
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant
+                color = MaterialTheme.colorScheme.surfaceVariant,
             ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text(
-                        text = stringResource(
-                            R.string.storage_header_total_used,
-                            formatFileSize(context, uiState.totalBytes)
-                        ),
+                        text =
+                            stringResource(
+                                R.string.storage_header_total_used,
+                                formatFileSize(context, uiState.totalBytes),
+                            ),
                         style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
                         text = stringResource(R.string.storage_header_subtitle),
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -126,20 +129,20 @@ private fun StorageScreenContent(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant
+                color = MaterialTheme.colorScheme.surfaceVariant,
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     SizeRow(
                         label = stringResource(R.string.storage_cache_discover),
-                        value = formatFileSize(context, uiState.cache.discoverCacheBytes)
+                        value = formatFileSize(context, uiState.cache.discoverCacheBytes),
                     )
                     SizeRow(
                         label = stringResource(R.string.storage_cache_images),
-                        value = formatFileSize(context, uiState.cache.imageCacheBytes)
+                        value = formatFileSize(context, uiState.cache.imageCacheBytes),
                     )
                     SizeRow(
                         label = stringResource(R.string.storage_cache_reader),
-                        value = formatFileSize(context, uiState.cache.readerCacheBytes)
+                        value = formatFileSize(context, uiState.cache.readerCacheBytes),
                     )
                 }
             }
@@ -148,17 +151,19 @@ private fun StorageScreenContent(
                 enabled = !uiState.isClearingCache,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error,
-                    contentColor = MaterialTheme.colorScheme.onError
-                )
+                colors =
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError,
+                    ),
             ) {
                 if (uiState.isClearingCache) {
                     CircularProgressIndicator(
-                        modifier = Modifier
-                            .padding(end = 8.dp)
-                            .size(16.dp),
-                        strokeWidth = 2.dp
+                        modifier =
+                            Modifier
+                                .padding(end = 8.dp)
+                                .size(16.dp),
+                        strokeWidth = 2.dp,
                     )
                 }
                 Text(text = stringResource(R.string.storage_action_clear_cache))
@@ -169,20 +174,21 @@ private fun StorageScreenContent(
             when {
                 uiState.isLoading -> {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 12.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp
+                            strokeWidth = 2.dp,
                         )
                         Text(
                             text = stringResource(R.string.storage_loading),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -191,22 +197,23 @@ private fun StorageScreenContent(
                         text = stringResource(R.string.storage_books_empty),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(vertical = 12.dp)
+                        modifier = Modifier.padding(vertical = 12.dp),
                     )
                 }
-                else -> uiState.books.forEach { book ->
-                    BookRow(
-                        book = book,
-                        sizeLabel = formatFileSize(context, book.sizeBytes),
-                        onDelete = { onRequestDeleteBook(book.bookId) }
-                    )
-                }
+                else ->
+                    uiState.books.forEach { book ->
+                        BookRow(
+                            book = book,
+                            sizeLabel = formatFileSize(context, book.sizeBytes),
+                            onDelete = { onRequestDeleteBook(book.bookId) },
+                        )
+                    }
             }
 
             OutlinedButton(
                 onClick = onSweepOrphans,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
             ) {
                 Text(text = stringResource(R.string.storage_action_sweep))
             }
@@ -223,63 +230,72 @@ private fun SectionTitle(text: String) {
         style = MaterialTheme.typography.titleSmall,
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(horizontal = 4.dp)
+        modifier = Modifier.padding(horizontal = 4.dp),
     )
 }
 
 @Composable
-private fun SizeRow(label: String, value: String) {
+private fun SizeRow(
+    label: String,
+    value: String,
+) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
 
 @Composable
-private fun BookRow(book: BookStorageItem, sizeLabel: String, onDelete: () -> Unit) {
+private fun BookRow(
+    book: BookStorageItem,
+    sizeLabel: String,
+    onDelete: () -> Unit,
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant
+        color = MaterialTheme.colorScheme.surfaceVariant,
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = book.title,
                     style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
                 )
                 Text(
                     text = sizeLabel,
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             TextButton(onClick = onDelete) {
                 Text(
                     text = stringResource(R.string.storage_action_delete),
                     style = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp),
-                    color = MaterialTheme.colorScheme.error
+                    color = MaterialTheme.colorScheme.error,
                 )
             }
         }
@@ -298,7 +314,7 @@ private fun StorageScreenDarkPreview() {
             onDismissDelete = {},
             onConfirmLocalOnly = {},
             onConfirmLocalAndDrive = {},
-            onSweepOrphans = {}
+            onSweepOrphans = {},
         )
     }
 }
@@ -315,20 +331,23 @@ private fun StorageScreenLightPreview() {
             onDismissDelete = {},
             onConfirmLocalOnly = {},
             onConfirmLocalAndDrive = {},
-            onSweepOrphans = {}
+            onSweepOrphans = {},
         )
     }
 }
 
-private fun sampleState() = StorageUiState(
-    isLoading = false,
-    cache = CacheUsage(
-        discoverCacheBytes = 12L * 1024 * 1024,
-        imageCacheBytes = 4L * 1024 * 1024,
-        readerCacheBytes = 2L * 1024 * 1024
-    ),
-    books = listOf(
-        BookStorageItem(bookId = "1", title = "La Odisea", sizeBytes = 45L * 1024 * 1024),
-        BookStorageItem(bookId = "2", title = "Moby Dick", sizeBytes = 38L * 1024 * 1024)
+private fun sampleState() =
+    StorageUiState(
+        isLoading = false,
+        cache =
+            CacheUsage(
+                discoverCacheBytes = 12L * 1024 * 1024,
+                imageCacheBytes = 4L * 1024 * 1024,
+                readerCacheBytes = 2L * 1024 * 1024,
+            ),
+        books =
+            listOf(
+                BookStorageItem(bookId = "1", title = "La Odisea", sizeBytes = 45L * 1024 * 1024),
+                BookStorageItem(bookId = "2", title = "Moby Dick", sizeBytes = 38L * 1024 * 1024),
+            ),
     )
-)

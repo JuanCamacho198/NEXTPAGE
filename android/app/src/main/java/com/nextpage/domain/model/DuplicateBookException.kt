@@ -7,5 +7,5 @@ package com.nextpage.domain.model
  * outcome rather than a failure.
  */
 class DuplicateBookException(
-    message: String = "Book already in the library"
+    message: String = "Book already in the library",
 ) : Exception(message)

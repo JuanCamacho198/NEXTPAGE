@@ -20,7 +20,6 @@ import io.sentry.protocol.SentryId
  * pattern as `DebugLog`.
  */
 internal object FeedbackCapture {
-
     private const val TAG = "FeedbackCapture"
 
     /**
@@ -38,13 +37,14 @@ internal object FeedbackCapture {
             // feedback (without the link) rather than swallow the report.
             Log.w(TAG, "feedback: invalid eventId '${entry.eventId}', sending unlinked")
         }
-        val bookContext = buildMap {
-            put("bookId", entry.bookId ?: "")
-            if (entry.chapterIndex != null) put("chapterIndex", entry.chapterIndex)
-            if (entry.page != null) put("page", entry.page)
-            if (entry.title != null) put("title", entry.title.take(100))
-            if (entry.chapterLabel != null) put("chapterLabel", entry.chapterLabel.take(80))
-        }
+        val bookContext =
+            buildMap {
+                put("bookId", entry.bookId ?: "")
+                if (entry.chapterIndex != null) put("chapterIndex", entry.chapterIndex)
+                if (entry.page != null) put("page", entry.page)
+                if (entry.title != null) put("title", entry.title.take(100))
+                if (entry.chapterLabel != null) put("chapterLabel", entry.chapterLabel.take(80))
+            }
         // Feedback uses `unknown` for arbitrary payload (Sentry envelope schema).
         feedback.unknown = mapOf("book" to bookContext)
         return feedback
@@ -69,18 +69,19 @@ internal object FeedbackCapture {
     fun submitText(
         text: String,
         eventId: String?,
-        book: FeedbackEvent.BookMeta
+        book: FeedbackEvent.BookMeta,
     ): SentryId? {
-        val entry = FeedbackEvent.FeedbackEntry(
-            eventId = eventId ?: "",
-            text = text,
-            timestamp = System.currentTimeMillis(),
-            bookId = book.bookId,
-            chapterIndex = book.chapterIndex,
-            page = book.page,
-            title = book.title,
-            chapterLabel = book.chapterLabel
-        )
+        val entry =
+            FeedbackEvent.FeedbackEntry(
+                eventId = eventId ?: "",
+                text = text,
+                timestamp = System.currentTimeMillis(),
+                bookId = book.bookId,
+                chapterIndex = book.chapterIndex,
+                page = book.page,
+                title = book.title,
+                chapterLabel = book.chapterLabel,
+            )
         return submit(entry)
     }
 }

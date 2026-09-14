@@ -19,8 +19,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.painter.ColorPainter
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
@@ -49,16 +49,17 @@ internal fun DiscoverBookCover(
     title: String,
     modifier: Modifier = Modifier,
     letterSize: TextUnit = 32.sp,
-    surface: String = "grid"
+    surface: String = "grid",
 ) {
     var coverFailed by remember(coverUrl) { mutableStateOf(false) }
     val showCover = !coverUrl.isNullOrBlank() && !coverFailed
 
     Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(NextPageColors.surface),
-        contentAlignment = Alignment.Center
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(NextPageColors.surface),
+        contentAlignment = Alignment.Center,
     ) {
         if (showCover) {
             AsyncImage(
@@ -74,22 +75,21 @@ internal fun DiscoverBookCover(
                     coverFailed = true
                     SentryMetrics.count("discover_cover_fail", mapOf("surface" to surface))
                 },
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
             )
         } else {
             Text(
                 text = bookInitial(title),
                 style = MaterialTheme.typography.headlineLarge.copy(fontSize = letterSize),
                 fontWeight = FontWeight.Bold,
-                color = NextPageColors.primary
+                color = NextPageColors.primary,
             )
         }
     }
 }
 
 /** First glyph of the title, uppercased; `?` for an empty title (never a blank box). */
-internal fun bookInitial(title: String): String =
-    title.trim().firstOrNull()?.uppercase() ?: "?"
+internal fun bookInitial(title: String): String = title.trim().firstOrNull()?.uppercase() ?: "?"
 
 /** Fixed results-grid cell: cover + title (`text_primary`) + author (`text_secondary`). */
 @Composable
@@ -97,23 +97,25 @@ fun DiscoverCard(
     book: CatalogBook,
     onOpen: (String) -> Unit,
     modifier: Modifier = Modifier,
-    attributionNames: Map<String, String> = emptyMap()
+    attributionNames: Map<String, String> = emptyMap(),
 ) {
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .clickable { onOpen(book.id) },
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .clickable { onOpen(book.id) },
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         DiscoverBookCover(
             coverUrl = book.coverUrl,
             title = book.title,
             surface = "grid",
             letterSize = 48.sp,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(GRID_COVER_HEIGHT)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(GRID_COVER_HEIGHT),
         )
         Text(
             text = book.title,
@@ -121,18 +123,18 @@ fun DiscoverCard(
             fontWeight = FontWeight.Medium,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            color = NextPageColors.textPrimary
+            color = NextPageColors.textPrimary,
         )
         Text(
             text = book.authors.joinToString(", "),
             style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            color = NextPageColors.textSecondary
+            color = NextPageColors.textSecondary,
         )
         SourceAttributionBadge(
             provider = book.provider,
-            attributionNames = attributionNames
+            attributionNames = attributionNames,
         )
         AccessBadge(book = book)
     }

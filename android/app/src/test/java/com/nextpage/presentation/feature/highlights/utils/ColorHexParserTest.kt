@@ -5,7 +5,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class ColorHexParserTest {
-
     @Test
     fun `parseColorHex 6-char without hash`() {
         val c = parseColorHex("FF0000")

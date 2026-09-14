@@ -26,7 +26,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nextpage.R
 import com.nextpage.presentation.viewmodel.DictionaryViewModel
 import com.nextpage.ui.components.atoms.NextPageButton
@@ -48,33 +48,35 @@ import java.util.Locale
 @Composable
 fun DictionaryScreen(
     viewModel: DictionaryViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 24.dp)
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 24.dp),
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onNavigateBack) {
                     Icon(
                         imageVector = NextPageIcons.ArrowBack,
-                        contentDescription = stringResource(R.string.nav_back)
+                        contentDescription = stringResource(R.string.nav_back),
                     )
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = stringResource(R.string.dictionary_title),
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
             }
 
@@ -83,7 +85,7 @@ fun DictionaryScreen(
             Text(
                 text = stringResource(R.string.dictionary_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -94,7 +96,7 @@ fun DictionaryScreen(
                 placeholder = stringResource(R.string.dictionary_search_placeholder),
                 singleLine = true,
                 shape = RoundedCornerShape(24.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -102,49 +104,52 @@ fun DictionaryScreen(
             Text(
                 text = stringResource(R.string.dictionary_word_count, uiState.filteredWords.size),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
             if (uiState.filteredWords.isEmpty() && !uiState.isLoading) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    contentAlignment = Alignment.Center
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                    contentAlignment = Alignment.Center,
                 ) {
                     NextPageEmptyState(
                         icon = NextPageIcons.LibraryBooks,
                         title = stringResource(R.string.dictionary_empty),
-                        subtitle = stringResource(R.string.dictionary_empty_subtitle)
+                        subtitle = stringResource(R.string.dictionary_empty_subtitle),
                     )
                 }
             } else {
                 LazyColumn(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
-                    contentPadding = PaddingValues(bottom = 80.dp)
+                    contentPadding = PaddingValues(bottom = 80.dp),
                 ) {
                     items(uiState.filteredWords, key = { it.id }) { word ->
                         Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { viewModel.onRequestEditWord(word) },
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clickable { viewModel.onRequestEditWord(word) },
                             shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant
+                            color = MaterialTheme.colorScheme.surfaceVariant,
                         ) {
                             Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                modifier =
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = word.word,
                                         style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = FontWeight.Medium
+                                        fontWeight = FontWeight.Medium,
                                     )
                                     if (!word.definition.isNullOrBlank()) {
                                         Text(
@@ -152,31 +157,31 @@ fun DictionaryScreen(
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis
+                                            overflow = TextOverflow.Ellipsis,
                                         )
                                     } else {
                                         Text(
                                             text = stringResource(R.string.dictionary_tap_to_add_definition),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
                                         )
                                     }
                                     Text(
                                         text = formatDate(word.addedAtEpochMillis),
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                                 IconButton(
                                     onClick = { viewModel.onRequestDeleteWord(word) },
-                                    modifier = Modifier.size(40.dp)
+                                    modifier = Modifier.size(40.dp),
                                 ) {
                                     Icon(
                                         imageVector = NextPageIcons.Trash,
                                         contentDescription = stringResource(R.string.dictionary_delete_confirm),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(20.dp)
+                                        modifier = Modifier.size(20.dp),
                                     )
                                 }
                             }
@@ -189,15 +194,16 @@ fun DictionaryScreen(
         // ── FAB to add word ─────────────────────────────────────
         FloatingActionButton(
             onClick = { viewModel.onShowAddDialog() },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp),
-            containerColor = MaterialTheme.colorScheme.primary
+            modifier =
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp),
+            containerColor = MaterialTheme.colorScheme.primary,
         ) {
             Icon(
                 imageVector = NextPageIcons.Add,
                 contentDescription = stringResource(R.string.dictionary_add_word),
-                tint = MaterialTheme.colorScheme.onPrimary
+                tint = MaterialTheme.colorScheme.onPrimary,
             )
         }
 
@@ -215,7 +221,7 @@ fun DictionaryScreen(
                                 Text(stringResource(R.string.dictionary_add_word_hint))
                             },
                             singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         OutlinedTextField(
@@ -227,14 +233,14 @@ fun DictionaryScreen(
                             singleLine = false,
                             minLines = 2,
                             maxLines = 4,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
                 },
                 confirmButton = {
                     TextButton(
                         onClick = { viewModel.onAddWordConfirm() },
-                        enabled = uiState.addWordText.isNotBlank()
+                        enabled = uiState.addWordText.isNotBlank(),
                     ) {
                         Text(text = stringResource(R.string.dictionary_add_confirm))
                     }
@@ -243,7 +249,7 @@ fun DictionaryScreen(
                     TextButton(onClick = { viewModel.onDismissAddDialog() }) {
                         Text(text = stringResource(R.string.reader_cancel))
                     }
-                }
+                },
             )
         }
 
@@ -254,13 +260,13 @@ fun DictionaryScreen(
                 title = { Text(text = stringResource(R.string.dictionary_delete_title)) },
                 text = {
                     Text(
-                        text = stringResource(R.string.dictionary_delete_message, word.word)
+                        text = stringResource(R.string.dictionary_delete_message, word.word),
                     )
                 },
                 confirmButton = {
                     NextPageButton(
                         onClick = { viewModel.onConfirmDeleteWord() },
-                        variant = NextPageButtonVariant.TEXT
+                        variant = NextPageButtonVariant.TEXT,
                     ) {
                         Text(text = stringResource(R.string.dictionary_delete_confirm))
                     }
@@ -268,11 +274,11 @@ fun DictionaryScreen(
                 dismissButton = {
                     NextPageButton(
                         onClick = { viewModel.onDismissDeleteDialog() },
-                        variant = NextPageButtonVariant.TEXT
+                        variant = NextPageButtonVariant.TEXT,
                     ) {
                         Text(text = stringResource(R.string.reader_cancel))
                     }
-                }
+                },
             )
         }
 
@@ -283,7 +289,7 @@ fun DictionaryScreen(
                 title = {
                     Text(
                         text = word.word,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
                     )
                 },
                 text = {
@@ -296,12 +302,12 @@ fun DictionaryScreen(
                         singleLine = false,
                         minLines = 2,
                         maxLines = 5,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 },
                 confirmButton = {
                     TextButton(
-                        onClick = { viewModel.onEditDefinitionConfirm() }
+                        onClick = { viewModel.onEditDefinitionConfirm() },
                     ) {
                         Text(text = stringResource(R.string.dictionary_edit_confirm))
                     }
@@ -310,7 +316,7 @@ fun DictionaryScreen(
                     TextButton(onClick = { viewModel.onDismissEditDialog() }) {
                         Text(text = stringResource(R.string.reader_cancel))
                     }
-                }
+                },
             )
         }
     }

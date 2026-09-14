@@ -15,7 +15,6 @@ import org.junit.Test
  * list is a second destination inside the same graph.
  */
 class DiscoverNavTest {
-
     @Test
     fun discover_usesDiscoverRoute() {
         assertEquals("discover", NextPageDestination.Discover.route)

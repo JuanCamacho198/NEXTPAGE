@@ -5,7 +5,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -13,7 +12,6 @@ import org.junit.rules.TemporaryFolder
 import java.io.File
 
 class CrashLogStoreTest {
-
     @get:Rule
     val tempFolder = TemporaryFolder()
 
@@ -69,67 +67,78 @@ class CrashLogStoreTest {
         val (store, _) = createStore()
         val crashDir = tempFolder.newFolder("crashes")
 
-            // Create 11 crash files with staggered timestamps (recent past,
-            // distinct minutes - ancient epoch values are unreliable on some
-            // Linux filesystems and made this test flaky on CI).
-            val now = System.currentTimeMillis()
-            repeat(11) { i ->
-                val file = File(crashDir, "crash_$i.txt")
-                check(file.createNewFile()) { "failed to create ${file.name}" }
-                check(file.setLastModified(now - (11 - i) * 60_000L)) {
-                    "failed to set mtime on ${file.name}"
-                }
+        // Create 11 crash files with staggered timestamps (recent past,
+        // distinct minutes - ancient epoch values are unreliable on some
+        // Linux filesystems and made this test flaky on CI).
+        val now = System.currentTimeMillis()
+        repeat(11) { i ->
+            val file = File(crashDir, "crash_$i.txt")
+            check(file.createNewFile()) { "failed to create ${file.name}" }
+            check(file.setLastModified(now - (11 - i) * 60_000L)) {
+                "failed to set mtime on ${file.name}"
             }
+        }
 
-            val before = crashDir.listFiles()
+        val before =
+            crashDir
+                .listFiles()
                 ?.filter { it.name.startsWith("crash_") }
                 ?: error("crash dir not listable")
-            check(before.size == 11) { "expected 11 seed files, got ${before.size}" }
-            val oldestName = before.minBy { it.lastModified() }.name
+        check(before.size == 11) { "expected 11 seed files, got ${before.size}" }
+        val oldestName = before.minBy { it.lastModified() }.name
 
-            store.cleanup(crashDir, maxFiles = 10)
+        store.cleanup(crashDir, maxFiles = 10)
 
-            val remaining = crashDir.listFiles()
+        val remaining =
+            crashDir
+                .listFiles()
                 ?.filter { it.name.startsWith("crash_") }
                 ?: error("crash dir not listable after cleanup")
-            check(remaining.size == 10) {
-                "Should have 10 crash files remaining, got ${remaining.size}: " +
-                    remaining.joinToString(", ") { "${it.name}@${it.lastModified()}" } +
-                    " (seed: " + before.joinToString(", ") { "${it.name}@${it.lastModified()}" } + ")"
-            }
-            val deleted = before.map { it.name } - remaining.map { it.name }.toSet()
-            check(deleted == listOf(oldestName)) {
-                "Oldest ($oldestName) should be deleted; deleted=$deleted"
-            }
+        check(remaining.size == 10) {
+            "Should have 10 crash files remaining, got ${remaining.size}: " +
+                remaining.joinToString(", ") { "${it.name}@${it.lastModified()}" } +
+                " (seed: " + before.joinToString(", ") { "${it.name}@${it.lastModified()}" } + ")"
+        }
+        val deleted = before.map { it.name } - remaining.map { it.name }.toSet()
+        check(deleted == listOf(oldestName)) {
+            "Oldest ($oldestName) should be deleted; deleted=$deleted"
+        }
     }
 
     @Test
-    fun `write is thread safe under concurrent writes`() = runBlocking {
-        val (store, _) = createStore(maxFileSize = 500_000) // no rotation during test
-        val numThreads = 10
-        val linesPerThread = 10 // 100 total — fits under snapshot cap of 200
+    fun `write is thread safe under concurrent writes`() =
+        runBlocking {
+            val (store, _) = createStore(maxFileSize = 500_000) // no rotation during test
+            val numThreads = 10
+            val linesPerThread = 10 // 100 total — fits under snapshot cap of 200
 
-        val jobs = (1..numThreads).map { threadId ->
-            async(Dispatchers.Default) {
-                repeat(linesPerThread) { lineNum ->
-                    store.write(
-                        "INFO", "T$threadId", "data $lineNum",
-                        (threadId * linesPerThread + lineNum).toLong()
-                    )
+            val jobs =
+                (1..numThreads).map { threadId ->
+                    async(Dispatchers.Default) {
+                        repeat(linesPerThread) { lineNum ->
+                            store.write(
+                                "INFO",
+                                "T$threadId",
+                                "data $lineNum",
+                                (threadId * linesPerThread + lineNum).toLong(),
+                            )
+                        }
+                    }
                 }
-            }
+            jobs.awaitAll()
+
+            val expectedTotal = numThreads * linesPerThread
+            val snapshot = store.snapshot()
+            assertEquals("Snapshot should contain all written lines", expectedTotal, snapshot.size)
+
+            // Every written line should appear exactly once in the snapshot
+            val lines = snapshot.toSet()
+            assertEquals(
+                "All lines should be unique (no interleaving corruption)",
+                expectedTotal,
+                lines.size,
+            )
         }
-        jobs.awaitAll()
-
-        val expectedTotal = numThreads * linesPerThread
-        val snapshot = store.snapshot()
-        assertEquals("Snapshot should contain all written lines", expectedTotal, snapshot.size)
-
-        // Every written line should appear exactly once in the snapshot
-        val lines = snapshot.toSet()
-        assertEquals("All lines should be unique (no interleaving corruption)",
-            expectedTotal, lines.size)
-    }
 
     @Test
     fun `copySnapshotTo writes snapshot content to target file`() {

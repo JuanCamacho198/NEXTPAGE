@@ -16,8 +16,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -58,7 +58,10 @@ import com.nextpage.ui.components.atoms.NextPageSkeletonBox
  * actual destination (the CTA must not claim Open Library when it points at
  * Project Gutenberg).
  */
-internal data class DiscoverExternalLink(val url: String, @param:StringRes val labelRes: Int)
+internal data class DiscoverExternalLink(
+    val url: String,
+    @param:StringRes val labelRes: Int,
+)
 
 /**
  * Detail bottom sheet (base, existing fields only).
@@ -103,7 +106,7 @@ fun DiscoverDetailSheet(
     onDenyAddonConsent: () -> Unit = {},
     onDismissAddonRead: () -> Unit = {},
     onRetryAddonRead: () -> Unit = {},
-    onRetryAccess: () -> Unit = {}
+    onRetryAccess: () -> Unit = {},
 ) {
     if (detailStatus == DiscoverDetailStatus.CLOSED) return
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -113,47 +116,51 @@ fun DiscoverDetailSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         scrimColor = Color(0x66000000),
-        containerColor = NextPageColors.surface
+        containerColor = NextPageColors.surface,
     ) {
         when {
             detailStatus == DiscoverDetailStatus.LOADING ->
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
                 ) {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
             detailStatus == DiscoverDetailStatus.NOT_FOUND || detail == null ->
                 Text(
-                    text = stringResource(
-                        if (detailStatus == DiscoverDetailStatus.NOT_FOUND) {
-                            R.string.discover_detail_not_found
-                        } else {
-                            R.string.discover_error_upstream
-                        }
-                    ),
+                    text =
+                        stringResource(
+                            if (detailStatus == DiscoverDetailStatus.NOT_FOUND) {
+                                R.string.discover_detail_not_found
+                            } else {
+                                R.string.discover_error_upstream
+                            },
+                        ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = NextPageColors.textSecondary,
-                    modifier = Modifier.padding(24.dp)
+                    modifier = Modifier.padding(24.dp),
                 )
-            else -> DiscoverDetailContent(
-                detail = detail,
-                download = download,
-                onDownload = onDownload,
-                onCancelDownload = onCancelDownload,
-                accessState = accessState,
-                addonName = addonName,
-                onOpenReadAccess = { showReadAccess = true },
-                onOpenAddonRead = onOpenAddonRead,
-                onAllowAccessConsent = onAllowAccessConsent,
-                onDenyAccessConsent = onDenyAccessConsent,
-                onRetryAccess = onRetryAccess
-            )
+            else ->
+                DiscoverDetailContent(
+                    detail = detail,
+                    download = download,
+                    onDownload = onDownload,
+                    onCancelDownload = onCancelDownload,
+                    accessState = accessState,
+                    addonName = addonName,
+                    onOpenReadAccess = { showReadAccess = true },
+                    onOpenAddonRead = onOpenAddonRead,
+                    onAllowAccessConsent = onAllowAccessConsent,
+                    onDenyAccessConsent = onDenyAccessConsent,
+                    onRetryAccess = onRetryAccess,
+                )
         }
     }
 
-    if (showReadAccess && detail != null &&
+    if (showReadAccess &&
+        detail != null &&
         detailStatus != DiscoverDetailStatus.LOADING &&
         detailStatus != DiscoverDetailStatus.NOT_FOUND
     ) {
@@ -165,7 +172,7 @@ fun DiscoverDetailSheet(
             onRetry = onRetryAccess,
             onAllowConsent = onAllowAccessConsent,
             onDenyConsent = onDenyAccessConsent,
-            onDismiss = { showReadAccess = false }
+            onDismiss = { showReadAccess = false },
         )
     }
 
@@ -176,7 +183,7 @@ fun DiscoverDetailSheet(
             onAllowConsent = onAllowAddonConsent,
             onDenyConsent = onDenyAddonConsent,
             onRetry = onRetryAddonRead,
-            onDismiss = onDismissAddonRead
+            onDismiss = onDismissAddonRead,
         )
     }
 }
@@ -185,13 +192,14 @@ fun DiscoverDetailSheet(
  * Locally derived access for hosts without an access state (the "Ver todo"
  * section screen): generic U3 links, zero I/O, no consent involved.
  */
-private fun derivedAccess(detail: CatalogBook): AccessResolverState = mapAccessState(
-    isOnline = true,
-    consentRequiredAddonId = null,
-    hasConsent = true,
-    access = resolveAccess(detail),
-    failed = false
-)
+private fun derivedAccess(detail: CatalogBook): AccessResolverState =
+    mapAccessState(
+        isOnline = true,
+        consentRequiredAddonId = null,
+        hasConsent = true,
+        access = resolveAccess(detail),
+        failed = false,
+    )
 
 @Composable
 private fun DiscoverDetailContent(
@@ -205,16 +213,17 @@ private fun DiscoverDetailContent(
     onOpenAddonRead: (addonId: String) -> Unit,
     onAllowAccessConsent: () -> Unit,
     onDenyAccessConsent: () -> Unit,
-    onRetryAccess: () -> Unit
+    onRetryAccess: () -> Unit,
 ) {
     val uriHandler = LocalUriHandler.current
     val externalLink = discoverExternalLink(detail)
     val effectiveAccess = accessState ?: remember(detail) { derivedAccess(detail) }
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         DiscoverDetailHead(detail = detail)
 
@@ -224,7 +233,7 @@ private fun DiscoverDetailContent(
 
         DiscoverDetailParagraph(
             labelRes = R.string.discover_detail_description_label,
-            body = discoverDescription(detail)
+            body = discoverDescription(detail),
         )
 
         val formatLabels = discoverFormatLabels(detail.formats)
@@ -245,24 +254,24 @@ private fun DiscoverDetailContent(
             onOpenAddonRead = onOpenAddonRead,
             onAllowAccessConsent = onAllowAccessConsent,
             onDenyAccessConsent = onDenyAccessConsent,
-            onRetryAccess = onRetryAccess
+            onRetryAccess = onRetryAccess,
         )
 
         externalLink?.let { link ->
             NextPageButton(
                 onClick = { uriHandler.openUri(link.url) },
                 variant = NextPageButtonVariant.OUTLINED,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(
                     imageVector = Icons.Rounded.OpenInNew,
                     contentDescription = null,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(16.dp),
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = stringResource(link.labelRes),
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
                 )
             }
         }
@@ -291,23 +300,23 @@ private fun DiscoverAccessSection(
     onOpenAddonRead: (addonId: String) -> Unit,
     onAllowAccessConsent: () -> Unit,
     onDenyAccessConsent: () -> Unit,
-    onRetryAccess: () -> Unit
+    onRetryAccess: () -> Unit,
 ) {
     val addonId = remember(detail) { CatalogSources.addonIdOf(detail.provider) }
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
             text = stringResource(R.string.read_access_title),
             style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp),
             fontWeight = FontWeight.SemiBold,
-            color = NextPageColors.textPrimary
+            color = NextPageColors.textPrimary,
         )
         Text(
             text = stringResource(R.string.read_access_subtitle),
             style = MaterialTheme.typography.bodySmall,
-            color = NextPageColors.textSecondary
+            color = NextPageColors.textSecondary,
         )
         when (accessState) {
             AccessResolverState.Loading -> {
@@ -320,7 +329,7 @@ private fun DiscoverAccessSection(
                         DiscoverDownloadCta(
                             download = download,
                             onDownload = onDownload,
-                            onCancelDownload = onCancelDownload
+                            onCancelDownload = onCancelDownload,
                         )
                     } else {
                         // Host without the download bridge (the "Ver todo"
@@ -332,11 +341,11 @@ private fun DiscoverAccessSection(
                             NextPageButton(
                                 onClick = { uriHandler.openUri(gatedUrl) },
                                 variant = NextPageButtonVariant.FILLED,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
                             ) {
                                 Text(
                                     text = stringResource(R.string.discover_download),
-                                    style = MaterialTheme.typography.bodyMedium
+                                    style = MaterialTheme.typography.bodyMedium,
                                 )
                             }
                         }
@@ -346,76 +355,79 @@ private fun DiscoverAccessSection(
                     NextPageButton(
                         onClick = { onOpenAddonRead(addonId) },
                         variant = NextPageButtonVariant.OUTLINED,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text(
-                            text = stringResource(
-                                R.string.discover_rail_from,
-                                addonName ?: addonId
-                            ),
-                            style = MaterialTheme.typography.bodyMedium
+                            text =
+                                stringResource(
+                                    R.string.discover_rail_from,
+                                    addonName ?: addonId,
+                                ),
+                            style = MaterialTheme.typography.bodyMedium,
                         )
                     }
                 }
                 NextPageButton(
                     onClick = onOpenReadAccess,
                     variant = NextPageButtonVariant.OUTLINED,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
                         text = stringResource(R.string.read_access_title),
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
             }
-            AccessResolverState.Empty -> Text(
-                text = stringResource(R.string.read_access_empty_body),
-                style = MaterialTheme.typography.bodySmall,
-                color = NextPageColors.textSecondary
-            )
+            AccessResolverState.Empty ->
+                Text(
+                    text = stringResource(R.string.read_access_empty_body),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NextPageColors.textSecondary,
+                )
             AccessResolverState.Error -> {
                 Text(
                     text = stringResource(R.string.discover_error_body),
                     style = MaterialTheme.typography.bodySmall,
-                    color = NextPageColors.textSecondary
+                    color = NextPageColors.textSecondary,
                 )
                 NextPageButton(
                     text = stringResource(R.string.discover_retry),
                     onClick = onRetryAccess,
-                    variant = NextPageButtonVariant.OUTLINED
+                    variant = NextPageButtonVariant.OUTLINED,
                 )
             }
             AccessResolverState.Offline -> {
                 Text(
                     text = stringResource(R.string.discover_offline_body),
                     style = MaterialTheme.typography.bodySmall,
-                    color = NextPageColors.textSecondary
+                    color = NextPageColors.textSecondary,
                 )
                 NextPageButton(
                     text = stringResource(R.string.discover_retry),
                     onClick = onRetryAccess,
-                    variant = NextPageButtonVariant.OUTLINED
+                    variant = NextPageButtonVariant.OUTLINED,
                 )
             }
             is AccessResolverState.ConsentRequired -> {
                 Text(
-                    text = stringResource(
-                        R.string.addon_consent_body,
-                        addonName ?: accessState.addonId
-                    ),
+                    text =
+                        stringResource(
+                            R.string.addon_consent_body,
+                            addonName ?: accessState.addonId,
+                        ),
                     style = MaterialTheme.typography.bodySmall,
-                    color = NextPageColors.textSecondary
+                    color = NextPageColors.textSecondary,
                 )
                 NextPageButton(
                     text = stringResource(R.string.addon_consent_allow),
                     onClick = onAllowAccessConsent,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 NextPageButton(
                     text = stringResource(R.string.addon_consent_deny),
                     onClick = onDenyAccessConsent,
                     variant = NextPageButtonVariant.OUTLINED,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
@@ -431,22 +443,22 @@ private fun DiscoverAccessSection(
 private fun DiscoverDownloadCta(
     download: DownloadImportState,
     onDownload: () -> Unit,
-    onCancelDownload: () -> Unit
+    onCancelDownload: () -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         when (download) {
             is DownloadImportState.Idle -> {
                 NextPageButton(
                     onClick = onDownload,
                     variant = NextPageButtonVariant.FILLED,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
                         text = stringResource(R.string.discover_download),
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
             }
@@ -455,29 +467,29 @@ private fun DiscoverDownloadCta(
                 if (total != null && total > 0L) {
                     NextPageProgressBar(
                         progress = download.bytesSoFar.toFloat() / total.toFloat(),
-                        showPercentage = true
+                        showPercentage = true,
                     )
                     Text(
                         text = "${formatFileSize(download.bytesSoFar)} / ${formatFileSize(total)}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = NextPageColors.textSecondary
+                        color = NextPageColors.textSecondary,
                     )
                 } else {
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                     Text(
                         text = formatFileSize(download.bytesSoFar),
                         style = MaterialTheme.typography.labelSmall,
-                        color = NextPageColors.textSecondary
+                        color = NextPageColors.textSecondary,
                     )
                 }
                 NextPageButton(
                     onClick = onCancelDownload,
                     variant = NextPageButtonVariant.OUTLINED,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
                         text = stringResource(R.string.discover_download_cancel),
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
             }
@@ -486,11 +498,11 @@ private fun DiscoverDownloadCta(
                 NextPageButton(
                     onClick = onCancelDownload,
                     variant = NextPageButtonVariant.OUTLINED,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
                         text = stringResource(R.string.discover_download_cancel),
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
             }
@@ -499,11 +511,11 @@ private fun DiscoverDownloadCta(
                     onClick = { },
                     enabled = false,
                     variant = NextPageButtonVariant.FILLED,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
                         text = stringResource(R.string.discover_imported),
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
             }
@@ -511,23 +523,23 @@ private fun DiscoverDownloadCta(
                 Text(
                     text = stringResource(R.string.discover_duplicate),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = NextPageColors.textSecondary
+                    color = NextPageColors.textSecondary,
                 )
             }
             is DownloadImportState.Failure -> {
                 Text(
                     text = stringResource(R.string.discover_download_failed),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = NextPageColors.errorSoft
+                    color = NextPageColors.errorSoft,
                 )
                 NextPageButton(
                     onClick = onDownload,
                     variant = NextPageButtonVariant.OUTLINED,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
                         text = stringResource(R.string.discover_retry),
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
                     )
                 }
             }
@@ -540,56 +552,58 @@ private fun DiscoverDownloadCta(
 private fun DiscoverDetailHead(detail: CatalogBook) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(14.dp)
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         if (detail.coverUrl.isNullOrBlank()) {
             Box(
-                modifier = Modifier
-                    .size(width = 72.dp, height = 108.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(NextPageColors.surface),
-                contentAlignment = Alignment.Center
+                modifier =
+                    Modifier
+                        .size(width = 72.dp, height = 108.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(NextPageColors.surface),
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = bookInitial(detail.title),
                     style = MaterialTheme.typography.headlineMedium.copy(fontSize = 28.sp),
                     fontWeight = FontWeight.Bold,
-                    color = NextPageColors.primary
+                    color = NextPageColors.primary,
                 )
             }
         } else {
             NextPageBookCover(
                 coverUrl = detail.coverUrl,
                 title = detail.title,
-                modifier = Modifier.size(width = 72.dp, height = 108.dp)
+                modifier = Modifier.size(width = 72.dp, height = 108.dp),
             )
         }
 
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(
                 text = detail.title,
                 style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp),
                 fontWeight = FontWeight.SemiBold,
-                color = NextPageColors.textPrimary
+                color = NextPageColors.textPrimary,
             )
             if (detail.authors.isNotEmpty()) {
                 Text(
-                    text = stringResource(
-                        R.string.discover_by_authors,
-                        detail.authors.joinToString(", ")
-                    ),
+                    text =
+                        stringResource(
+                            R.string.discover_by_authors,
+                            detail.authors.joinToString(", "),
+                        ),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = NextPageColors.textSecondary
+                    color = NextPageColors.textSecondary,
                 )
             }
             if (detail.languages.isNotEmpty()) {
                 Spacer(modifier = Modifier.size(2.dp))
                 DiscoverDetailChipRow(
                     labels = detail.languages,
-                    contentPadding = PaddingValues(horizontal = 0.dp)
+                    contentPadding = PaddingValues(horizontal = 0.dp),
                 )
             }
         }
@@ -610,14 +624,17 @@ private fun DiscoverDetailSubjectSection(subjects: List<String>) {
  * for a field the model cannot provide yet.
  */
 @Composable
-private fun DiscoverDetailParagraph(@StringRes labelRes: Int, body: String?) {
+private fun DiscoverDetailParagraph(
+    @StringRes labelRes: Int,
+    body: String?,
+) {
     if (body.isNullOrBlank()) return
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         DiscoverDetailLabel(text = stringResource(labelRes))
         Text(
             text = body,
             style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-            color = NextPageColors.textSecondary
+            color = NextPageColors.textSecondary,
         )
     }
 }
@@ -627,7 +644,7 @@ private fun DiscoverDetailLabel(text: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-        color = NextPageColors.textSecondary
+        color = NextPageColors.textSecondary,
     )
 }
 
@@ -635,14 +652,14 @@ private fun DiscoverDetailLabel(text: String) {
 @Composable
 private fun DiscoverDetailChipRow(
     labels: List<String>,
-    contentPadding: PaddingValues = PaddingValues(horizontal = 0.dp)
+    contentPadding: PaddingValues = PaddingValues(horizontal = 0.dp),
 ) {
     DiscoverChipRow(
         chips = labels.map { DiscoverChip(label = it) },
         onChipClick = { },
         contentPadding = contentPadding,
         chipBackground = NextPageColors.surfaceVariant,
-        chipLabelColor = NextPageColors.textSecondary
+        chipLabelColor = NextPageColors.textSecondary,
     )
 }
 
@@ -656,7 +673,7 @@ internal fun discoverExternalLink(book: CatalogBook): DiscoverExternalLink? {
         if (numericId != null && numericId > 0) {
             return DiscoverExternalLink(
                 url = "https://www.gutenberg.org/ebooks/$numericId",
-                labelRes = R.string.discover_detail_external_gutenberg
+                labelRes = R.string.discover_detail_external_gutenberg,
             )
         }
         return null
@@ -666,7 +683,7 @@ internal fun discoverExternalLink(book: CatalogBook): DiscoverExternalLink? {
         if (key.startsWith("/")) {
             return DiscoverExternalLink(
                 url = "https://openlibrary.org$key",
-                labelRes = R.string.discover_detail_external_openlibrary
+                labelRes = R.string.discover_detail_external_openlibrary,
             )
         }
         return null
@@ -680,12 +697,13 @@ internal fun discoverExternalLink(book: CatalogBook): DiscoverExternalLink? {
  * format row hides.
  */
 internal fun discoverFormatLabels(formats: Map<String, String>): List<Int> {
-    val byMime = listOf(
-        "application/epub+zip" to R.string.discover_format_epub,
-        "application/x-mobipocket-ebook" to R.string.discover_format_mobi,
-        "text/plain; charset=utf-8" to R.string.discover_format_txt,
-        "text/html" to R.string.discover_format_html
-    )
+    val byMime =
+        listOf(
+            "application/epub+zip" to R.string.discover_format_epub,
+            "application/x-mobipocket-ebook" to R.string.discover_format_mobi,
+            "text/plain; charset=utf-8" to R.string.discover_format_txt,
+            "text/html" to R.string.discover_format_html,
+        )
     return byMime.filter { formats.containsKey(it.first) }.map { it.second }
 }
 
@@ -693,5 +711,4 @@ internal fun discoverFormatLabels(formats: Map<String, String>): List<Int> {
  * Description text for the DESCRIPCIÓN block. Null/blank hides the block rather
  * than showing a placeholder paragraph.
  */
-internal fun discoverDescription(book: CatalogBook): String? =
-    book.description?.takeIf { it.isNotBlank() }
+internal fun discoverDescription(book: CatalogBook): String? = book.description?.takeIf { it.isNotBlank() }

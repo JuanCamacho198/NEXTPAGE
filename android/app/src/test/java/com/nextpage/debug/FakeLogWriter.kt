@@ -7,11 +7,15 @@ import java.io.File
  * Stores written lines in-memory; never touches disk.
  */
 class FakeLogWriter : LogWriter {
-
     val written = mutableListOf<String>()
     var failWrites = false
 
-    override fun write(level: String, tag: String, message: String, timestamp: Long) {
+    override fun write(
+        level: String,
+        tag: String,
+        message: String,
+        timestamp: Long,
+    ) {
         if (failWrites) throw RuntimeException("Simulated write failure")
         written.add("$timestamp $level $tag: $message")
     }

@@ -30,7 +30,7 @@ import com.nextpage.presentation.theme.NextPageTheme
 data class FilterTab(
     val id: String,
     @param:StringRes val labelRes: Int,
-    val icon: ImageVector? = null
+    val icon: ImageVector? = null,
 )
 
 /**
@@ -72,46 +72,55 @@ fun NextPageFilterTabs(
     selectedTabId: String,
     onTabSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
-    showOverflowIndicator: Boolean = true
+    showOverflowIndicator: Boolean = true,
 ) {
     val scrollState = rememberScrollState()
     val canScrollForward by remember { derivedStateOf { scrollState.canScrollForward } }
 
     Box(modifier = modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(scrollState)
-                .padding(horizontal = 16.dp),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(scrollState)
+                    .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             tabs.forEach { tab ->
                 val isSelected = selectedTabId == tab.id
                 Surface(
                     onClick = { onTabSelected(tab.id) },
                     shape = RoundedCornerShape(20.dp),
-                    color = if (isSelected) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary
-                    else MaterialTheme.colorScheme.onSurfaceVariant
+                    color =
+                        if (isSelected) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant
+                        },
+                    contentColor =
+                        if (isSelected) {
+                            MaterialTheme.colorScheme.onPrimary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         tab.icon?.let { icon ->
                             androidx.compose.material3.Icon(
                                 imageVector = icon,
                                 contentDescription = null,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(16.dp),
                             )
                         }
                         Text(
                             text = stringResource(tab.labelRes),
                             style = MaterialTheme.typography.labelMedium,
-                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                         )
                     }
                 }
@@ -120,15 +129,16 @@ fun NextPageFilterTabs(
 
         if (showOverflowIndicator && canScrollForward) {
             Box(
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = 8.dp)
+                modifier =
+                    Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(end = 8.dp),
             ) {
                 Text(
                     text = ">",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
             }
         }
@@ -139,17 +149,18 @@ fun NextPageFilterTabs(
 @Composable
 private fun NextPageFilterTabsDarkPreview() {
     NextPageTheme(darkTheme = true) {
-        val tabs = listOf(
-            FilterTab("all", R.string.library_tab_all),
-            FilterTab("reading", R.string.library_tab_reading),
-            FilterTab("pending", R.string.library_tab_pending),
-            FilterTab("completed", R.string.library_tab_completed)
-        )
+        val tabs =
+            listOf(
+                FilterTab("all", R.string.library_tab_all),
+                FilterTab("reading", R.string.library_tab_reading),
+                FilterTab("pending", R.string.library_tab_pending),
+                FilterTab("completed", R.string.library_tab_completed),
+            )
 
         NextPageFilterTabs(
             tabs = tabs,
             selectedTabId = "reading",
-            onTabSelected = {}
+            onTabSelected = {},
         )
     }
 }
@@ -158,17 +169,18 @@ private fun NextPageFilterTabsDarkPreview() {
 @Composable
 private fun NextPageFilterTabsLightPreview() {
     NextPageTheme(darkTheme = false) {
-        val tabs = listOf(
-            FilterTab("all", R.string.library_tab_all),
-            FilterTab("reading", R.string.library_tab_reading),
-            FilterTab("pending", R.string.library_tab_pending),
-            FilterTab("completed", R.string.library_tab_completed)
-        )
+        val tabs =
+            listOf(
+                FilterTab("all", R.string.library_tab_all),
+                FilterTab("reading", R.string.library_tab_reading),
+                FilterTab("pending", R.string.library_tab_pending),
+                FilterTab("completed", R.string.library_tab_completed),
+            )
 
         NextPageFilterTabs(
             tabs = tabs,
             selectedTabId = "reading",
-            onTabSelected = {}
+            onTabSelected = {},
         )
     }
 }

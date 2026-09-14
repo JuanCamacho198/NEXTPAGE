@@ -71,7 +71,7 @@ fun AnchoredDefinitionInput(
     onDefinitionChange: (String) -> Unit,
     onSave: () -> Unit,
     onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -85,17 +85,18 @@ fun AnchoredDefinitionInput(
         modifier = modifier.width(280.dp),
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 8.dp
+        shadowElevation = 8.dp,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
         ) {
             Text(
                 text = word,
                 style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -103,21 +104,23 @@ fun AnchoredDefinitionInput(
             OutlinedTextField(
                 value = definition,
                 onValueChange = onDefinitionChange,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(focusRequester),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester),
                 label = { Text(stringResource(R.string.definition_input_hint)) },
                 singleLine = false,
                 minLines = 2,
                 maxLines = 4,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { onSave() }),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface
-                )
+                colors =
+                    OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    ),
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -125,7 +128,7 @@ fun AnchoredDefinitionInput(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 TextButton(onClick = onDismiss) {
                     Text(stringResource(R.string.reader_cancel))
@@ -148,7 +151,7 @@ private fun AnchoredDefinitionInputDarkPreview() {
             definition = "The occurrence of events by chance in a happy or beneficial way.",
             onDefinitionChange = {},
             onSave = {},
-            onDismiss = {}
+            onDismiss = {},
         )
     }
 }
@@ -162,7 +165,7 @@ private fun AnchoredDefinitionInputLightPreview() {
             definition = "The occurrence of events by chance in a happy or beneficial way.",
             onDefinitionChange = {},
             onSave = {},
-            onDismiss = {}
+            onDismiss = {},
         )
     }
 }

@@ -6,7 +6,6 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.view.ActionMode
-import android.view.View
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -18,8 +17,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import com.nextpage.data.session.AppThemePreferences
 import com.nextpage.data.remote.supabase.SupabaseClientProvider
+import com.nextpage.data.session.AppThemePreferences
 import com.nextpage.debug.CrashNotificationHelper
 import com.nextpage.debug.DebugLog
 import com.nextpage.debug.DebugPrefs
@@ -33,20 +32,22 @@ import com.nextpage.presentation.navigation.InstallDeepLinkParser
 import com.nextpage.presentation.navigation.NextPageNavHost
 import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.presentation.viewmodel.AuthViewModel
+import dagger.hilt.android.AndroidEntryPoint
 import io.github.jan.supabase.auth.handleDeeplinks
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
-
-    private lateinit var appContainer: AppContainer
+    @Inject lateinit var appContainer: AppContainer
 
     // Must be registered before onCreate (per the AndroidX ActivityResult API contract).
-    private val requestNotificationPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { /* result is informational — we post only if granted */ }
+    private val requestNotificationPermissionLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.RequestPermission(),
+        ) { /* result is informational — we post only if granted */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        appContainer = AppContainer(context = this)
 
         // Addon install deep links (nextpage://install?url=...) are checked
         // FIRST: install URIs are never auth URIs, so supabase handleDeeplinks
@@ -67,16 +68,9 @@ class MainActivity : AppCompatActivity() {
         // renders instantly at launch. Keep it on screen until the auth session
         // finishes restoring so there is no flash of an empty screen. The
         // AuthViewModel is shared with the NavHost through the Activity's
-        // ViewModelStore (same factory = same instance).
+        // ViewModelStore (Hilt scopes both to this Activity = same instance).
         val splashScreen = installSplashScreen()
-        val authViewModel: AuthViewModel by viewModels {
-            AuthViewModel.Factory(
-                authRepository = appContainer.authRepository,
-                syncOrchestrator = appContainer.syncOrchestrator,
-                isAuthConfigured = !appContainer.isAuthConfigError,
-                hasAuthWiringIssue = false
-            )
-        }
+        val authViewModel: AuthViewModel by viewModels()
         splashScreen.setKeepOnScreenCondition {
             authViewModel.uiState.value.isCheckingSession
         }
@@ -100,11 +94,12 @@ class MainActivity : AppCompatActivity() {
             val appThemePrefs = remember { AppThemePreferences(this@MainActivity) }
             var appThemeMode by remember { mutableStateOf(appThemePrefs.load()) }
 
-            val darkTheme = when (appThemeMode) {
-                ThemeMode.LIGHT -> false
-                ThemeMode.DARK -> true
-                ThemeMode.SYSTEM -> isSystemInDarkTheme()
-            }
+            val darkTheme =
+                when (appThemeMode) {
+                    ThemeMode.LIGHT -> false
+                    ThemeMode.DARK -> true
+                    ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                }
 
             NextPageTheme(darkTheme = darkTheme) {
                 NextPageNavHost(
@@ -113,7 +108,7 @@ class MainActivity : AppCompatActivity() {
                     onAppThemeModeChanged = { mode ->
                         appThemeMode = mode
                         appThemePrefs.save(mode)
-                    }
+                    },
                 )
             }
 
@@ -126,6 +121,7 @@ class MainActivity : AppCompatActivity() {
                 window.decorView.viewTreeObserver.addOnPreDrawListener(
                     object : android.view.ViewTreeObserver.OnPreDrawListener {
                         private var reported = false
+
                         override fun onPreDraw(): Boolean {
                             window.decorView.viewTreeObserver.removeOnPreDrawListener(this)
                             if (!reported) {
@@ -133,17 +129,18 @@ class MainActivity : AppCompatActivity() {
                                 val elapsed = android.os.SystemClock.elapsedRealtime() - startElapsed
                                 com.nextpage.debug.SentryMetrics.distribution(
                                     "app_cold_start",
-                                    com.nextpage.debug.SentryMetrics.bucketDurationMs(elapsed),
+                                    com.nextpage.debug.SentryMetrics
+                                        .bucketDurationMs(elapsed),
                                     mapOf(
                                         "platform" to "android",
-                                        "source" to "app_shell"
-                                    )
+                                        "source" to "app_shell",
+                                    ),
                                 )
                                 runCatching { reportFullyDrawn() }
                             }
                             return true
                         }
-                    }
+                    },
                 )
             }
         }
@@ -181,10 +178,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun maybeRequestNotificationPermission() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
-        val granted = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.POST_NOTIFICATIONS
-        ) == PackageManager.PERMISSION_GRANTED
+        val granted =
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS,
+            ) == PackageManager.PERMISSION_GRANTED
         if (!granted) {
             runCatching {
                 requestNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -212,14 +210,15 @@ class MainActivity : AppCompatActivity() {
             FeedbackActivity.intent(
                 context = this,
                 eventId = lastEventId,
-                book = FeedbackEvent.BookMeta(
-                    bookId = "",
-                    title = null,
-                    chapterLabel = null,
-                    chapterIndex = null,
-                    page = null
-                )
-            )
+                book =
+                    FeedbackEvent.BookMeta(
+                        bookId = "",
+                        title = null,
+                        chapterLabel = null,
+                        chapterIndex = null,
+                        page = null,
+                    ),
+            ),
         )
     }
 
@@ -237,12 +236,15 @@ class MainActivity : AppCompatActivity() {
     // level is the most reliable cross-API nuclear option.
     override fun onActionModeStarted(mode: ActionMode) {
         if (BuildConfig.DEBUG) {
-            val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                mode.type.toString()
-            } else "PRIMARY"
+            val type =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    mode.type.toString()
+                } else {
+                    "PRIMARY"
+                }
             DebugLog.warn(
                 "ActionMode",
-                "onActionModeStarted: title='${mode.title}', type=$type"
+                "onActionModeStarted: title='${mode.title}', type=$type",
             )
             DebugStateHolder.recordActionModeEvent("onActionModeStarted", type)
             mode.finish()

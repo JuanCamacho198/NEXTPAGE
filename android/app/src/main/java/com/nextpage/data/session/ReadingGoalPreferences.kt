@@ -10,7 +10,9 @@ import android.content.Context
  *   goal step must be shown.
  * - `save(minutes)` persists the user-chosen goal.
  */
-class ReadingGoalPreferences(private val context: Context) {
+class ReadingGoalPreferences(
+    private val context: Context,
+) {
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     /** @return the stored goal in minutes, or `null` when absent/invalid. */

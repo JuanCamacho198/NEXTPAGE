@@ -31,15 +31,20 @@ interface DictionaryWordDao {
     suspend fun findById(wordId: String): DictionaryWordEntity?
 
     @Query("UPDATE dictionary_words SET definition = :definition WHERE id = :wordId")
-    suspend fun updateDefinition(wordId: String, definition: String?)
+    suspend fun updateDefinition(
+        wordId: String,
+        definition: String?,
+    )
 
     @RawQuery(observedEntities = [DictionaryWordEntity::class])
     suspend fun searchFtsRaw(query: SupportSQLiteQuery): List<DictionaryWordEntity>
 
     /** Search dictionary words using FTS5 MATCH via prepared query. */
     suspend fun searchFts(query: String): List<DictionaryWordEntity> =
-        searchFtsRaw(SimpleSQLiteQuery(
-            "SELECT * FROM dictionary_words WHERE rowid IN (SELECT rowid FROM dictionary_words_fts WHERE dictionary_words_fts MATCH ?)",
-            arrayOf(query)
-        ))
+        searchFtsRaw(
+            SimpleSQLiteQuery(
+                "SELECT * FROM dictionary_words WHERE rowid IN (SELECT rowid FROM dictionary_words_fts WHERE dictionary_words_fts MATCH ?)",
+                arrayOf(query),
+            ),
+        )
 }

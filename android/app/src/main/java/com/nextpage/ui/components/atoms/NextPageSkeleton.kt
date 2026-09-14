@@ -37,28 +37,31 @@ fun NextPageSkeletonBox(
     modifier: Modifier = Modifier,
     size: Dp? = null,
     radius: Dp = 8.dp,
-    shimmer: Boolean = true
+    shimmer: Boolean = true,
 ) {
-    val alpha = if (shimmer) {
-        val transition = rememberInfiniteTransition(label = "nextPageSkeleton")
-        val animatedAlpha by transition.animateFloat(
-            initialValue = 0.45f,
-            targetValue = 0.9f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(durationMillis = 900),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "nextPageSkeletonAlpha"
-        )
-        animatedAlpha
-    } else {
-        0.6f
-    }
+    val alpha =
+        if (shimmer) {
+            val transition = rememberInfiniteTransition(label = "nextPageSkeleton")
+            val animatedAlpha by transition.animateFloat(
+                initialValue = 0.45f,
+                targetValue = 0.9f,
+                animationSpec =
+                    infiniteRepeatable(
+                        animation = tween(durationMillis = 900),
+                        repeatMode = RepeatMode.Reverse,
+                    ),
+                label = "nextPageSkeletonAlpha",
+            )
+            animatedAlpha
+        } else {
+            0.6f
+        }
 
     Box(
-        modifier = modifier
-            .then(if (size != null) Modifier.size(size) else Modifier)
-            .clip(RoundedCornerShape(radius))
-            .background(NextPageColors.surface.copy(alpha = alpha))
+        modifier =
+            modifier
+                .then(if (size != null) Modifier.size(size) else Modifier)
+                .clip(RoundedCornerShape(radius))
+                .background(NextPageColors.surface.copy(alpha = alpha)),
     )
 }

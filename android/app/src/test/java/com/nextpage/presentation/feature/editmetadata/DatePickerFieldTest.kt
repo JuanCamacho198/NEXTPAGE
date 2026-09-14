@@ -6,7 +6,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DatePickerFieldTest {
-
     // ── isoToEpochMillis ─────────────────────────────────────────────
 
     @Test
@@ -50,11 +49,12 @@ class DatePickerFieldTest {
     @Test
     fun `isoToEpochMillis exception path returns null not throw`() {
         // Exception branch: e.g. month 99
-        val result = try {
-            isoToEpochMillis("2024-99-99")
-        } catch (e: Exception) {
-            throw AssertionError("should not throw, should return null", e)
-        }
+        val result =
+            try {
+                isoToEpochMillis("2024-99-99")
+            } catch (e: Exception) {
+                throw AssertionError("should not throw, should return null", e)
+            }
         assertNull(result)
     }
 
@@ -80,15 +80,16 @@ class DatePickerFieldTest {
 
     @Test
     fun `iso epoch round-trip is lossless`() {
-        val dates = listOf(
-            "1970-01-01",
-            "2024-01-15",
-            "2024-06-15",
-            "1937-09-21",
-            "2000-12-31",
-            "2025-02-28",
-            "2024-02-29" // leap year
-        )
+        val dates =
+            listOf(
+                "1970-01-01",
+                "2024-01-15",
+                "2024-06-15",
+                "1937-09-21",
+                "2000-12-31",
+                "2025-02-28",
+                "2024-02-29", // leap year
+            )
         for (iso in dates) {
             val millis = isoToEpochMillis(iso)
             assertTrue("isoToEpochMillis($iso) should not be null", millis != null)

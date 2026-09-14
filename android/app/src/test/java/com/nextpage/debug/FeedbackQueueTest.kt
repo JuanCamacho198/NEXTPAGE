@@ -25,7 +25,6 @@ import java.util.UUID
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class FeedbackQueueTest {
-
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
@@ -43,7 +42,7 @@ class FeedbackQueueTest {
 
     private fun entry(
         eventId: String = newEventId(),
-        text: String = "hello"
+        text: String = "hello",
     ) = FeedbackEvent.FeedbackEntry(
         eventId = eventId,
         text = text,
@@ -52,7 +51,7 @@ class FeedbackQueueTest {
         chapterIndex = 3,
         page = 142,
         title = "La Odisea",
-        chapterLabel = "Capítulo IX"
+        chapterLabel = "Capítulo IX",
     )
 
     // ── Queue FIFO + cap ──────────────────────────────────────────────────
@@ -147,23 +146,25 @@ class FeedbackQueueTest {
 
     @Test
     fun viewModel_init_idle_whenNoEventId() {
-        val vm = FeedbackViewModel(
-            initialQueue = emptyList(),
-            initialDismissed = emptySet(),
-            initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
-            initialEventId = null
-        )
+        val vm =
+            FeedbackViewModel(
+                initialQueue = emptyList(),
+                initialDismissed = emptySet(),
+                initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
+                initialEventId = null,
+            )
         assertEquals(FeedbackEvent.FeedbackSheetState.Idle, vm.state.value)
     }
 
     @Test
     fun viewModel_init_editing_whenEventIdPresent() {
-        val vm = FeedbackViewModel(
-            initialQueue = emptyList(),
-            initialDismissed = emptySet(),
-            initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
-            initialEventId = newEventId("-evt")
-        )
+        val vm =
+            FeedbackViewModel(
+                initialQueue = emptyList(),
+                initialDismissed = emptySet(),
+                initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
+                initialEventId = newEventId("-evt"),
+            )
         val state = vm.state.value
         assertTrue("expected Editing, got $state", state is FeedbackEvent.FeedbackSheetState.Editing)
     }
@@ -171,23 +172,25 @@ class FeedbackQueueTest {
     @Test
     fun viewModel_init_idle_whenEventIdDismissed() {
         val dismissedId = newEventId("-dismissed")
-        val vm = FeedbackViewModel(
-            initialQueue = emptyList(),
-            initialDismissed = setOf(dismissedId),
-            initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
-            initialEventId = dismissedId
-        )
+        val vm =
+            FeedbackViewModel(
+                initialQueue = emptyList(),
+                initialDismissed = setOf(dismissedId),
+                initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
+                initialEventId = dismissedId,
+            )
         assertEquals(FeedbackEvent.FeedbackSheetState.Idle, vm.state.value)
     }
 
     @Test
     fun viewModel_onTextChanged_clampsAt240() {
-        val vm = FeedbackViewModel(
-            initialQueue = emptyList(),
-            initialDismissed = emptySet(),
-            initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
-            initialEventId = newEventId("-clamp")
-        )
+        val vm =
+            FeedbackViewModel(
+                initialQueue = emptyList(),
+                initialDismissed = emptySet(),
+                initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
+                initialEventId = newEventId("-clamp"),
+            )
         val huge = "a".repeat(500)
         vm.onTextChanged(huge)
         val state = vm.state.value as FeedbackEvent.FeedbackSheetState.Editing
@@ -197,12 +200,13 @@ class FeedbackQueueTest {
 
     @Test
     fun viewModel_onTextChanged_updatesCounterLive() {
-        val vm = FeedbackViewModel(
-            initialQueue = emptyList(),
-            initialDismissed = emptySet(),
-            initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
-            initialEventId = newEventId("-counter")
-        )
+        val vm =
+            FeedbackViewModel(
+                initialQueue = emptyList(),
+                initialDismissed = emptySet(),
+                initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
+                initialEventId = newEventId("-counter"),
+            )
         vm.onTextChanged("hi")
         assertEquals(2, vm.charCount.value)
         vm.onTextChanged("hello world")
@@ -213,16 +217,17 @@ class FeedbackQueueTest {
     fun viewModel_submit_onlineTransitionsToSent() {
         val sentIds = mutableListOf<String>()
         val eventId = newEventId("-online")
-        val vm = FeedbackViewModel(
-            initialQueue = emptyList(),
-            initialDismissed = emptySet(),
-            initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
-            initialEventId = eventId,
-            captureFn = { entry ->
-                sentIds += entry.eventId
-                SentryId(entry.eventId)
-            }
-        )
+        val vm =
+            FeedbackViewModel(
+                initialQueue = emptyList(),
+                initialDismissed = emptySet(),
+                initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
+                initialEventId = eventId,
+                captureFn = { entry ->
+                    sentIds += entry.eventId
+                    SentryId(entry.eventId)
+                },
+            )
         vm.onTextChanged("great feedback")
         vm.submit()
         assertEquals(FeedbackEvent.FeedbackSheetState.Sent, vm.state.value)
@@ -233,16 +238,17 @@ class FeedbackQueueTest {
     @Test
     fun viewModel_submit_emptyTextAllowed() {
         val sentIds = mutableListOf<String>()
-        val vm = FeedbackViewModel(
-            initialQueue = emptyList(),
-            initialDismissed = emptySet(),
-            initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
-            initialEventId = newEventId("-empty"),
-            captureFn = { entry ->
-                sentIds += entry.eventId
-                SentryId(entry.eventId)
-            }
-        )
+        val vm =
+            FeedbackViewModel(
+                initialQueue = emptyList(),
+                initialDismissed = emptySet(),
+                initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
+                initialEventId = newEventId("-empty"),
+                captureFn = { entry ->
+                    sentIds += entry.eventId
+                    SentryId(entry.eventId)
+                },
+            )
         // Do not call onTextChanged — empty text.
         vm.submit()
         assertEquals(FeedbackEvent.FeedbackSheetState.Sent, vm.state.value)
@@ -251,13 +257,14 @@ class FeedbackQueueTest {
 
     @Test
     fun viewModel_submit_offlineEnqueuesAndTransitionsToError() {
-        val vm = FeedbackViewModel(
-            initialQueue = emptyList(),
-            initialDismissed = emptySet(),
-            initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
-            initialEventId = newEventId("-offline"),
-            captureFn = { null } // Sentry uninit / offline
-        )
+        val vm =
+            FeedbackViewModel(
+                initialQueue = emptyList(),
+                initialDismissed = emptySet(),
+                initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
+                initialEventId = newEventId("-offline"),
+                captureFn = { null }, // Sentry uninit / offline
+            )
         vm.onTextChanged("offline feedback")
         vm.submit()
         val state = vm.state.value
@@ -269,13 +276,14 @@ class FeedbackQueueTest {
 
     @Test
     fun viewModel_submit_captureThrows_enqueuesAndTransitionsToError() {
-        val vm = FeedbackViewModel(
-            initialQueue = emptyList(),
-            initialDismissed = emptySet(),
-            initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
-            initialEventId = newEventId("-throw"),
-            captureFn = { throw IllegalStateException("boom") }
-        )
+        val vm =
+            FeedbackViewModel(
+                initialQueue = emptyList(),
+                initialDismissed = emptySet(),
+                initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
+                initialEventId = newEventId("-throw"),
+                captureFn = { throw IllegalStateException("boom") },
+            )
         vm.onTextChanged("throw")
         vm.submit()
         assertTrue(vm.state.value is FeedbackEvent.FeedbackSheetState.Error)
@@ -285,12 +293,13 @@ class FeedbackQueueTest {
     @Test
     fun viewModel_dismiss_isIdempotent() {
         val dismissedId = newEventId("-dismiss")
-        val vm = FeedbackViewModel(
-            initialQueue = emptyList(),
-            initialDismissed = emptySet(),
-            initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
-            initialEventId = dismissedId
-        )
+        val vm =
+            FeedbackViewModel(
+                initialQueue = emptyList(),
+                initialDismissed = emptySet(),
+                initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
+                initialEventId = dismissedId,
+            )
         vm.dismiss()
         vm.dismiss()
         vm.dismiss()
@@ -305,22 +314,26 @@ class FeedbackQueueTest {
         val id1 = newEventId("-q1")
         val id2 = newEventId("-q2")
         val id3 = newEventId("-q3")
-        val vm = FeedbackViewModel(
-            initialQueue = listOf(
-                entry(eventId = id1),
-                entry(eventId = id2),
-                entry(eventId = id3)
-            ),
-            initialDismissed = emptySet(),
-            initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
-            initialEventId = null,
-            captureFn = { entry ->
-                if (entry.eventId == id2) null else {
-                    sentIds += entry.eventId
-                    SentryId(entry.eventId)
-                }
-            }
-        )
+        val vm =
+            FeedbackViewModel(
+                initialQueue =
+                    listOf(
+                        entry(eventId = id1),
+                        entry(eventId = id2),
+                        entry(eventId = id3),
+                    ),
+                initialDismissed = emptySet(),
+                initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
+                initialEventId = null,
+                captureFn = { entry ->
+                    if (entry.eventId == id2) {
+                        null
+                    } else {
+                        sentIds += entry.eventId
+                        SentryId(entry.eventId)
+                    }
+                },
+            )
         val flushed = vm.flushQueue()
         // id1 succeeds, id2 fails (re-enqueued at end), id3 never attempted.
         assertEquals(1, flushed)
@@ -335,16 +348,18 @@ class FeedbackQueueTest {
     fun viewModel_export_roundTrips() {
         val queuedId = newEventId("-q1")
         val dismissedId = newEventId("-dismissed")
-        val q = FeedbackQueue(
-            initialQueue = listOf(entry(eventId = queuedId)),
-            initialDismissed = setOf(dismissedId)
-        )
-        val vm = FeedbackViewModel(
-            initialQueue = q.snapshot(),
-            initialDismissed = q.dismissedSnapshot(),
-            initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
-            initialEventId = dismissedId
-        )
+        val q =
+            FeedbackQueue(
+                initialQueue = listOf(entry(eventId = queuedId)),
+                initialDismissed = setOf(dismissedId),
+            )
+        val vm =
+            FeedbackViewModel(
+                initialQueue = q.snapshot(),
+                initialDismissed = q.dismissedSnapshot(),
+                initialBook = FeedbackEvent.BookMeta("b", "Title", "Cap", 0, 1),
+                initialEventId = dismissedId,
+            )
         val (queue, dismissed) = vm.exportForPersistence()
         assertEquals(1, queue.size)
         assertEquals(queuedId, queue[0].eventId)

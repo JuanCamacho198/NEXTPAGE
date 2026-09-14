@@ -24,7 +24,7 @@ import kotlinx.coroutines.launch
 class BookFilterStateHolder(
     private val scope: CoroutineScope,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
-    private val onStateChanged: (BookFilterState) -> Unit = {}
+    private val onStateChanged: (BookFilterState) -> Unit = {},
 ) {
     private val _state = MutableStateFlow(BookFilterState())
     val state: StateFlow<BookFilterState> = _state.asStateFlow()
@@ -63,7 +63,7 @@ class BookFilterStateHolder(
             it.copy(
                 showSearch = !it.showSearch,
                 searchQuery = "",
-                debouncedSearchQuery = ""
+                debouncedSearchQuery = "",
             )
         }
         onStateChanged(_state.value)
@@ -83,11 +83,12 @@ class BookFilterStateHolder(
             return
         }
 
-        searchJob = scope.launch(mainDispatcher) {
-            delay(SEARCH_DEBOUNCE_MS)
-            _state.update { it.copy(debouncedSearchQuery = query) }
-            onStateChanged(_state.value)
-        }
+        searchJob =
+            scope.launch(mainDispatcher) {
+                delay(SEARCH_DEBOUNCE_MS)
+                _state.update { it.copy(debouncedSearchQuery = query) }
+                onStateChanged(_state.value)
+            }
     }
 
     /** Toggle the filter bottom sheet. */

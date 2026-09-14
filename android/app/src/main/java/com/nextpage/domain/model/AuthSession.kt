@@ -7,5 +7,5 @@ data class AuthSession(
     val photoUrl: String? = null,
     val providerToken: String? = null,
     val provider: String? = null,
-    val createdAt: String? = null
+    val createdAt: String? = null,
 )

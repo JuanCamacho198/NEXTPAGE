@@ -1,7 +1,6 @@
 package com.nextpage.presentation.viewmodel.reader.interaction
 
 import android.util.Log
-import com.nextpage.debug.DebugLog
 import com.nextpage.domain.model.Bookmark
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.presentation.viewmodel.CfiMigrator
@@ -22,9 +21,8 @@ internal class BookmarkManager(
     private val store: InteractionStateStore,
     private val readerRepository: ReaderRepository,
     private val scope: CoroutineScope,
-    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
+    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
 ) : Clearable {
-
     companion object {
         private const val TAG = "BookmarkManager"
     }
@@ -33,24 +31,35 @@ internal class BookmarkManager(
 
     fun observeBook(bookId: String) {
         observeBookmarksJob?.cancel()
-        observeBookmarksJob = scope.launch(mainDispatcher) {
-            readerRepository.observeBookmarks(bookId).collect { bookmarks ->
-                store.update { it.copy(bookmarks = bookmarks) }
+        observeBookmarksJob =
+            scope.launch(mainDispatcher) {
+                readerRepository.observeBookmarks(bookId).collect { bookmarks ->
+                    store.update { it.copy(bookmarks = bookmarks) }
+                }
             }
-        }
     }
 
     fun testStopObserving() {
         observeBookmarksJob?.cancel()
     }
 
-    fun createBookmark(bookId: String, cfiLocation: String, titleOrSnippet: String, locatorJson: String? = null) {
+    fun createBookmark(
+        bookId: String,
+        cfiLocation: String,
+        titleOrSnippet: String,
+        locatorJson: String? = null,
+    ) {
         scope.launch(mainDispatcher) {
-            val bookmark = Bookmark(
-                id = UUID.randomUUID().toString(), bookId = bookId, cfiLocation = cfiLocation,
-                titleOrSnippet = titleOrSnippet, locatorJson = locatorJson,
-                updatedAtEpochMillis = System.currentTimeMillis(), deletedAtEpochMillis = null
-            )
+            val bookmark =
+                Bookmark(
+                    id = UUID.randomUUID().toString(),
+                    bookId = bookId,
+                    cfiLocation = cfiLocation,
+                    titleOrSnippet = titleOrSnippet,
+                    locatorJson = locatorJson,
+                    updatedAtEpochMillis = System.currentTimeMillis(),
+                    deletedAtEpochMillis = null,
+                )
             readerRepository.upsertBookmark(bookmark)
             Log.d(TAG, "Bookmark created: ${bookmark.id}")
         }
@@ -62,7 +71,7 @@ internal class BookmarkManager(
         currentPdfPage: Int,
         chapters: List<BookChapter>,
         currentChapterIndex: Int,
-        readiumLocator: Locator? = null
+        readiumLocator: Locator? = null,
     ) {
         val bookId = selectedBookId ?: return
         val format = bookFormat

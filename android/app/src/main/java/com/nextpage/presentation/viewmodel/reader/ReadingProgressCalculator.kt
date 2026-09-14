@@ -15,7 +15,6 @@ import kotlin.math.floor
  * 2. Fallback typographic charsPerPage model when positions absent
  */
 object ReadingProgressCalculator {
-
     private const val PROGRESSION_EPSILON = 0.02
     private const val NO_VIEWPORT_REMAINING_FACTOR = 10
     private const val AVG_CHAR_WIDTH_FACTOR = 0.6f
@@ -27,7 +26,7 @@ object ReadingProgressCalculator {
         val fontSizeSp: Float,
         val lineHeight: Float,
         val pageMarginsDp: Float = 16f,
-        val density: Float = 3f
+        val density: Float = 3f,
     )
 
     data class Result(
@@ -35,7 +34,7 @@ object ReadingProgressCalculator {
         val totalPages: Int,
         val currentPage: Int,
         val charsPerPage: Int,
-        val path: String // "positions" or "fallback"
+        val path: String, // "positions" or "fallback"
     )
 
     /**
@@ -49,56 +48,59 @@ object ReadingProgressCalculator {
         chapters: List<BookChapter>,
         currentChapterIndex: Int,
         viewport: ViewportTypography?,
-        totalCharsFallback: Int? = null
+        totalCharsFallback: Int? = null,
     ): Result {
         // Try Readium positions first (via reflection for API compat across Readium versions)
         publication?.let { pub ->
             try {
                 @Suppress("UNCHECKED_CAST")
-                val positions: List<Locator>? = runCatching {
-                    // Try direct property via reflection (positions may be extension or field)
-                    // Readium 3.2.0 exposes positions as List<Locator> via getPositions() or field 'positions'
-                    // Also try Kotlin property 'positions' and declared methods with no args
-                    val method = pub::class.java.methods.firstOrNull { it.name == "getPositions" || it.name == "positions" }
-                    if (method != null) {
-                        method.invoke(pub) as? List<Locator>
-                    } else {
-                        // Try declared method (private/protected)
-                        val declared = pub::class.java.declaredMethods.firstOrNull { it.name == "getPositions" || it.name == "positions" }
-                        if (declared != null) {
-                            declared.isAccessible = true
-                            declared.invoke(pub) as? List<Locator>
+                val positions: List<Locator>? =
+                    runCatching {
+                        // Try direct property via reflection (positions may be extension or field)
+                        // Readium 3.2.0 exposes positions as List<Locator> via getPositions() or field 'positions'
+                        // Also try Kotlin property 'positions' and declared methods with no args
+                        val method = pub::class.java.methods.firstOrNull { it.name == "getPositions" || it.name == "positions" }
+                        if (method != null) {
+                            method.invoke(pub) as? List<Locator>
                         } else {
-                            val field = pub::class.java.declaredFields.firstOrNull { it.name == "positions" }
-                            field?.let {
-                                it.isAccessible = true
-                                it.get(pub) as? List<Locator>
+                            // Try declared method (private/protected)
+                            val declared = pub::class.java.declaredMethods.firstOrNull { it.name == "getPositions" || it.name == "positions" }
+                            if (declared != null) {
+                                declared.isAccessible = true
+                                declared.invoke(pub) as? List<Locator>
+                            } else {
+                                val field = pub::class.java.declaredFields.firstOrNull { it.name == "positions" }
+                                field?.let {
+                                    it.isAccessible = true
+                                    it.get(pub) as? List<Locator>
+                                }
                             }
                         }
-                    }
-                }.getOrNull() ?: runCatching {
-                    // Fallback: Kotlin reflection via members (covers extension property)
-                    @Suppress("UNCHECKED_CAST")
-                    (pub::class.members.firstOrNull { it.name == "positions" }?.call(pub) as? List<Locator>)
-                }.getOrNull()
+                    }.getOrNull() ?: runCatching {
+                        // Fallback: Kotlin reflection via members (covers extension property)
+                        @Suppress("UNCHECKED_CAST")
+                        (pub::class.members.firstOrNull { it.name == "positions" }?.call(pub) as? List<Locator>)
+                    }.getOrNull()
                 if (positions == null || positions.isEmpty()) throw IllegalStateException("no positions")
                 val positionsNN = positions
                 run {
                     val totalPages = positionsNN.size
                     // Find nearest position index matching locator href/progression
-                    val currentIdx = locator?.let { loc ->
-                        // positions are Locators; find index where href matches and progression close
-                        positionsNN.indexOfFirst { pos ->
-                            pos.href.toString() == loc.href.toString() &&
-                                kotlin.math.abs((pos.locations.progression ?: 0.0) - (loc.locations.progression ?: 0.0)) < PROGRESSION_EPSILON
-                        }.takeIf { it >= 0 }
-                            ?: positionsNN.indexOfFirst { it.href.toString() == loc.href.toString() }.takeIf { it >= 0 }
-                            ?: run {
-                                // fallback to progression-based estimate within positions
-                                val prog = loc.locations.progression ?: 0.0
-                                (prog * totalPages).toInt().coerceIn(0, totalPages - 1)
-                            }
-                    } ?: currentChapterIndex.coerceIn(0, totalPages - 1)
+                    val currentIdx =
+                        locator?.let { loc ->
+                            // positions are Locators; find index where href matches and progression close
+                            positionsNN
+                                .indexOfFirst { pos ->
+                                    pos.href.toString() == loc.href.toString() &&
+                                        kotlin.math.abs((pos.locations.progression ?: 0.0) - (loc.locations.progression ?: 0.0)) < PROGRESSION_EPSILON
+                                }.takeIf { it >= 0 }
+                                ?: positionsNN.indexOfFirst { it.href.toString() == loc.href.toString() }.takeIf { it >= 0 }
+                                ?: run {
+                                    // fallback to progression-based estimate within positions
+                                    val prog = loc.locations.progression ?: 0.0
+                                    (prog * totalPages).toInt().coerceIn(0, totalPages - 1)
+                                }
+                        } ?: currentChapterIndex.coerceIn(0, totalPages - 1)
                     val remaining = (totalPages - currentIdx - 1).coerceAtLeast(0)
                     val charsPerPage = 0
                     val path = "positions"
@@ -111,8 +113,8 @@ object ReadingProgressCalculator {
                             pageMargins = viewport?.pageMarginsDp ?: 0f,
                             charsPerPage = charsPerPage,
                             remaining = remaining,
-                            path = path
-                        )
+                            path = path,
+                        ),
                     )
                     return Result(remaining, totalPages, currentIdx, charsPerPage, path)
                 }
@@ -124,9 +126,10 @@ object ReadingProgressCalculator {
         // Fallback typographic model
         if (viewport == null || viewport.viewportW <= 0 || viewport.viewportH <= 0) {
             // No viewport -> fallback to simple (1 - progression) * estimate but with new logic: use 0 remaining
-            val remaining = locator?.locations?.progression?.let { prog ->
-                ceil((1.0 - prog) * NO_VIEWPORT_REMAINING_FACTOR).toInt().coerceAtLeast(0)
-            } ?: 0
+            val remaining =
+                locator?.locations?.progression?.let { prog ->
+                    ceil((1.0 - prog) * NO_VIEWPORT_REMAINING_FACTOR).toInt().coerceAtLeast(0)
+                } ?: 0
             return Result(remaining, remaining, 0, 0, "fallback-no-viewport")
         }
 
@@ -144,13 +147,14 @@ object ReadingProgressCalculator {
 
         // totalChars: prefer publication readingOrder estimated length or provided totalCharsFallback
         // Use heuristic: average chars per chapter * chapterCount, or 18000 for single chapter fallback
-        val totalChars = totalCharsFallback
-            ?: run {
-                // estimate: 18000 chars per chapter average * chapter count, or 5000 if unknown
-                val perChapter = ESTIMATED_CHARS_PER_CHAPTER
-                val count = chapters.size.takeIf { it > 0 } ?: 1
-                perChapter * count
-            }
+        val totalChars =
+            totalCharsFallback
+                ?: run {
+                    // estimate: 18000 chars per chapter average * chapter count, or 5000 if unknown
+                    val perChapter = ESTIMATED_CHARS_PER_CHAPTER
+                    val count = chapters.size.takeIf { it > 0 } ?: 1
+                    perChapter * count
+                }
 
         val totalPages = ceil(totalChars.toDouble() / charsPerPage).toInt().coerceAtLeast(1)
         val progression = locator?.locations?.progression?.toFloat() ?: 0f
@@ -169,8 +173,8 @@ object ReadingProgressCalculator {
                 pageMargins = viewport.pageMarginsDp,
                 charsPerPage = charsPerPage,
                 remaining = remaining,
-                path = "fallback"
-            )
+                path = "fallback",
+            ),
         )
 
         return Result(remaining, totalPages, currentPage, charsPerPage.toInt(), "fallback")

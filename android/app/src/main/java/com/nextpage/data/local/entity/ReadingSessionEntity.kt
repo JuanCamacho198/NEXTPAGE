@@ -13,10 +13,10 @@ import androidx.room.PrimaryKey
             entity = BookEntity::class,
             parentColumns = ["id"],
             childColumns = ["book_id"],
-            onDelete = ForeignKey.CASCADE
-        )
+            onDelete = ForeignKey.CASCADE,
+        ),
     ],
-    indices = [Index(value = ["book_id"]), Index(value = ["date"]), Index(value = ["date", "userId"])]
+    indices = [Index(value = ["book_id"]), Index(value = ["date"]), Index(value = ["date", "userId"])],
 )
 data class ReadingSessionEntity(
     @PrimaryKey
@@ -30,5 +30,5 @@ data class ReadingSessionEntity(
     val date: Long, // Date only (no time) - epoch days or epoch millis at midnight
     val userId: String = "",
     @ColumnInfo(name = "updated_at_epoch_millis")
-    val updatedAtEpochMillis: Long = 0L
+    val updatedAtEpochMillis: Long = 0L,
 )

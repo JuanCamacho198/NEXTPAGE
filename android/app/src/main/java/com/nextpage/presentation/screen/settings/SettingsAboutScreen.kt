@@ -6,7 +6,7 @@ import com.nextpage.presentation.theme.NextPageTheme
 
 @Composable
 fun SettingsAboutScreen(
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     AboutScreen(onBack = onBack)
 }

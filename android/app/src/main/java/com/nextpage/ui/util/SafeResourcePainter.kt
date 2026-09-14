@@ -29,16 +29,17 @@ fun safePainterResource(
     @DrawableRes resId: Int,
     fallbackColor: Color,
     source: String = "unknown",
-): Painter = resolvePainterOrFallback(
-    loader = { painterResource(resId) },
-    fallback = { ColorPainter(fallbackColor) },
-    onUnsupported = { error ->
-        DebugDual.w(
-            TAG,
-            "Unsupported drawable res=0x${resId.toString(16)} source=$source: ${error.message}"
-        )
-    }
-)
+): Painter =
+    resolvePainterOrFallback(
+        loader = { painterResource(resId) },
+        fallback = { ColorPainter(fallbackColor) },
+        onUnsupported = { error ->
+            DebugDual.w(
+                TAG,
+                "Unsupported drawable res=0x${resId.toString(16)} source=$source: ${error.message}",
+            )
+        },
+    )
 
 private const val TAG = "SafePainter"
 
@@ -52,9 +53,10 @@ internal inline fun <T> resolvePainterOrFallback(
     loader: () -> T,
     fallback: () -> T,
     onUnsupported: (IllegalArgumentException) -> Unit,
-): T = try {
-    loader()
-} catch (e: IllegalArgumentException) {
-    onUnsupported(e)
-    fallback()
-}
+): T =
+    try {
+        loader()
+    } catch (e: IllegalArgumentException) {
+        onUnsupported(e)
+        fallback()
+    }

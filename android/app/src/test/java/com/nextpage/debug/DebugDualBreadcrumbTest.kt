@@ -25,7 +25,6 @@ import org.junit.Test
  * Uninit SDK MUST be a safe no-op with the local entry retained.
  */
 class DebugDualBreadcrumbTest {
-
     companion object {
         @BeforeClass
         @JvmStatic

@@ -2,9 +2,9 @@ package com.nextpage.presentation.viewmodel.reader.interaction
 
 import android.util.Log
 import com.nextpage.debug.DebugLog
-import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.HighlightColor
+import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.presentation.viewmodel.CfiMigrator
 import com.nextpage.presentation.viewmodel.reader.ReaderSelectionState
 import com.nextpage.presentation.viewmodel.reader.lifecycle.Clearable
@@ -25,9 +25,8 @@ internal class HighlightManager(
     private val selectionManager: SelectionManager,
     private val readerRepository: ReaderRepository,
     private val scope: CoroutineScope,
-    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
+    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
 ) : Clearable {
-
     companion object {
         private const val TAG = "HighlightManager"
     }
@@ -38,13 +37,14 @@ internal class HighlightManager(
     fun observeBook(bookId: String) {
         DebugLog.info(TAG, "observeBook called for bookId=$bookId")
         observeHighlightsJob?.cancel()
-        observeHighlightsJob = scope.launch(mainDispatcher) {
-            DebugLog.info(TAG, "observeHighlights collect started for bookId=$bookId")
-            readerRepository.observeHighlights(bookId).collect { highlights ->
-                DebugLog.info(TAG, "observeHighlights emitted ${highlights.size} highlights")
-                store.update { it.copy(highlights = highlights) }
+        observeHighlightsJob =
+            scope.launch(mainDispatcher) {
+                DebugLog.info(TAG, "observeHighlights collect started for bookId=$bookId")
+                readerRepository.observeHighlights(bookId).collect { highlights ->
+                    DebugLog.info(TAG, "observeHighlights emitted ${highlights.size} highlights")
+                    store.update { it.copy(highlights = highlights) }
+                }
             }
-        }
     }
 
     fun testStopObserving() {
@@ -57,20 +57,21 @@ internal class HighlightManager(
         textContent: String,
         note: String? = null,
         color: String = HighlightColor.YELLOW.hex,
-        locatorJson: String? = null
+        locatorJson: String? = null,
     ) {
         scope.launch(mainDispatcher) {
-            val highlight = Highlight(
-                id = UUID.randomUUID().toString(),
-                bookId = bookId,
-                cfiRange = cfiRange,
-                textContent = textContent,
-                note = note,
-                color = color,
-                updatedAtEpochMillis = System.currentTimeMillis(),
-                deletedAtEpochMillis = null,
-                locatorJson = locatorJson
-            )
+            val highlight =
+                Highlight(
+                    id = UUID.randomUUID().toString(),
+                    bookId = bookId,
+                    cfiRange = cfiRange,
+                    textContent = textContent,
+                    note = note,
+                    color = color,
+                    updatedAtEpochMillis = System.currentTimeMillis(),
+                    deletedAtEpochMillis = null,
+                    locatorJson = locatorJson,
+                )
             readerRepository.upsertHighlight(highlight)
             Log.d(TAG, "Highlight created: ${highlight.id}")
         }
@@ -83,12 +84,13 @@ internal class HighlightManager(
         selectedText: String?,
         bookFormat: String?,
         currentPdfPage: Int,
-        currentChapterIndex: Int
+        currentChapterIndex: Int,
     ) {
         val bookId = selectedBookId ?: return
-        val locator = (store.value.selectionState as? ReaderSelectionState.New)?.locator
-            ?: readiumSelectionLocator
-            ?: return
+        val locator =
+            (store.value.selectionState as? ReaderSelectionState.New)?.locator
+                ?: readiumSelectionLocator
+                ?: return
         val text = selectedText ?: store.value.selectedText ?: return
         val activeId = selectionManager.activeHighlightId()
         DebugLog.info(TAG, "Color selected: $color for id=${activeId ?: "<new>"}")
@@ -103,7 +105,7 @@ internal class HighlightManager(
             cfiRange = "readium:${locator.href}",
             textContent = text,
             color = color,
-            locatorJson = locatorJson
+            locatorJson = locatorJson,
         )
         DebugLog.info(TAG, "Color selected: $color, menu closed")
         selectionManager.dismissMenuAndClearSelection()
@@ -116,7 +118,10 @@ internal class HighlightManager(
         selectionManager.dismissMenuAndClearSelection()
     }
 
-    fun onReadiumUpdateHighlightColor(highlightId: String, color: String) {
+    fun onReadiumUpdateHighlightColor(
+        highlightId: String,
+        color: String,
+    ) {
         val existing = store.value.highlights.find { it.id == highlightId } ?: return
         val updated = existing.copy(color = color, updatedAtEpochMillis = System.currentTimeMillis())
         scope.launch(mainDispatcher) { readerRepository.upsertHighlight(updated) }
@@ -129,7 +134,7 @@ internal class HighlightManager(
         selectedText: String?,
         bookFormat: String?,
         currentPdfPage: Int,
-        currentChapterIndex: Int
+        currentChapterIndex: Int,
     ) {
         val activeId = selectionManager.activeHighlightId()
         if (activeId != null) {

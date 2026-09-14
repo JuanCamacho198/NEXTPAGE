@@ -20,9 +20,8 @@ class ReadingSessionRecorder(
     private val state: MutableStateFlow<ReaderLifecycleState>,
     private val scope: CoroutineScope,
     private val mainDispatcher: CoroutineDispatcher,
-    private val readingStatsRepository: ReadingStatsRepository
+    private val readingStatsRepository: ReadingStatsRepository,
 ) : Clearable {
-
     @Volatile
     var activeUserId: String = ""
         private set
@@ -44,12 +43,13 @@ class ReadingSessionRecorder(
         if (sessionStartTime > 0L) return
         sessionStartTime = System.currentTimeMillis()
         readingTimeTickerJob?.cancel()
-        readingTimeTickerJob = scope.launch(mainDispatcher) {
-            while (isActive) {
-                delay(READING_TIME_TICK_MS)
-                flushReadingTime(minimumMinutes = 1L)
+        readingTimeTickerJob =
+            scope.launch(mainDispatcher) {
+                while (isActive) {
+                    delay(READING_TIME_TICK_MS)
+                    flushReadingTime(minimumMinutes = 1L)
+                }
             }
-        }
     }
 
     fun onReaderPaused() {
@@ -72,11 +72,12 @@ class ReadingSessionRecorder(
         val now = System.currentTimeMillis()
         val elapsedMs = now - sessionStartTime
         val computedMinutes = elapsedMs / MILLIS_PER_MINUTE
-        val additionalMinutes = if (minimumMinutes > 0L) {
-            computedMinutes.coerceAtLeast(minimumMinutes)
-        } else {
-            computedMinutes
-        }
+        val additionalMinutes =
+            if (minimumMinutes > 0L) {
+                computedMinutes.coerceAtLeast(minimumMinutes)
+            } else {
+                computedMinutes
+            }
         if (additionalMinutes <= 0L) return
         val intervalStart = sessionStartTime
         scope.launch(mainDispatcher) {
@@ -85,7 +86,7 @@ class ReadingSessionRecorder(
                 bookId = bookId,
                 startTimeEpochMillis = intervalStart,
                 durationMinutes = additionalMinutes.toInt(),
-                userId = activeUserId
+                userId = activeUserId,
             )
             Log.d(TAG, "Recorded $additionalMinutes minutes for book $bookId")
         }

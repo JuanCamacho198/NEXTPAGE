@@ -46,7 +46,7 @@ fun RemoveBookDialog(
     bookToDelete: Book?,
     onDismiss: () -> Unit,
     onConfirmLocalOnly: () -> Unit,
-    onConfirmLocalAndDrive: () -> Unit
+    onConfirmLocalAndDrive: () -> Unit,
 ) {
     if (bookToDelete == null) return
 
@@ -64,7 +64,7 @@ fun RemoveBookDialog(
             dismissText = stringResource(R.string.library_remove_cancel),
             onConfirm = { step = "choose" },
             onDismiss = onDismiss,
-            variant = NextPageDialogVariant.DESTRUCTIVE
+            variant = NextPageDialogVariant.DESTRUCTIVE,
         )
     } else {
         AlertDialog(
@@ -74,46 +74,48 @@ fun RemoveBookDialog(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                onConfirmLocalOnly()
-                            },
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onConfirmLocalOnly()
+                                },
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
                                 text = stringResource(R.string.library_remove_local_only),
                                 style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = MaterialTheme.colorScheme.onSurface,
                             )
                             Text(
                                 text = stringResource(R.string.library_remove_local_only_subtitle),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
                     Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onConfirmLocalAndDrive() },
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { onConfirmLocalAndDrive() },
                         shape = RoundedCornerShape(12.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f))
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f)),
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
                                 text = stringResource(R.string.library_remove_local_and_drive),
                                 style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.error
+                                color = MaterialTheme.colorScheme.error,
                             )
                             Text(
                                 text = stringResource(R.string.library_remove_local_and_drive_subtitle),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -124,7 +126,7 @@ fun RemoveBookDialog(
                 TextButton(onClick = onDismiss) {
                     Text(text = stringResource(R.string.library_remove_cancel))
                 }
-            }
+            },
         )
     }
 }
@@ -134,18 +136,19 @@ fun RemoveBookDialog(
 private fun RemoveBookDialogConfirmPreview() {
     NextPageTheme(darkTheme = false) {
         RemoveBookDialog(
-            bookToDelete = Book(
-                id = "1",
-                title = "La Odisea",
-                author = "Homero",
-                coverPath = null,
-                filePath = "/books/odisea.epub",
-                format = "epub",
-                updatedAtEpochMillis = 0L
-            ),
+            bookToDelete =
+                Book(
+                    id = "1",
+                    title = "La Odisea",
+                    author = "Homero",
+                    coverPath = null,
+                    filePath = "/books/odisea.epub",
+                    format = "epub",
+                    updatedAtEpochMillis = 0L,
+                ),
             onDismiss = {},
             onConfirmLocalOnly = {},
-            onConfirmLocalAndDrive = {}
+            onConfirmLocalAndDrive = {},
         )
     }
 }

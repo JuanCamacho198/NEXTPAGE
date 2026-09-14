@@ -26,7 +26,6 @@ import java.io.File
  */
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalCoilApi::class)
 class CacheRepositoryImplTest {
-
     @get:Rule
     val tempFolder = TemporaryFolder()
 
@@ -43,71 +42,78 @@ class CacheRepositoryImplTest {
     }
 
     @Test
-    fun discoverCacheSize_readsPayloadBytesOnly() = runTest {
-        coEvery { dao.payloadBytes() } returns 1_234L
+    fun discoverCacheSize_readsPayloadBytesOnly() =
+        runTest {
+            coEvery { dao.payloadBytes() } returns 1_234L
 
-        assertEquals(1_234L, repository().discoverCacheSizeBytes())
-        coVerify(exactly = 1) { dao.payloadBytes() }
-    }
-
-    @Test
-    fun pruneDiscoverCache_usesExpiryCutoff() = runTest {
-        coEvery { dao.deleteExpired(any()) } returns 4
-
-        assertEquals(4, repository().pruneDiscoverCache())
-        coVerify(exactly = 1) { dao.deleteExpired(any()) }
-    }
+            assertEquals(1_234L, repository().discoverCacheSizeBytes())
+            coVerify(exactly = 1) { dao.payloadBytes() }
+        }
 
     @Test
-    fun purgeLegacyDiscoverCache_deletesLegacyNamespaces() = runTest {
-        coEvery { dao.deleteLegacyNamespaces() } returns 7
+    fun pruneDiscoverCache_usesExpiryCutoff() =
+        runTest {
+            coEvery { dao.deleteExpired(any()) } returns 4
 
-        assertEquals(7, repository().purgeLegacyDiscoverCache())
-    }
-
-    @Test
-    fun clearDiscoverCache_deletesCacheRowsOnly() = runTest {
-        coEvery { dao.deleteAll() } returns 3
-
-        assertEquals(3, repository().clearDiscoverCache())
-        coVerify(exactly = 1) { dao.deleteAll() }
-        // No per-row or book/cover mutation belongs to "clear cache".
-        coVerify(exactly = 0) { dao.getByKey(any()) }
-    }
+            assertEquals(4, repository().pruneDiscoverCache())
+            coVerify(exactly = 1) { dao.deleteExpired(any()) }
+        }
 
     @Test
-    fun imageCache_sizeAndClear_targetCoilDiskCache() = runTest {
-        every { imageLoader.diskCache } returns diskCache
-        every { diskCache.size } returns 42L
+    fun purgeLegacyDiscoverCache_deletesLegacyNamespaces() =
+        runTest {
+            coEvery { dao.deleteLegacyNamespaces() } returns 7
 
-        assertEquals(42L, repository().imageCacheSizeBytes())
-        repository().clearImageCache()
-        verify(exactly = 1) { diskCache.clear() }
-    }
+            assertEquals(7, repository().purgeLegacyDiscoverCache())
+        }
 
     @Test
-    fun imageCache_withoutDiskCache_isZero() = runTest {
-        every { imageLoader.diskCache } returns null
+    fun clearDiscoverCache_deletesCacheRowsOnly() =
+        runTest {
+            coEvery { dao.deleteAll() } returns 3
 
-        assertEquals(0L, repository().imageCacheSizeBytes())
-    }
+            assertEquals(3, repository().clearDiscoverCache())
+            coVerify(exactly = 1) { dao.deleteAll() }
+            // No per-row or book/cover mutation belongs to "clear cache".
+            coVerify(exactly = 0) { dao.getByKey(any()) }
+        }
 
     @Test
-    fun readerCache_sizesAndClearsEpubCache() = runTest {
-        val root = tempFolder.newFolder("files")
-        val cacheRoot = tempFolder.newFolder("cache")
-        val cacheDir = File(root, "epub_cache").apply { mkdirs() }
-        File(cacheDir, "a.bin").writeBytes(ByteArray(10))
-        File(cacheDir, "b.bin").writeBytes(ByteArray(5))
-        every { context.filesDir } returns root
-        // After the clear, the files-dir copy is gone and the lookup falls back
-        // to cacheDir; stub it to a real (empty) dir so the fallback returns 0.
-        every { context.cacheDir } returns cacheRoot
+    fun imageCache_sizeAndClear_targetCoilDiskCache() =
+        runTest {
+            every { imageLoader.diskCache } returns diskCache
+            every { diskCache.size } returns 42L
 
-        val repo = repository()
-        assertEquals(15L, repo.readerCacheSizeBytes())
+            assertEquals(42L, repository().imageCacheSizeBytes())
+            repository().clearImageCache()
+            verify(exactly = 1) { diskCache.clear() }
+        }
 
-        repo.clearReaderCache()
-        assertEquals(0L, repo.readerCacheSizeBytes())
-    }
+    @Test
+    fun imageCache_withoutDiskCache_isZero() =
+        runTest {
+            every { imageLoader.diskCache } returns null
+
+            assertEquals(0L, repository().imageCacheSizeBytes())
+        }
+
+    @Test
+    fun readerCache_sizesAndClearsEpubCache() =
+        runTest {
+            val root = tempFolder.newFolder("files")
+            val cacheRoot = tempFolder.newFolder("cache")
+            val cacheDir = File(root, "epub_cache").apply { mkdirs() }
+            File(cacheDir, "a.bin").writeBytes(ByteArray(10))
+            File(cacheDir, "b.bin").writeBytes(ByteArray(5))
+            every { context.filesDir } returns root
+            // After the clear, the files-dir copy is gone and the lookup falls back
+            // to cacheDir; stub it to a real (empty) dir so the fallback returns 0.
+            every { context.cacheDir } returns cacheRoot
+
+            val repo = repository()
+            assertEquals(15L, repo.readerCacheSizeBytes())
+
+            repo.clearReaderCache()
+            assertEquals(0L, repo.readerCacheSizeBytes())
+        }
 }

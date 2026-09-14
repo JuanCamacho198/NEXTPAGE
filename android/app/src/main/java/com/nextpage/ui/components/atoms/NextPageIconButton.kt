@@ -13,11 +13,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.tooling.preview.Preview
-import com.nextpage.ui.icons.NextPageIcons
 import com.nextpage.presentation.theme.NextPageTheme
+import com.nextpage.ui.icons.NextPageIcons
 
 /**
  * Circular, filled-background icon button. Lightweight alternative to
@@ -55,21 +55,22 @@ fun NextPageIconButton(
     size: Dp = 40.dp,
     iconSize: Dp = 24.dp,
     containerColor: Color = MaterialTheme.colorScheme.surfaceVariant,
-    iconTint: Color = MaterialTheme.colorScheme.onSurface
+    iconTint: Color = MaterialTheme.colorScheme.onSurface,
 ) {
     Box(
-        modifier = modifier
-            .size(size)
-            .clip(CircleShape)
-            .background(containerColor)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
+        modifier =
+            modifier
+                .size(size)
+                .clip(CircleShape)
+                .background(containerColor)
+                .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
             tint = iconTint,
-            modifier = Modifier.size(iconSize)
+            modifier = Modifier.size(iconSize),
         )
     }
 }
@@ -81,7 +82,7 @@ private fun NextPageIconButtonDarkPreview() {
         NextPageIconButton(
             icon = NextPageIcons.Add,
             contentDescription = "Add",
-            onClick = {}
+            onClick = {},
         )
     }
 }
@@ -93,7 +94,7 @@ private fun NextPageIconButtonLightPreview() {
         NextPageIconButton(
             icon = NextPageIcons.Add,
             contentDescription = "Add",
-            onClick = {}
+            onClick = {},
         )
     }
 }

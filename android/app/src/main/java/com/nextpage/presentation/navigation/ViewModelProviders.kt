@@ -1,24 +1,20 @@
 package com.nextpage.presentation.navigation
 
-import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nextpage.di.AppContainer
-import com.nextpage.presentation.viewmodel.AuthViewModel
 import com.nextpage.presentation.debug.DebugViewModel
+import com.nextpage.presentation.viewmodel.AuthViewModel
 import com.nextpage.presentation.viewmodel.DiscoverViewModel
 import com.nextpage.presentation.viewmodel.DiscoverViewModelFactory
 import com.nextpage.presentation.viewmodel.HighlightsViewModel
-import com.nextpage.presentation.viewmodel.HighlightsViewModelFactory
 import com.nextpage.presentation.viewmodel.HomeViewModel
-import com.nextpage.presentation.viewmodel.HomeViewModelFactory
 import com.nextpage.presentation.viewmodel.LibraryViewModel
-import com.nextpage.presentation.viewmodel.LibraryViewModelFactory
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 import com.nextpage.presentation.viewmodel.ReaderViewModelFactory
 import com.nextpage.presentation.viewmodel.StatisticsViewModel
-import com.nextpage.presentation.viewmodel.StatisticsViewModelFactory
 
 /**
  * Holder grouping the host-scoped ViewModels.
@@ -36,114 +32,81 @@ internal data class ViewModelProviders(
     val auth: AuthViewModel,
     val home: HomeViewModel,
     val debug: DebugViewModel,
-    val discover: DiscoverViewModel
+    val discover: DiscoverViewModel,
 )
 
 /**
- * Creates and remembers all host-scoped ViewModels via AppContainer factories.
+ * Creates and remembers all host-scoped ViewModels — the single-sourced path.
  *
- * Preserves exact factory wiring from the 931-line monolith; no behavior change.
+ * Plain VMs use `hiltViewModel()`; Reader/Discover keep assisted factories.
  * selectedBookId is still host-owned and passed to Reader via defaultBookId at creation time,
  * then kept in sync via write lambdas (see BookDetail/Reader graphs).
  */
 @Composable
 internal fun rememberNavHostViewModels(
     appContainer: AppContainer,
-    selectedBookId: String
+    selectedBookId: String,
 ): ViewModelProviders {
     val context = LocalContext.current
     val application = context.applicationContext as android.app.Application
 
-    val libraryViewModel: LibraryViewModel = viewModel(
-        factory = LibraryViewModelFactory(
-            libraryRepository = appContainer.libraryRepository,
-            syncService = appContainer.syncService,
-            appContext = context.applicationContext,
-            catalogSync = appContainer.supabaseBookCatalogSync,
-            readerRepository = appContainer.readerRepository,
-            getBookProgressUseCase = appContainer.getBookProgressUseCase
-        )
-    )
+    val libraryViewModel: LibraryViewModel = hiltViewModel()
 
-    val readerViewModel: ReaderViewModel = viewModel(
-        factory = ReaderViewModelFactory(
-            application = application,
-            readerRepository = appContainer.readerRepository,
-            readingStatsRepository = appContainer.readingStatsRepository,
-            readerPreferences = appContainer.readerPreferences,
-            defaultBookId = selectedBookId,
-            dictionaryRepository = appContainer.dictionaryRepository,
-            libraryRepository = appContainer.libraryRepository,
-            supabaseProgressSync = appContainer.supabaseProgressSync
+    val readerViewModel: ReaderViewModel =
+        viewModel(
+            factory =
+                ReaderViewModelFactory(
+                    application = application,
+                    readerRepository = appContainer.readerRepository,
+                    readingStatsRepository = appContainer.readingStatsRepository,
+                    readerPreferences = appContainer.readerPreferences,
+                    defaultBookId = selectedBookId,
+                    dictionaryRepository = appContainer.dictionaryRepository,
+                    libraryRepository = appContainer.libraryRepository,
+                    supabaseProgressSync = appContainer.supabaseProgressSync,
+                ),
         )
-    )
 
-    val highlightsViewModel: HighlightsViewModel = viewModel(
-        factory = HighlightsViewModelFactory(
-            readerRepository = appContainer.readerRepository,
-            homeRepository = appContainer.homeRepository,
-            supabaseSync = appContainer.supabaseProgressSync
+    val highlightsViewModel: HighlightsViewModel = hiltViewModel()
+
+    val statisticsViewModel: StatisticsViewModel = hiltViewModel()
+
+    val authViewModel: AuthViewModel = hiltViewModel()
+
+    val homeViewModel: HomeViewModel = hiltViewModel()
+
+    val debugViewModel: DebugViewModel = hiltViewModel()
+
+    val discoverViewModel: DiscoverViewModel =
+        viewModel(
+            factory =
+                DiscoverViewModelFactory(
+                    catalogProvider = appContainer.catalogProvider,
+                    connectivityObserver = appContainer.connectivityObserver,
+                    downloadAndImportBookUseCase = appContainer.downloadAndImportBookUseCase,
+                    registerAddonChangeListener = { listener ->
+                        appContainer.addonRegistry.addOnChangedListener(listener)
+                    },
+                    addonConsent = { addonId -> appContainer.addonRegistry.hasAddonConsent(addonId) },
+                    onAddonConsentChange = { addonId, granted ->
+                        if (granted) {
+                            appContainer.addonRegistry.recordAddonConsent(addonId)
+                        } else {
+                            appContainer.addonRegistry.revokeAddonConsent(addonId)
+                        }
+                    },
+                    addonResolve = { addonId, book -> appContainer.addonResolveForBook(addonId, book) },
+                ),
         )
-    )
-
-    val statisticsViewModel: StatisticsViewModel = viewModel(
-        factory = StatisticsViewModelFactory(
-            appContainer.getStatisticsUseCase
-        )
-    )
-
-    val authViewModel: AuthViewModel = viewModel(
-        factory = AuthViewModel.Factory(
-            authRepository = appContainer.authRepository,
-            syncOrchestrator = appContainer.syncOrchestrator,
-            isAuthConfigured = !appContainer.isAuthConfigError,
-            hasAuthWiringIssue = false
-        )
-    )
-
-    val homeViewModel: HomeViewModel = viewModel(
-        factory = HomeViewModelFactory(
-            homeRepository = appContainer.homeRepository,
-            getStatisticsUseCase = appContainer.getStatisticsUseCase,
-            dailyGoalProvider = appContainer.dailyGoalProvider,
-            readerRepository = appContainer.readerRepository,
-            getBookProgressUseCase = appContainer.getBookProgressUseCase
-        )
-    )
-
-    val debugViewModel: DebugViewModel = viewModel(
-        factory = DebugViewModel.Factory(appContainer)
-    )
-
-    val discoverViewModel: DiscoverViewModel = viewModel(
-        factory = DiscoverViewModelFactory(
-            catalogProvider = appContainer.catalogProvider,
-            connectivityObserver = appContainer.connectivityObserver,
-            downloadAndImportBookUseCase = appContainer.downloadAndImportBookUseCase,
-            registerAddonChangeListener = { listener ->
-                appContainer.addonRegistry.addOnChangedListener(listener)
-            },
-            addonConsent = { addonId -> appContainer.addonRegistry.hasAddonConsent(addonId) },
-            onAddonConsentChange = { addonId, granted ->
-                if (granted) {
-                    appContainer.addonRegistry.recordAddonConsent(addonId)
-                } else {
-                    appContainer.addonRegistry.revokeAddonConsent(addonId)
-                }
-            },
-            addonResolve = { addonId, book -> appContainer.addonResolveForBook(addonId, book) }
-        )
-    )
 
     return ViewModelProviders(
-            library = libraryViewModel,
-            reader = readerViewModel,
-            highlights = highlightsViewModel,
-            statistics = statisticsViewModel,
-            auth = authViewModel,
-            home = homeViewModel,
-            debug = debugViewModel,
-            discover = discoverViewModel
-        )
-
+        library = libraryViewModel,
+        reader = readerViewModel,
+        highlights = highlightsViewModel,
+        statistics = statisticsViewModel,
+        auth = authViewModel,
+        home = homeViewModel,
+        debug = debugViewModel,
+        discover = discoverViewModel,
+    )
 }

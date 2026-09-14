@@ -2,12 +2,9 @@ package com.nextpage.data.session
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.nextpage.domain.model.FontSizePreset
 import com.nextpage.domain.model.ReaderSettings
-import com.nextpage.domain.model.ReaderTheme
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkStatic
 import io.mockk.slot
 import io.mockk.verify
 import org.junit.Assert.assertEquals
@@ -22,29 +19,28 @@ import org.junit.Test
  * deserialization of the JSON array without Robolectric or device.
  */
 class ReaderPreferencesCustomColorsTest {
-
-    private fun createMockPrefs(
-        storedValues: Map<String, String> = emptyMap()
-    ): ReaderPreferences {
+    private fun createMockPrefs(storedValues: Map<String, String> = emptyMap()): ReaderPreferences {
         // Mock SharedPreferences and SharedPreferences.Editor
         val editor = mockk<SharedPreferences.Editor>(relaxed = true)
-        val prefs = mockk<SharedPreferences> {
-            every { getString(any(), any()) } answers {
-                val key = firstArg<String>()
-                val fallback = secondArg<String?>()
-                storedValues[key] ?: fallback
+        val prefs =
+            mockk<SharedPreferences> {
+                every { getString(any(), any()) } answers {
+                    val key = firstArg<String>()
+                    val fallback = secondArg<String?>()
+                    storedValues[key] ?: fallback
+                }
+                every { getInt(any<String>(), any()) } answers {
+                    val key = firstArg<String>()
+                    storedValues[key]?.toIntOrNull() ?: secondArg()
+                }
+                every { edit() } returns editor
             }
-            every { getInt(any<String>(), any()) } answers {
-                val key = firstArg<String>()
-                storedValues[key]?.toIntOrNull() ?: secondArg()
-            }
-            every { edit() } returns editor
-        }
 
         // Mock Context to return our fake SharedPreferences
-        val context = mockk<Context> {
-            every { getSharedPreferences(any(), any()) } returns prefs
-        }
+        val context =
+            mockk<Context> {
+                every { getSharedPreferences(any(), any()) } returns prefs
+            }
 
         return ReaderPreferences(context)
     }
@@ -80,14 +76,16 @@ class ReaderPreferencesCustomColorsTest {
     @Test
     fun `save with null customHighlightColors removes key`() {
         val editor = mockk<SharedPreferences.Editor>(relaxed = true)
-        val prefs = mockk<SharedPreferences> {
-            every { edit() } returns editor
-            every { getString(any(), any()) } returns null
-            every { getInt(any<String>(), any()) } returns 16
-        }
-        val context = mockk<Context> {
-            every { getSharedPreferences(any(), any()) } returns prefs
-        }
+        val prefs =
+            mockk<SharedPreferences> {
+                every { edit() } returns editor
+                every { getString(any(), any()) } returns null
+                every { getInt(any<String>(), any()) } returns 16
+            }
+        val context =
+            mockk<Context> {
+                every { getSharedPreferences(any(), any()) } returns prefs
+            }
         val rp = ReaderPreferences(context)
 
         rp.save(ReaderSettings(customHighlightColors = null))
@@ -100,18 +98,21 @@ class ReaderPreferencesCustomColorsTest {
     fun `save with custom colors writes JSON array`() {
         val paletteKey = slot<String>()
         val paletteValue = slot<String>()
-        val editor = mockk<SharedPreferences.Editor>(relaxed = true) {
-            every { putString(capture(paletteKey), capture(paletteValue)) } returns this
-            every { putInt(any<String>(), any()) } returns this
-        }
-        val prefs = mockk<SharedPreferences> {
-            every { edit() } returns editor
-            every { getString(any(), any()) } returns null
-            every { getInt(any<String>(), any()) } returns 16
-        }
-        val context = mockk<Context> {
-            every { getSharedPreferences(any(), any()) } returns prefs
-        }
+        val editor =
+            mockk<SharedPreferences.Editor>(relaxed = true) {
+                every { putString(capture(paletteKey), capture(paletteValue)) } returns this
+                every { putInt(any<String>(), any()) } returns this
+            }
+        val prefs =
+            mockk<SharedPreferences> {
+                every { edit() } returns editor
+                every { getString(any(), any()) } returns null
+                every { getInt(any<String>(), any()) } returns 16
+            }
+        val context =
+            mockk<Context> {
+                every { getSharedPreferences(any(), any()) } returns prefs
+            }
         val rp = ReaderPreferences(context)
 
         val colors = listOf("#4ADE80", "#3B82F6", "#F97316", "#EF4444", "#FACC15")

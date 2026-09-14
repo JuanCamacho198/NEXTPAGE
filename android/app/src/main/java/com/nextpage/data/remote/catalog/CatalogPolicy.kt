@@ -1,7 +1,7 @@
 package com.nextpage.data.remote.catalog
 
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -40,8 +40,7 @@ const val ANDROID_USER_AGENT = "NextPage/Android (contact: TBD)"
 fun buildUserAgent(platform: String): String = "NextPage/$platform (contact: TBD)"
 
 /** Clamp a requested page size into the contractual 20–32 window. */
-fun clampPageSize(requested: Int): Int =
-    requested.coerceIn(MIN_PAGE_SIZE, MAX_PAGE_SIZE)
+fun clampPageSize(requested: Int): Int = requested.coerceIn(MIN_PAGE_SIZE, MAX_PAGE_SIZE)
 
 /** Clamp a requested page size into the contractual 20–32 window. */
 fun clampPageSize(requested: Double): Int {
@@ -49,8 +48,7 @@ fun clampPageSize(requested: Double): Int {
     return requested.toInt().coerceIn(MIN_PAGE_SIZE, MAX_PAGE_SIZE)
 }
 
-fun shouldRetryStatus(status: Int): Boolean =
-    status == HTTP_TOO_MANY_REQUESTS || status >= HTTP_SERVER_ERROR_MIN
+fun shouldRetryStatus(status: Int): Boolean = status == HTTP_TOO_MANY_REQUESTS || status >= HTTP_SERVER_ERROR_MIN
 
 /** True for HTTP 2xx responses. */
 fun Int.isHttpSuccess(): Boolean = this in HTTP_OK_MIN..HTTP_OK_MAX
@@ -61,7 +59,7 @@ fun backoffDelayMs(attempt: Int): Long = RETRY_BASE_DELAY_MS * (1L shl attempt.c
 /** Enforces a minimum gap between calls (Open Library 1 req/s courtesy). */
 class RateLimiter(
     private val minGapMs: Long,
-    private val now: () -> Long = { System.currentTimeMillis() }
+    private val now: () -> Long = { System.currentTimeMillis() },
 ) {
     private val mutex = Mutex()
     private var lastCall = 0L
@@ -83,7 +81,7 @@ class RateLimiter(
 class SearchDebouncer<T>(
     private val scope: CoroutineScope,
     private val windowMs: Long = DEBOUNCE_MS,
-    private val execute: suspend (query: String, page: Int) -> T
+    private val execute: suspend (query: String, page: Int) -> T,
 ) {
     private val mutex = Mutex()
     private var pending: MutableList<PendingSearch<T>> = mutableListOf()
@@ -92,31 +90,35 @@ class SearchDebouncer<T>(
     private data class PendingSearch<T>(
         val query: String,
         val page: Int,
-        val result: CompletableDeferred<T> = CompletableDeferred()
+        val result: CompletableDeferred<T> = CompletableDeferred(),
     )
 
-    suspend fun search(query: String, page: Int): T {
+    suspend fun search(
+        query: String,
+        page: Int,
+    ): T {
         val entry = PendingSearch<T>(query, page)
         mutex.withLock {
             pending.add(entry)
             job?.cancel()
             // Child of the injected scope: production passes a Default-dispatcher
             // scope, tests pass a TestScope so `delay` below is virtual time.
-            job = scope.launch {
-                delay(windowMs)
-                val batch: List<PendingSearch<T>>
-                mutex.withLock {
-                    batch = pending.toList()
-                    pending = mutableListOf()
+            job =
+                scope.launch {
+                    delay(windowMs)
+                    val batch: List<PendingSearch<T>>
+                    mutex.withLock {
+                        batch = pending.toList()
+                        pending = mutableListOf()
+                    }
+                    val latest = batch.last()
+                    try {
+                        val result = execute(latest.query, latest.page)
+                        batch.forEach { it.result.complete(result) }
+                    } catch (err: Throwable) {
+                        batch.forEach { it.result.completeExceptionally(err) }
+                    }
                 }
-                val latest = batch.last()
-                try {
-                    val result = execute(latest.query, latest.page)
-                    batch.forEach { it.result.complete(result) }
-                } catch (err: Throwable) {
-                    batch.forEach { it.result.completeExceptionally(err) }
-                }
-            }
         }
         return entry.result.await()
     }

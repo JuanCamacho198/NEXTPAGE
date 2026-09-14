@@ -16,8 +16,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
-import com.nextpage.ui.icons.NextPageIcons
 import com.nextpage.presentation.theme.NextPageTheme
+import com.nextpage.ui.icons.NextPageIcons
 
 /**
  * Full-screen error state: error icon, title, message, and an optional
@@ -46,18 +46,18 @@ fun NextPageErrorState(
     title: String,
     message: String,
     modifier: Modifier = Modifier,
-    retryAction: @Composable (() -> Unit)? = null
+    retryAction: @Composable (() -> Unit)? = null,
 ) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         Icon(
             imageVector = NextPageIcons.ErrorOutline,
             contentDescription = null,
             modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.error
+            tint = MaterialTheme.colorScheme.error,
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
@@ -65,14 +65,14 @@ fun NextPageErrorState(
             style = MaterialTheme.typography.titleMedium,
             fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = message,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
         )
         if (retryAction != null) {
             Spacer(modifier = Modifier.height(16.dp))
@@ -102,13 +102,13 @@ fun NextPageErrorState(
 fun NextPageErrorState(
     message: String,
     modifier: Modifier = Modifier,
-    retryAction: @Composable (() -> Unit)? = null
+    retryAction: @Composable (() -> Unit)? = null,
 ) {
     NextPageErrorState(
         title = stringResource(R.string.error_unknown),
         message = message,
         modifier = modifier,
-        retryAction = retryAction
+        retryAction = retryAction,
     )
 }
 
@@ -119,7 +119,7 @@ private fun NextPageErrorStateDarkPreview() {
         NextPageErrorState(
             title = "Something went wrong",
             message = "We couldn't load your highlights.",
-            retryAction = {}
+            retryAction = {},
         )
     }
 }
@@ -131,7 +131,7 @@ private fun NextPageErrorStateLightPreview() {
         NextPageErrorState(
             title = "Something went wrong",
             message = "We couldn't load your highlights.",
-            retryAction = {}
+            retryAction = {},
         )
     }
 }

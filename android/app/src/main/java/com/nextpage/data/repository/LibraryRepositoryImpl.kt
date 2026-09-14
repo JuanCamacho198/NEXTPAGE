@@ -9,7 +9,6 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.map
 import com.nextpage.data.epub.EpubParserService
-import com.nextpage.data.pdf.PdfParserService
 import com.nextpage.data.local.dao.BookDao
 import com.nextpage.data.local.dao.ReadingProgressDao
 import com.nextpage.data.local.dao.SyncOutboxDao
@@ -18,10 +17,11 @@ import com.nextpage.data.local.entity.ReadingProgressEntity
 import com.nextpage.data.local.entity.SyncEntityType
 import com.nextpage.data.local.entity.SyncOperation
 import com.nextpage.data.local.entity.SyncOutboxEntity
+import com.nextpage.data.pdf.PdfParserService
 import com.nextpage.data.remote.drive.coverFailureError
 import com.nextpage.data.storage.CoverStorage
-import com.nextpage.domain.model.BookImportRequest
 import com.nextpage.domain.model.Book
+import com.nextpage.domain.model.BookImportRequest
 import com.nextpage.domain.model.DuplicateBookException
 import com.nextpage.domain.model.ReadingProgress
 import com.nextpage.domain.repository.LibraryRepository
@@ -35,8 +35,8 @@ import kotlinx.coroutines.withContext
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.publication.services.cover
 import org.readium.r2.shared.util.AbsoluteUrl
-import org.readium.r2.shared.util.http.DefaultHttpClient
 import org.readium.r2.shared.util.asset.AssetRetriever
+import org.readium.r2.shared.util.http.DefaultHttpClient
 import org.readium.r2.streamer.PublicationOpener
 import org.readium.r2.streamer.parser.DefaultPublicationParser
 import java.io.ByteArrayOutputStream
@@ -60,7 +60,7 @@ class LibraryRepositoryImpl(
      * already-settled gate so non-wired callers (and tests) keep the previous
      * behavior; production wires the orchestrator-backed gate.
      */
-    private val settleGate: SyncSettleGate = SyncSettleGate { true }
+    private val settleGate: SyncSettleGate = SyncSettleGate { true },
 ) : LibraryRepository {
     override fun observeLibrary(): Flow<List<Book>> =
         combine(bookDao.observeAllBooks(), readingProgressDao.observeAll()) { books, progresses ->
@@ -75,19 +75,16 @@ class LibraryRepositoryImpl(
     override fun observeLibraryPaged(): Flow<PagingData<Book>> =
         Pager(
             config = PagingConfig(pageSize = 20),
-            pagingSourceFactory = { bookDao.observeAllBooksPaged() }
+            pagingSourceFactory = { bookDao.observeAllBooksPaged() },
         ).flow.map { pagingData ->
             pagingData.map { it.toDomain() }
         }
 
-    override fun observeBookById(bookId: String): Flow<Book?> =
-        bookDao.observeBookById(bookId).map { it?.toDomain() }
+    override fun observeBookById(bookId: String): Flow<Book?> = bookDao.observeBookById(bookId).map { it?.toDomain() }
 
-    override fun observeProgressForBook(bookId: String): Flow<ReadingProgress?> =
-        readingProgressDao.observeProgressForBook(bookId).map { it?.toDomain() }
+    override fun observeProgressForBook(bookId: String): Flow<ReadingProgress?> = readingProgressDao.observeProgressForBook(bookId).map { it?.toDomain() }
 
-    override fun observeTotalReadingTime(): Flow<Long> =
-        readingStatsDao.observeTotalMinutesRead().map { it ?: 0L }
+    override fun observeTotalReadingTime(): Flow<Long> = readingStatsDao.observeTotalMinutesRead().map { it ?: 0L }
 
     override fun observeReadingTimeByBook(): Flow<Map<String, Long>> =
         readingStatsDao.observeAllStats().map { stats ->
@@ -96,138 +93,165 @@ class LibraryRepositoryImpl(
 
     override suspend fun importBookFromEpub(
         request: BookImportRequest,
-        inputStreamProvider: suspend () -> InputStream?
-    ): Result<Book> = runCatching {
-        val inputStream = inputStreamProvider()
-            ?: throw IllegalArgumentException("Unable to open EPUB stream")
-        val metadata = epubParserService.extractMetadata(inputStream).getOrThrow()
-        val now = System.currentTimeMillis()
-        val bookId = UUID.randomUUID().toString()
+        inputStreamProvider: suspend () -> InputStream?,
+    ): Result<Book> =
+        runCatching {
+            val inputStream =
+                inputStreamProvider()
+                    ?: throw IllegalArgumentException("Unable to open EPUB stream")
+            val metadata = epubParserService.extractMetadata(inputStream).getOrThrow()
+            val now = System.currentTimeMillis()
+            val bookId = UUID.randomUUID().toString()
 
-        // Primary: extract cover via Readium Publication.cover()
-        // Fallback: use existing OPF-based cover bytes from metadata
-        val coverBytes = extractReadiumCover(request.sourcePath)
-            ?: metadata.coverImageBytes
+            // Primary: extract cover via Readium Publication.cover()
+            // Fallback: use existing OPF-based cover bytes from metadata
+            val coverBytes =
+                extractReadiumCover(request.sourcePath)
+                    ?: metadata.coverImageBytes
 
-        val coverPath = coverBytes?.let { persistCoverNonBlocking(bookId, it) }
+            val coverPath = coverBytes?.let { persistCoverNonBlocking(bookId, it) }
 
-        val book = Book(
-            id = bookId,
-            title = metadata.title.ifBlank { request.fallbackTitle ?: "Untitled" },
-            author = metadata.author,
-            description = metadata.description,
-            coverPath = coverPath,
-            filePath = request.sourcePath,
-            format = EPUB_FORMAT,
-            totalPages = metadata.estimatedPageCount,
-            chapterCount = metadata.chapterCount.takeIf { it > 0 },
-            // EPUB metadata does not expose a genre — it stays null until the
-            // user assigns one in the editor.
-            genre = null,
-            language = metadata.language,
-            publisher = metadata.publisher,
-            tags = metadata.tags.joinToString(", ").takeIf { it.isNotBlank() },
-            publishedDate = metadata.publishedDate,
-            updatedAtEpochMillis = now
-        )
+            val book =
+                Book(
+                    id = bookId,
+                    title = metadata.title.ifBlank { request.fallbackTitle ?: "Untitled" },
+                    author = metadata.author,
+                    description = metadata.description,
+                    coverPath = coverPath,
+                    filePath = request.sourcePath,
+                    format = EPUB_FORMAT,
+                    totalPages = metadata.estimatedPageCount,
+                    chapterCount = metadata.chapterCount.takeIf { it > 0 },
+                    // EPUB metadata does not expose a genre — it stays null until the
+                    // user assigns one in the editor.
+                    genre = null,
+                    language = metadata.language,
+                    publisher = metadata.publisher,
+                    tags = metadata.tags.joinToString(", ").takeIf { it.isNotBlank() },
+                    publishedDate = metadata.publishedDate,
+                    updatedAtEpochMillis = now,
+                )
 
-        val contentHash = computeSha256(request.sourcePath)
-        // Duplicate rule: identical bytes already imported are not imported
-        // twice. Surfaced as DuplicateBookException so the caller can render a
-        // neutral "already in library" outcome instead of a failure.
-        if (contentHash != null && bookDao.observeAllBooks().first().any { it.contentHash == contentHash }) {
-            throw DuplicateBookException()
+            val contentHash = computeSha256(request.sourcePath)
+            // Duplicate rule: identical bytes already imported are not imported
+            // twice. Surfaced as DuplicateBookException so the caller can render a
+            // neutral "already in library" outcome instead of a failure.
+            if (contentHash != null && bookDao.observeAllBooks().first().any { it.contentHash == contentHash }) {
+                throw DuplicateBookException()
+            }
+            bookDao.upsert(book.toEntity().copy(contentHash = contentHash))
+            queueBookOutboxEntry(bookId)
+            book
         }
-        bookDao.upsert(book.toEntity().copy(contentHash = contentHash))
-        queueBookOutboxEntry(bookId)
-        book
-    }
 
     override suspend fun importBookFromPdf(
         request: BookImportRequest,
-        file: java.io.File
-    ): Result<Book> = runCatching {
-        val metadata = pdfParserService.extractMetadata(file).getOrThrow()
-        val now = System.currentTimeMillis()
-        val bookId = UUID.randomUUID().toString()
+        file: java.io.File,
+    ): Result<Book> =
+        runCatching {
+            val metadata = pdfParserService.extractMetadata(file).getOrThrow()
+            val now = System.currentTimeMillis()
+            val bookId = UUID.randomUUID().toString()
 
-        val coverPath = metadata.coverBytes
-            ?.let { persistCoverNonBlocking(bookId, it) }
+            val coverPath =
+                metadata.coverBytes
+                    ?.let { persistCoverNonBlocking(bookId, it) }
 
-        val book = Book(
-            id = bookId,
-            title = metadata.title?.ifBlank { request.fallbackTitle ?: "Untitled" }
-                ?: request.fallbackTitle ?: "Untitled",
-            author = metadata.author,
-            coverPath = coverPath,
-            filePath = request.sourcePath,
-            format = PDF_FORMAT,
-            totalPages = metadata.pageCount,
-            updatedAtEpochMillis = now
-        )
+            val book =
+                Book(
+                    id = bookId,
+                    title =
+                        metadata.title?.ifBlank { request.fallbackTitle ?: "Untitled" }
+                            ?: request.fallbackTitle ?: "Untitled",
+                    author = metadata.author,
+                    coverPath = coverPath,
+                    filePath = request.sourcePath,
+                    format = PDF_FORMAT,
+                    totalPages = metadata.pageCount,
+                    updatedAtEpochMillis = now,
+                )
 
-        val contentHash = computeSha256(file.absolutePath)
-        bookDao.upsert(book.toEntity().copy(contentHash = contentHash))
-        queueBookOutboxEntry(bookId)
-        book
-    }
-
-    override suspend fun getBookById(bookId: String): Book? =
-        bookDao.getBookById(bookId)?.toDomain()
-
-    override suspend fun findBookByTitleAndAuthor(title: String, author: String?): Book? {
-        val requestedAuthor = author?.trim().orEmpty()
-        return bookDao.observeAllBooks().first().firstOrNull { candidate ->
-            candidate.title.equals(title, ignoreCase = true) &&
-                (requestedAuthor.isEmpty() ||
-                    candidate.author?.trim().orEmpty().equals(requestedAuthor, ignoreCase = true))
-        }?.toDomain()
-    }
-
-    override suspend fun startReading(bookId: String): Result<Unit> = runCatching {
-        bookDao.startReading(bookId, System.currentTimeMillis())
-    }
-
-    override suspend fun updateReadingProgress(bookId: String, progress: Float): Result<Unit> = runCatching {
-        val bounded = progress.coerceIn(0f, 100f)
-        bookDao.updateReadingProgress(bookId, bounded, System.currentTimeMillis())
-    }
-
-    override suspend fun completeReading(bookId: String): Result<Unit> = runCatching {
-        bookDao.completeReading(bookId, System.currentTimeMillis())
-    }
-
-    override suspend fun deleteBook(bookId: String): Result<Unit> = runCatching {
-        // Capture the local backing path BEFORE the soft-delete — the row is
-        // excluded from observeAllBooks() once deleted_at is set.
-        val backingPath = bookDao.getBookById(bookId)?.filePath
-        // Clean up cover file first (idempotent — no-op if missing)
-        coverStorage.deleteCover(bookId).getOrNull()
-        val now = System.currentTimeMillis()
-        bookDao.deleteBook(bookId, now)
-        readingStatsDao.deleteForBook(bookId)
-        queueBookOutboxEntry(bookId, SyncOperation.DELETE)
-        deleteBackingFileIfSettled(backingPath, bookId)
-    }
-
-    override suspend fun deleteBookLocalOnly(bookId: String): Result<Unit> = runCatching {
-        val backingPath = bookDao.getBookById(bookId)?.filePath
-        coverStorage.deleteCover(bookId).getOrNull()
-        val now = System.currentTimeMillis()
-        bookDao.deleteBook(bookId, now)
-        readingStatsDao.deleteForBook(bookId)
-        // Local only — do NOT queue a DELETE tombstone so the Drive file is kept
-        // (mirrors desktop handleHideBook). Also drop any pending DELETE for this
-        // book so a previously-queued cloud delete does not resurrect.
-        try {
-            val pending = outboxDao.getPendingItems().filter {
-                it.entityType == SyncEntityType.BOOK.name && it.entityId == bookId && it.operation == SyncOperation.DELETE.name
-            }
-            pending.forEach { outboxDao.deleteById(it.id) }
-        } catch (_: Exception) {
+            val contentHash = computeSha256(file.absolutePath)
+            bookDao.upsert(book.toEntity().copy(contentHash = contentHash))
+            queueBookOutboxEntry(bookId)
+            book
         }
-        deleteBackingFileIfSettled(backingPath, bookId)
+
+    override suspend fun getBookById(bookId: String): Book? = bookDao.getBookById(bookId)?.toDomain()
+
+    override suspend fun findBookByTitleAndAuthor(
+        title: String,
+        author: String?,
+    ): Book? {
+        val requestedAuthor = author?.trim().orEmpty()
+        return bookDao
+            .observeAllBooks()
+            .first()
+            .firstOrNull { candidate ->
+                candidate.title.equals(title, ignoreCase = true) &&
+                    (
+                        requestedAuthor.isEmpty() ||
+                            candidate.author
+                                ?.trim()
+                                .orEmpty()
+                                .equals(requestedAuthor, ignoreCase = true)
+                    )
+            }?.toDomain()
     }
+
+    override suspend fun startReading(bookId: String): Result<Unit> =
+        runCatching {
+            bookDao.startReading(bookId, System.currentTimeMillis())
+        }
+
+    override suspend fun updateReadingProgress(
+        bookId: String,
+        progress: Float,
+    ): Result<Unit> =
+        runCatching {
+            val bounded = progress.coerceIn(0f, 100f)
+            bookDao.updateReadingProgress(bookId, bounded, System.currentTimeMillis())
+        }
+
+    override suspend fun completeReading(bookId: String): Result<Unit> =
+        runCatching {
+            bookDao.completeReading(bookId, System.currentTimeMillis())
+        }
+
+    override suspend fun deleteBook(bookId: String): Result<Unit> =
+        runCatching {
+            // Capture the local backing path BEFORE the soft-delete — the row is
+            // excluded from observeAllBooks() once deleted_at is set.
+            val backingPath = bookDao.getBookById(bookId)?.filePath
+            // Clean up cover file first (idempotent — no-op if missing)
+            coverStorage.deleteCover(bookId).getOrNull()
+            val now = System.currentTimeMillis()
+            bookDao.deleteBook(bookId, now)
+            readingStatsDao.deleteForBook(bookId)
+            queueBookOutboxEntry(bookId, SyncOperation.DELETE)
+            deleteBackingFileIfSettled(backingPath, bookId)
+        }
+
+    override suspend fun deleteBookLocalOnly(bookId: String): Result<Unit> =
+        runCatching {
+            val backingPath = bookDao.getBookById(bookId)?.filePath
+            coverStorage.deleteCover(bookId).getOrNull()
+            val now = System.currentTimeMillis()
+            bookDao.deleteBook(bookId, now)
+            readingStatsDao.deleteForBook(bookId)
+            // Local only — do NOT queue a DELETE tombstone so the Drive file is kept
+            // (mirrors desktop handleHideBook). Also drop any pending DELETE for this
+            // book so a previously-queued cloud delete does not resurrect.
+            try {
+                val pending =
+                    outboxDao.getPendingItems().filter {
+                        it.entityType == SyncEntityType.BOOK.name && it.entityId == bookId && it.operation == SyncOperation.DELETE.name
+                    }
+                pending.forEach { outboxDao.deleteById(it.id) }
+            } catch (_: Exception) {
+            }
+            deleteBackingFileIfSettled(backingPath, bookId)
+        }
 
     /**
      * Deletes a book's local backing file once sync has settled. Rules:
@@ -238,32 +262,44 @@ class LibraryRepositoryImpl(
      *  - When the settle gate reports `false` (timeout/active sync) the file is
      *    left for the orphan sweep instead of blocking the delete.
      */
-    private suspend fun deleteBackingFileIfSettled(filePath: String?, bookId: String) {
+    private suspend fun deleteBackingFileIfSettled(
+        filePath: String?,
+        bookId: String,
+    ) {
         if (filePath.isNullOrBlank()) return
         val file = File(filePath)
         if (!file.isFile) return
         if (!isInsideAppFilesDir(file)) return
         if (!settleGate.awaitSettled()) return
-        val referencedElsewhere = bookDao.observeAllBooks().first().any { other ->
-            other.id != bookId && other.filePath == filePath
-        }
+        val referencedElsewhere =
+            bookDao.observeAllBooks().first().any { other ->
+                other.id != bookId && other.filePath == filePath
+            }
         if (referencedElsewhere) return
         file.delete()
     }
 
     /** True when [file] resolves under this app's internal `filesDir`. */
-    private fun isInsideAppFilesDir(file: File): Boolean = runCatching {
-        val root = appContext.filesDir.canonicalPath
-        file.canonicalPath.startsWith("$root${File.separator}")
-    }.getOrDefault(false)
+    private fun isInsideAppFilesDir(file: File): Boolean =
+        runCatching {
+            val root = appContext.filesDir.canonicalPath
+            file.canonicalPath.startsWith("$root${File.separator}")
+        }.getOrDefault(false)
 
-    override suspend fun updateBookRating(bookId: String, rating: Int?) {
+    override suspend fun updateBookRating(
+        bookId: String,
+        rating: Int?,
+    ) {
         bookDao.updateRating(bookId, rating)
     }
 
-    override suspend fun updateBookStatus(bookId: String, status: String?): Result<Unit> = runCatching {
-        bookDao.updateStatus(bookId, status, System.currentTimeMillis())
-    }
+    override suspend fun updateBookStatus(
+        bookId: String,
+        status: String?,
+    ): Result<Unit> =
+        runCatching {
+            bookDao.updateStatus(bookId, status, System.currentTimeMillis())
+        }
 
     override suspend fun updateBookMetadata(
         bookId: String,
@@ -275,26 +311,27 @@ class LibraryRepositoryImpl(
         language: String?,
         publisher: String?,
         tags: String?,
-        publishedDate: String?
-    ): Result<Unit> = runCatching {
-        bookDao.updateMetadata(
-            bookId = bookId,
-            title = title,
-            author = author,
-            description = description,
-            coverPath = coverPath,
-            genre = genre,
-            language = language,
-            publisher = publisher,
-            tags = tags,
-            publishedDate = publishedDate,
-            updatedAt = System.currentTimeMillis()
-        )
-        // Queue a BOOK UPDATE so the edited metadata reaches the cloud. The
-        // remotePath guard in SupabaseBookCatalogSync.processBookItem still
-        // defers books without a remote file to the Drive push.
-        queueBookOutboxEntry(bookId, SyncOperation.UPDATE)
-    }
+        publishedDate: String?,
+    ): Result<Unit> =
+        runCatching {
+            bookDao.updateMetadata(
+                bookId = bookId,
+                title = title,
+                author = author,
+                description = description,
+                coverPath = coverPath,
+                genre = genre,
+                language = language,
+                publisher = publisher,
+                tags = tags,
+                publishedDate = publishedDate,
+                updatedAt = System.currentTimeMillis(),
+            )
+            // Queue a BOOK UPDATE so the edited metadata reaches the cloud. The
+            // remotePath guard in SupabaseBookCatalogSync.processBookItem still
+            // defers books without a remote file to the Drive push.
+            queueBookOutboxEntry(bookId, SyncOperation.UPDATE)
+        }
 
     /**
      * Attempts to extract cover image bytes using Readium's [Publication.cover]
@@ -306,140 +343,152 @@ class LibraryRepositoryImpl(
      * calls [publication.cover] which returns a [Bitmap?], then compresses
      * it to JPEG bytes.
      */
-    private suspend fun extractReadiumCover(filePath: String): ByteArray? = runCatching {
-        val file = File(filePath)
-        if (!file.exists()) return@runCatching null
+    private suspend fun extractReadiumCover(filePath: String): ByteArray? =
+        runCatching {
+            val file = File(filePath)
+            if (!file.exists()) return@runCatching null
 
-        val fileUri = Uri.fromFile(file).toString()
-        val url = AbsoluteUrl(fileUri) ?: return@runCatching null
-        val httpClient = DefaultHttpClient()
-        val assetRetriever = AssetRetriever(appContext.contentResolver, httpClient)
+            val fileUri = Uri.fromFile(file).toString()
+            val url = AbsoluteUrl(fileUri) ?: return@runCatching null
+            val httpClient = DefaultHttpClient()
+            val assetRetriever = AssetRetriever(appContext.contentResolver, httpClient)
 
-        val asset = withContext(Dispatchers.IO) {
-            assetRetriever.retrieve(url)
-        }.getOrNull() ?: return@runCatching null
-
-        val parser = DefaultPublicationParser(
-            context = appContext,
-            httpClient = httpClient,
-            assetRetriever = assetRetriever,
-            pdfFactory = null
-        )
-        val opener = PublicationOpener(parser)
-
-        val publication = withContext(Dispatchers.IO) {
-            opener.open(asset, allowUserInteraction = false)
-        }.getOrNull() ?: return@runCatching null
-
-        // publication.cover() returns a Bitmap? via CoverService
-        publication.cover()
-            ?.let { bitmap ->
+            val asset =
                 withContext(Dispatchers.IO) {
-                    ByteArrayOutputStream().use { stream ->
-                        bitmap.compress(Bitmap.CompressFormat.JPEG, 80, stream)
-                        stream.toByteArray()
+                    assetRetriever.retrieve(url)
+                }.getOrNull() ?: return@runCatching null
+
+            val parser =
+                DefaultPublicationParser(
+                    context = appContext,
+                    httpClient = httpClient,
+                    assetRetriever = assetRetriever,
+                    pdfFactory = null,
+                )
+            val opener = PublicationOpener(parser)
+
+            val publication =
+                withContext(Dispatchers.IO) {
+                    opener.open(asset, allowUserInteraction = false)
+                }.getOrNull() ?: return@runCatching null
+
+            // publication.cover() returns a Bitmap? via CoverService
+            publication
+                .cover()
+                ?.let { bitmap ->
+                    withContext(Dispatchers.IO) {
+                        ByteArrayOutputStream().use { stream ->
+                            bitmap.compress(Bitmap.CompressFormat.JPEG, 80, stream)
+                            stream.toByteArray()
+                        }
                     }
                 }
-            }
-    }.getOrNull()
+        }.getOrNull()
 
     /**
      * Persist a cover without ever blocking book import. A cover save
      * failure is mapped to the stable COVER_FAILED error code (REQ-07)
      * and yields a null cover path so the import proceeds with a fallback.
      */
-    private suspend fun persistCoverNonBlocking(bookId: String, coverBytes: ByteArray): String? =
+    private suspend fun persistCoverNonBlocking(
+        bookId: String,
+        coverBytes: ByteArray,
+    ): String? =
         coverStorage.saveCover(bookId = bookId, coverBytes = coverBytes).getOrElse {
             coverFailureError(correlationId = bookId, bookId = bookId)
             null
         }
 
     @Suppress("DEPRECATION")
-    private fun BookEntity.toDomain(): Book = Book(
-        id = id,
-        title = title,
-        author = author,
-        description = description,
-        coverPath = coverPath,
-        filePath = filePath,
-        format = format,
-        totalPages = totalPages,
-        userRating = userRating,
-        updatedAtEpochMillis = updatedAtEpochMillis,
-        status = status,
-        readingState = readingState,
-        startedAtEpochMillis = startedAtEpochMillis,
-        completedAtEpochMillis = completedAtEpochMillis,
-        progressPercentage = progressPercentage,
-        progressUpdatedAtEpochMillis = progressUpdatedAtEpochMillis,
-        stateVersion = stateVersion,
-        genre = genre,
-        language = language,
-        publisher = publisher,
-        tags = tags,
-        publishedDate = publishedDate
-    )
+    private fun BookEntity.toDomain(): Book =
+        Book(
+            id = id,
+            title = title,
+            author = author,
+            description = description,
+            coverPath = coverPath,
+            filePath = filePath,
+            format = format,
+            totalPages = totalPages,
+            userRating = userRating,
+            updatedAtEpochMillis = updatedAtEpochMillis,
+            status = status,
+            readingState = readingState,
+            startedAtEpochMillis = startedAtEpochMillis,
+            completedAtEpochMillis = completedAtEpochMillis,
+            progressPercentage = progressPercentage,
+            progressUpdatedAtEpochMillis = progressUpdatedAtEpochMillis,
+            stateVersion = stateVersion,
+            genre = genre,
+            language = language,
+            publisher = publisher,
+            tags = tags,
+            publishedDate = publishedDate,
+        )
 
-    private fun BookEntity.toDomainWithCanonical(canonical: ReadingProgressEntity): Book = Book(
-        id = id,
-        title = title,
-        author = author,
-        description = description,
-        coverPath = coverPath,
-        filePath = filePath,
-        format = format,
-        totalPages = totalPages,
-        userRating = userRating,
-        updatedAtEpochMillis = updatedAtEpochMillis,
-        status = status,
-        readingState = readingState,
-        startedAtEpochMillis = startedAtEpochMillis,
-        completedAtEpochMillis = completedAtEpochMillis,
-        progressPercentage = canonical.percentage,
-        progressUpdatedAtEpochMillis = canonical.updatedAtEpochMillis,
-        stateVersion = stateVersion,
-        genre = genre,
-        language = language,
-        publisher = publisher,
-        tags = tags,
-        publishedDate = publishedDate
-    )
+    private fun BookEntity.toDomainWithCanonical(canonical: ReadingProgressEntity): Book =
+        Book(
+            id = id,
+            title = title,
+            author = author,
+            description = description,
+            coverPath = coverPath,
+            filePath = filePath,
+            format = format,
+            totalPages = totalPages,
+            userRating = userRating,
+            updatedAtEpochMillis = updatedAtEpochMillis,
+            status = status,
+            readingState = readingState,
+            startedAtEpochMillis = startedAtEpochMillis,
+            completedAtEpochMillis = completedAtEpochMillis,
+            progressPercentage = canonical.percentage,
+            progressUpdatedAtEpochMillis = canonical.updatedAtEpochMillis,
+            stateVersion = stateVersion,
+            genre = genre,
+            language = language,
+            publisher = publisher,
+            tags = tags,
+            publishedDate = publishedDate,
+        )
 
-    private fun ReadingProgressEntity.toDomain(): ReadingProgress = ReadingProgress(
-        id = id,
-        bookId = bookId,
-        cfiLocation = cfiLocation,
-        percentage = percentage,
-        currentPage = currentPage,
-        updatedAtEpochMillis = updatedAtEpochMillis
-    )
+    private fun ReadingProgressEntity.toDomain(): ReadingProgress =
+        ReadingProgress(
+            id = id,
+            bookId = bookId,
+            cfiLocation = cfiLocation,
+            percentage = percentage,
+            currentPage = currentPage,
+            updatedAtEpochMillis = updatedAtEpochMillis,
+        )
 
     @Suppress("DEPRECATION")
-    private fun Book.toEntity(): BookEntity = BookEntity(
-        id = id,
-        title = title,
-        author = author,
-        description = description,
-        coverPath = coverPath,
-        filePath = filePath,
-        format = format,
-        totalPages = totalPages,
-        chapterCount = chapterCount,
-        userRating = userRating,
-        updatedAtEpochMillis = updatedAtEpochMillis,
-        status = status,
-        readingState = readingState,
-        startedAtEpochMillis = startedAtEpochMillis,
-        completedAtEpochMillis = completedAtEpochMillis,
-        progressPercentage = progressPercentage,
-        progressUpdatedAtEpochMillis = progressUpdatedAtEpochMillis,
-        stateVersion = stateVersion,
-        genre = genre,
-        language = language,
-        publisher = publisher,
-        tags = tags,
-        publishedDate = publishedDate
-    )
+    private fun Book.toEntity(): BookEntity =
+        BookEntity(
+            id = id,
+            title = title,
+            author = author,
+            description = description,
+            coverPath = coverPath,
+            filePath = filePath,
+            format = format,
+            totalPages = totalPages,
+            chapterCount = chapterCount,
+            userRating = userRating,
+            updatedAtEpochMillis = updatedAtEpochMillis,
+            status = status,
+            readingState = readingState,
+            startedAtEpochMillis = startedAtEpochMillis,
+            completedAtEpochMillis = completedAtEpochMillis,
+            progressPercentage = progressPercentage,
+            progressUpdatedAtEpochMillis = progressUpdatedAtEpochMillis,
+            stateVersion = stateVersion,
+            genre = genre,
+            language = language,
+            publisher = publisher,
+            tags = tags,
+            publishedDate = publishedDate,
+        )
 
     /**
      * Queue a BOOK outbox entry so the catalog sync processor
@@ -448,7 +497,10 @@ class LibraryRepositoryImpl(
      * Non-blocking on failure — the reconciliation pass in
      * [SupabaseBookCatalogSync.reconcileLocalBooks] covers gaps.
      */
-    private suspend fun queueBookOutboxEntry(bookId: String, operation: SyncOperation = SyncOperation.CREATE) {
+    private suspend fun queueBookOutboxEntry(
+        bookId: String,
+        operation: SyncOperation = SyncOperation.CREATE,
+    ) {
         try {
             outboxDao.insert(
                 SyncOutboxEntity(
@@ -457,8 +509,8 @@ class LibraryRepositoryImpl(
                     entityId = bookId,
                     operation = operation.name,
                     payloadJson = """{}""",
-                    createdAtEpochMillis = System.currentTimeMillis()
-                )
+                    createdAtEpochMillis = System.currentTimeMillis(),
+                ),
             )
         } catch (_: Exception) {
             // Non-blocking — reconciliation in SupabaseBookCatalogSync covers gaps

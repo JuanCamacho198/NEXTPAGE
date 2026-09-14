@@ -3,7 +3,9 @@ package com.nextpage.data.session
 import android.content.Context
 import com.nextpage.domain.model.ThemeMode
 
-class AppThemePreferences(private val context: Context) {
+class AppThemePreferences(
+    private val context: Context,
+) {
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     fun load(): ThemeMode {

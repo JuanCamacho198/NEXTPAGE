@@ -28,56 +28,59 @@ import com.nextpage.ui.icons.NextPageIcons
 private data class ThemeOption(
     val mode: ThemeMode,
     val labelRes: Int,
-    val icon: ImageVector
+    val icon: ImageVector,
 )
 
 @Composable
 fun SettingsThemeScreen(
     appThemeMode: ThemeMode,
     onAppThemeModeChanged: (ThemeMode) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
-    val options = listOf(
-        ThemeOption(ThemeMode.LIGHT, R.string.settings_theme_light, NextPageIcons.LightMode),
-        ThemeOption(ThemeMode.DARK, R.string.settings_theme_dark, NextPageIcons.DarkMode),
-        ThemeOption(ThemeMode.SYSTEM, R.string.settings_theme_system, NextPageIcons.BrightnessAuto)
-    )
+    val options =
+        listOf(
+            ThemeOption(ThemeMode.LIGHT, R.string.settings_theme_light, NextPageIcons.LightMode),
+            ThemeOption(ThemeMode.DARK, R.string.settings_theme_dark, NextPageIcons.DarkMode),
+            ThemeOption(ThemeMode.SYSTEM, R.string.settings_theme_system, NextPageIcons.BrightnessAuto),
+        )
 
     NextPageSettingsSubPage(
         title = stringResource(R.string.settings_theme_title),
-        onBack = onBack
+        onBack = onBack,
     ) {
         options.forEach { option ->
             val selected = appThemeMode == option.mode
             Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onAppThemeModeChanged(option.mode) },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { onAppThemeModeChanged(option.mode) },
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant
+                color = MaterialTheme.colorScheme.surfaceVariant,
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     Icon(
                         imageVector = option.icon,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface
+                        tint = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
                         text = stringResource(option.labelRes),
                         style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
                     )
                     if (selected) {
                         Icon(
                             imageVector = NextPageIcons.Check,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = MaterialTheme.colorScheme.primary,
                         )
                     }
                 }
@@ -96,7 +99,7 @@ private fun SettingsThemeScreenDarkPreview() {
         SettingsThemeScreen(
             appThemeMode = ThemeMode.SYSTEM,
             onAppThemeModeChanged = {},
-            onBack = {}
+            onBack = {},
         )
     }
 }
@@ -108,7 +111,7 @@ private fun SettingsThemeScreenLightPreview() {
         SettingsThemeScreen(
             appThemeMode = ThemeMode.SYSTEM,
             onAppThemeModeChanged = {},
-            onBack = {}
+            onBack = {},
         )
     }
 }

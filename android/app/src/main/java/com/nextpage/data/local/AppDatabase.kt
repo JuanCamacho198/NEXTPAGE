@@ -11,8 +11,8 @@ import com.nextpage.data.local.dao.HighlightDao
 import com.nextpage.data.local.dao.ReadingProgressDao
 import com.nextpage.data.local.dao.ReadingSessionDao
 import com.nextpage.data.local.dao.ReadingStatsDao
-import com.nextpage.data.local.dao.SyncOutboxDao
 import com.nextpage.data.local.dao.SyncFileMappingDao
+import com.nextpage.data.local.dao.SyncOutboxDao
 import com.nextpage.data.local.entity.AddonEntity
 import com.nextpage.data.local.entity.BookEntity
 import com.nextpage.data.local.entity.BookmarkEntity
@@ -37,21 +37,31 @@ import com.nextpage.data.local.entity.SyncOutboxEntity
         SyncFileMappingEntity::class,
         DictionaryWordEntity::class,
         DiscoverCacheEntity::class,
-            AddonEntity::class
-        ],
-        version = 27,
-    exportSchema = true
+        AddonEntity::class,
+    ],
+    version = 27,
+    exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun bookDao(): BookDao
+
     abstract fun readingProgressDao(): ReadingProgressDao
+
     abstract fun readingStatsDao(): ReadingStatsDao
+
     abstract fun readingSessionDao(): ReadingSessionDao
+
     abstract fun highlightDao(): HighlightDao
+
     abstract fun bookmarkDao(): BookmarkDao
+
     abstract fun syncOutboxDao(): SyncOutboxDao
+
     abstract fun syncFileMappingDao(): SyncFileMappingDao
+
     abstract fun dictionaryWordDao(): DictionaryWordDao
+
     abstract fun discoverCacheDao(): DiscoverCacheDao
+
     abstract fun addonDao(): AddonDao
 }

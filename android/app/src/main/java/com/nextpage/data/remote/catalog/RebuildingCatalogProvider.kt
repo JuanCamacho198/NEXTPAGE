@@ -7,7 +7,7 @@ package com.nextpage.data.remote.catalog
  * `createRebuildingCatalogProvider`.
  */
 class RebuildingCatalogProvider(
-    private val build: suspend () -> CatalogProvider
+    private val build: suspend () -> CatalogProvider,
 ) {
     private var current: CatalogProvider? = null
 
@@ -32,13 +32,17 @@ class RebuildingCatalogProvider(
  * immediately without any runBlocking at construction time.
  */
 class LiveCatalogProvider(
-    private val supplier: RebuildingCatalogProvider
+    private val supplier: RebuildingCatalogProvider,
 ) : CatalogProvider {
-    override suspend fun search(query: String, page: Int): PagedResult =
-        supplier.provider().search(query, page)
+    override suspend fun search(
+        query: String,
+        page: Int,
+    ): PagedResult = supplier.provider().search(query, page)
 
-    override suspend fun featured(sort: CatalogFeaturedSort, page: Int): PagedResult =
-        supplier.provider().featured(sort, page)
+    override suspend fun featured(
+        sort: CatalogFeaturedSort,
+        page: Int,
+    ): PagedResult = supplier.provider().featured(sort, page)
 
     /**
      * Reads the already-built composite. Before the first [RebuildingCatalogProvider.provider]
@@ -47,15 +51,20 @@ class LiveCatalogProvider(
      */
     override fun supportsFeatured(): Boolean = supplier.peek()?.supportsFeatured() ?: false
 
-    override suspend fun searchSource(sourceId: String, query: String, page: Int): PagedResult =
-        supplier.provider().searchSource(sourceId, query, page)
+    override suspend fun searchSource(
+        sourceId: String,
+        query: String,
+        page: Int,
+    ): PagedResult = supplier.provider().searchSource(sourceId, query, page)
 
-    override suspend fun getDetails(id: String): CatalogBook =
-        supplier.provider().getDetails(id)
+    override suspend fun getDetails(id: String): CatalogBook = supplier.provider().getDetails(id)
 
-    override fun resolveDownloadUrl(formats: Map<String, String>, preferEpub: Boolean): String =
-        com.nextpage.data.remote.catalog.resolveDownloadUrl(formats, preferEpub)
+    override fun resolveDownloadUrl(
+        formats: Map<String, String>,
+        preferEpub: Boolean,
+    ): String =
+        com.nextpage.data.remote.catalog
+            .resolveDownloadUrl(formats, preferEpub)
 
-    override fun listSources(): List<CatalogSourceInfo> =
-        supplier.peek()?.listSources() ?: emptyList()
+    override fun listSources(): List<CatalogSourceInfo> = supplier.peek()?.listSources() ?: emptyList()
 }

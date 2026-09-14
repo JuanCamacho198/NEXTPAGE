@@ -7,8 +7,8 @@ import com.nextpage.domain.repository.ReadingStatsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit
 class GetStatisticsUseCase(
     private val readingStatsRepository: ReadingStatsRepository,
     private val homeRepository: HomeRepository,
-    private val dailyGoalProvider: () -> Int = { 30 }
+    private val dailyGoalProvider: () -> Int = { 30 },
 ) {
     private val refreshTrigger = MutableStateFlow(Unit)
 
@@ -35,45 +35,55 @@ class GetStatisticsUseCase(
         userFilter.value = userId
     }
 
-    operator fun invoke(): Flow<Statistics> = combine(
-        readingStatsRepository.observeTotalTime(),
-        readingStatsRepository.observeBookStats(),
-        refreshTrigger.combine(userFilter) { _, userId -> userId }
-            .flatMapLatest { userId ->
-                flow { emit(readingStatsRepository.getDailyActivity(userId)) }
-            },
-        homeRepository.observeBooks()
-    ) { totalMinutes, bookStats, dailyActivity, books ->
-        val todayStart = getTodayStartMillis()
-        val todayMinutes = dailyActivity
-            .filter { it.dateEpochMillis == todayStart }
-            .sumOf { it.minutesRead }
-            .toLong()
+    operator fun invoke(): Flow<Statistics> =
+        combine(
+            readingStatsRepository.observeTotalTime(),
+            readingStatsRepository.observeBookStats(),
+            refreshTrigger
+                .combine(userFilter) { _, userId -> userId }
+                .flatMapLatest { userId ->
+                    flow { emit(readingStatsRepository.getDailyActivity(userId)) }
+                },
+            homeRepository.observeBooks(),
+        ) { totalMinutes, bookStats, dailyActivity, books ->
+            val todayStart = getTodayStartMillis()
+            val todayMinutes =
+                dailyActivity
+                    .filter { it.dateEpochMillis == todayStart }
+                    .sumOf { it.minutesRead }
+                    .toLong()
 
-        Statistics(
-            totalMinutesRead = totalMinutes,
-            currentStreak = calculateStreak(dailyActivity, todayStart),
-            booksRead = bookStats.count { it.totalMinutesRead >= BOOKS_READ_MINUTES },
-            weeklyActivity = lastSevenDaysActivity(dailyActivity, todayStart),
-            goalProgress = (todayMinutes.toFloat() / dailyGoalProvider().coerceAtLeast(1))
-                .coerceIn(0f, 1f),
-            favoriteGenres = books.mapNotNull { it.description?.split(",")?.firstOrNull() }
-                .filter { it.isNotBlank() }
-                .distinct()
-                .take(5)
-        )
-    }
+            Statistics(
+                totalMinutesRead = totalMinutes,
+                currentStreak = calculateStreak(dailyActivity, todayStart),
+                booksRead = bookStats.count { it.totalMinutesRead >= BOOKS_READ_MINUTES },
+                weeklyActivity = lastSevenDaysActivity(dailyActivity, todayStart),
+                goalProgress =
+                    (todayMinutes.toFloat() / dailyGoalProvider().coerceAtLeast(1))
+                        .coerceIn(0f, 1f),
+                favoriteGenres =
+                    books
+                        .mapNotNull { it.description?.split(",")?.firstOrNull() }
+                        .filter { it.isNotBlank() }
+                        .distinct()
+                        .take(5),
+            )
+        }
 
     /**
      * Today-anchored streak: counts consecutive days with recorded reading
      * sessions ending today. With no session today the streak is 0
      * (REQ-streak-widget-3, SCEN-streak-2).
      */
-    private fun calculateStreak(dailyActivity: List<DailyReadingActivity>, todayStart: Long): Int {
-        val activeDates = dailyActivity
-            .filter { it.minutesRead > 0 }
-            .map { it.dateEpochMillis }
-            .toSortedSet()
+    private fun calculateStreak(
+        dailyActivity: List<DailyReadingActivity>,
+        todayStart: Long,
+    ): Int {
+        val activeDates =
+            dailyActivity
+                .filter { it.minutesRead > 0 }
+                .map { it.dateEpochMillis }
+                .toSortedSet()
 
         if (activeDates.isEmpty()) return 0
         if (!activeDates.contains(todayStart)) return 0
@@ -92,7 +102,7 @@ class GetStatisticsUseCase(
 
     private fun lastSevenDaysActivity(
         dailyActivity: List<DailyReadingActivity>,
-        todayStart: Long
+        todayStart: Long,
     ): List<DailyReadingActivity> {
         val activityByDate = dailyActivity.associateBy { it.dateEpochMillis }
         val days = mutableListOf<DailyReadingActivity>()
@@ -104,12 +114,13 @@ class GetStatisticsUseCase(
     }
 
     private fun getTodayStartMillis(): Long {
-        val calendar = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
+        val calendar =
+            Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
         return calendar.timeInMillis
     }
 

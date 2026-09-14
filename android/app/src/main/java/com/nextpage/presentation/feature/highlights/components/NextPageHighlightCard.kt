@@ -28,7 +28,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -38,8 +37,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextpage.R
-import com.nextpage.ui.icons.NextPageIcons
 import com.nextpage.presentation.theme.NextPageTheme
+import com.nextpage.ui.icons.NextPageIcons
 
 /**
  * Card showing a single saved highlight: the highlight text, an
@@ -97,64 +96,73 @@ fun NextPageHighlightCard(
     onViewInBook: (() -> Unit)? = null,
     onAddTag: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
-    onTagClick: ((String) -> Unit)? = null
+    onTagClick: ((String) -> Unit)? = null,
 ) {
     var showMenu by remember { mutableStateOf(false) }
-    val hasMenu = onCopyText != null || onEditNote != null || onChangeColor != null
-        || onViewInBook != null || onAddTag != null || onDelete != null
+    val hasMenu =
+        onCopyText != null ||
+            onEditNote != null ||
+            onChangeColor != null ||
+            onViewInBook != null ||
+            onAddTag != null ||
+            onDelete != null
 
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant
+        color = MaterialTheme.colorScheme.surfaceVariant,
     ) {
         Row(
-            modifier = Modifier.height(IntrinsicSize.Min)
+            modifier = Modifier.height(IntrinsicSize.Min),
         ) {
             // Colored left edge. The Row is sized with IntrinsicSize.Min so
             // fillMaxHeight() resolves to the content height — without it the
             // stripe measures 0dp tall (the Row has no fixed height) and the
             // accent color becomes invisible.
             Box(
-                modifier = Modifier
-                    .width(6.dp)
-                    .fillMaxHeight()
-                    .clip(RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp))
-                    .background(accentColor)
+                modifier =
+                    Modifier
+                        .width(6.dp)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp))
+                        .background(accentColor),
             )
             Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(16.dp)
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .padding(16.dp),
             ) {
                 Text(
                     text = content,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 if (tag != null) {
                     Spacer(modifier = Modifier.height(6.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         val clickable = onTagClick != null
                         Box(
-                                modifier = Modifier
+                            modifier =
+                                Modifier
                                     .clip(RoundedCornerShape(4.dp))
                                     .background(MaterialTheme.colorScheme.primaryContainer)
                                     .then(
                                         if (clickable) {
                                             Modifier.clickable { onTagClick.invoke(tag) }
-                                        } else Modifier
-                                    )
-                                    .padding(horizontal = 8.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = tag,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
+                                        } else {
+                                            Modifier
+                                        },
+                                    ).padding(horizontal = 8.dp, vertical = 2.dp),
+                        ) {
+                            Text(
+                                text = tag,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
                     }
                 }
                 if (!attribution.isNullOrBlank()) {
@@ -162,7 +170,7 @@ fun NextPageHighlightCard(
                     Text(
                         text = "\u2014 $attribution",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 if (!note.isNullOrBlank()) {
@@ -172,7 +180,7 @@ fun NextPageHighlightCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 3,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
@@ -180,41 +188,53 @@ fun NextPageHighlightCard(
                 Box {
                     IconButton(
                         onClick = { showMenu = true },
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(40.dp),
                     ) {
                         Icon(
                             imageVector = NextPageIcons.MoreVert,
                             contentDescription = stringResource(R.string.context_menu_more),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(20.dp),
                         )
                     }
                     DropdownMenu(
                         expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
+                        onDismissRequest = { showMenu = false },
                     ) {
                         onCopyText?.let { cb ->
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.highlights_menu_copy_text)) },
-                                onClick = { showMenu = false; cb() }
+                                onClick = {
+                                    showMenu = false
+                                    cb()
+                                },
                             )
                         }
                         onEditNote?.let { cb ->
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.highlights_menu_edit_note)) },
-                                onClick = { showMenu = false; cb() }
+                                onClick = {
+                                    showMenu = false
+                                    cb()
+                                },
                             )
                         }
                         onChangeColor?.let { cb ->
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.highlights_menu_change_color)) },
-                                onClick = { showMenu = false; cb() }
+                                onClick = {
+                                    showMenu = false
+                                    cb()
+                                },
                             )
                         }
                         onViewInBook?.let { cb ->
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.highlights_menu_view_in_book)) },
-                                onClick = { showMenu = false; cb() }
+                                onClick = {
+                                    showMenu = false
+                                    cb()
+                                },
                             )
                         }
                         if (onCopyText != null || onEditNote != null || onChangeColor != null || onViewInBook != null) {
@@ -223,7 +243,10 @@ fun NextPageHighlightCard(
                         onAddTag?.let { cb ->
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.highlights_menu_add_tag)) },
-                                onClick = { showMenu = false; cb() }
+                                onClick = {
+                                    showMenu = false
+                                    cb()
+                                },
                             )
                         }
                         onDelete?.let { deleteCb ->
@@ -231,13 +254,13 @@ fun NextPageHighlightCard(
                                 text = {
                                     Text(
                                         stringResource(R.string.highlights_menu_delete),
-                                        color = MaterialTheme.colorScheme.error
+                                        color = MaterialTheme.colorScheme.error,
                                     )
                                 },
                                 onClick = {
                                     showMenu = false
                                     deleteCb()
-                                }
+                                },
                             )
                         }
                     }
@@ -258,7 +281,7 @@ private fun NextPageHighlightCardDarkPreview() {
             note = "This passage makes me think about choices.",
             tag = "Philosophy",
             onCopyText = {},
-            onDelete = {}
+            onDelete = {},
         )
     }
 }
@@ -274,7 +297,7 @@ private fun NextPageHighlightCardLightPreview() {
             note = "This passage makes me think about choices.",
             tag = "Philosophy",
             onCopyText = {},
-            onDelete = {}
+            onDelete = {},
         )
     }
 }

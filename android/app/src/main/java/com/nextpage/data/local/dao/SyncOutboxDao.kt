@@ -18,7 +18,10 @@ interface SyncOutboxDao {
     suspend fun deleteById(id: String)
 
     @Query("UPDATE sync_outbox SET retry_count = retry_count + 1, last_error = :error WHERE id = :id")
-    suspend fun incrementRetryCount(id: String, error: String)
+    suspend fun incrementRetryCount(
+        id: String,
+        error: String,
+    )
 
     @Query("DELETE FROM sync_outbox WHERE retry_count >= :maxRetries")
     suspend fun pruneFailedItems(maxRetries: Int)
@@ -27,10 +30,16 @@ interface SyncOutboxDao {
     fun observePendingCount(): kotlinx.coroutines.flow.Flow<Int>
 
     @Query("SELECT * FROM sync_outbox WHERE entity_type = :type AND entity_id = :entityId LIMIT 1")
-    suspend fun getByTypeAndEntityId(type: String, entityId: String): SyncOutboxEntity?
+    suspend fun getByTypeAndEntityId(
+        type: String,
+        entityId: String,
+    ): SyncOutboxEntity?
 
     @Query("UPDATE sync_outbox SET payload = :payloadJson, retry_count = 0, last_error = NULL WHERE id = :id")
-    suspend fun updatePayload(id: String, payloadJson: String)
+    suspend fun updatePayload(
+        id: String,
+        payloadJson: String,
+    )
 
     /**
      * Coalesced upsert for READING_PROGRESS: one row per (type, entityId=bookId).

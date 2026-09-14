@@ -53,51 +53,52 @@ import com.nextpage.presentation.theme.NextPageTheme
 fun FilterBottomSheet(
     selectedFormat: String,
     onFormatSelected: (String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
+        sheetState = sheetState,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 32.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 32.dp),
         ) {
             Text(
                 text = stringResource(R.string.library_filter_label),
                 style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(bottom = 16.dp)
+                modifier = Modifier.padding(bottom = 16.dp),
             )
 
             Text(
                 text = stringResource(R.string.library_filter_format_label),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 8.dp)
+                modifier = Modifier.padding(bottom = 8.dp),
             )
 
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 FormatChip(
                     label = stringResource(R.string.library_filter_format_all),
                     isSelected = selectedFormat == "all",
-                    onClick = { onFormatSelected("all") }
+                    onClick = { onFormatSelected("all") },
                 )
                 FormatChip(
                     label = "EPUB",
                     isSelected = selectedFormat == "epub",
-                    onClick = { onFormatSelected("epub") }
+                    onClick = { onFormatSelected("epub") },
                 )
                 FormatChip(
                     label = "PDF",
                     isSelected = selectedFormat == "pdf",
-                    onClick = { onFormatSelected("pdf") }
+                    onClick = { onFormatSelected("pdf") },
                 )
             }
 
@@ -110,17 +111,18 @@ fun FilterBottomSheet(
 private fun FormatChip(
     label: String,
     isSelected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     FilterChip(
         selected = isSelected,
         onClick = onClick,
         label = { Text(label) },
         shape = RoundedCornerShape(16.dp),
-        colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = MaterialTheme.colorScheme.primary,
-            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-        )
+        colors =
+            FilterChipDefaults.filterChipColors(
+                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+            ),
     )
 }
 
@@ -131,7 +133,7 @@ private fun FilterBottomSheetDarkPreview() {
         FilterBottomSheet(
             selectedFormat = "epub",
             onFormatSelected = {},
-            onDismiss = {}
+            onDismiss = {},
         )
     }
 }
@@ -143,7 +145,7 @@ private fun FilterBottomSheetLightPreview() {
         FilterBottomSheet(
             selectedFormat = "epub",
             onFormatSelected = {},
-            onDismiss = {}
+            onDismiss = {},
         )
     }
 }

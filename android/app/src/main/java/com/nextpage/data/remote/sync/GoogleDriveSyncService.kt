@@ -38,16 +38,17 @@ class GoogleDriveSyncService(
     private val remoteDataSource: StorageSyncRemoteDataSource,
     private val localBooksDir: File,
     private val isEnabled: () -> Boolean = { false },
-    private val tokenRefresher: suspend () -> Result<String> = { Result.failure(AppError(ErrorCategory.CONFIG_ERROR, "SYNC_NO_REFRESHER", "Drive token refresher not configured.", COMPONENT)) },
+    private val tokenRefresher: suspend () -> Result<String> = {
+        Result.failure(AppError(ErrorCategory.CONFIG_ERROR, "SYNC_NO_REFRESHER", "Drive token refresher not configured.", COMPONENT))
+    },
     private val diagnosticError: AppError? = null,
     private val maxRetries: Int = DEFAULT_MAX_RETRIES,
     // SDD 3: drive service now owns the auth-gated reconcile seam so the
     // VMs don't each call reconcileAll() on init. Default-constructed from
     // the already-injected DAOs to avoid breaking direct test construction
     // (GoogleDriveSyncServiceTest builds with the bare-args shape).
-    private val progressReconciler: ProgressReconciler = ProgressReconciler(bookDao, readingProgressDao)
+    private val progressReconciler: ProgressReconciler = ProgressReconciler(bookDao, readingProgressDao),
 ) : SyncService {
-
     private val state = MutableStateFlow<DriveSyncState>(if (isEnabled()) DriveSyncState.Idle else DriveSyncState.Disabled)
 
     override val syncState: Flow<DriveSyncState> = state.asStateFlow()
@@ -55,12 +56,13 @@ class GoogleDriveSyncService(
 
     override suspend fun bootstrap(userId: String): Result<Unit> {
         if (!isEnabled()) {
-            val disabledError = diagnosticError ?: AppError(
-                category = ErrorCategory.CONFIG_ERROR,
-                code = "SYNC_DISABLED",
-                message = "Sync service is disabled due to Google Drive configuration.",
-                component = COMPONENT
-            )
+            val disabledError =
+                diagnosticError ?: AppError(
+                    category = ErrorCategory.CONFIG_ERROR,
+                    code = "SYNC_DISABLED",
+                    message = "Sync service is disabled due to Google Drive configuration.",
+                    component = COMPONENT,
+                )
             state.value = DriveSyncState.Disabled
             return Result.failure(disabledError)
         }
@@ -70,8 +72,8 @@ class GoogleDriveSyncService(
                     category = ErrorCategory.WIRING_ERROR,
                     code = "SYNC_BOOTSTRAP_INVALID_USER",
                     message = "Sync bootstrap requires a non-empty user id.",
-                    component = COMPONENT
-                )
+                    component = COMPONENT,
+                ),
             )
         }
         if (!localBooksDir.exists()) {
@@ -86,25 +88,26 @@ class GoogleDriveSyncService(
         return Result.success(Unit)
     }
 
-    private suspend fun hasLiveSession(): Boolean =
-        sessionManager.getCurrentSession().getOrNull() != null
+    private suspend fun hasLiveSession(): Boolean = sessionManager.getCurrentSession().getOrNull() != null
 
     override suspend fun schedulePush(): Result<Unit> {
         if (!isEnabled()) {
-            val disabledError = diagnosticError ?: AppError(
-                category = ErrorCategory.CONFIG_ERROR,
-                code = "SYNC_DISABLED",
-                message = "Sync service is disabled due to Google Drive configuration.",
-                component = COMPONENT
-            )
+            val disabledError =
+                diagnosticError ?: AppError(
+                    category = ErrorCategory.CONFIG_ERROR,
+                    code = "SYNC_DISABLED",
+                    message = "Sync service is disabled due to Google Drive configuration.",
+                    component = COMPONENT,
+                )
             state.value = DriveSyncState.Disabled
             return Result.failure(disabledError)
         }
-        val session = sessionManager.ensureFreshSession().getOrElse { error ->
-            val mapped = mapError(error, defaultCode = "SYNC_SESSION_REQUIRED")
-            state.value = DriveSyncState.Error(mapped.message)
-            return Result.failure(mapped)
-        }
+        val session =
+            sessionManager.ensureFreshSession().getOrElse { error ->
+                val mapped = mapError(error, defaultCode = "SYNC_SESSION_REQUIRED")
+                state.value = DriveSyncState.Error(mapped.message)
+                return Result.failure(mapped)
+            }
 
         state.value = DriveSyncState.Running
         val pendingItems = outboxDao.getPendingItems()
@@ -126,7 +129,8 @@ class GoogleDriveSyncService(
                 SyncEntityType.READING_PROGRESS.name,
                 SyncEntityType.HIGHLIGHT.name,
                 SyncEntityType.BOOKMARK.name,
-                SyncEntityType.READING_SESSION.name -> {
+                SyncEntityType.READING_SESSION.name,
+                -> {
                     // PR4: Drive is cold only — Supabase owns all hot state
                     // (progress/highlights/bookmarks/sessions via PostgREST onConflict
                     // + single Realtime supervisor). Leave these outbox rows for
@@ -145,7 +149,10 @@ class GoogleDriveSyncService(
         return Result.success(Unit)
     }
 
-    private suspend fun pushBook(item: com.nextpage.data.local.entity.SyncOutboxEntity, userId: String): Result<Unit> {
+    private suspend fun pushBook(
+        item: com.nextpage.data.local.entity.SyncOutboxEntity,
+        userId: String,
+    ): Result<Unit> {
         if (item.operation == SyncOperation.DELETE.name) {
             // DELETE ops for books are handled by removing the outbox entry;
             // the actual Drive file can be cleaned up lazily.
@@ -156,8 +163,9 @@ class GoogleDriveSyncService(
         // row with a null entity_id. Treat that as "nothing to push" and ack the row.
         val entityId = item.entityId ?: return Result.success(Unit)
 
-        val book = bookDao.getBookById(entityId)
-            ?: return Result.success(Unit) // Book deleted locally, skip
+        val book =
+            bookDao.getBookById(entityId)
+                ?: return Result.success(Unit) // Book deleted locally, skip
 
         if (book.deletedAtEpochMillis != null) {
             return Result.success(Unit)
@@ -170,15 +178,16 @@ class GoogleDriveSyncService(
                     category = ErrorCategory.WIRING_ERROR,
                     code = "SYNC_LOCAL_FILE_MISSING",
                     message = "Local file is missing for book ${book.id}.",
-                    component = COMPONENT
-                )
+                    component = COMPONENT,
+                ),
             )
         }
 
         val drivePath = drivePathFor(userId, book.id, extensionFor(book))
-        val uploadResult = retryable {
-            remoteDataSource.upload(drivePath, localFile.readBytes())
-        }
+        val uploadResult =
+            retryable {
+                remoteDataSource.upload(drivePath, localFile.readBytes())
+            }
 
         if (uploadResult.isFailure) {
             return uploadResult.map { }
@@ -203,37 +212,40 @@ class GoogleDriveSyncService(
                 userId = userId,
                 bookId = book.id,
                 localPath = book.filePath,
-                updatedAtEpochMillis = System.currentTimeMillis()
-            )
+                updatedAtEpochMillis = System.currentTimeMillis(),
+            ),
         )
         return Result.success(Unit)
     }
 
     override suspend fun schedulePull(): Result<Unit> {
         if (!isEnabled()) {
-            val disabledError = diagnosticError ?: AppError(
-                category = ErrorCategory.CONFIG_ERROR,
-                code = "SYNC_DISABLED",
-                message = "Sync service is disabled due to Google Drive configuration.",
-                component = COMPONENT
-            )
+            val disabledError =
+                diagnosticError ?: AppError(
+                    category = ErrorCategory.CONFIG_ERROR,
+                    code = "SYNC_DISABLED",
+                    message = "Sync service is disabled due to Google Drive configuration.",
+                    component = COMPONENT,
+                )
             state.value = DriveSyncState.Disabled
             return Result.failure(disabledError)
         }
-        val session = sessionManager.ensureFreshSession().getOrElse { error ->
-            val mapped = mapError(error, defaultCode = "SYNC_SESSION_REQUIRED")
-            state.value = DriveSyncState.Error(mapped.message)
-            return Result.failure(mapped)
-        }
-
-        state.value = DriveSyncState.Running
-        val userPrefix = "books/${session.userId}/"
-        val remotePaths = retryable { remoteDataSource.list(prefix = userPrefix) }
-            .getOrElse { error ->
-                val mapped = mapError(error, defaultCode = "SYNC_LIST_FAILED")
+        val session =
+            sessionManager.ensureFreshSession().getOrElse { error ->
+                val mapped = mapError(error, defaultCode = "SYNC_SESSION_REQUIRED")
                 state.value = DriveSyncState.Error(mapped.message)
                 return Result.failure(mapped)
             }
+
+        state.value = DriveSyncState.Running
+        val userPrefix = "books/${session.userId}/"
+        val remotePaths =
+            retryable { remoteDataSource.list(prefix = userPrefix) }
+                .getOrElse { error ->
+                    val mapped = mapError(error, defaultCode = "SYNC_LIST_FAILED")
+                    state.value = DriveSyncState.Error(mapped.message)
+                    return Result.failure(mapped)
+                }
 
         for (remotePath in remotePaths.distinct()) {
             if (remotePath.endsWith("/state.json")) {
@@ -242,8 +254,9 @@ class GoogleDriveSyncService(
             }
 
             val mapping = mappingDao.getByDriveFileId(remotePath)
-            val parsed = parseDrivePath(remotePath)
-                ?: continue
+            val parsed =
+                parseDrivePath(remotePath)
+                    ?: continue
             val bookId = mapping?.bookId ?: parsed.bookId
             val extension = parsed.extension
 
@@ -260,32 +273,38 @@ class GoogleDriveSyncService(
             // which carries the real title/metadata. Auto-creating here produced
             // books titled "Recovered {uuid}" and bypassed the catalog download UI.
             if (existingBook == null && mapping == null) {
-                DebugLog.info(COMPONENT, "schedulePull: skipping unknown remote file $remotePath (no local book/mapping) — catalog owns new imports")
+                DebugLog.info(
+                    COMPONENT,
+                    "schedulePull: skipping unknown remote file $remotePath (no local book/mapping) — catalog owns new imports",
+                )
                 continue
             }
 
-            val localPath = mapping?.localPath
-                ?: existingBook?.filePath
-                ?: File(localBooksDir, "$bookId.$extension").absolutePath
+            val localPath =
+                mapping?.localPath
+                    ?: existingBook?.filePath
+                    ?: File(localBooksDir, "$bookId.$extension").absolutePath
             val localFile = File(localPath)
 
             if (!localFile.exists()) {
-                val bytes = retryable { remoteDataSource.download(remotePath) }
-                    .getOrElse { error ->
-                        val mapped = mapError(error, defaultCode = "SYNC_DOWNLOAD_FAILED")
-                        state.value = DriveSyncState.Error(mapped.message)
-                        return Result.failure(mapped)
-                    }
+                val bytes =
+                    retryable { remoteDataSource.download(remotePath) }
+                        .getOrElse { error ->
+                            val mapped = mapError(error, defaultCode = "SYNC_DOWNLOAD_FAILED")
+                            state.value = DriveSyncState.Error(mapped.message)
+                            return Result.failure(mapped)
+                        }
                 localFile.parentFile?.mkdirs()
                 localFile.writeBytes(bytes)
             }
 
-            val mergedBook = mergeBook(
-                existing = existingBook,
-                bookId = bookId,
-                localPath = localFile.absolutePath,
-                extension = extension
-            )
+            val mergedBook =
+                mergeBook(
+                    existing = existingBook,
+                    bookId = bookId,
+                    localPath = localFile.absolutePath,
+                    extension = extension,
+                )
             bookDao.upsert(mergedBook)
             mappingDao.upsert(
                 SyncFileMappingEntity(
@@ -293,8 +312,8 @@ class GoogleDriveSyncService(
                     userId = session.userId,
                     bookId = bookId,
                     localPath = localFile.absolutePath,
-                    updatedAtEpochMillis = System.currentTimeMillis()
-                )
+                    updatedAtEpochMillis = System.currentTimeMillis(),
+                ),
             )
         }
 
@@ -308,7 +327,7 @@ class GoogleDriveSyncService(
         existing: BookEntity?,
         bookId: String,
         localPath: String,
-        extension: String
+        extension: String,
     ): BookEntity {
         // Only ever called with an existing local book (schedulePull skips unknown
         // remote files — the Supabase catalog owns new imports). Keep the original
@@ -316,7 +335,7 @@ class GoogleDriveSyncService(
         require(existing != null) { "mergeBook requires an existing local book (id=$bookId)" }
         return existing.copy(
             filePath = localPath,
-            updatedAtEpochMillis = System.currentTimeMillis()
+            updatedAtEpochMillis = System.currentTimeMillis(),
         )
     }
 
@@ -324,9 +343,7 @@ class GoogleDriveSyncService(
      * Skips a remote book when it is locally DELETE-marked (tombstoned), so
      * schedulePull/downloadRemoteBook never resurrect it (D6).
      */
-    private suspend fun isTombstoned(bookId: String): Boolean {
-        return bookDao.getBookById(bookId)?.deletedAtEpochMillis != null
-    }
+    private suspend fun isTombstoned(bookId: String): Boolean = bookDao.getBookById(bookId)?.deletedAtEpochMillis != null
 
     private suspend fun <T> retryable(block: suspend () -> T): Result<T> {
         var attempt = 0
@@ -355,7 +372,10 @@ class GoogleDriveSyncService(
      * call), and retries the operation once. On refresh failure it surfaces an
      * "authorization needed" state instead of failing silently.
      */
-    private suspend fun <T> driveCall(block: suspend () -> T, lastError: Throwable?): Result<T> {
+    private suspend fun <T> driveCall(
+        block: suspend () -> T,
+        lastError: Throwable?,
+    ): Result<T> {
         return runCatching { tokenRefresher() }
             .fold(
                 onSuccess = { refreshResult ->
@@ -363,18 +383,21 @@ class GoogleDriveSyncService(
                         state.value = DriveSyncState.AuthorizationNeeded
                         return Result.failure(
                             refreshResult.exceptionOrNull()
-                                ?: lastError ?: IllegalStateException("Drive authorization needed")
+                                ?: lastError ?: IllegalStateException("Drive authorization needed"),
                         )
                     }
                     runCatching { block() }.let { retry ->
-                        if (retry.isSuccess) retry
-                        else Result.failure(retry.exceptionOrNull() ?: lastError ?: IllegalStateException("Drive retry failed"))
+                        if (retry.isSuccess) {
+                            retry
+                        } else {
+                            Result.failure(retry.exceptionOrNull() ?: lastError ?: IllegalStateException("Drive retry failed"))
+                        }
                     }
                 },
                 onFailure = { refreshThrown ->
                     state.value = DriveSyncState.AuthorizationNeeded
                     Result.failure(refreshThrown)
-                }
+                },
             )
     }
 
@@ -384,46 +407,50 @@ class GoogleDriveSyncService(
             authError?.code == "GOOGLE_DRIVE_UNAUTHORIZED"
     }
 
-    private fun isTransient(error: Throwable?): Boolean {
-        return error is IOException ||
+    private fun isTransient(error: Throwable?): Boolean =
+        error is IOException ||
             error is AppError
-    }
 
-    private fun mapError(error: Throwable?, defaultCode: String): AppError {
+    private fun mapError(
+        error: Throwable?,
+        defaultCode: String,
+    ): AppError {
         if (error is AppError) {
             return error
         }
-        val category = when (error) {
-            null -> ErrorCategory.WIRING_ERROR
-            is IllegalStateException -> ErrorCategory.WIRING_ERROR
-            is IllegalArgumentException -> ErrorCategory.CONFIG_ERROR
-            is IOException -> ErrorCategory.WIRING_ERROR
-            else -> ErrorCategory.WIRING_ERROR
-        }
+        val category =
+            when (error) {
+                null -> ErrorCategory.WIRING_ERROR
+                is IllegalStateException -> ErrorCategory.WIRING_ERROR
+                is IllegalArgumentException -> ErrorCategory.CONFIG_ERROR
+                is IOException -> ErrorCategory.WIRING_ERROR
+                else -> ErrorCategory.WIRING_ERROR
+            }
         return AppError(
             category = category,
             code = defaultCode,
             message = error?.message ?: "Sync operation failed.",
-            component = COMPONENT
+            component = COMPONENT,
         )
     }
 
-    private fun drivePathFor(userId: String, bookId: String, extension: String): String {
+    private fun drivePathFor(
+        userId: String,
+        bookId: String,
+        extension: String,
+    ): String {
         val userToken = sanitizeIdToken(userId)
         val bookToken = sanitizeIdToken(bookId)
         return "books/$userToken/$bookToken.$extension"
     }
 
-    private fun extensionFor(book: BookEntity): String {
-        return sanitizeToken(book.format)
+    private fun extensionFor(book: BookEntity): String =
+        sanitizeToken(book.format)
             .ifBlank {
                 File(book.filePath).extension.lowercase().ifBlank { DEFAULT_EXTENSION }
             }
-    }
 
-    private fun sanitizeToken(raw: String): String {
-        return raw.lowercase().replace(NON_ALNUM_REGEX, "")
-    }
+    private fun sanitizeToken(raw: String): String = raw.lowercase().replace(NON_ALNUM_REGEX, "")
 
     private fun sanitizeIdToken(raw: String): String {
         val sanitized = raw.lowercase().replace(NON_PATH_SAFE_REGEX, "-").trim('-')
@@ -447,7 +474,7 @@ class GoogleDriveSyncService(
 
     private data class ParsedDrivePath(
         val bookId: String,
-        val extension: String
+        val extension: String,
     )
 
     /**
@@ -484,7 +511,7 @@ private fun com.nextpage.data.local.entity.ReadingProgressEntity.toDomain(): com
         percentage = percentage,
         currentPage = currentPage,
         updatedAtEpochMillis = updatedAtEpochMillis,
-        locatorJson = locatorJson
+        locatorJson = locatorJson,
     )
 
 private fun com.nextpage.domain.model.ReadingProgress.toEntity(): com.nextpage.data.local.entity.ReadingProgressEntity =
@@ -495,7 +522,7 @@ private fun com.nextpage.domain.model.ReadingProgress.toEntity(): com.nextpage.d
         percentage = percentage,
         currentPage = currentPage,
         updatedAtEpochMillis = updatedAtEpochMillis,
-        locatorJson = locatorJson
+        locatorJson = locatorJson,
     )
 
 private fun com.nextpage.data.local.entity.HighlightEntity.toDomain(): com.nextpage.domain.model.Highlight =
@@ -510,7 +537,7 @@ private fun com.nextpage.data.local.entity.HighlightEntity.toDomain(): com.nextp
         deletedAtEpochMillis = deletedAtEpochMillis,
         locatorJson = locatorJson,
         type = type,
-        tag = tag
+        tag = tag,
     )
 
 private fun com.nextpage.domain.model.Highlight.toEntity(): com.nextpage.data.local.entity.HighlightEntity =
@@ -525,7 +552,7 @@ private fun com.nextpage.domain.model.Highlight.toEntity(): com.nextpage.data.lo
         deletedAtEpochMillis = deletedAtEpochMillis,
         locatorJson = locatorJson,
         type = type,
-        tag = tag
+        tag = tag,
     )
 
 private fun com.nextpage.data.local.entity.BookmarkEntity.toDomain(): com.nextpage.domain.model.Bookmark =
@@ -536,7 +563,7 @@ private fun com.nextpage.data.local.entity.BookmarkEntity.toDomain(): com.nextpa
         titleOrSnippet = titleOrSnippet,
         updatedAtEpochMillis = updatedAtEpochMillis,
         deletedAtEpochMillis = deletedAtEpochMillis,
-        locatorJson = locatorJson
+        locatorJson = locatorJson,
     )
 
 private fun com.nextpage.domain.model.Bookmark.toEntity(): com.nextpage.data.local.entity.BookmarkEntity =
@@ -547,5 +574,5 @@ private fun com.nextpage.domain.model.Bookmark.toEntity(): com.nextpage.data.loc
         titleOrSnippet = titleOrSnippet,
         updatedAtEpochMillis = updatedAtEpochMillis,
         deletedAtEpochMillis = deletedAtEpochMillis,
-        locatorJson = locatorJson
+        locatorJson = locatorJson,
     )

@@ -13,11 +13,18 @@ object SentryPrivacyPrefs {
     private const val KEY_ENABLED = "telemetry_enabled"
 
     fun isEnabled(context: Context): Boolean =
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        context
+            .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .getBoolean(KEY_ENABLED, true)
 
-    fun setEnabled(context: Context, enabled: Boolean) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit().putBoolean(KEY_ENABLED, enabled).apply()
+    fun setEnabled(
+        context: Context,
+        enabled: Boolean,
+    ) {
+        context
+            .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_ENABLED, enabled)
+            .apply()
     }
 }

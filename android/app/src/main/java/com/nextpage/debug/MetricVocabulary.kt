@@ -8,16 +8,17 @@ package com.nextpage.debug
  * (`metricVocabulary.lockstep.test.ts`). Do not edit one side without the other.
  */
 object MetricVocabulary {
-    val P0_METRIC_NAMES = listOf(
-        "app_cold_start",
-        "reader_open",
-        "reader_ttfp_web",
-        "reader_ttfp_native",
-        "sync_flush",
-        "outbox_depth",
-        "book_import",
-        "ipc_call"
-    )
+    val P0_METRIC_NAMES =
+        listOf(
+            "app_cold_start",
+            "reader_open",
+            "reader_ttfp_web",
+            "reader_ttfp_native",
+            "sync_flush",
+            "outbox_depth",
+            "book_import",
+            "ipc_call",
+        )
 
     const val PLATFORM_DESKTOP = "desktop"
     const val PLATFORM_ANDROID = "android"

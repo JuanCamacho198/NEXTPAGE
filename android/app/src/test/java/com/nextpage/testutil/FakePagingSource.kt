@@ -11,13 +11,13 @@ import androidx.paging.PagingState
  * device and a real database to instantiate).
  */
 class FakePagingSource<T : Any>(
-    private val items: List<T>
+    private val items: List<T>,
 ) : PagingSource<Int, T>() {
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, T> =
         LoadResult.Page(
             data = items,
             prevKey = null,
-            nextKey = null
+            nextKey = null,
         )
 
     override fun getRefreshKey(state: PagingState<Int, T>): Int? = null

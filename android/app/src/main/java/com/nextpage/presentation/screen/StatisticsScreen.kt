@@ -26,7 +26,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +36,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.rememberLottieComposition
 import com.nextpage.R
 import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.model.DailyReadingActivity
@@ -47,10 +51,6 @@ import com.nextpage.presentation.viewmodel.StatisticsViewModel
 import com.nextpage.ui.components.atoms.NextPageEmptyState
 import com.nextpage.ui.components.atoms.NextPageErrorState
 import com.nextpage.ui.components.atoms.NextPageLoadingIndicator
-import com.airbnb.lottie.compose.LottieAnimation
-import com.airbnb.lottie.compose.LottieCompositionSpec
-import com.airbnb.lottie.compose.LottieConstants
-import com.airbnb.lottie.compose.rememberLottieComposition
 import com.nextpage.ui.components.molecules.NextPageHeader
 import com.nextpage.ui.components.molecules.NextPageSectionHeader
 import com.nextpage.ui.icons.NextPageIcons
@@ -62,16 +62,17 @@ fun StatisticsScreen(
     contentPadding: PaddingValues,
     viewModel: StatisticsViewModel,
     authSession: AuthSession? = null,
-    onOpenAccount: () -> Unit = {}
+    onOpenAccount: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(contentPadding)
-            .padding(horizontal = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingMd)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(contentPadding)
+                .padding(horizontal = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingMd),
     ) {
         item {
             NextPageHeader(
@@ -79,7 +80,7 @@ fun StatisticsScreen(
                 avatarImageUrl = authSession?.photoUrl,
                 avatarInitials = authSession?.displayName?.take(2)?.uppercase() ?: "NP",
                 onAvatarClick = onOpenAccount,
-                avatarContentDescription = stringResource(R.string.home_avatar_content_description)
+                avatarContentDescription = stringResource(R.string.home_avatar_content_description),
             )
         }
 
@@ -88,13 +89,13 @@ fun StatisticsScreen(
                 Text(
                     text = stringResource(R.string.statistics_title),
                     style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = stringResource(R.string.statistics_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -103,9 +104,10 @@ fun StatisticsScreen(
             uiState.isLoading -> {
                 item {
                     NextPageLoadingIndicator(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp)
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
                     )
                 }
             }
@@ -115,9 +117,10 @@ fun StatisticsScreen(
                     NextPageErrorState(
                         title = stringResource(R.string.error_unknown),
                         message = uiState.errorMessage ?: stringResource(R.string.error_unknown),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp)
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
                     )
                 }
             }
@@ -151,35 +154,36 @@ private fun StreakHeroSection(currentStreak: Int) {
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(NextPageDimens.spacingMd),
         color = MaterialTheme.colorScheme.surfaceVariant,
-        tonalElevation = 1.dp
+        tonalElevation = 1.dp,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 24.dp, horizontal = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 24.dp, horizontal = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.fire_streak))
             LottieAnimation(
                 composition = composition,
                 modifier = Modifier.size(48.dp),
-                iterations = LottieConstants.IterateForever
+                iterations = LottieConstants.IterateForever,
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "$currentStreak",
                 style = MaterialTheme.typography.displayMedium,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
             )
             Text(
                 text = stringResource(R.string.statistics_current_streak),
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
                 text = stringResource(R.string.statistics_days),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -192,28 +196,28 @@ private fun SummarySection(uiState: StatisticsUiState) {
         Spacer(modifier = Modifier.height(NextPageDimens.spacingSm))
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm)
+            horizontalArrangement = Arrangement.spacedBy(NextPageDimens.spacingSm),
         ) {
             SummaryCard(
                 icon = NextPageIcons.Clock,
                 value = "${uiState.totalMinutesRead}",
                 label = stringResource(R.string.statistics_total_reading_time),
                 unit = stringResource(R.string.statistics_minutes),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
             SummaryCard(
                 icon = NextPageIcons.Flame,
                 value = "${uiState.currentStreak}",
                 label = stringResource(R.string.statistics_current_streak),
                 unit = stringResource(R.string.statistics_days),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
             SummaryCard(
                 icon = NextPageIcons.Book,
                 value = "${uiState.booksRead}",
                 label = stringResource(R.string.statistics_books_read),
                 unit = "",
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             )
         }
     }
@@ -225,39 +229,40 @@ private fun SummaryCard(
     value: String,
     label: String,
     unit: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(NextPageDimens.spacingSm),
         color = MaterialTheme.colorScheme.surfaceVariant,
-        tonalElevation = 1.dp
+        tonalElevation = 1.dp,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(NextPageDimens.spacingMd),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(NextPageDimens.spacingMd),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(24.dp),
             )
             Spacer(modifier = Modifier.height(NextPageDimens.spacingXs))
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
                     text = value,
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
                 if (unit.isNotBlank()) {
                     Spacer(modifier = Modifier.width(2.dp))
                     Text(
                         text = unit,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -265,7 +270,7 @@ private fun SummaryCard(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
             )
         }
     }
@@ -277,22 +282,23 @@ private fun ReadingActivitySection(weeklyActivity: List<DailyReadingActivity>) {
         NextPageSectionHeader(
             title = stringResource(R.string.statistics_reading_activity),
             actionLabel = stringResource(R.string.statistics_last_7_days),
-            onActionClick = {}
+            onActionClick = {},
         )
         Spacer(modifier = Modifier.height(NextPageDimens.spacingSm))
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(NextPageDimens.spacingSm),
             color = MaterialTheme.colorScheme.surfaceVariant,
-            tonalElevation = 1.dp
+            tonalElevation = 1.dp,
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp)
-                    .padding(NextPageDimens.spacingMd),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(120.dp)
+                        .padding(NextPageDimens.spacingMd),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.Bottom
+                verticalAlignment = Alignment.Bottom,
             ) {
                 val maxMinutes = weeklyActivity.maxOfOrNull { it.minutesRead }?.coerceAtLeast(1) ?: 1
                 val dateFormatter = SimpleDateFormat("EEE", Locale.getDefault())
@@ -300,20 +306,21 @@ private fun ReadingActivitySection(weeklyActivity: List<DailyReadingActivity>) {
                     val heightFraction = day.minutesRead.toFloat() / maxMinutes
                     Column(
                         modifier = Modifier.weight(1f),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Box(
-                            modifier = Modifier
-                                .width(24.dp)
-                                .fillMaxHeight(fraction = heightFraction.coerceIn(0.05f, 1f))
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(MaterialTheme.colorScheme.primary)
+                            modifier =
+                                Modifier
+                                    .width(24.dp)
+                                    .fillMaxHeight(fraction = heightFraction.coerceIn(0.05f, 1f))
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(MaterialTheme.colorScheme.primary),
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = dateFormatter.format(java.util.Date(day.dateEpochMillis)),
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -331,46 +338,48 @@ private fun GoalsSection(goalProgress: Float) {
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(NextPageDimens.spacingSm),
             color = MaterialTheme.colorScheme.surfaceVariant,
-            tonalElevation = 1.dp
+            tonalElevation = 1.dp,
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(NextPageDimens.spacingMd),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(NextPageDimens.spacingMd),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .aspectRatio(1f)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surface),
-                    contentAlignment = Alignment.Center
+                    modifier =
+                        Modifier
+                            .size(80.dp)
+                            .aspectRatio(1f)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surface),
+                    contentAlignment = Alignment.Center,
                 ) {
                     CircularProgressIndicator(
                         progress = { goalProgress.coerceIn(0f, 1f) },
                         modifier = Modifier.fillMaxSize(),
                         strokeWidth = 8.dp,
                         color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.outline
+                        trackColor = MaterialTheme.colorScheme.outline,
                     )
                     Text(
                         text = stringResource(R.string.format_percent, (goalProgress * 100).toInt()),
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                 }
                 Column {
                     Text(
                         text = stringResource(R.string.statistics_daily_goal),
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
                     )
                     Text(
                         text = stringResource(R.string.statistics_minutes),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -387,20 +396,21 @@ private fun FavoriteGenresSection(genres: List<String>) {
             NextPageEmptyState(
                 icon = NextPageIcons.Statistics,
                 title = stringResource(R.string.statistics_no_genres),
-                subtitle = stringResource(R.string.statistics_no_genres_subtitle)
+                subtitle = stringResource(R.string.statistics_no_genres_subtitle),
             )
         } else {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 genres.forEach { genre ->
                     FilterChip(
                         selected = false,
                         onClick = { },
                         label = { Text(genre) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
+                        colors =
+                            FilterChipDefaults.filterChipColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            ),
                     )
                 }
             }
@@ -426,25 +436,28 @@ private fun StatisticsScreenLightPreview() {
 
 @Composable
 private fun StatisticsScreenPreviewContent() {
-    val uiState = StatisticsUiState(
-        isLoading = false,
-        totalMinutesRead = 1240,
-        currentStreak = 6,
-        booksRead = 12,
-        weeklyActivity = List(7) { index ->
-            DailyReadingActivity(
-                dateEpochMillis = System.currentTimeMillis() - (6 - index) * 86_400_000L,
-                minutesRead = listOf(30, 45, 20, 60, 40, 25, 35)[index]
-            )
-        },
-        goalProgress = 0.8f,
-        favoriteGenres = listOf("Sci-Fi", "Fantasy", "Non-fiction")
-    )
+    val uiState =
+        StatisticsUiState(
+            isLoading = false,
+            totalMinutesRead = 1240,
+            currentStreak = 6,
+            booksRead = 12,
+            weeklyActivity =
+                List(7) { index ->
+                    DailyReadingActivity(
+                        dateEpochMillis = System.currentTimeMillis() - (6 - index) * 86_400_000L,
+                        minutesRead = listOf(30, 45, 20, 60, 40, 25, 35)[index],
+                    )
+                },
+            goalProgress = 0.8f,
+            favoriteGenres = listOf("Sci-Fi", "Fantasy", "Non-fiction"),
+        )
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingMd)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(NextPageDimens.spacingMd),
     ) {
         item {
             NextPageHeader(
@@ -452,7 +465,7 @@ private fun StatisticsScreenPreviewContent() {
                 avatarImageUrl = null,
                 avatarInitials = "NP",
                 onAvatarClick = null,
-                avatarContentDescription = stringResource(R.string.home_avatar_content_description)
+                avatarContentDescription = stringResource(R.string.home_avatar_content_description),
             )
         }
         item {
@@ -460,13 +473,13 @@ private fun StatisticsScreenPreviewContent() {
                 Text(
                     text = stringResource(R.string.statistics_title),
                     style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = stringResource(R.string.statistics_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }

@@ -30,29 +30,30 @@ fun NavGraphBuilder.readerGraph(
     selectedBookId: String,
     selectedBookFilePath: String?,
     selectedBookFormat: String,
-    contentPadding: PaddingValues
+    contentPadding: PaddingValues,
 ) {
     composable(
         route = NextPageDestination.Reader.route,
-        arguments = listOf(
-            navArgument(NextPageDestination.Reader.ARG_BOOK_ID) {
-                type = NavType.StringType
-                defaultValue = ""
-            },
-            navArgument(NextPageDestination.Reader.ARG_BOOK_PATH) {
-                type = NavType.StringType
-                nullable = true
-                defaultValue = null
-            },
-            navArgument(NextPageDestination.Reader.ARG_BOOK_FORMAT) {
-                type = NavType.StringType
-                defaultValue = "epub"
-            }
-        ),
+        arguments =
+            listOf(
+                navArgument(NextPageDestination.Reader.ARG_BOOK_ID) {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
+                navArgument(NextPageDestination.Reader.ARG_BOOK_PATH) {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument(NextPageDestination.Reader.ARG_BOOK_FORMAT) {
+                    type = NavType.StringType
+                    defaultValue = "epub"
+                },
+            ),
         enterTransition = { slideInHorizontally { it } + fadeIn() },
         exitTransition = { slideOutHorizontally { it } + fadeOut() },
         popEnterTransition = { slideInHorizontally { -it } + fadeIn() },
-        popExitTransition = { slideOutHorizontally { -it } + fadeOut() }
+        popExitTransition = { slideOutHorizontally { -it } + fadeOut() },
     ) { backStackEntry ->
         val argBookId = backStackEntry.arguments?.getString(NextPageDestination.Reader.ARG_BOOK_ID).orEmpty()
         val argBookPath = backStackEntry.arguments?.getString(NextPageDestination.Reader.ARG_BOOK_PATH)
@@ -61,11 +62,12 @@ fun NavGraphBuilder.readerGraph(
         // snapshot is kept only as a backup for bare "reader" navigations.
         val hasArgs = argBookId.isNotBlank()
         val effectiveBookId = if (hasArgs) argBookId else selectedBookId
-        val effectiveBookPath = if (hasArgs) {
-            argBookPath?.takeIf { it.isNotBlank() }
-        } else {
-            selectedBookFilePath
-        }
+        val effectiveBookPath =
+            if (hasArgs) {
+                argBookPath?.takeIf { it.isNotBlank() }
+            } else {
+                selectedBookFilePath
+            }
         val effectiveBookFormat = if (hasArgs) argBookFormat else selectedBookFormat
         ReaderScreen(
             contentPadding = contentPadding,
@@ -74,7 +76,7 @@ fun NavGraphBuilder.readerGraph(
             bookFormat = effectiveBookFormat,
             bookIdentitySource = if (hasArgs) "args" else "snapshot",
             viewModel = readerViewModel,
-            onNavigateBack = { navController.popBackStack() }
+            onNavigateBack = { navController.popBackStack() },
         )
     }
 }

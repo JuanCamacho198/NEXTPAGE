@@ -15,7 +15,6 @@ import java.security.SecureRandom
  * Pure Kotlin — no Android dependency — so the whole class is JVM-unit-testable.
  */
 object Pkce {
-
     /** RFC 7636 requires the verifier to be 43..128 characters; 32 bytes → 43 base64url chars. */
     private const val VERIFIER_BYTE_LENGTH = 32
 
@@ -39,11 +38,16 @@ object Pkce {
      * what lets the token endpoint prove the exchange came from the same client.
      */
     fun challenge(verifier: String): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-            .digest(verifier.toByteArray(Charsets.US_ASCII))
+        val digest =
+            MessageDigest
+                .getInstance("SHA-256")
+                .digest(verifier.toByteArray(Charsets.US_ASCII))
         return base64Url(digest)
     }
 
     private fun base64Url(bytes: ByteArray): String =
-        java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
+        java.util.Base64
+            .getUrlEncoder()
+            .withoutPadding()
+            .encodeToString(bytes)
 }

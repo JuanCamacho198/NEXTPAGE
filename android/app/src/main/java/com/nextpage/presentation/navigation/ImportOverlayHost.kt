@@ -27,7 +27,7 @@ private const val IMPORT_OVERLAY_WATCHDOG_TIMEOUT_MS = 120_000L
  */
 @Composable
 fun ImportOverlayHost(
-    libraryViewModel: LibraryViewModel
+    libraryViewModel: LibraryViewModel,
 ) {
     val importState by libraryViewModel.importState.collectAsStateWithLifecycle()
 
@@ -41,7 +41,7 @@ fun ImportOverlayHost(
     if (importState !is BookImportState.Idle) {
         NextPageImportOverlay(
             importState = importState,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
         )
     }
 }

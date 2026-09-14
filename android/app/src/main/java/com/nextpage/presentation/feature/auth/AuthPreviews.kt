@@ -12,7 +12,13 @@ private fun AuthScreenDarkPreview() {
     NextPageTheme(darkTheme = true) {
         LoginScreenContent(
             uiState = AuthUiState(currentSession = null, isCheckingSession = false, isConfigured = true, hasWiringIssue = false, isLoading = false, errorMessage = null, failureKind = AuthFailureKind.NONE),
-            onAuthenticated = {}, onContinueLocal = {}, onNavigateToRegister = {}, onNavigateToForgot = {}, onGoogleIdToken = {}, onSetError = {}, onSignIn = { _, _ -> }
+            onAuthenticated = {},
+            onContinueLocal = {},
+            onNavigateToRegister = {},
+            onNavigateToForgot = {},
+            onGoogleIdToken = {},
+            onSetError = {},
+            onSignIn = { _, _ -> },
         )
     }
 }
@@ -23,7 +29,13 @@ private fun AuthScreenLightPreview() {
     NextPageTheme(darkTheme = false) {
         LoginScreenContent(
             uiState = AuthUiState(currentSession = null, isCheckingSession = false, isConfigured = true, hasWiringIssue = false, isLoading = false, errorMessage = null, failureKind = AuthFailureKind.NONE),
-            onAuthenticated = {}, onContinueLocal = {}, onNavigateToRegister = {}, onNavigateToForgot = {}, onGoogleIdToken = {}, onSetError = {}, onSignIn = { _, _ -> }
+            onAuthenticated = {},
+            onContinueLocal = {},
+            onNavigateToRegister = {},
+            onNavigateToForgot = {},
+            onGoogleIdToken = {},
+            onSetError = {},
+            onSignIn = { _, _ -> },
         )
     }
 }
@@ -34,7 +46,11 @@ private fun RegisterScreenPreview() {
     NextPageTheme(darkTheme = false) {
         RegisterScreenContent(
             uiState = AuthUiState(currentSession = null, isCheckingSession = false, isConfigured = true, hasWiringIssue = false, isLoading = false, errorMessage = null, failureKind = AuthFailureKind.NONE),
-            onAuthenticated = {}, onNavigateBack = {}, onGoogleIdToken = {}, onSetError = {}, onSignUp = { _, _, _ -> }
+            onAuthenticated = {},
+            onNavigateBack = {},
+            onGoogleIdToken = {},
+            onSetError = {},
+            onSignUp = { _, _, _ -> },
         )
     }
 }

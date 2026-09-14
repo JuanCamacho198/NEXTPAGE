@@ -42,21 +42,22 @@ internal fun EditMetadataContent(
     onGenreAdd: (String) -> Unit,
     onGenreRemove: (String) -> Unit,
     onTagAdd: (String) -> Unit,
-    onTagRemove: (String) -> Unit
+    onTagRemove: (String) -> Unit,
 ) {
     val book = state.book ?: return
 
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         CoverSection(
             book = book,
             coverUri = state.coverUri,
-            onChangeCover = onChangeCover
+            onChangeCover = onChangeCover,
         )
 
         FormField(
@@ -64,21 +65,21 @@ internal fun EditMetadataContent(
             value = state.title,
             onValueChange = onTitleChange,
             counter = stringResource(R.string.edit_metadata_counter, state.title.length, MAX_SHORT_FIELD),
-            singleLine = true
+            singleLine = true,
         )
         FormField(
             label = stringResource(R.string.edit_metadata_field_author),
             value = state.author,
             onValueChange = onAuthorChange,
             counter = stringResource(R.string.edit_metadata_counter, state.author.length, MAX_SHORT_FIELD),
-            singleLine = true
+            singleLine = true,
         )
         FormField(
             label = stringResource(R.string.edit_metadata_field_synopsis),
             value = state.description,
             onValueChange = onDescriptionChange,
             counter = stringResource(R.string.edit_metadata_counter, state.description.length, MAX_SYNOPSIS),
-            minLines = 4
+            minLines = 4,
         )
 
         SectionHeader(stringResource(R.string.edit_metadata_section_details))
@@ -87,18 +88,18 @@ internal fun EditMetadataContent(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = stringResource(R.string.edit_metadata_field_date),
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             TextButton(onClick = { showDatePicker = true }) {
                 Text(
                     text = formatPublishedDate(state.publishedDate),
                     style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
                 )
             }
         }
@@ -107,7 +108,7 @@ internal fun EditMetadataContent(
             DatePickerField(
                 publishedDate = state.publishedDate,
                 onPublishedDateChange = onPublishedDateChange,
-                onDismiss = { showDatePicker = false }
+                onDismiss = { showDatePicker = false },
             )
         }
 
@@ -118,16 +119,16 @@ internal fun EditMetadataContent(
             value = state.publisher,
             onValueChange = onPublisherChange,
             counter = stringResource(R.string.edit_metadata_counter, state.publisher.length, MAX_SHORT_FIELD),
-            singleLine = true
+            singleLine = true,
         )
 
         ReadOnlyDetailRow(
             label = stringResource(R.string.edit_metadata_field_size),
-            value = remember(book.filePath) { formatSizeMb(book.filePath) }
+            value = remember(book.filePath) { formatSizeMb(book.filePath) },
         )
         ReadOnlyDetailRow(
             label = stringResource(R.string.edit_metadata_field_format),
-            value = book.format.uppercase()
+            value = book.format.uppercase(),
         )
 
         SectionHeader(stringResource(R.string.edit_metadata_genres))
@@ -136,7 +137,7 @@ internal fun EditMetadataContent(
             max = 5,
             onAdd = onGenreAdd,
             onRemove = onGenreRemove,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
 
         SectionHeader(stringResource(R.string.edit_metadata_tags))
@@ -145,7 +146,7 @@ internal fun EditMetadataContent(
             max = 10,
             onAdd = onTagAdd,
             onRemove = onTagRemove,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         )
 
         Spacer(modifier = Modifier.height(8.dp))

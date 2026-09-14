@@ -2,7 +2,6 @@ package com.nextpage.presentation
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -29,7 +28,6 @@ import org.junit.runner.RunWith
  */
 @RunWith(AndroidJUnit4::class)
 class InstallDeepLinkTest {
-
     @get:Rule
     val composeRule = createAndroidComposeRule<MainActivity>()
 
@@ -38,13 +36,14 @@ class InstallDeepLinkTest {
         composeRule.onNodeWithText("Continue with Google").assertIsDisplayed()
 
         composeRule.activityRule.scenario.onActivity { activity ->
-            val installIntent = Intent(
-                Intent.ACTION_VIEW,
-                Uri.parse("nextpage://install?url=https://example.test/manifest.json")
-            ).apply {
-                setClass(activity, MainActivity::class.java)
-                addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            }
+            val installIntent =
+                Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse("nextpage://install?url=https://example.test/manifest.json"),
+                ).apply {
+                    setClass(activity, MainActivity::class.java)
+                    addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                }
             activity.startActivity(installIntent)
         }
 
@@ -54,10 +53,11 @@ class InstallDeepLinkTest {
         }
 
         // Cancel (confirming) or OK (error) dismisses: nothing installed, no crash.
-        composeRule.runCatching {
-            composeRule.onNodeWithText("Cancel").performClick()
-        }.recoverCatching {
-            composeRule.onNodeWithText("OK").performClick()
-        }
+        composeRule
+            .runCatching {
+                composeRule.onNodeWithText("Cancel").performClick()
+            }.recoverCatching {
+                composeRule.onNodeWithText("OK").performClick()
+            }
     }
 }

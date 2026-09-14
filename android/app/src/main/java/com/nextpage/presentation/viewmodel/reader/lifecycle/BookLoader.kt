@@ -14,10 +14,11 @@ interface BookLoader {
     val isLoading: StateFlow<Boolean>
     val loadTimeMs: StateFlow<Long?>
     val loadEpoch: Long
+
     suspend fun open(
         bookId: String,
         filePath: String,
-        format: String
+        format: String,
     ): Result<Pair<Publication, Locator?>>
 }
 

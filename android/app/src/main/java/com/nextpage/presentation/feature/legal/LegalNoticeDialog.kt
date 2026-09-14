@@ -20,7 +20,7 @@ fun LegalNoticeDialog(
     onAccept: () -> Unit,
     onViewPolicy: () -> Unit,
     onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     NextPageDialog(
         title = stringResource(R.string.legal_disclaimer_title),
@@ -33,6 +33,6 @@ fun LegalNoticeDialog(
             onDismiss()
         },
         modifier = modifier,
-        variant = NextPageDialogVariant.INFO
+        variant = NextPageDialogVariant.INFO,
     )
 }

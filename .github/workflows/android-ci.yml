@@ -3,8 +3,11 @@ name: Android CI
 on:
   # Allow maintainers to re-run the full gate manually from the Actions tab.
   workflow_dispatch:
+  # No `branches` filter on purpose: chained PRs target intermediate branches,
+  # not `main`, and a `branches: [main]` filter silently skipped CI for every
+  # slice of a feature-branch-chain. Branch protection only requires this check
+  # on `main`, so running it on PRs to any base is safe.
   pull_request:
-    branches: [main]
     paths-ignore:
       - 'desktop/**'
       - 'web/**'
@@ -79,9 +82,29 @@ jobs:
             -Dorg.gradle.vfs.watch=false \
             :app:testDebugUnitTest \
             detekt \
+            spotlessCheck \
+            :app:lintDebug \
             :app:verifyStringParity \
             :app:verifyAuthScreenNoHardcodedStrings \
-            :app:verifyNoReaderUiStateResidue
+            :app:verifyNoReaderUiStateResidue \
+            :app:koverXmlReportDebug \
+            :app:koverHtmlReportDebug
+
+      - name: Upload Kover coverage reports
+        # Report-only: coverage is published as an artifact and never gates the
+        # test result (Kover's `verify` block is deliberately absent; a coverage
+        # bound is deferred). A MISSING report, however, is a real failure —
+        # `if-no-files-found: error` turns a silently skipped report into a red
+        # step. `if: always()` keeps the report available even when an earlier
+        # gate failed, since the tests that produce it already ran.
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: kover-coverage
+          path: |
+            android/app/build/reports/kover/reportDebug.xml
+            android/app/build/reports/kover/htmlDebug/
+          if-no-files-found: error
 
       - name: Print failed test reports
         if: failure()

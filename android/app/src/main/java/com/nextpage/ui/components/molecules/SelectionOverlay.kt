@@ -53,7 +53,7 @@ fun SelectionOverlay(
     onDefinitionTextChanged: (String) -> Unit = {},
     onSaveDefinition: () -> Unit = {},
     onDismissDefinitionInput: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val anyMenuVisible = selectionState != ReaderSelectionState.None || showColorPickerPopover || showTagInput || showDefinitionInput
     if (selectionRect == null) return
@@ -75,7 +75,10 @@ fun SelectionOverlay(
     }
     if (showTagInput) {
         AnchoredOverlayBox(selectionRect = selectionRect, viewportWidth = viewportWidth, viewportHeight = viewportHeight, modifier = modifier) {
-            AnchoredTagInput(tag = activeTagText, suggestions = tagSuggestions, onTagChange = onTagTextChanged, onSuggestionClick = { tag -> onTagTextChanged(tag); onSaveTag() }, onSave = onSaveTag, onDismiss = onDismissTagInput)
+            AnchoredTagInput(tag = activeTagText, suggestions = tagSuggestions, onTagChange = onTagTextChanged, onSuggestionClick = { tag ->
+                onTagTextChanged(tag)
+                onSaveTag()
+            }, onSave = onSaveTag, onDismiss = onDismissTagInput)
         }
     }
     if (showDefinitionInput) {
@@ -87,7 +90,21 @@ fun SelectionOverlay(
         val density = LocalDensity.current
         val anchorCenterX = selectionRect.left + (selectionRect.right - selectionRect.left) / 2
         val anchorBelowY = selectionRect.bottom + with(density) { 12.dp.toPx() }.toInt()
-        HighlightColorPickerPopover(customColors = customHighlightColors, onColorSelected = { c -> onColorSelected(c); onDismissColorPickerPopover() }, onDismiss = onDismissColorPickerPopover, anchorX = anchorCenterX, anchorY = anchorBelowY, modifier = Modifier.offset { val x = (anchorCenterX - 110.dp.toPx().toInt()).coerceAtLeast(0); IntOffset(x, anchorBelowY) })
+        HighlightColorPickerPopover(
+            customColors = customHighlightColors,
+            onColorSelected = { c ->
+                onColorSelected(c)
+                onDismissColorPickerPopover()
+            },
+            onDismiss = onDismissColorPickerPopover,
+            anchorX = anchorCenterX,
+            anchorY = anchorBelowY,
+            modifier =
+                Modifier.offset {
+                    val x = (anchorCenterX - 110.dp.toPx().toInt()).coerceAtLeast(0)
+                    IntOffset(x, anchorBelowY)
+                },
+        )
     }
 }
 
@@ -98,7 +115,30 @@ private fun SelectionOverlayHost(surface: SelectionSurface) {
     val rect = remember { Rect(50, 100, 250, 150) }
     val hl = remember { Highlight(id = "h1", bookId = "b1", cfiRange = "/4/2", textContent = "Selected sample", note = null, color = HighlightColor.YELLOW.hex, updatedAtEpochMillis = 0L, deletedAtEpochMillis = null) }
     Box(modifier = Modifier.size(340.dp, 380.dp).background(MaterialTheme.colorScheme.background)) {
-        SelectionOverlay(selectionState = when (surface) { SelectionSurface.TEXT_MENU -> ReaderSelectionState.New(rect, "Selected", null); SelectionSurface.CONTEXT_MENU -> ReaderSelectionState.Existing(hl, rect); else -> ReaderSelectionState.None }, showColorPickerPopover = surface == SelectionSurface.COLOR_PICKER, showTagInput = surface == SelectionSurface.TAG_INPUT, showDefinitionInput = surface == SelectionSurface.DEFINITION_INPUT, selectionRect = rect, selectedText = "Selected", highlights = listOf(hl), activeHighlightColor = HighlightColor.YELLOW.hex, customHighlightColors = HighlightColor.defaultHexList(), onColorSelected = {}, onCopy = {}, onDismissContextMenu = {}, onDelete = {}, onAddTag = {}, onAnnotate = {}, onShare = {}, onDictionary = {})
+        SelectionOverlay(
+            selectionState =
+                when (surface) {
+                    SelectionSurface.TEXT_MENU -> ReaderSelectionState.New(rect, "Selected", null)
+                    SelectionSurface.CONTEXT_MENU -> ReaderSelectionState.Existing(hl, rect)
+                    else -> ReaderSelectionState.None
+                },
+            showColorPickerPopover = surface == SelectionSurface.COLOR_PICKER,
+            showTagInput = surface == SelectionSurface.TAG_INPUT,
+            showDefinitionInput = surface == SelectionSurface.DEFINITION_INPUT,
+            selectionRect = rect,
+            selectedText = "Selected",
+            highlights = listOf(hl),
+            activeHighlightColor = HighlightColor.YELLOW.hex,
+            customHighlightColors = HighlightColor.defaultHexList(),
+            onColorSelected = {},
+            onCopy = {},
+            onDismissContextMenu = {},
+            onDelete = {},
+            onAddTag = {},
+            onAnnotate = {},
+            onShare = {},
+            onDictionary = {},
+        )
     }
 }
 

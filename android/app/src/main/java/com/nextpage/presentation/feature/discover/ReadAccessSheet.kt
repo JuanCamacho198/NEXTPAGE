@@ -29,11 +29,11 @@ import com.nextpage.R
 import com.nextpage.domain.access.LegalAccess
 import com.nextpage.domain.usecase.DownloadImportState
 import com.nextpage.presentation.theme.NextPageColors
-import com.nextpage.ui.icons.NextPageIcons
 import com.nextpage.ui.components.atoms.NextPageButton
 import com.nextpage.ui.components.atoms.NextPageButtonVariant
 import com.nextpage.ui.components.atoms.NextPageDivider
 import com.nextpage.ui.components.atoms.NextPageSkeletonBox
+import com.nextpage.ui.icons.NextPageIcons
 
 /**
  * "Dónde leerlo" bottom sheet (U5): grouped FREE / BUY / SUBSCRIBE rows
@@ -55,13 +55,13 @@ fun ReadAccessSheet(
     onRetry: () -> Unit = {},
     onAllowConsent: () -> Unit = {},
     onDenyConsent: () -> Unit = {},
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = NextPageColors.surface
+        containerColor = NextPageColors.surface,
     ) {
         ReadAccessContent(
             state = state,
@@ -71,7 +71,7 @@ fun ReadAccessSheet(
             onRetry = onRetry,
             onAllowConsent = onAllowConsent,
             onDenyConsent = onDenyConsent,
-            modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 24.dp)
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
         )
     }
 }
@@ -91,7 +91,7 @@ fun ReadAccessScreen(
     onRetry: () -> Unit = {},
     onAllowConsent: () -> Unit = {},
     onDenyConsent: () -> Unit = {},
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     Scaffold(
         topBar = {
@@ -101,12 +101,12 @@ fun ReadAccessScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = NextPageIcons.ArrowBack,
-                            contentDescription = stringResource(R.string.discover_back)
+                            contentDescription = stringResource(R.string.discover_back),
                         )
                     }
-                }
+                },
             )
-        }
+        },
     ) { padding ->
         ReadAccessContent(
             state = state,
@@ -116,9 +116,10 @@ fun ReadAccessScreen(
             onRetry = onRetry,
             onAllowConsent = onAllowConsent,
             onDenyConsent = onDenyConsent,
-            modifier = Modifier
-                .padding(padding)
-                .padding(horizontal = 20.dp, vertical = 16.dp)
+            modifier =
+                Modifier
+                    .padding(padding)
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
         )
     }
 }
@@ -133,67 +134,70 @@ internal fun ReadAccessContent(
     onRetry: () -> Unit,
     onAllowConsent: () -> Unit = {},
     onDenyConsent: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
             text = stringResource(R.string.read_access_title),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold,
-            color = NextPageColors.textPrimary
+            color = NextPageColors.textPrimary,
         )
         Text(
             text = stringResource(R.string.read_access_subtitle),
             style = MaterialTheme.typography.bodySmall,
-            color = NextPageColors.textSecondary
+            color = NextPageColors.textSecondary,
         )
         NextPageDivider()
         when (state) {
             AccessResolverState.Loading -> ReadAccessSkeleton()
-            is AccessResolverState.Loaded -> ReadAccessLoaded(
-                access = state.access,
-                download = download,
-                onDownloadInApp = onDownloadInApp,
-                onCancelDownload = onCancelDownload
-            )
-            AccessResolverState.Empty -> ReadAccessMessage(
-                title = stringResource(R.string.read_access_empty_title),
-                body = stringResource(R.string.read_access_empty_body)
-            )
+            is AccessResolverState.Loaded ->
+                ReadAccessLoaded(
+                    access = state.access,
+                    download = download,
+                    onDownloadInApp = onDownloadInApp,
+                    onCancelDownload = onCancelDownload,
+                )
+            AccessResolverState.Empty ->
+                ReadAccessMessage(
+                    title = stringResource(R.string.read_access_empty_title),
+                    body = stringResource(R.string.read_access_empty_body),
+                )
             AccessResolverState.Error -> {
                 ReadAccessMessage(
                     title = stringResource(R.string.discover_error_title),
-                    body = stringResource(R.string.discover_error_body)
+                    body = stringResource(R.string.discover_error_body),
                 )
                 ReadAccessRetry(onRetry = onRetry)
             }
             AccessResolverState.Offline -> {
                 ReadAccessMessage(
                     title = stringResource(R.string.discover_offline_title),
-                    body = stringResource(R.string.discover_offline_body)
+                    body = stringResource(R.string.discover_offline_body),
                 )
                 ReadAccessRetry(onRetry = onRetry)
             }
             is AccessResolverState.ConsentRequired -> {
                 ReadAccessMessage(
                     title = stringResource(R.string.addon_consent_title),
-                    body = stringResource(R.string.addon_consent_body, state.addonId)
+                    body = stringResource(R.string.addon_consent_body, state.addonId),
                 )
                 NextPageButton(
                     text = stringResource(R.string.addon_consent_allow),
                     onClick = onAllowConsent,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
                 NextPageButton(
                     text = stringResource(R.string.addon_consent_deny),
                     onClick = onDenyConsent,
                     variant = NextPageButtonVariant.OUTLINED,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
@@ -206,20 +210,20 @@ private fun ReadAccessLoaded(
     access: LegalAccess,
     download: DownloadImportState,
     onDownloadInApp: () -> Unit,
-    onCancelDownload: () -> Unit
+    onCancelDownload: () -> Unit,
 ) {
     val uriHandler = LocalUriHandler.current
     if (access.canDownloadInApp) {
         ReadAccessDownloadCta(
             download = download,
             onDownloadInApp = onDownloadInApp,
-            onCancelDownload = onCancelDownload
+            onCancelDownload = onCancelDownload,
         )
         NextPageDivider()
     }
     BookAccessList(
         access = access,
-        onOpenExternal = { url -> uriHandler.openUri(url) }
+        onOpenExternal = { url -> uriHandler.openUri(url) },
     )
 }
 
@@ -228,45 +232,48 @@ private fun ReadAccessLoaded(
 private fun ReadAccessDownloadCta(
     download: DownloadImportState,
     onDownloadInApp: () -> Unit,
-    onCancelDownload: () -> Unit
+    onCancelDownload: () -> Unit,
 ) {
     when (download) {
-        is DownloadImportState.Idle -> NextPageButton(
-            text = stringResource(R.string.discover_download),
-            onClick = onDownloadInApp,
-            modifier = Modifier.fillMaxWidth()
-        )
+        is DownloadImportState.Idle ->
+            NextPageButton(
+                text = stringResource(R.string.discover_download),
+                onClick = onDownloadInApp,
+                modifier = Modifier.fillMaxWidth(),
+            )
         is DownloadImportState.Downloading, is DownloadImportState.Importing -> {
             NextPageSkeletonBox(modifier = Modifier.fillMaxWidth())
             NextPageButton(
                 text = stringResource(R.string.discover_download_cancel),
                 onClick = onCancelDownload,
                 variant = NextPageButtonVariant.OUTLINED,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             )
         }
-        is DownloadImportState.Success -> NextPageButton(
-            text = stringResource(R.string.discover_imported),
-            onClick = { },
-            enabled = false,
-            modifier = Modifier.fillMaxWidth()
-        )
-        is DownloadImportState.Duplicate -> Text(
-            text = stringResource(R.string.discover_duplicate),
-            style = MaterialTheme.typography.bodyMedium,
-            color = NextPageColors.textSecondary
-        )
+        is DownloadImportState.Success ->
+            NextPageButton(
+                text = stringResource(R.string.discover_imported),
+                onClick = { },
+                enabled = false,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        is DownloadImportState.Duplicate ->
+            Text(
+                text = stringResource(R.string.discover_duplicate),
+                style = MaterialTheme.typography.bodyMedium,
+                color = NextPageColors.textSecondary,
+            )
         is DownloadImportState.Failure -> {
             Text(
                 text = stringResource(R.string.discover_download_failed),
                 style = MaterialTheme.typography.bodyMedium,
-                color = NextPageColors.errorSoft
+                color = NextPageColors.errorSoft,
             )
             NextPageButton(
                 text = stringResource(R.string.discover_retry),
                 onClick = onDownloadInApp,
                 variant = NextPageButtonVariant.OUTLINED,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }
@@ -277,7 +284,7 @@ private fun ReadAccessDownloadCta(
 private fun ReadAccessSkeleton(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         repeat(READ_ACCESS_SKELETON_ROWS) {
             NextPageSkeletonBox(modifier = Modifier.fillMaxWidth())
@@ -287,35 +294,42 @@ private fun ReadAccessSkeleton(modifier: Modifier = Modifier) {
 
 /** Centered title + body message for the empty/error/offline states. */
 @Composable
-private fun ReadAccessMessage(title: String, body: String, modifier: Modifier = Modifier) {
+private fun ReadAccessMessage(
+    title: String,
+    body: String,
+    modifier: Modifier = Modifier,
+) {
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
-            color = NextPageColors.textPrimary
+            color = NextPageColors.textPrimary,
         )
         Text(
             text = body,
             style = MaterialTheme.typography.bodySmall,
-            color = NextPageColors.textSecondary
+            color = NextPageColors.textSecondary,
         )
     }
 }
 
 /** Retry CTA shared by the error and offline states. */
 @Composable
-private fun ReadAccessRetry(onRetry: () -> Unit, modifier: Modifier = Modifier) {
+private fun ReadAccessRetry(
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         NextPageButton(
             text = stringResource(R.string.discover_retry),
             onClick = onRetry,
-            variant = NextPageButtonVariant.OUTLINED
+            variant = NextPageButtonVariant.OUTLINED,
         )
     }
 }

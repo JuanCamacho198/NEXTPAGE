@@ -31,7 +31,12 @@ import com.nextpage.presentation.theme.NextPageDimens
 import com.nextpage.ui.icons.NextPageIcons
 
 @Composable
-fun QuickAccessSection(onImportBook: () -> Unit, onHighlights: () -> Unit, onStatistics: () -> Unit, onSettings: () -> Unit) {
+fun QuickAccessSection(
+    onImportBook: () -> Unit,
+    onHighlights: () -> Unit,
+    onStatistics: () -> Unit,
+    onSettings: () -> Unit,
+) {
     Column {
         Text(text = stringResource(R.string.home_quick_actions), style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
         Spacer(modifier = Modifier.height(NextPageDimens.spacingSm))
@@ -49,7 +54,12 @@ fun QuickAccessSection(onImportBook: () -> Unit, onHighlights: () -> Unit, onSta
 }
 
 @Composable
-fun QuickAccessButton(icon: ImageVector, label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun QuickAccessButton(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Surface(modifier = modifier.clickable(onClick = onClick), shape = RoundedCornerShape(NextPageDimens.spacingSm), color = MaterialTheme.colorScheme.surfaceVariant, tonalElevation = 1.dp) {
         Column(modifier = Modifier.fillMaxWidth().padding(NextPageDimens.spacingMd), horizontalAlignment = Alignment.CenterHorizontally) {
             Box(modifier = Modifier.size(56.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {

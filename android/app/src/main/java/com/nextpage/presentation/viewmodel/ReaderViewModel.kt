@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.nextpage.R
+import com.nextpage.data.remote.supabase.SupabaseProgressSync
 import com.nextpage.data.session.ReaderPreferences
 import com.nextpage.debug.DebugLog
 import com.nextpage.domain.model.Highlight
@@ -15,7 +16,6 @@ import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.repository.ReadingStatsRepository
 import com.nextpage.domain.usecase.UpdateReadingProgressUseCase
-import com.nextpage.data.remote.supabase.SupabaseProgressSync
 import com.nextpage.presentation.UiEvent
 import com.nextpage.presentation.viewmodel.reader.AnnotationUiState
 import com.nextpage.presentation.viewmodel.reader.ChromeUiState
@@ -23,10 +23,10 @@ import com.nextpage.presentation.viewmodel.reader.FullscreenManager
 import com.nextpage.presentation.viewmodel.reader.ReaderInteractionStateHolder
 import com.nextpage.presentation.viewmodel.reader.ReaderLifecycleStateHolder
 import com.nextpage.presentation.viewmodel.reader.ReaderSettingsManager
-import com.nextpage.presentation.viewmodel.reader.SettingsUiState
 import com.nextpage.presentation.viewmodel.reader.SearchStateHolder
 import com.nextpage.presentation.viewmodel.reader.SearchUiState
 import com.nextpage.presentation.viewmodel.reader.SessionUiState
+import com.nextpage.presentation.viewmodel.reader.SettingsUiState
 import com.nextpage.presentation.viewmodel.reader.SleepTimerManager
 import com.nextpage.presentation.viewmodel.reader.SleepTimerUiState
 import kotlinx.coroutines.CoroutineDispatcher
@@ -36,7 +36,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.readium.r2.shared.publication.Locator
@@ -85,7 +84,7 @@ class ReaderViewModel(
     private val dictionaryRepository: DictionaryRepository? = null,
     private val libraryRepository: LibraryRepository? = null,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
-    private val supabaseProgressSync: SupabaseProgressSync? = null
+    private val supabaseProgressSync: SupabaseProgressSync? = null,
 ) : AndroidViewModel(application) {
     /**
      * Sleep timer manager — timer slice owner (SDD reader-facade-split, slice 3).
@@ -99,6 +98,7 @@ class ReaderViewModel(
     val sleepTimerManager = SleepTimerManager(viewModelScope)
 
     private val _uiEvent = MutableSharedFlow<UiEvent>()
+
     /**
      * One-shot UI events for the reader (snackbars, toasts).
      *
@@ -109,6 +109,7 @@ class ReaderViewModel(
     val uiEvent: SharedFlow<UiEvent> = _uiEvent.asSharedFlow()
 
     private val _navigateToLocator = MutableSharedFlow<Locator>()
+
     /**
      * One-shot navigation events carrying a Readium [Locator] to jump to
      * (used by search-result taps and highlight-tap navigation).
@@ -128,12 +129,14 @@ class ReaderViewModel(
      * (`viewModel.searchStateHolder`), never via a direct holder import.
      * Only this holder holds the search MutableStateFlow and mutating funs.
      */
-    val searchStateHolder = SearchStateHolder(
-        scope = viewModelScope,
-        onNavigateToLocator = { loc -> viewModelScope.launch { _navigateToLocator.emit(loc) } },
-        onGoToChapter = { lifecycleHolder.goToChapter(it) },
-        onGoToPdfPage = { lifecycleHolder.goToPdfPage(it) }
-    )
+    val searchStateHolder =
+        SearchStateHolder(
+            scope = viewModelScope,
+            onNavigateToLocator = { loc -> viewModelScope.launch { _navigateToLocator.emit(loc) } },
+            onGoToChapter = { lifecycleHolder.goToChapter(it) },
+            onGoToPdfPage = { lifecycleHolder.goToPdfPage(it) },
+        )
+
     /**
      * Chrome slice owner (SDD reader-facade-split, slice 2).
      *
@@ -142,6 +145,7 @@ class ReaderViewModel(
      * Only this manager holds the chrome MutableStateFlow and mutating funs.
      */
     val fullscreenManager = FullscreenManager()
+
     /**
      * Settings slice owner (SDD reader-facade-split, slice 2).
      *
@@ -161,20 +165,21 @@ class ReaderViewModel(
      * Only this holder (and its lifecycle collaborators) holds the session
      * MutableStateFlow and mutating funs.
      */
-    val lifecycleHolder = ReaderLifecycleStateHolder(
-        application = application,
-        readerRepository = readerRepository,
-        updateReadingProgressUseCase = updateReadingProgressUseCase,
-        readingStatsRepository = readingStatsRepository,
-        scope = viewModelScope,
-        onChapterChanged = { sleepTimerManager.onChapterChanged() },
-        onErrorEvent = { _uiEvent.tryEmit(it) },
-        onSelectionCleared = { interactionHolder.onSelectionClearedFromLifecycle() },
-        onNavigateToLocator = { loc -> viewModelScope.launch { _navigateToLocator.emit(loc) } },
-        onBookLoaded = { bookId -> interactionHolder.observeBook(bookId) },
-        mainDispatcher = mainDispatcher,
-        supabaseProgressSync = supabaseProgressSync
-    )
+    val lifecycleHolder =
+        ReaderLifecycleStateHolder(
+            application = application,
+            readerRepository = readerRepository,
+            updateReadingProgressUseCase = updateReadingProgressUseCase,
+            readingStatsRepository = readingStatsRepository,
+            scope = viewModelScope,
+            onChapterChanged = { sleepTimerManager.onChapterChanged() },
+            onErrorEvent = { _uiEvent.tryEmit(it) },
+            onSelectionCleared = { interactionHolder.onSelectionClearedFromLifecycle() },
+            onNavigateToLocator = { loc -> viewModelScope.launch { _navigateToLocator.emit(loc) } },
+            onBookLoaded = { bookId -> interactionHolder.observeBook(bookId) },
+            mainDispatcher = mainDispatcher,
+            supabaseProgressSync = supabaseProgressSync,
+        )
 
     // ── Cluster B state holder ────────────────────────────────────────
 
@@ -187,13 +192,14 @@ class ReaderViewModel(
      * invoke holder methods directly for writes and collect
      * [annotationUiState] for reads.
      */
-    val interactionHolder = ReaderInteractionStateHolder(
-        readerRepository = readerRepository,
-        dictionaryRepository = dictionaryRepository,
-        scope = viewModelScope,
-        onEvent = { _uiEvent.tryEmit(it) },
-        mainDispatcher = mainDispatcher
-    )
+    val interactionHolder =
+        ReaderInteractionStateHolder(
+            readerRepository = readerRepository,
+            dictionaryRepository = dictionaryRepository,
+            scope = viewModelScope,
+            onEvent = { _uiEvent.tryEmit(it) },
+            mainDispatcher = mainDispatcher,
+        )
 
     /**
      * Emitted when the WebView/Readium selection should be cleared.
@@ -271,7 +277,7 @@ class ReaderViewModel(
         // owner (SDD reader-facade-split, T5); the VM only supplies density.
         lifecycleHolder.observeTypographyConfig(
             settingsManager.state,
-            getApplication<android.app.Application>().resources.displayMetrics.density
+            getApplication<android.app.Application>().resources.displayMetrics.density,
         )
     }
 
@@ -300,7 +306,11 @@ class ReaderViewModel(
      * @param filePath Absolute filesystem path to the book file.
      * @param format `"epub"` or `"pdf"`. Defaults to `"epub"`.
      */
-    fun loadBook(bookId: String, filePath: String, format: String = "epub") {
+    fun loadBook(
+        bookId: String,
+        filePath: String,
+        format: String = "epub",
+    ) {
         interactionHolder.resetCoordinator()
         fullscreenManager.enterFullscreen()
         lifecycleHolder.loadBook(bookId, filePath, format)
@@ -327,7 +337,11 @@ class ReaderViewModel(
      * @param filePath Navigation-carried absolute path; may be null/blank.
      * @param format `"epub"` or `"pdf"`. Defaults to `"epub"`.
      */
-    fun loadBookWithFallback(bookId: String, filePath: String?, format: String = "epub") {
+    fun loadBookWithFallback(
+        bookId: String,
+        filePath: String?,
+        format: String = "epub",
+    ) {
         val navPath = filePath?.takeIf { it.isNotBlank() }
         if (navPath != null) {
             loadBook(bookId, navPath, format)
@@ -339,11 +353,12 @@ class ReaderViewModel(
             return
         }
         viewModelScope.launch(mainDispatcher) {
-            val resolved = try {
-                libraryRepository?.getBookById(bookId)?.filePath?.takeIf { it.isNotBlank() }
-            } catch (_: Exception) {
-                null
-            }
+            val resolved =
+                try {
+                    libraryRepository?.getBookById(bookId)?.filePath?.takeIf { it.isNotBlank() }
+                } catch (_: Exception) {
+                    null
+                }
             if (resolved != null) {
                 DebugLog.info(TAG, "loadBookWithFallback resolved path from library bookId=$bookId")
                 loadBook(bookId, resolved, format)
@@ -408,7 +423,7 @@ class ReaderViewModel(
             result = result,
             publication = session.readiumPublication,
             bookFormat = session.bookFormat,
-            currentChapterIndex = session.currentChapterIndex
+            currentChapterIndex = session.currentChapterIndex,
         )
     }
 
@@ -452,11 +467,22 @@ class ReaderViewModel(
                 // Legacy CFI without a stored locator: extract spine index and
                 // map to TOC list position (spine offset fix).
                 val chapterMatch = Regex("/6/(\\d+)").find(cfi)
-                val spineIndex = chapterMatch?.groupValues?.getOrNull(1)?.toIntOrNull()?.minus(1)
+                val spineIndex =
+                    chapterMatch
+                        ?.groupValues
+                        ?.getOrNull(1)
+                        ?.toIntOrNull()
+                        ?.minus(1)
                 if (spineIndex != null) {
                     val chapters = lifecycleHolder.state.value.chapters
                     val listPos = chapters.indexOfFirst { it.index == spineIndex }.takeIf { it >= 0 }
-                    if (listPos != null) lifecycleHolder.goToChapter(listPos) else lifecycleHolder.goToChapter(spineIndex.coerceIn(chapters.indices))
+                    if (listPos !=
+                        null
+                    ) {
+                        lifecycleHolder.goToChapter(listPos)
+                    } else {
+                        lifecycleHolder.goToChapter(spineIndex.coerceIn(chapters.indices))
+                    }
                 }
             }
         }
@@ -475,8 +501,11 @@ class ReaderViewModel(
      * @param cfiLocation CFI string (EPUB) or `"pdfpage:<n>"` marker.
      * @param titleOrSnippet User-supplied title or snippet to label the bookmark.
      */
-    fun createBookmark(bookId: String, cfiLocation: String, titleOrSnippet: String) =
-        interactionHolder.createBookmark(bookId, cfiLocation, titleOrSnippet)
+    fun createBookmark(
+        bookId: String,
+        cfiLocation: String,
+        titleOrSnippet: String,
+    ) = interactionHolder.createBookmark(bookId, cfiLocation, titleOrSnippet)
 
     /**
      * Creates a bookmark at the reader's current position using the
@@ -490,7 +519,7 @@ class ReaderViewModel(
             currentPdfPage = session.currentPdfPage,
             chapters = session.chapters,
             currentChapterIndex = session.currentChapterIndex,
-            readiumLocator = session.readiumLocator
+            readiumLocator = session.readiumLocator,
         )
     }
 
@@ -544,7 +573,7 @@ class ReaderViewModelFactory(
     private val defaultBookId: String?,
     private val dictionaryRepository: DictionaryRepository? = null,
     private val libraryRepository: LibraryRepository? = null,
-    private val supabaseProgressSync: SupabaseProgressSync? = null
+    private val supabaseProgressSync: SupabaseProgressSync? = null,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -558,7 +587,7 @@ class ReaderViewModelFactory(
                 defaultBookId = defaultBookId,
                 dictionaryRepository = dictionaryRepository,
                 libraryRepository = libraryRepository,
-                supabaseProgressSync = supabaseProgressSync
+                supabaseProgressSync = supabaseProgressSync,
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")

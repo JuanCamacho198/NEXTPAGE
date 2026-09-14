@@ -2,9 +2,7 @@ package com.nextpage.presentation.navigation
 
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -17,20 +15,21 @@ import com.nextpage.ui.components.atoms.NextPageDialog
  */
 internal object AddonInstallDialogText {
     const val TITLE = "Install addon?"
-        const val PUBLISHER_LABEL = "Publisher"
+    const val PUBLISHER_LABEL = "Publisher"
     const val INSTALL = "Install"
     const val CANCEL = "Cancel"
     const val INSTALLING_TITLE = "Installing addon…"
     const val ERROR_TITLE = "Couldn't install addon"
     const val OK = "OK"
 
-    fun errorBody(code: AddonFetchErrorCode): String = when (code) {
-        AddonFetchErrorCode.HTTPS_REQUIRED -> "Install links must use https."
-        AddonFetchErrorCode.NETWORK -> "Could not download the addon. Check your connection and try again."
-        AddonFetchErrorCode.TOO_LARGE -> "The addon manifest is too large."
-        AddonFetchErrorCode.BAD_CONTENT_TYPE -> "The addon manifest is not valid JSON."
-        AddonFetchErrorCode.INVALID_MANIFEST -> "This addon manifest is invalid."
-    }
+    fun errorBody(code: AddonFetchErrorCode): String =
+        when (code) {
+            AddonFetchErrorCode.HTTPS_REQUIRED -> "Install links must use https."
+            AddonFetchErrorCode.NETWORK -> "Could not download the addon. Check your connection and try again."
+            AddonFetchErrorCode.TOO_LARGE -> "The addon manifest is too large."
+            AddonFetchErrorCode.BAD_CONTENT_TYPE -> "The addon manifest is not valid JSON."
+            AddonFetchErrorCode.INVALID_MANIFEST -> "This addon manifest is invalid."
+        }
 }
 
 /**
@@ -51,28 +50,31 @@ fun AddonInstallDialogHost(controller: InstallDeepLinkController) {
                 title = { Text(AddonInstallDialogText.INSTALLING_TITLE) },
                 text = { CircularProgressIndicator() },
                 confirmButton = {},
-                dismissButton = {}
+                dismissButton = {},
             )
         }
-        is InstallUiState.Confirming -> NextPageDialog(
-            title = AddonInstallDialogText.TITLE,
-            body = "${current.manifest.name} v${current.manifest.version} · " +
-                "${current.manifest.catalogs.size} catalog(s)\n" +
-                    "${AddonInstallDialogText.PUBLISHER_LABEL}: ${current.manifest.id}\n${current.url}",
-            confirmText = AddonInstallDialogText.INSTALL,
-            dismissText = AddonInstallDialogText.CANCEL,
-            onConfirm = controller::confirm,
-            onDismiss = controller::cancel,
-            variant = com.nextpage.ui.components.atoms.NextPageDialogVariant.INFO
-        )
-        is InstallUiState.Error -> NextPageDialog(
-            title = AddonInstallDialogText.ERROR_TITLE,
-            body = AddonInstallDialogText.errorBody(current.code),
-            confirmText = AddonInstallDialogText.OK,
-            dismissText = AddonInstallDialogText.CANCEL,
-            onConfirm = controller::dismissError,
-            onDismiss = controller::dismissError,
-            variant = com.nextpage.ui.components.atoms.NextPageDialogVariant.DESTRUCTIVE
-        )
+        is InstallUiState.Confirming ->
+            NextPageDialog(
+                title = AddonInstallDialogText.TITLE,
+                body =
+                    "${current.manifest.name} v${current.manifest.version} · " +
+                        "${current.manifest.catalogs.size} catalog(s)\n" +
+                        "${AddonInstallDialogText.PUBLISHER_LABEL}: ${current.manifest.id}\n${current.url}",
+                confirmText = AddonInstallDialogText.INSTALL,
+                dismissText = AddonInstallDialogText.CANCEL,
+                onConfirm = controller::confirm,
+                onDismiss = controller::cancel,
+                variant = com.nextpage.ui.components.atoms.NextPageDialogVariant.INFO,
+            )
+        is InstallUiState.Error ->
+            NextPageDialog(
+                title = AddonInstallDialogText.ERROR_TITLE,
+                body = AddonInstallDialogText.errorBody(current.code),
+                confirmText = AddonInstallDialogText.OK,
+                dismissText = AddonInstallDialogText.CANCEL,
+                onConfirm = controller::dismissError,
+                onDismiss = controller::dismissError,
+                variant = com.nextpage.ui.components.atoms.NextPageDialogVariant.DESTRUCTIVE,
+            )
     }
 }

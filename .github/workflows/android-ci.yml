@@ -3,8 +3,11 @@ name: Android CI
 on:
   # Allow maintainers to re-run the full gate manually from the Actions tab.
   workflow_dispatch:
+  # No `branches` filter on purpose: chained PRs target intermediate branches,
+  # not `main`, and a `branches: [main]` filter silently skipped CI for every
+  # slice of a feature-branch-chain. Branch protection only requires this check
+  # on `main`, so running it on PRs to any base is safe.
   pull_request:
-    branches: [main]
     paths-ignore:
       - 'desktop/**'
       - 'web/**'

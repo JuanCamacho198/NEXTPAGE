@@ -89,12 +89,14 @@ class SupabaseDeviceDataSource {
     }
 
     suspend fun upsertDevice(device: Device): Device {
+        // Empty response body = successful write (see decodeSingleOrNullTolerant).
         return postgrest["devices"]
             .upsert(device) {
                 onConflict = "user_id,hardware_id"
                 headers.append("Prefer", "return=representation")
             }
-            .decodeSingle<Device>()
+            .decodeSingleOrNullTolerant<Device>()
+            ?: device
     }
 
     suspend fun updateHeartbeat(deviceId: String) {

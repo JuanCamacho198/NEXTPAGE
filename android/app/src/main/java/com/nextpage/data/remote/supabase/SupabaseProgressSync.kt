@@ -12,7 +12,9 @@ import com.nextpage.data.local.entity.ReadingSessionEntity
 import com.nextpage.data.local.entity.SyncEntityType
 import com.nextpage.data.local.entity.SyncOperation
 import com.nextpage.data.remote.sync.ApplyOutcome
+import com.nextpage.data.remote.sync.CommitOutcome
 import com.nextpage.data.remote.sync.OutboxCommit
+import com.nextpage.debug.DebugLog
 import com.nextpage.data.session.SessionManager
 import com.nextpage.data.sync.CanonicalLocator
 import com.nextpage.data.sync.LocatorCodec
@@ -196,7 +198,17 @@ class SupabaseProgressSync(
     ) {
         val helper = outboxCommit
         if (helper != null) {
-            helper.commit(item, apply)
+            val outcome = helper.commit(item, apply)
+            if (outcome is CommitOutcome.Poison) {
+                // Genuine, bounded error: the item exhausted its retries and was
+                // pruned. Per-attempt failures stay WARN telemetry (FIX 5); only
+                // this terminal state is error-level.
+                DebugLog.error(
+                    TAG,
+                    "sync.outboxPoisoned entityType=${item.entityType} " +
+                        "entityId=${item.entityId} error=${outcome.cause.message}"
+                )
+            }
             return
         }
         when (val outcome = apply()) {
@@ -820,6 +832,8 @@ class SupabaseProgressSync(
     }
 
     companion object {
+        private const val TAG = "SupabaseProgressSync"
+
         /** How many times to re-check that a freshly-downloaded book exists locally. */
         internal const val PULL_BOOK_READY_MAX_ATTEMPTS = 5
 

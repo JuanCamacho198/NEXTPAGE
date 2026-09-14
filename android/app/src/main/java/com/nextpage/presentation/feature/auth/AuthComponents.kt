@@ -34,7 +34,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -45,6 +44,7 @@ import com.nextpage.presentation.screen.AuthTags
 import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.presentation.viewmodel.AuthUiState
 import com.nextpage.ui.icons.NextPageIcons
+import com.nextpage.ui.util.safePainterResource
 
 @Composable
 fun AuthScreenScaffold(
@@ -55,9 +55,11 @@ fun AuthScreenScaffold(
     val isDarkBackground = MaterialTheme.colorScheme.background.luminance() < 0.5f
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
-            painter = painterResource(
-                if (isDarkBackground) R.drawable.bg_auth_bookshelf_dark
-                else R.drawable.bg_auth_bookshelf_light
+            painter = safePainterResource(
+                resId = if (isDarkBackground) R.drawable.bg_auth_bookshelf_dark
+                else R.drawable.bg_auth_bookshelf_light,
+                fallbackColor = MaterialTheme.colorScheme.background,
+                source = "auth_background"
             ),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),

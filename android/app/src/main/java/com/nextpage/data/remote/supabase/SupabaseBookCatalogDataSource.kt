@@ -40,12 +40,17 @@ class SupabaseBookCatalogDataSource(
      * on the same user gets overwritten with latest metadata.
      */
     suspend fun upsertBook(row: UserBookRow): UserBookRow {
+        // Empty response body = successful write (204 / return=minimal / stripped
+        // representation). Without this, PostgREST's empty body surfaced as a
+        // JsonDecodingException ("Expected start of the array '[', but had 'EOF'")
+        // and broke every local-book reconcile push. See decodeSingleOrNullTolerant.
         return postgrest["user_books"]
             .upsert(row) {
                 onConflict = "user_id, id"
                 headers.append("Prefer", "return=representation")
             }
-            .decodeSingle<UserBookRow>()
+            .decodeSingleOrNullTolerant<UserBookRow>()
+            ?: row
     }
 
     /**

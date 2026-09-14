@@ -7,6 +7,7 @@ import coil.ImageLoaderFactory
 import com.nextpage.data.remote.supabase.SupabaseClientProvider
 import com.nextpage.debug.CrashLogStore
 import com.nextpage.debug.SentryPiiScrubber
+import com.nextpage.debug.SentryInitGuard
 import com.nextpage.debug.SentryMetrics
 import com.nextpage.debug.SentryPrivacyPrefs
 import com.nextpage.debug.DebugLog
@@ -80,7 +81,10 @@ class NextPageApplication : Application(), ImageLoaderFactory {
         // comes from local.properties which is gitignored; see app/build.gradle.kts).
         // We deliberately do NOT attach screenshots or view hierarchy — NextPage
         // is a reader app and we must not leak book content to Sentry.
-        SentryAndroid.init(this) { options ->
+        // FIX 4 (NEXTPAGE-ANDROID-3): never initialise the real SDK on a JVM test
+        // classpath (JUnit/Robolectric instantiate this Application) — synthetic
+        // test failures must not egress to the production project.
+        if (SentryInitGuard.shouldInitialize()) SentryAndroid.init(this) { options ->
             options.dsn = BuildConfig.SENTRY_DSN.takeIf { it.isNotEmpty() }
             // Spec C1 — cross-platform release `nextpage-android@<version>+<sha12>`.
             // GIT_SHA is emitted by `build.gradle.kts` from `git rev-parse --short=12 HEAD`

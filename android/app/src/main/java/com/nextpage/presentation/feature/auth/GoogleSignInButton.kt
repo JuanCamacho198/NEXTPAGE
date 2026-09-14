@@ -20,7 +20,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -38,6 +37,7 @@ import com.nextpage.BuildConfig
 import com.nextpage.R
 import com.nextpage.presentation.screen.AuthTags
 import com.nextpage.presentation.theme.NextPageTheme
+import com.nextpage.ui.util.safePainterResource
 import com.nextpage.presentation.viewmodel.AuthUiState
 import com.nextpage.ui.components.atoms.NextPageButton
 import com.nextpage.ui.components.atoms.NextPageButtonVariant
@@ -160,7 +160,11 @@ fun GoogleSignInButton(
             )
         } else {
             Icon(
-                painter = painterResource(R.drawable.ic_google_logo),
+                painter = safePainterResource(
+                    resId = R.drawable.ic_google_logo,
+                    fallbackColor = Color.Transparent,
+                    source = "google_logo"
+                ),
                 contentDescription = null,
                 tint = Color.Unspecified,
                 modifier = Modifier.size(20.dp)

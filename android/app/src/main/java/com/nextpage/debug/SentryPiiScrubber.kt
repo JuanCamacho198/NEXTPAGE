@@ -63,7 +63,9 @@ object SentryPiiScrubber {
     val BREADCRUMB_ALLOWLIST: Set<String> = setOf(
         "progress.emit",
         "footer.chapterResolved",
+        "reader.footerMismatch",
         "highlights.applied",
+        "highlights.skipped",
         "sync.outboxFailed",
         "sync.receive",
         "metric."

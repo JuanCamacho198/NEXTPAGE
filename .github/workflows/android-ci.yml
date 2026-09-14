@@ -79,6 +79,7 @@ jobs:
             -Dorg.gradle.vfs.watch=false \
             :app:testDebugUnitTest \
             detekt \
+            spotlessCheck \
             :app:verifyStringParity \
             :app:verifyAuthScreenNoHardcodedStrings \
             :app:verifyNoReaderUiStateResidue

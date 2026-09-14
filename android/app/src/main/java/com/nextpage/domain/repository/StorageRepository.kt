@@ -1,9 +1,25 @@
 package com.nextpage.domain.repository
 
+import com.nextpage.domain.model.BookStorageItem
+
 /**
- * Storage maintenance over the app's internal book files.
+ * Storage maintenance and measurement over the app's internal book files.
  */
 interface StorageRepository {
+    /**
+     * Measures the local footprint of every live library book as the sum of its
+     * backing file plus its cover, when the cover is a local file.
+     *
+     * Contract:
+     *  - computed off the main thread (`Dispatchers.IO`);
+     *  - paths are deduped, so a cover equal to the backing file (or a file
+     *    shared by two rows) is counted once;
+     *  - a missing/unreadable path contributes 0 bytes rather than failing.
+     *
+     * @return one [BookStorageItem] per live book, in library order.
+     */
+    suspend fun bookStorageUsage(): List<BookStorageItem>
+
     /**
      * Deletes backing files no live book references (orphans left by deletes
      * whose sync-settle gate timed out, or by failed imports).

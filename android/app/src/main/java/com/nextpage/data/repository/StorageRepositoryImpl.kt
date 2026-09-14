@@ -2,6 +2,7 @@ package com.nextpage.data.repository
 
 import android.content.Context
 import com.nextpage.data.local.dao.BookDao
+import com.nextpage.domain.model.BookStorageItem
 import com.nextpage.domain.repository.StorageRepository
 import com.nextpage.domain.sync.SyncSettleGate
 import kotlinx.coroutines.Dispatchers
@@ -12,10 +13,11 @@ import java.io.File
 /**
  * JVM/Android implementation of [StorageRepository].
  *
- * The sweep is best-effort and local-only: it scans the managed book
- * directories (`catalog`, `pdfs`, `epubs`) for files no live book references,
- * skipping `*.part` in-flight downloads and anything modified inside the grace
- * window. It never touches remote/Drive bytes.
+ * Measurement sums the backing file plus cover of every live book. The sweep is
+ * best-effort and local-only: it scans the managed book directories
+ * (`catalog`, `pdfs`, `epubs`) for files no live book references, skipping
+ * `*.part` in-flight downloads and anything modified inside the grace window.
+ * It never touches remote/Drive bytes.
  */
 class StorageRepositoryImpl(
     private val appContext: Context,
@@ -23,6 +25,22 @@ class StorageRepositoryImpl(
     private val settleGate: SyncSettleGate,
     private val nowMillis: () -> Long = System::currentTimeMillis
 ) : StorageRepository {
+
+    override suspend fun bookStorageUsage(): List<BookStorageItem> = withContext(Dispatchers.IO) {
+        // Dedupe by absolute path: a cover that equals the backing file, or a
+        // file shared by two rows, must not be counted twice. The first book
+        // that references a path owns its bytes; later references count 0.
+        val seenPaths = mutableSetOf<String>()
+        bookDao.observeAllBooks().first().map { entity ->
+            var sizeBytes = 0L
+            for (path in listOfNotNull(entity.filePath, entity.coverPath)) {
+                if (path.isBlank()) continue
+                if (!seenPaths.add(path)) continue
+                sizeBytes += File(path).length()
+            }
+            BookStorageItem(bookId = entity.id, title = entity.title, sizeBytes = sizeBytes)
+        }
+    }
 
     override suspend fun sweepOrphanBookFiles(): Int = withContext(Dispatchers.IO) {
         // Never sweep mid-sync: a download may be renaming into place.

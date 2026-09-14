@@ -27,7 +27,10 @@ import com.nextpage.data.session.ReadingGoalPreferences
 import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.model.HighlightColor
 import com.nextpage.domain.model.ThemeMode
+import com.nextpage.domain.repository.CacheRepository
 import com.nextpage.domain.repository.DictionaryRepository
+import com.nextpage.domain.repository.LibraryRepository
+import com.nextpage.domain.repository.StorageRepository
 import com.nextpage.presentation.navigation.NextPageDestination
 import com.nextpage.presentation.screen.settings.AboutScreen
 import com.nextpage.presentation.screen.settings.SettingsAboutScreen
@@ -47,6 +50,7 @@ import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.presentation.viewmodel.DictionaryViewModel
 import com.nextpage.presentation.viewmodel.SettingsDevicesViewModel
 import com.nextpage.presentation.viewmodel.StatisticsViewModel
+import com.nextpage.presentation.viewmodel.StorageViewModel
 
 @Composable
 fun SettingsScreen(
@@ -66,7 +70,10 @@ fun SettingsScreen(
     statisticsViewModel: StatisticsViewModel,
     dictionaryRepository: DictionaryRepository? = null,
     driveAuthHelper: GoogleDriveAuthHelper? = null,
-    readingGoalPreferences: ReadingGoalPreferences? = null
+    readingGoalPreferences: ReadingGoalPreferences? = null,
+    storageRepository: StorageRepository? = null,
+    cacheRepository: CacheRepository? = null,
+    libraryRepository: LibraryRepository? = null
 ) {
     SettingsScreenContent(
         contentPadding = contentPadding,
@@ -85,7 +92,10 @@ fun SettingsScreen(
         statisticsViewModel = statisticsViewModel,
         dictionaryRepository = dictionaryRepository,
         driveAuthHelper = driveAuthHelper,
-        readingGoalPreferences = readingGoalPreferences
+        readingGoalPreferences = readingGoalPreferences,
+        storageRepository = storageRepository,
+        cacheRepository = cacheRepository,
+        libraryRepository = libraryRepository
     )
 }
 
@@ -107,11 +117,21 @@ private fun SettingsScreenContent(
     statisticsViewModel: StatisticsViewModel? = null,
     dictionaryRepository: DictionaryRepository? = null,
     driveAuthHelper: GoogleDriveAuthHelper? = null,
-    readingGoalPreferences: ReadingGoalPreferences? = null
+    readingGoalPreferences: ReadingGoalPreferences? = null,
+    storageRepository: StorageRepository? = null,
+    cacheRepository: CacheRepository? = null,
+    libraryRepository: LibraryRepository? = null
 ) {
     val nestedNavController = rememberNavController()
     val dictionaryViewModel = remember(dictionaryRepository) {
         dictionaryRepository?.let { DictionaryViewModel(it) }
+    }
+    val storageViewModel = remember(storageRepository, cacheRepository, libraryRepository) {
+        if (storageRepository != null && cacheRepository != null && libraryRepository != null) {
+            StorageViewModel(storageRepository, cacheRepository, libraryRepository)
+        } else {
+            null
+        }
     }
 
     val start = initialRoute ?: NextPageDestination.SettingsList.route
@@ -226,7 +246,10 @@ private fun SettingsScreenContent(
                     onNavigateToStatistics = {
                         nestedNavController.navigate(NextPageDestination.SettingsStatistics.route)
                     },
-                    onBack = { nestedNavController.popBackStack() }
+                    onBack = { nestedNavController.popBackStack() },
+                    onNavigateToStorage = {
+                        nestedNavController.navigate(NextPageDestination.SettingsStorage.route)
+                    }
                 )
             }
 
@@ -237,9 +260,20 @@ private fun SettingsScreenContent(
             }
 
             composable(route = NextPageDestination.SettingsStorage.route) {
-                StorageScreen(
-                    onBack = { nestedNavController.popBackStack() }
-                )
+                val vm = storageViewModel
+                if (vm != null) {
+                    val storageState by vm.uiState.collectAsStateWithLifecycle()
+                    StorageScreen(
+                        uiState = storageState,
+                        onBack = { nestedNavController.popBackStack() },
+                        onClearCache = vm::clearCache,
+                        onRequestDeleteBook = vm::requestDeleteBook,
+                        onDismissDelete = vm::dismissDeleteDialog,
+                        onConfirmLocalOnly = vm::confirmDeleteLocalOnly,
+                        onConfirmLocalAndDrive = vm::confirmDeleteLocalAndDrive,
+                        onSweepOrphans = vm::sweepOrphans
+                    )
+                }
             }
 
             composable(route = NextPageDestination.SettingsSync.route) {

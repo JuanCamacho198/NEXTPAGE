@@ -213,72 +213,61 @@ dependencies {
     implementation(libs.androidx.fragment.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
 
-    implementation(libs.compose.ui)
-    implementation(libs.compose.ui.tooling.preview)
-    implementation(libs.compose.material3)
+    implementation(libs.bundles.compose.ui)
     implementation(libs.compose.material.icons.extended)
     // Lottie for the Home streak widget (REQ-streak-widget-4). 6.6.6 verified
     // against Kotlin 1.9.24 (kotlin-stdlib 1.9.22 metadata); fallback 6.5.2.
-    implementation("com.airbnb.android:lottie-compose:6.6.6")
+    implementation(libs.lottie.compose)
     implementation(libs.coil)
     implementation(libs.coil.compose)
-    implementation("androidx.webkit:webkit:1.12.1")
+    implementation(libs.androidx.webkit)
 
-    implementation("androidx.navigation:navigation-compose:2.8.2")
-    androidTestImplementation("androidx.navigation:navigation-testing:2.8.2")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
+    implementation(libs.androidx.navigation.compose)
+    androidTestImplementation(libs.androidx.navigation.testing)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
 
-    implementation(libs.room.runtime)
-    implementation(libs.room.ktx)
-    implementation(libs.room.paging)
+    implementation(libs.bundles.room)
     ksp(libs.room.compiler)
-    androidTestImplementation("androidx.room:room-testing:2.8.4")
-    testImplementation("androidx.room:room-testing:2.8.4")
+    androidTestImplementation(libs.room.testing)
+    testImplementation(libs.room.testing)
 
     // Paging 3
     implementation(libs.paging.runtime)
     implementation(libs.paging.compose)
 
     // Google Drive REST API + Credential Manager
-    implementation("com.google.android.gms:play-services-auth:21.3.0")
-    implementation("com.google.api-client:google-api-client-android:2.7.2")
-    implementation("com.google.apis:google-api-services-drive:v3-rev20260428-2.0.0")
-    implementation("com.google.http-client:google-http-client-gson:1.45.3")
-    implementation("androidx.credentials:credentials:1.5.0")
-    implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
-    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+    implementation(libs.google.play.services.auth)
+    implementation(libs.google.api.client.android)
+    implementation(libs.google.api.services.drive)
+    implementation(libs.google.http.client.gson)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services)
+    implementation(libs.google.id)
 
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.serialization.json)
 
     // Ktor HTTP client (v3.x for supabase-kt compatibility)
-    implementation("io.ktor:ktor-client-core:3.1.2")
-    implementation("io.ktor:ktor-client-okhttp:3.1.2")
     // CIO engine for the dedicated Discover catalog client (PR2: catalog-only,
     // keeps catalog traffic off the shared OkHttp stack used by Drive/Supabase).
-    implementation("io.ktor:ktor-client-cio:3.1.2")
-    implementation("io.ktor:ktor-client-content-negotiation:3.1.2")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:3.1.2")
+    implementation(libs.bundles.ktor.client)
 
     // supabase-kt v3 — Supabase client for Android
-    implementation(platform("io.github.jan-tennert.supabase:bom:3.5.0"))
-    implementation("io.github.jan-tennert.supabase:auth-kt")
-    implementation("io.github.jan-tennert.supabase:postgrest-kt")
-    implementation("io.github.jan-tennert.supabase:realtime-kt")
-    implementation("io.github.jan-tennert.supabase:storage-kt")
+    implementation(platform(libs.supabase.bom))
+    implementation(libs.bundles.supabase)
     // kotlinx-datetime — supabase-kt 3.5+ uses its own unix serializer (no
     // InstantIso8601Serializer). Readium 3.2.0 requires 0.7+ (atStartOfDayIn).
-    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.7.1")
+    implementation(libs.kotlinx.datetime)
 
     // Security: encrypted storage (database encryption requires Kotlin 2.0+ upgrade)
-    implementation("androidx.security:security-crypto:1.1.0-alpha06")
-    implementation("androidx.profileinstaller:profileinstaller:1.3.1")
+    implementation(libs.androidx.security.crypto)
+    implementation(libs.androidx.profileinstaller)
 
     // Readium Kotlin Toolkit (EPUB + PDF rendering)
-    implementation("org.readium.kotlin-toolkit:readium-shared:3.2.0")
-    implementation("org.readium.kotlin-toolkit:readium-streamer:3.2.0")
-    implementation("org.readium.kotlin-toolkit:readium-navigator:3.2.0")
-    implementation("org.readium.kotlin-toolkit:readium-adapter-pdfium:3.2.0") {
+    implementation(libs.readium.shared)
+    implementation(libs.readium.streamer)
+    implementation(libs.readium.navigator)
+    implementation(libs.readium.adapter.pdfium) {
         exclude(group = "androidx.appcompat")
     }
 
@@ -286,24 +275,23 @@ dependencies {
     // landing time). Pinned explicitly so transitive resolution cannot
     // surprise us. The Gradle plugin's autoInstallation also adds this
     // dependency; declaring it here makes the version visible to reviewers.
-    implementation("io.sentry:sentry-android:8.54.0")
+    implementation(libs.sentry.android)
 
-    debugImplementation("androidx.compose.ui:ui-tooling")
-    debugImplementation("androidx.compose.ui:ui-test-manifest")
+    debugImplementation(libs.compose.ui.tooling)
+    debugImplementation(libs.compose.ui.test.manifest)
 
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
 
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("io.ktor:ktor-client-mock:3.1.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
-    testImplementation("io.mockk:mockk:1.13.12")
-    testImplementation("org.json:json:20231013")
-    testImplementation("androidx.test:core:1.6.1")
-    testImplementation("org.robolectric:robolectric:4.13")
+    testImplementation(libs.bundles.testing)
+    testImplementation(libs.ktor.client.mock)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.testing.json)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.testing.robolectric)
     testImplementation(composeBom)
-    androidTestImplementation("androidx.test.ext:junit:1.2.1")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    androidTestImplementation(libs.androidx.test.junit.ext)
+    androidTestImplementation(libs.androidx.test.espresso)
+    androidTestImplementation(libs.compose.ui.test.junit4)
 }
 
 tasks.register("verifyAuthScreenNoHardcodedStrings") {

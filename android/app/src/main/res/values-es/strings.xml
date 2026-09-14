@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_name">NextPage</string>
     <string name="app_logo_initials">NP</string>
     <string name="auth_config_error_google_unavailable">Error de configuracion: el inicio de sesion con Google no esta disponible porque el ID de cliente OAuth no esta configurado. Podes continuar usando funciones de biblioteca local.</string>
     <string name="auth_continue_with_google">Continuar con Google</string>
@@ -37,6 +38,7 @@
     <string name="auth_password_show">Mostrar contraseña</string>
     <string name="auth_password_hide">Ocultar contraseña</string>
     <string name="auth_signup_stale_session">Este correo ya está registrado o la verificación está pendiente — revisa tu bandeja o inicia sesión</string>
+    <string name="auth_mock_google_button">Mock Google jcamachomolina503</string>
     <string name="auth_google_unexpected_credential">Tipo de credencial inesperado: %1$s</string>
     <string name="auth_google_credential_error">Error de credencial (%1$s): %2$s</string>
     <string name="auth_google_unexpected_error">Error inesperado: %1$s</string>
@@ -82,24 +84,34 @@
     <string name="settings_language_spanish">Español</string>
     <string name="settings_language_english">English</string>
     <string name="settings_language_system">Seguir dispositivo</string>
+    <string name="home_welcome">Bienvenido de nuevo</string>
     <string name="home_greeting">Hola, %1$s</string>
     <string name="home_subtitle">¿Qué vas a leer hoy?</string>
     <string name="home_continue_reading">Continuar leyendo</string>
+    <string name="home_no_book_in_progress">Sin libro en progreso</string>
     <string name="home_continuar">Continuar</string>
     <string name="home_sessions">Sesiones</string>
     <string name="home_progress">Progreso</string>
     <string name="home_minutes">Minutos</string>
+    <string name="home_minutes_read_today">%1$d minutos leídos hoy</string>
+    <string name="home_my_bookshelf">Mi estantería</string>
     <string name="home_my_bookshelf_title">Mi estantería</string>
+    <string name="home_view_all">Ver todo</string>
     <string name="home_ver_todo">Ver todo</string>
     <string name="home_import_epub">Importar EPUB</string>
     <string name="home_import_pdf">Importar PDF</string>
+    <string name="home_quick_actions">Acciones rápidas</string>
+    <string name="home_action_import_epub">Importar EPUB</string>
+    <string name="home_action_import_pdf">Importar PDF</string>
     <string name="home_action_import_book">Importar libro</string>
+    <string name="home_action_notes">Notas</string>
     <string name="home_action_stats">Estadísticas</string>
     <string name="home_highlights">Resaltados</string>
     <string name="home_settings">Ajustes</string>
     <string name="home_no_current_book">Sin libro en curso</string>
     <string name="home_bookshelf_empty_title">Tu estanter\u00eda est\u00e1 vac\u00eda</string>
     <string name="home_bookshelf_empty_subtitle">Import\u00e1 un libro para empezar tu biblioteca.</string>
+    <string name="home_today_summary">Resumen de hoy</string>
     <string name="home_today_summary_title">Resumen de hoy</string>
     <string name="home_streak_days">d\u00edas</string>
     <!-- Onboarding goal -->
@@ -243,6 +255,21 @@
 
     <!-- Library / Bookshelf - New Pencil design -->
     <string name="library_empty">Todavía no hay libros locales.</string>
+    <string name="library_import_epub">Importar EPUB</string>
+    <string name="library_import_pdf">Importar PDF</string>
+    <string name="library_import_success">Se importó "%1$s"</string>
+    <string name="library_import_failure">Error al importar: %1$s</string>
+    <string name="library_open">Abrir</string>
+    <string name="library_author_unknown">Autor desconocido</string>
+    <string name="library_last_updated">Actualizado: %1$s</string>
+    <string name="library_cover_placeholder">Sin portada</string>
+    <string name="library_layout_list">Lista</string>
+    <string name="library_layout_grid">Cuadrícula</string>
+    <string name="library_total_minutes_read">Total leído: %1$d minutos</string>
+    <string name="library_item_minutes_read">Leído: %1$d minutos</string>
+    <string name="library_delete_title">Eliminar libro</string>
+    <string name="library_delete_message">¿Estás seguro de eliminar &quot;%1$s&quot;?</string>
+    <string name="library_delete_confirm">Eliminar</string>
     <string name="library_search_placeholder">Buscar libros...</string>
     <string name="library_filter_label">Filtrar</string>
     <string name="library_tab_all">Todos</string>
@@ -264,6 +291,15 @@
     <string name="library_filter_format_all">Todos</string>
     <string name="library_search_no_results">Sin resultados</string>
     <string name="library_search_empty_subtitle">Prob\u00e1 con otro t\u00e9rmino de b\u00fasqueda.</string>
+
+    <!-- Bookmarks -->
+    <string name="bookmarks_tab">Marcadores (%1$d)</string>
+    <string name="bookmarks_empty">Aún no hay marcadores</string>
+    <string name="bookmark_location">Ubicación: %1$s</string>
+
+    <!-- PDF -->
+    <string name="pdf_page_description">Página %1$d de %2$d</string>
+    <string name="pdf_loading">Cargando PDF...</string>
 
     <!-- Notifications -->
     <string name="notifications_title">Notificaciones</string>
@@ -295,6 +331,15 @@
     <string name="reader_sleep_timer_finished_title">¡Se acabó el tiempo!</string>
     <string name="reader_sleep_timer_finished_message">Tu tiempo de lectura terminó.</string>
     <string name="reader_sleep_timer_tap_to_dismiss">Toca cualquier lugar para seguir leyendo</string>
+
+    <!-- Reader -->
+    <string name="reader_placeholder">El motor de renderizado del lector estará disponible próximamente.</string>
+    <string name="reader_selected_book">Libro: %1$s</string>
+    <string name="reader_no_progress">Aún no hay progreso local para este libro.</string>
+    <string name="reader_progress_cfi">CFI: %1$s</string>
+    <string name="reader_progress_percent">Progreso: %1$.1f%%</string>
+    <string name="reader_mark_quarter">Marcar 25%%</string>
+    <string name="reader_mark_three_quarter">Marcar 75%%</string>
 
     <!-- Reader / Settings Sheet -->
     <string name="reader_settings_sheet_title">Ajustes de lectura</string>
@@ -481,6 +526,10 @@
     <string name="debug_mode_subtitle">Mostrar herramientas de desarrollo</string>
 
     <!-- Navegación y nuevas keys -->
+    <string name="tab_auth">Acceso</string>
+    <string name="tab_reader">Lector</string>
+    <string name="tab_highlights">Resaltados</string>
+    <string name="tab_settings">Ajustes</string>
     <string name="tab_statistics">Estadísticas</string>
     <string name="nav_statistics">Estadísticas</string>
     <string name="nav_back">Volver</string>
@@ -518,6 +567,7 @@
     <string name="highlights_filter_all_colors">Todos los colores</string>
     <string name="highlights_filter_all_tags">Todas las etiquetas</string>
     <string name="highlights_clear_filters">Borrar filtros</string>
+    <string name="highlight_location">Ubicación: %1$s</string>
 
     <!-- Daily goal (onboarding + settings) -->
     <string name="settings_daily_goal_title">Meta diaria</string>

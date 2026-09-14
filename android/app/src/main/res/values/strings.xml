@@ -298,6 +298,9 @@
     <string name="highlights_summary_ideas">Ideas</string>
     <string name="highlights_summary_passages">Passages</string>
     <string name="highlights_summary_favorites">Favorites</string>
+    <string name="highlights_quote_content">"Knowledge is power."</string>
+    <string name="highlights_quote_author">Francis Bacon</string>
+    <string name="highlights_idea_content">Daily consistency builds results.</string>
     <string name="highlights_empty">No highlights yet</string>
     <string name="highlights_empty_subtitle">Save passages, ideas, and quotes as you read.</string>
     <string name="highlights_search">Search highlights</string>

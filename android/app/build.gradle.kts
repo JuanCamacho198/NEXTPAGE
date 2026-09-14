@@ -340,6 +340,51 @@ tasks.register("verifyAuthScreenNoHardcodedStrings") {
     }
 }
 
+tasks.register("verifyStringParity") {
+    group = "verification"
+    description = "Fails if a string/plurals/string-array resource is missing from either locale"
+
+    // Resolve at configuration time; RegularFile is configuration-cache safe.
+    val defaultStrings = layout.projectDirectory.file("src/main/res/values/strings.xml")
+    val spanishStrings = layout.projectDirectory.file("src/main/res/values-es/strings.xml")
+
+    doLast {
+        // Matches the declared resource name of <string>, <plurals> and
+        // <string-array>. <item> children are intentionally excluded: their
+        // names differ per locale inside a plural/array and are not resources.
+        val namePattern = Regex("<(?:string|plurals|string-array)\\s+name=\"([^\"]+)\"")
+
+        fun namesIn(file: java.io.File, label: String): Set<String> {
+            if (!file.exists()) throw GradleException("$label not found: ${file.path}")
+            return namePattern.findAll(file.readText())
+                .map { it.groupValues[1] }
+                .toSet()
+        }
+
+        val english = namesIn(defaultStrings.asFile, "values/strings.xml")
+        val spanish = namesIn(spanishStrings.asFile, "values-es/strings.xml")
+
+        val missingInSpanish = (english - spanish).sorted()
+        val missingInEnglish = (spanish - english).sorted()
+
+        if (missingInSpanish.isNotEmpty() || missingInEnglish.isNotEmpty()) {
+            throw GradleException(
+                buildString {
+                    append("Locale string parity failed.\n")
+                    if (missingInSpanish.isNotEmpty()) {
+                        append("Missing from values-es/strings.xml (${missingInSpanish.size}):\n")
+                        missingInSpanish.forEach { append("  - $it\n") }
+                    }
+                    if (missingInEnglish.isNotEmpty()) {
+                        append("Missing from values/strings.xml (${missingInEnglish.size}):\n")
+                        missingInEnglish.forEach { append("  - $it\n") }
+                    }
+                }
+            )
+        }
+    }
+}
+
 tasks.register("verifyNoReaderUiStateResidue") {
     group = "verification"
     description = "Fails if the deleted Reader uiState aggregate resurfaces (SDD reader-uiState-cleanup S7 gate)"

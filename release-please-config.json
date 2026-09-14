@@ -1,10 +1,12 @@
 {
   "packages": {
     "desktop": {
-      "release-type": "simple"
+      "release-type": "simple",
+      "bump-minor-pre-major": true
     },
     "android": {
-      "release-type": "simple"
+      "release-type": "simple",
+      "bump-minor-pre-major": true
     }
   }
 }

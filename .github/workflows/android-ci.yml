@@ -1,6 +1,8 @@
 name: Android CI
 
 on:
+  # Allow maintainers to re-run the full gate manually from the Actions tab.
+  workflow_dispatch:
   pull_request:
     branches: [main]
     paths-ignore:
@@ -25,7 +27,10 @@ jobs:
   android-checks:
     name: Android checks
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Full unit suite (~1117 tests) + detekt + verification gates. Locally the
+    # full debug suite ran in ~5m12s on Windows; ubuntu runners are comparable
+    # but a cold-cache first run is slower, so leave generous headroom.
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -55,25 +60,28 @@ jobs:
         working-directory: android
         run: chmod +x ./gradlew || true
 
-      - name: Run focused tests + detekt
+      - name: Run unit tests, detekt and verification gates
         working-directory: android
         # Linux runner: the daemon is fine (the --no-daemon prescription was
         # for the local Windows pwsh/Gradle VFS hang; an ephemeral runner just
         # pays a cold JVM start for nothing). Configuration cache + build
         # cache remove the remaining per-run reconfiguration/rebuild tax.
         #
-        # Focused test scope: `com.nextpage.debug.*` + `ReleaseFormatTest`
-        # only (per orchestrator preflight). Full suite stays a verify-phase
-        # concern to keep CI fast.
+        # Full unit suite (all ~1117 tests, no --tests filter). Instrumentation
+        # tests are intentionally out of scope — no emulator job (deferred).
+        # The verify* tasks below are the cheap, deterministic string/source
+        # gates. verifyReleaseMapping and verifySentryMappingUpload are
+        # release-only (R8 mapping / SENTRY_AUTH_TOKEN) and stay out of CI.
         run: |
           ./gradlew \
             --configuration-cache \
             --build-cache \
             -Dorg.gradle.vfs.watch=false \
             :app:testDebugUnitTest \
-            --tests "com.nextpage.debug.*" \
-            --tests "com.nextpage.ReleaseFormatTest" \
-            detekt
+            detekt \
+            :app:verifyStringParity \
+            :app:verifyAuthScreenNoHardcodedStrings \
+            :app:verifyNoReaderUiStateResidue
 
       - name: Print failed test reports
         if: failure()

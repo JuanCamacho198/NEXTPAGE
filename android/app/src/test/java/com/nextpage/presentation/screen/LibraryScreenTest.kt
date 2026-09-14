@@ -1,6 +1,8 @@
 package com.nextpage.presentation.screen
 
 import com.nextpage.domain.model.Book
+import com.nextpage.presentation.feature.library.LibraryEmptyRenderState
+import com.nextpage.presentation.feature.library.libraryEmptyRenderState
 import com.nextpage.presentation.viewmodel.LibraryUiState
 import com.nextpage.testutil.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -82,5 +84,56 @@ class LibraryScreenTest {
 
         assertTrue(state.isImporting)
         assertTrue(state.books.isEmpty())
+    }
+
+    // ── Loading-skeleton gate + post-filter empty gate (LS4-LS5) ───────
+
+    @Test
+    fun libraryUiState_defaultsToLoadingBeforeFirstEmission() = runTest {
+        val state = LibraryUiState()
+
+        assertTrue("Library must start loading before the first Room emission", state.isLoading)
+        assertTrue(state.books.isEmpty())
+    }
+
+    @Test
+    fun libraryEmptyRenderState_skeletonWhileLoading() {
+        assertEquals(
+            LibraryEmptyRenderState.SKELETON,
+            libraryEmptyRenderState(isLoading = true, isSearchedEmpty = true)
+        )
+    }
+
+    @Test
+    fun libraryEmptyRenderState_emptyPlaceholderOnlyAfterLoadingCompletes() {
+        assertEquals(
+            LibraryEmptyRenderState.EMPTY,
+            libraryEmptyRenderState(isLoading = false, isSearchedEmpty = true)
+        )
+    }
+
+    @Test
+    fun libraryEmptyRenderState_filterEmptiedShelfStillRendersEmptyState() = runTest {
+        val state = LibraryUiState(
+            books = listOf(
+                Book("b1", "Book 1", "Author 1", null, "/p1", "epub", totalPages = null, userRating = null, updatedAtEpochMillis = 1000L)
+            ),
+            isLoading = false
+        )
+        val searchedBooks = emptyList<Book>()
+
+        assertTrue("Unfiltered books remain", state.books.isNotEmpty())
+        assertEquals(
+            LibraryEmptyRenderState.EMPTY,
+            libraryEmptyRenderState(state.isLoading, searchedBooks.isEmpty())
+        )
+    }
+
+    @Test
+    fun libraryEmptyRenderState_noPlaceholderWhenSearchedBooksPresent() {
+        assertEquals(
+            LibraryEmptyRenderState.NONE,
+            libraryEmptyRenderState(isLoading = false, isSearchedEmpty = false)
+        )
     }
 }

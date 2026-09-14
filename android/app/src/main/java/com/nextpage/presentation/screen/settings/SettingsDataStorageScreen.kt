@@ -59,6 +59,7 @@ fun SettingsDataStorageScreen(
     driveAuthHelper: GoogleDriveAuthHelper,
     onNavigateToStatistics: () -> Unit,
     onBack: () -> Unit,
+    onNavigateToStorage: () -> Unit = {},
     driveColdBackupService: DriveColdBackupService? = null,
     userId: String? = null,
 ) {
@@ -109,7 +110,7 @@ fun SettingsDataStorageScreen(
         NextPagePreferenceItem(
             icon = NextPageIcons.Storage,
             label = stringResource(R.string.settings_storage),
-            onClick = {}
+            onClick = onNavigateToStorage
         )
 
         NextPagePreferenceItem(

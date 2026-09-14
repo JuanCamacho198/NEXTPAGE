@@ -1,8 +1,7 @@
 package com.nextpage.presentation.screen.library
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,19 +10,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,26 +30,23 @@ import com.nextpage.domain.model.Book
 import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.ui.components.atoms.CoverThumbnail
 import com.nextpage.ui.components.atoms.NextPageProgressBar
-import com.nextpage.ui.components.molecules.BookContextMenu
-import com.nextpage.ui.icons.NextPageIcons
+import com.nextpage.ui.components.molecules.BookContextMenuTrigger
 
 private const val READING_TARGET_MINUTES = 300L
 private const val SURFACE_ALPHA = 0.3f
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BookListCard(
     book: Book,
     minutesRead: Long,
     progressPercent: Float? = null,
     onClick: () -> Unit,
-    onLongPress: () -> Unit,
     onEdit: () -> Unit,
     onMarkCompleted: () -> Unit,
     onMarkPlanToRead: () -> Unit,
-    onShare: () -> Unit
+    onShare: () -> Unit,
+    onDelete: () -> Unit
 ) {
-    var showMenu by remember { mutableStateOf(false) }
     // Canonical progress via GetBookProgressUseCase.observeProgressPercent (distinctUntilChanged) — wins over time-derived fallback
     val canonicalFraction = progressPercent?.let { (it / 100f).coerceIn(0f, 1f) }
     val progressFraction = canonicalFraction ?: if (minutesRead > 0L) {
@@ -68,7 +57,7 @@ fun BookListCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .combinedClickable(onClick = onClick, onLongClick = onLongPress),
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = SURFACE_ALPHA)
     ) {
@@ -109,46 +98,29 @@ fun BookListCard(
                     )
                 }
             }
-            Box {
-                IconButton(
-                    onClick = { showMenu = true },
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = NextPageIcons.MoreVert,
-                        contentDescription = stringResource(R.string.context_menu_more),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                BookContextMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false },
-                    onEdit = onEdit,
-                    onMarkCompleted = onMarkCompleted,
-                    onMarkPlanToRead = onMarkPlanToRead,
-                    onShare = onShare,
-                    onDelete = onLongPress
-                )
-            }
+            BookContextMenuTrigger(
+                onEdit = onEdit,
+                onMarkCompleted = onMarkCompleted,
+                onMarkPlanToRead = onMarkPlanToRead,
+                onShare = onShare,
+                onDelete = onDelete
+            )
         }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun BookGridCard(
     book: Book,
     minutesRead: Long,
     progressPercent: Float? = null,
     onClick: () -> Unit,
-    onLongPress: () -> Unit,
     onEdit: () -> Unit,
     onMarkCompleted: () -> Unit,
     onMarkPlanToRead: () -> Unit,
-    onShare: () -> Unit
+    onShare: () -> Unit,
+    onDelete: () -> Unit
 ) {
-    var showMenu by remember { mutableStateOf(false) }
     // Canonical progress via GetBookProgressUseCase.observeProgressPercent (distinctUntilChanged) — wins over time-derived fallback
     val canonicalFraction = progressPercent?.let { (it / 100f).coerceIn(0f, 1f) }
     val progressFraction = canonicalFraction ?: if (minutesRead > 0L) {
@@ -167,10 +139,7 @@ fun BookGridCard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = SURFACE_ALPHA))
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongPress
-            )
+            .clickable(onClick = onClick)
     ) {
         Box {
             CoverThumbnail(
@@ -180,32 +149,17 @@ fun BookGridCard(
                     .height(220.dp)
                     .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
             )
-            Box(
+            BookContextMenuTrigger(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(4.dp)
-            ) {
-                IconButton(
-                    onClick = { showMenu = true },
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = NextPageIcons.MoreVert,
-                        contentDescription = stringResource(R.string.context_menu_more),
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                BookContextMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false },
-                    onEdit = onEdit,
-                    onMarkCompleted = onMarkCompleted,
-                    onMarkPlanToRead = onMarkPlanToRead,
-                    onShare = onShare,
-                    onDelete = onLongPress
-                )
-            }
+                    .padding(4.dp),
+                iconTint = MaterialTheme.colorScheme.onSurface,
+                onEdit = onEdit,
+                onMarkCompleted = onMarkCompleted,
+                onMarkPlanToRead = onMarkPlanToRead,
+                onShare = onShare,
+                onDelete = onDelete
+            )
         }
 
         Column(
@@ -268,11 +222,11 @@ private fun BookCardsDarkPreview() {
             book = PreviewBook,
             minutesRead = 60L,
             onClick = {},
-            onLongPress = {},
             onEdit = {},
             onMarkCompleted = {},
             onMarkPlanToRead = {},
-            onShare = {}
+            onShare = {},
+            onDelete = {}
         )
     }
 }
@@ -285,11 +239,11 @@ private fun BookCardsLightPreview() {
             book = PreviewBook,
             minutesRead = 60L,
             onClick = {},
-            onLongPress = {},
             onEdit = {},
             onMarkCompleted = {},
             onMarkPlanToRead = {},
-            onShare = {}
+            onShare = {},
+            onDelete = {}
         )
     }
 }

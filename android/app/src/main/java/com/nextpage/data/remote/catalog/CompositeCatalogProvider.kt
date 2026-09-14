@@ -1,10 +1,14 @@
 package com.nextpage.data.remote.catalog
 
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
 import com.nextpage.debug.SentryMetrics
 import kotlinx.serialization.json.Json
 
@@ -22,7 +26,13 @@ import kotlinx.serialization.json.Json
 class CompositeCatalogProvider(
     private val providers: List<CatalogProvider>,
     private val cache: DiscoverCacheStore? = null,
-    private val nowEpochSecs: () -> Long = { System.currentTimeMillis() / 1000 }
+    private val nowEpochSecs: () -> Long = { System.currentTimeMillis() / 1000 },
+    /**
+     * Scope for stale-while-revalidate background refreshes. Tests pass the
+     * `runTest` scope so the refresh is deterministic; production defaults to an
+     * app-lifetime IO scope whose launches never block the caller's read.
+     */
+    private val refreshScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 ) : CatalogProvider {
 
     private val cacheJson = Json { ignoreUnknownKeys = true }
@@ -121,8 +131,22 @@ class CompositeCatalogProvider(
         val store = cache ?: return null
         val source = singleSource(provider) ?: return null
         if (source.sourceId !in active) return null
-        val hit = store.get(pageCacheKey(source.sourceId, query, page), nowEpochSecs()) ?: return null
-        return cacheJson.decodeFromString(PagedResult.serializer(), hit)
+        val key = pageCacheKey(source.sourceId, query, page)
+        val hit = store.read(key, nowEpochSecs()) ?: return null
+        if (!hit.fresh) {
+            // Stale-while-revalidate: serve the resident page immediately and
+            // refresh it behind the caller. The refresh is best-effort — a
+            // failure (or empty page) leaves the served stale page untouched.
+            refreshScope.launch {
+                try {
+                    val result = provider.search(query, page)
+                    cacheProviderPage(provider, query, page, result, active)
+                } catch (err: Throwable) {
+                    if (err is CancellationException) throw err
+                }
+            }
+        }
+        return cacheJson.decodeFromString(PagedResult.serializer(), hit.payload)
     }
 
     private suspend fun cacheProviderPage(

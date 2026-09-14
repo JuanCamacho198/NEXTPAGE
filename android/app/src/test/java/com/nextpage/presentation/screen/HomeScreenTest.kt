@@ -1,6 +1,8 @@
 package com.nextpage.presentation.screen
 
 import com.nextpage.domain.model.Book
+import com.nextpage.presentation.feature.home.HomeSectionRenderState
+import com.nextpage.presentation.feature.home.homeSectionRenderState
 import com.nextpage.presentation.viewmodel.HomeUiState
 import com.nextpage.testutil.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -93,5 +95,53 @@ class HomeScreenTest {
         assertEquals(2, state.recentBooks.size)
         assertEquals("Book 1", state.recentBooks[0].title)
         assertEquals("Book 2", state.recentBooks[1].title)
+    }
+
+    // ── Loading-skeleton gate (LS1-LS3) ────────────────────────────────
+
+    @Test
+    fun homeUiState_defaultsToLoadingWithEmptySections() = runTest {
+        val state = HomeUiState()
+
+        assertTrue("Home must start loading before the first Room emission", state.isLoading)
+        assertTrue(state.currentBooks.isEmpty())
+        assertTrue(state.recentBooks.isEmpty())
+    }
+
+    @Test
+    fun homeUiState_afterFirstEmission_stopsLoadingAndAllowsEmptyStates() = runTest {
+        val state = HomeUiState(isLoading = false)
+
+        assertTrue(!state.isLoading)
+        assertTrue(state.currentBooks.isEmpty())
+        assertTrue(state.recentBooks.isEmpty())
+    }
+
+    @Test
+    fun homeSectionRenderState_skeletonWhileLoadingAndUnpopulated() {
+        assertEquals(
+            HomeSectionRenderState.SKELETON,
+            homeSectionRenderState(isLoading = true, isEmpty = true)
+        )
+    }
+
+    @Test
+    fun homeSectionRenderState_emptyStateOnlyAfterLoadingCompletes() {
+        assertEquals(
+            HomeSectionRenderState.EMPTY,
+            homeSectionRenderState(isLoading = false, isEmpty = true)
+        )
+    }
+
+    @Test
+    fun homeSectionRenderState_contentWhenSectionIsPopulated() {
+        assertEquals(
+            HomeSectionRenderState.CONTENT,
+            homeSectionRenderState(isLoading = true, isEmpty = false)
+        )
+        assertEquals(
+            HomeSectionRenderState.CONTENT,
+            homeSectionRenderState(isLoading = false, isEmpty = false)
+        )
     }
 }

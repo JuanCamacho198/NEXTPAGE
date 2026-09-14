@@ -38,12 +38,33 @@ import com.nextpage.presentation.viewmodel.LibraryUiState
 import com.nextpage.presentation.viewmodel.LibraryViewModel
 import com.nextpage.ui.components.atoms.NextPageDialog
 import com.nextpage.ui.components.atoms.NextPageDownloadOverlay
+import com.nextpage.ui.components.molecules.BookGridSkeleton
+import com.nextpage.ui.components.molecules.BookListSkeleton
 import com.nextpage.ui.icons.NextPageIcons
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.InputStream
+
+/**
+ * Content the Library shelf grid/list renders when there are no visible books.
+ *
+ * Pure and JVM-testable so the loading gate and the post-filter empty gate
+ * (LS4-LS5) are verifiable without a device. The empty placeholder keys off the
+ * **searched/filtered** list, never the unfiltered `books`.
+ */
+internal enum class LibraryEmptyRenderState { SKELETON, EMPTY, NONE }
+
+/**
+ * @return [LibraryEmptyRenderState.SKELETON] while [isLoading], [LibraryEmptyRenderState.EMPTY]
+ *   when loading finished with no searched book, otherwise [LibraryEmptyRenderState.NONE].
+ */
+internal fun libraryEmptyRenderState(isLoading: Boolean, isSearchedEmpty: Boolean): LibraryEmptyRenderState = when {
+    isLoading -> LibraryEmptyRenderState.SKELETON
+    isSearchedEmpty -> LibraryEmptyRenderState.EMPTY
+    else -> LibraryEmptyRenderState.NONE
+}
 
 @Composable
 fun LibraryScreen(contentPadding: PaddingValues, viewModel: LibraryViewModel, driveAuthHelper: GoogleDriveAuthHelper, authSession: AuthSession?, onOpenAccount: () -> Unit, onBookSelected: (String, String, String) -> Unit, onEditBook: (String) -> Unit) {
@@ -104,7 +125,11 @@ fun LibraryScreenContent(uiState: LibraryUiState, searchedBooks: List<Book>, fir
         PullToRefreshBox(isRefreshing = uiState.isRefreshing, onRefresh = onRefresh, modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize().padding(contentPadding)) {
                 LibraryToolbar(showSearch = uiState.showSearch, onSearchToggle = onSearchToggle, searchQuery = uiState.searchQuery, onSearchQueryChange = onSearchQueryChange, onFilterToggle = onFilterToggle, statusFilter = uiState.statusFilter, onStatusFilterChanged = onStatusFilterChanged, sortBy = uiState.sortBy, onSortByChanged = onSortByChanged, isGridView = uiState.isGridView, onViewToggle = onViewToggle, avatarImageUrl = authSession?.photoUrl, avatarInitials = authSession?.displayName?.take(2)?.uppercase() ?: "NP", onAvatarClick = onOpenAccount, avatarContentDescription = stringResource(R.string.home_avatar_content_description))
-                BookGridSection(books = searchedBooks, readingMinutesByBook = uiState.readingMinutesByBook, progressPercentByBook = uiState.progressPercentByBook, isGridView = uiState.isGridView, onBookSelected = onBookSelected, onBookLongPress = onRequestDeleteBook, onImportClick = { importLauncher.launch(arrayOf("application/epub+zip", "application/pdf")) }, onEdit = { book -> onEditBook(book.id) }, onMarkCompleted = onMarkCompleted, onMarkPlanToRead = onMarkPlanToRead, onShare = onShare, emptyContent = if (uiState.books.isEmpty()) { { EmptyShelfPlaceholder(isImporting = uiState.isImporting, onImportClick = { importLauncher.launch(arrayOf("application/epub+zip", "application/pdf")) }) } } else null, footerContent = { DownloadableBooksSection(books = uiState.downloadableBooks, downloadStateMap = uiState.downloadState, isLoading = uiState.isDownloadableLoading, isDriveAuthorized = driveAuthHelper == null || driveAuthHelper.isAuthorized(), onConnectDrive = { row -> pendingDownloadId = row.id; showDriveConnectDialog = true }, onConfirmDownload = onDownload) })
+                BookGridSection(books = searchedBooks, readingMinutesByBook = uiState.readingMinutesByBook, progressPercentByBook = uiState.progressPercentByBook, isGridView = uiState.isGridView, onBookSelected = onBookSelected, onDelete = onRequestDeleteBook, onImportClick = { importLauncher.launch(arrayOf("application/epub+zip", "application/pdf")) }, onEdit = { book -> onEditBook(book.id) }, onMarkCompleted = onMarkCompleted, onMarkPlanToRead = onMarkPlanToRead, onShare = onShare, emptyContent = when (libraryEmptyRenderState(uiState.isLoading, searchedBooks.isEmpty())) {
+                        LibraryEmptyRenderState.SKELETON -> { { if (uiState.isGridView) BookGridSkeleton() else BookListSkeleton() } }
+                        LibraryEmptyRenderState.EMPTY -> { { EmptyShelfPlaceholder(isImporting = uiState.isImporting, onImportClick = { importLauncher.launch(arrayOf("application/epub+zip", "application/pdf")) }) } }
+                        LibraryEmptyRenderState.NONE -> null
+                    }, footerContent = { DownloadableBooksSection(books = uiState.downloadableBooks, downloadStateMap = uiState.downloadState, isLoading = uiState.isDownloadableLoading, isDriveAuthorized = driveAuthHelper == null || driveAuthHelper.isAuthorized(), onConnectDrive = { row -> pendingDownloadId = row.id; showDriveConnectDialog = true }, onConfirmDownload = onDownload) })
             }
         }
         RemoveBookDialog(bookToDelete = uiState.bookToDelete, onDismiss = onDismissDelete, onConfirmLocalOnly = onConfirmLocalOnly, onConfirmLocalAndDrive = onConfirmLocalAndDrive)

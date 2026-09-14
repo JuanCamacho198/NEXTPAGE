@@ -24,6 +24,9 @@ import com.nextpage.ui.icons.NextPageIcons
  * @param onDismissRequest Invoked on outside-tap, scrim-tap, or
  *   back-press. Also called by every item before its own callback so
  *   the menu always closes after a selection.
+ * @param showPlanToRead When `false`, the "Plan to read" item is omitted
+ *   (the Home carousel offers only Edit, Mark completed, Share, Remove).
+ *   Library list/grid cards keep the default `true` and render all five.
  * @param onEdit Edit-metadata action. Called after the menu auto-dismisses.
  * @param onMarkCompleted Move the book to the "completed" status.
  * @param onMarkPlanToRead Move the book to the "plan to read" status.
@@ -46,6 +49,7 @@ import com.nextpage.ui.icons.NextPageIcons
 fun BookContextMenu(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
+    showPlanToRead: Boolean = true,
     onEdit: () -> Unit,
     onMarkCompleted: () -> Unit,
     onMarkPlanToRead: () -> Unit,
@@ -84,20 +88,22 @@ fun BookContextMenu(
                 onMarkCompleted()
             }
         )
-        DropdownMenuItem(
-            leadingIcon = {
-                Icon(
-                    imageVector = NextPageIcons.Star,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            text = { Text(stringResource(R.string.library_menu_mark_plan_to_read)) },
-            onClick = {
-                onDismissRequest()
-                onMarkPlanToRead()
-            }
-        )
+        if (showPlanToRead) {
+            DropdownMenuItem(
+                leadingIcon = {
+                    Icon(
+                        imageVector = NextPageIcons.Star,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                text = { Text(stringResource(R.string.library_menu_mark_plan_to_read)) },
+                onClick = {
+                    onDismissRequest()
+                    onMarkPlanToRead()
+                }
+            )
+        }
         DropdownMenuItem(
             leadingIcon = {
                 Icon(

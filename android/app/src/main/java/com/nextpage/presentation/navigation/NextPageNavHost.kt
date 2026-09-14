@@ -33,7 +33,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import com.nextpage.ui.components.molecules.BottomNavItem
 import com.nextpage.ui.components.molecules.NextPageBottomNavBar
@@ -66,25 +65,10 @@ import com.nextpage.presentation.viewmodel.library.BookImportState
 import com.nextpage.ui.components.atoms.NextPageDialog
 import com.nextpage.ui.components.atoms.NextPageImportOverlay
 import com.nextpage.ui.components.atoms.NextPageSnackbar
-import com.nextpage.presentation.viewmodel.AuthViewModel
-import com.nextpage.presentation.viewmodel.HomeViewModel
-import com.nextpage.presentation.viewmodel.HomeViewModelFactory
-import com.nextpage.presentation.viewmodel.LibraryViewModel
-import com.nextpage.presentation.viewmodel.LibraryViewModelFactory
-import com.nextpage.presentation.viewmodel.ReaderViewModel
-import com.nextpage.presentation.viewmodel.ReaderViewModelFactory
 import com.nextpage.presentation.util.getContentDisplayName
-import com.nextpage.presentation.viewmodel.HighlightsViewModel
-import com.nextpage.presentation.viewmodel.HighlightsViewModelFactory
-import com.nextpage.presentation.viewmodel.StatisticsViewModel
-import com.nextpage.presentation.viewmodel.StatisticsViewModelFactory
 import com.nextpage.debug.LogViewerScreen
 import com.nextpage.presentation.UiEvent
 import com.nextpage.presentation.debug.DebugPanel
-import com.nextpage.presentation.viewmodel.DiscoverViewModel
-import com.nextpage.presentation.viewmodel.DiscoverViewModelFactory
-import com.nextpage.presentation.debug.DebugViewModel
-import com.nextpage.presentation.debug.InitTimingsSection
 import com.nextpage.debug.DebugPrefs
 import com.nextpage.ui.icons.NextPageIcons
 import java.io.File
@@ -125,66 +109,19 @@ fun NextPageNavHost(
     // re-open the stale route.
     var settingsInitialRoute by rememberSaveable { mutableStateOf<String?>(null) }
 
-    val libraryViewModel: LibraryViewModel = viewModel(
-        factory = LibraryViewModelFactory(
-            libraryRepository = appContainer.libraryRepository,
-            syncService = appContainer.syncService,
-            appContext = context.applicationContext,
-            catalogSync = appContainer.supabaseBookCatalogSync,
-            readerRepository = appContainer.readerRepository,
-            getBookProgressUseCase = appContainer.getBookProgressUseCase
-        )
-    )
-
-    val readerViewModel: ReaderViewModel = viewModel(
-        factory = ReaderViewModelFactory(
-            application = context.applicationContext as android.app.Application,
-            readerRepository = appContainer.readerRepository,
-            readingStatsRepository = appContainer.readingStatsRepository,
-            readerPreferences = appContainer.readerPreferences,
-            defaultBookId = selectedBookId,
-            dictionaryRepository = appContainer.dictionaryRepository,
-            libraryRepository = appContainer.libraryRepository,
-            supabaseProgressSync = appContainer.supabaseProgressSync
-        )
-    )
-
-    val highlightsViewModel: HighlightsViewModel = viewModel(
-        factory = HighlightsViewModelFactory(
-            readerRepository = appContainer.readerRepository,
-            homeRepository = appContainer.homeRepository,
-            supabaseSync = appContainer.supabaseProgressSync
-        )
-    )
-
-    val statisticsViewModel: StatisticsViewModel = viewModel(
-        factory = StatisticsViewModelFactory(
-            appContainer.getStatisticsUseCase
-        )
-    )
-
-    val authViewModel: AuthViewModel = viewModel(
-        factory = AuthViewModel.Factory(
-            authRepository = appContainer.authRepository,
-            syncOrchestrator = appContainer.syncOrchestrator,
-            isAuthConfigured = !appContainer.isAuthConfigError,
-            hasAuthWiringIssue = false
-        )
-    )
+    val navHostViewModels = rememberNavHostViewModels(appContainer, selectedBookId)
+    val libraryViewModel = navHostViewModels.library
+    val readerViewModel = navHostViewModels.reader
+    val highlightsViewModel = navHostViewModels.highlights
+    val statisticsViewModel = navHostViewModels.statistics
+    val authViewModel = navHostViewModels.auth
+    val homeViewModel = navHostViewModels.home
+    val debugViewModel = navHostViewModels.debug
+    val discoverViewModel = navHostViewModels.discover
 
     val authState by authViewModel.uiState.collectAsStateWithLifecycle()
     val isAuthenticated = authState.currentSession != null
     val isCheckingSession = authState.isCheckingSession
-
-    val homeViewModel: HomeViewModel = viewModel(
-        factory = HomeViewModelFactory(
-            homeRepository = appContainer.homeRepository,
-            getStatisticsUseCase = appContainer.getStatisticsUseCase,
-            dailyGoalProvider = appContainer.dailyGoalProvider,
-            readerRepository = appContainer.readerRepository,
-            getBookProgressUseCase = appContainer.getBookProgressUseCase
-        )
-    )
 
     SessionSyncEffect(
         session = authState.currentSession,
@@ -193,46 +130,7 @@ fun NextPageNavHost(
         readerViewModel = readerViewModel
     )
 
-    val debugViewModel: DebugViewModel = viewModel(
-        factory = DebugViewModel.Factory(
-            initTimings = InitTimingsSection(
-                dbInitMs = appContainer.dbInitTimeMs,
-                epubImportInitMs = appContainer.epubImportInitTimeMs,
-                readerRepoInitMs = appContainer.readerRepoInitTimeMs,
-                totalInitMs = appContainer.totalInitTimeMs
-            ),
-            supabaseProgressSyncProvider = appContainer::supabaseProgressSync,
-            bookDao = appContainer.bookDao,
-            highlightDao = appContainer.highlightDao,
-            bookmarkDao = appContainer.bookmarkDao,
-            readingSessionDao = appContainer.readingSessionDao,
-            readingProgressDao = appContainer.readingProgressDao,
-            clearAllData = appContainer::clearAllData,
-            syncServiceProvider = appContainer::syncService,
-        )
-    )
-
-        val discoverViewModel: DiscoverViewModel = viewModel(
-            factory = DiscoverViewModelFactory(
-                catalogProvider = appContainer.catalogProvider,
-                connectivityObserver = appContainer.connectivityObserver,
-                downloadAndImportBookUseCase = appContainer.downloadAndImportBookUseCase,
-                registerAddonChangeListener = { listener ->
-                    appContainer.addonRegistry.addOnChangedListener(listener)
-                },
-                addonConsent = { addonId -> appContainer.addonRegistry.hasAddonConsent(addonId) },
-                onAddonConsentChange = { addonId, granted ->
-                    if (granted) {
-                        appContainer.addonRegistry.recordAddonConsent(addonId)
-                    } else {
-                        appContainer.addonRegistry.revokeAddonConsent(addonId)
-                    }
-                },
-                addonResolve = { addonId, book -> appContainer.addonResolveForBook(addonId, book) }
-            )
-        )
-
-        // Resolved here (not inside the screen) so the Discover surface no longer
+    // Resolved here (not inside the screen) so the Discover surface no longer
         // reads the session through a service locator. Null when signed out.
         val discoverUserInitial = remember(authState.currentSession) {
             discoverUserInitialOf(authState.currentSession)

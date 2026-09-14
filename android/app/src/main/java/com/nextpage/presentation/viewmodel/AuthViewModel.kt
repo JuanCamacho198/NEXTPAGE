@@ -15,6 +15,9 @@ import com.nextpage.domain.error.ErrorCategory
 import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.repository.AuthRepository
 import com.nextpage.presentation.UiEvent
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import javax.inject.Named
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -85,11 +88,12 @@ data class AuthUiState(
  * @param isAuthConfigured Build-time flag indicating auth keys are wired in.
  * @param hasAuthWiringIssue Build-time flag indicating a DI wiring problem.
  */
-class AuthViewModel(
+@HiltViewModel
+class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val syncOrchestrator: SyncOrchestrator,
-    private val isAuthConfigured: Boolean,
-    private val hasAuthWiringIssue: Boolean
+    @Named("isAuthConfigured") private val isAuthConfigured: Boolean,
+    @Named("hasAuthWiringIssue") private val hasAuthWiringIssue: Boolean
 ) : ViewModel() {
 
     companion object {

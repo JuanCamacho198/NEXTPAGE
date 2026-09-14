@@ -237,6 +237,7 @@ dependencies {
     // KSP-ordering rule; both processors must run on assemble.
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
+    implementation(libs.hilt.navigation.compose)
     androidTestImplementation(libs.room.testing)
     testImplementation(libs.room.testing)
 
@@ -292,6 +293,8 @@ dependencies {
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     testImplementation(libs.bundles.testing)
+    testImplementation(libs.hilt.testing)
+    kspTest(libs.hilt.compiler)
     testImplementation(libs.ktor.client.mock)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.testing.json)

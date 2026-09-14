@@ -3,6 +3,8 @@ package com.nextpage.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import com.nextpage.domain.model.Statistics
 import com.nextpage.domain.usecase.GetStatisticsUseCase
 import com.nextpage.presentation.UiEvent
@@ -29,7 +31,8 @@ data class StatisticsUiState(
     val errorMessage: String? = null
 )
 
-class StatisticsViewModel(
+@HiltViewModel
+class StatisticsViewModel @Inject constructor(
     private val getStatisticsUseCase: GetStatisticsUseCase
 ) : ViewModel() {
 

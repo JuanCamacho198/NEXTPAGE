@@ -4,6 +4,9 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
 import com.nextpage.data.remote.supabase.SupabaseBookCatalogSync
 import com.nextpage.data.remote.supabase.UserBookRow
 import com.nextpage.data.remote.sync.SyncService
@@ -180,11 +183,12 @@ sealed interface DownloadState {
  * @param mainDispatcher Dispatcher for state updates; defaults to [Dispatchers.Main].
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-class LibraryViewModel(
+@HiltViewModel
+class LibraryViewModel @Inject constructor(
     private val libraryRepository: LibraryRepository,
     private val importEpubBookUseCase: ImportEpubBookUseCase,
     private val syncService: SyncService,
-    private val appContext: Context,
+    @ApplicationContext private val appContext: Context,
     private val catalogSync: SupabaseBookCatalogSync,
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
     private val readerRepository: ReaderRepository,

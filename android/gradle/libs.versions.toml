@@ -45,6 +45,7 @@ espresso = "3.6.1"
 lottie = "6.6.6"
 webkit = "1.12.1"
 hilt = "2.57.1"
+hiltNavigationCompose = "1.2.0"
 kover = "0.9.3"
 spotless = "7.2.1"
 
@@ -132,6 +133,8 @@ desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", ver
 # metadata readable by 2.2.21, AGP 8.x supported; Hilt >= 2.59 requires AGP 9).
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
+hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
+hilt-testing = { group = "com.google.dagger", name = "hilt-android-testing", version.ref = "hilt" }
 
 # testing group
 testing-junit4 = { group = "junit", name = "junit", version.ref = "junit4" }

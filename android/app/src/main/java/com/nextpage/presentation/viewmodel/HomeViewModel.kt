@@ -3,6 +3,8 @@ package com.nextpage.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import com.nextpage.debug.DebugDual
 import com.nextpage.debug.DebugEvent
 import com.nextpage.domain.model.AuthSession
@@ -52,10 +54,11 @@ data class HomeUiState(
 ) 
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class HomeViewModel(
+@HiltViewModel
+class HomeViewModel @Inject constructor(
     private val homeRepository: HomeRepository,
     private val getStatisticsUseCase: GetStatisticsUseCase,
-    private val dailyGoalProvider: () -> Int,
+    private val dailyGoalProvider: @kotlin.jvm.JvmSuppressWildcards () -> Int,
     private val readerRepository: ReaderRepository,
     private val getBookProgressUseCase: GetBookProgressUseCase
 ) : ViewModel() {

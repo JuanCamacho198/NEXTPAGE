@@ -7,6 +7,8 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import com.nextpage.data.local.dao.BookDao
 import com.nextpage.data.local.dao.BookmarkDao
 import com.nextpage.data.local.dao.HighlightDao
@@ -26,21 +28,22 @@ import kotlinx.coroutines.withContext
 
 /**
  * SDD android-tooling-hygiene WS2b slice 5: decomposed — takes explicit
- * dependencies instead of the whole [com.nextpage.di.AppContainer] (it was
+ * dependencies instead of the whole manual `AppContainer` (it was
  * the widest container dependency). Lazy manual singletons stay lazy via
- * providers so cold-start partitions are preserved; slice 6 migrates this
- * to `@HiltViewModel` constructor injection.
+ * providers so cold-start partitions are preserved; slice 6 provides this
+ * as an `@HiltViewModel` with constructor injection.
  */
-class DebugViewModel(
+@HiltViewModel
+class DebugViewModel @Inject constructor(
     initTimings: InitTimingsSection,
-    private val supabaseProgressSyncProvider: () -> SupabaseProgressSync,
+    private val supabaseProgressSyncProvider: @kotlin.jvm.JvmSuppressWildcards () -> SupabaseProgressSync,
     private val bookDao: BookDao,
     private val highlightDao: HighlightDao,
     private val bookmarkDao: BookmarkDao,
     private val readingSessionDao: ReadingSessionDao,
     private val readingProgressDao: ReadingProgressDao,
-    private val clearAllData: () -> Unit,
-    private val syncServiceProvider: () -> SyncService,
+    private val clearAllData: @kotlin.jvm.JvmSuppressWildcards () -> Unit,
+    private val syncServiceProvider: @kotlin.jvm.JvmSuppressWildcards () -> SyncService,
 ) : ViewModel() {
 
     companion object {

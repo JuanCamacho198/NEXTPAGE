@@ -3,6 +3,8 @@ package com.nextpage.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.model.Bookmark
 import com.nextpage.domain.model.Highlight
@@ -26,7 +28,8 @@ import kotlinx.coroutines.flow.stateIn
 typealias HighlightsUiState = FeatureHighlightsUiState
 typealias HighlightsSyncState = NewHighlightsSyncState
 
-class HighlightsViewModel(
+@HiltViewModel
+class HighlightsViewModel @Inject constructor(
     private val readerRepository: ReaderRepository,
     private val homeRepository: HomeRepository,
     private val supabaseSync: com.nextpage.data.remote.supabase.SupabaseProgressSync? = null

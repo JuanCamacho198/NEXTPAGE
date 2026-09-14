@@ -33,11 +33,14 @@ import com.nextpage.presentation.navigation.InstallDeepLinkParser
 import com.nextpage.presentation.navigation.NextPageNavHost
 import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.presentation.viewmodel.AuthViewModel
+import dagger.hilt.android.AndroidEntryPoint
 import io.github.jan.supabase.auth.handleDeeplinks
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var appContainer: AppContainer
+    @Inject lateinit var appContainer: AppContainer
 
     // Must be registered before onCreate (per the AndroidX ActivityResult API contract).
     private val requestNotificationPermissionLauncher = registerForActivityResult(
@@ -46,7 +49,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        appContainer = AppContainer(context = this)
 
         // Addon install deep links (nextpage://install?url=...) are checked
         // FIRST: install URIs are never auth URIs, so supabase handleDeeplinks
@@ -67,16 +69,9 @@ class MainActivity : AppCompatActivity() {
         // renders instantly at launch. Keep it on screen until the auth session
         // finishes restoring so there is no flash of an empty screen. The
         // AuthViewModel is shared with the NavHost through the Activity's
-        // ViewModelStore (same factory = same instance).
+        // ViewModelStore (Hilt scopes both to this Activity = same instance).
         val splashScreen = installSplashScreen()
-        val authViewModel: AuthViewModel by viewModels {
-            AuthViewModel.Factory(
-                authRepository = appContainer.authRepository,
-                syncOrchestrator = appContainer.syncOrchestrator,
-                isAuthConfigured = !appContainer.isAuthConfigError,
-                hasAuthWiringIssue = false
-            )
-        }
+        val authViewModel: AuthViewModel by viewModels()
         splashScreen.setKeepOnScreenCondition {
             authViewModel.uiState.value.isCheckingSession
         }

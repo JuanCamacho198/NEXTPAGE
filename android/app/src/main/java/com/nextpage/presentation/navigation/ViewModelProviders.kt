@@ -1,25 +1,20 @@
 package com.nextpage.presentation.navigation
 
-import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nextpage.di.AppContainer
 import com.nextpage.presentation.viewmodel.AuthViewModel
 import com.nextpage.presentation.debug.DebugViewModel
-import com.nextpage.presentation.debug.InitTimingsSection
 import com.nextpage.presentation.viewmodel.DiscoverViewModel
 import com.nextpage.presentation.viewmodel.DiscoverViewModelFactory
 import com.nextpage.presentation.viewmodel.HighlightsViewModel
-import com.nextpage.presentation.viewmodel.HighlightsViewModelFactory
 import com.nextpage.presentation.viewmodel.HomeViewModel
-import com.nextpage.presentation.viewmodel.HomeViewModelFactory
 import com.nextpage.presentation.viewmodel.LibraryViewModel
-import com.nextpage.presentation.viewmodel.LibraryViewModelFactory
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 import com.nextpage.presentation.viewmodel.ReaderViewModelFactory
 import com.nextpage.presentation.viewmodel.StatisticsViewModel
-import com.nextpage.presentation.viewmodel.StatisticsViewModelFactory
 
 /**
  * Holder grouping the host-scoped ViewModels.
@@ -41,9 +36,9 @@ internal data class ViewModelProviders(
 )
 
 /**
- * Creates and remembers all host-scoped ViewModels via AppContainer factories.
+ * Creates and remembers all host-scoped ViewModels — the single-sourced path.
  *
- * Preserves exact factory wiring from the 931-line monolith; no behavior change.
+ * Plain VMs use `hiltViewModel()`; Reader/Discover keep assisted factories.
  * selectedBookId is still host-owned and passed to Reader via defaultBookId at creation time,
  * then kept in sync via write lambdas (see BookDetail/Reader graphs).
  */
@@ -55,16 +50,7 @@ internal fun rememberNavHostViewModels(
     val context = LocalContext.current
     val application = context.applicationContext as android.app.Application
 
-    val libraryViewModel: LibraryViewModel = viewModel(
-        factory = LibraryViewModelFactory(
-            libraryRepository = appContainer.libraryRepository,
-            syncService = appContainer.syncService,
-            appContext = context.applicationContext,
-            catalogSync = appContainer.supabaseBookCatalogSync,
-            readerRepository = appContainer.readerRepository,
-            getBookProgressUseCase = appContainer.getBookProgressUseCase
-        )
-    )
+    val libraryViewModel: LibraryViewModel = hiltViewModel()
 
     val readerViewModel: ReaderViewModel = viewModel(
         factory = ReaderViewModelFactory(
@@ -79,57 +65,15 @@ internal fun rememberNavHostViewModels(
         )
     )
 
-    val highlightsViewModel: HighlightsViewModel = viewModel(
-        factory = HighlightsViewModelFactory(
-            readerRepository = appContainer.readerRepository,
-            homeRepository = appContainer.homeRepository,
-            supabaseSync = appContainer.supabaseProgressSync
-        )
-    )
+    val highlightsViewModel: HighlightsViewModel = hiltViewModel()
 
-    val statisticsViewModel: StatisticsViewModel = viewModel(
-        factory = StatisticsViewModelFactory(
-            appContainer.getStatisticsUseCase
-        )
-    )
+    val statisticsViewModel: StatisticsViewModel = hiltViewModel()
 
-    val authViewModel: AuthViewModel = viewModel(
-        factory = AuthViewModel.Factory(
-            authRepository = appContainer.authRepository,
-            syncOrchestrator = appContainer.syncOrchestrator,
-            isAuthConfigured = !appContainer.isAuthConfigError,
-            hasAuthWiringIssue = false
-        )
-    )
+    val authViewModel: AuthViewModel = hiltViewModel()
 
-    val homeViewModel: HomeViewModel = viewModel(
-        factory = HomeViewModelFactory(
-            homeRepository = appContainer.homeRepository,
-            getStatisticsUseCase = appContainer.getStatisticsUseCase,
-            dailyGoalProvider = appContainer.dailyGoalProvider,
-            readerRepository = appContainer.readerRepository,
-            getBookProgressUseCase = appContainer.getBookProgressUseCase
-        )
-    )
+    val homeViewModel: HomeViewModel = hiltViewModel()
 
-    val debugViewModel: DebugViewModel = viewModel(
-        factory = DebugViewModel.Factory(
-            initTimings = InitTimingsSection(
-                dbInitMs = appContainer.dbInitTimeMs,
-                epubImportInitMs = appContainer.epubImportInitTimeMs,
-                readerRepoInitMs = appContainer.readerRepoInitTimeMs,
-                totalInitMs = appContainer.totalInitTimeMs
-            ),
-            supabaseProgressSyncProvider = appContainer::supabaseProgressSync,
-            bookDao = appContainer.bookDao,
-            highlightDao = appContainer.highlightDao,
-            bookmarkDao = appContainer.bookmarkDao,
-            readingSessionDao = appContainer.readingSessionDao,
-            readingProgressDao = appContainer.readingProgressDao,
-            clearAllData = appContainer::clearAllData,
-            syncServiceProvider = appContainer::syncService,
-        )
-    )
+    val debugViewModel: DebugViewModel = hiltViewModel()
 
     val discoverViewModel: DiscoverViewModel = viewModel(
         factory = DiscoverViewModelFactory(

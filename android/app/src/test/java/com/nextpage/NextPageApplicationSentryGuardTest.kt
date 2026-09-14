@@ -1,8 +1,12 @@
 package com.nextpage
 
-import androidx.test.core.app.ApplicationProvider
+import dagger.hilt.android.testing.HiltAndroidRule
+import dagger.hilt.android.testing.HiltAndroidTest
+import dagger.hilt.android.testing.HiltTestApplication
 import io.sentry.Sentry
+import com.nextpage.debug.SentryInitGuard
 import org.junit.Assert.assertFalse
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -17,15 +21,18 @@ import org.robolectric.annotation.Config
  * The manifest disables Sentry's auto-init provider (`io.sentry.auto-init=false`),
  * so `Sentry.isEnabled()` can only become true through `NextPageApplication`.
  * This test pins that it stays disabled.
+ * WS2c slice 6: ambient Hilt test app; canary pins the guard + disabled SDK.
  */
+@HiltAndroidTest
 @RunWith(RobolectricTestRunner::class)
-@Config(application = NextPageApplication::class, sdk = [34])
+@Config(application = HiltTestApplication::class, sdk = [34])
 class NextPageApplicationSentryGuardTest {
+
+    @get:Rule val hiltRule = HiltAndroidRule(this)
 
     @Test
     fun `creating the Application does not initialize the real Sentry SDK`() {
-        // Triggers NextPageApplication.onCreate().
-        ApplicationProvider.getApplicationContext<NextPageApplication>()
+        assertFalse(SentryInitGuard.shouldInitialize())
 
         assertFalse(
             "Sentry must stay disabled while running unit tests",

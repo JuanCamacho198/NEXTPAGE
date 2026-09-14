@@ -157,7 +157,9 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
 sentry-gradle = { id = "io.sentry.android.gradle", version.ref = "sentryPlugin" }
-# Declared for later slices (WS2 Hilt, WS4 Kover, WS5 Spotless); not applied yet.
+# Hilt applied since WS2a slice 4, Spotless since WS5 slice 7 (both via
+# `alias(...)` in app/build.gradle.kts); Kover stays declared-not-applied
+# until WS4 slice 9.
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }

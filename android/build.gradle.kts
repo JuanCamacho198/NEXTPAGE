@@ -17,4 +17,8 @@ plugins {
     // SDD android-tooling-hygiene WS2a slice 4: Hilt (declared in the catalog;
     // applied in app/build.gradle.kts).
     alias(libs.plugins.hilt) apply false
+
+    // SDD android-tooling-hygiene WS5 slice 7: Spotless (declared in the
+    // catalog; applied in app/build.gradle.kts).
+    alias(libs.plugins.spotless) apply false
 }

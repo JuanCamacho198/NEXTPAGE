@@ -19,10 +19,26 @@ plugins {
     // SDD android-tooling-hygiene WS2a slice 4: Hilt foundation (catalog alias;
     // declared in the root build file, applied here).
     alias(libs.plugins.hilt)
+
+    // SDD android-tooling-hygiene WS5 slice 7: Spotless formatting gate
+    // (catalog alias; declared in the root build file, applied here).
+    alias(libs.plugins.spotless)
 }
 
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+// SDD android-tooling-hygiene WS5 slice 7: `spotless{kotlin{ktlint()}}` over
+// **/*.kt + **/*.kts. ktlint runs at the Spotless-bundled default version
+// (recorded in apply-progress #2750); detekt stays analysis-authoritative —
+// see android/.editorconfig (ktlint no-wildcard-imports defers to detekt's
+// WildcardImport excludeImports) and never enable detekt's formatting set.
+spotless {
+    kotlin {
+        target("**/*.kt", "**/*.kts")
+        ktlint()
+    }
 }
 
 val localProperties = Properties().apply {

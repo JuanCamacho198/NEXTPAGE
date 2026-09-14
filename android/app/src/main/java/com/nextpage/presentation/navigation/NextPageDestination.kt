@@ -53,10 +53,19 @@ sealed class NextPageDestination(
 
         private val ROUTE_PARAM_HEX = "0123456789ABCDEF"
 
+        /** Unsigned byte mask: a Kotlin [Byte] is signed, so widen it modulo 256. */
+        private const val BYTE_MASK = 0xFF
+
+        /** Mask for the low nibble of a byte (the two hex digits split 4/4). */
+        private const val LOW_NIBBLE_MASK = 0x0F
+
+        /** Shift from the low nibble to the high nibble of a byte. */
+        private const val HIGH_NIBBLE_SHIFT = 4
+
         private fun encodeRouteParam(value: String): String {
             val out = StringBuilder(value.length)
             for (byte in value.toByteArray(Charsets.UTF_8)) {
-                val c = byte.toInt() and 0xFF
+                val c = byte.toInt() and BYTE_MASK
                 val unreserved = c in 'a'.code..'z'.code ||
                     c in 'A'.code..'Z'.code ||
                     c in '0'.code..'9'.code ||
@@ -64,7 +73,9 @@ sealed class NextPageDestination(
                 if (unreserved) {
                     out.append(c.toChar())
                 } else {
-                    out.append('%').append(ROUTE_PARAM_HEX[c shr 4]).append(ROUTE_PARAM_HEX[c and 0x0F])
+                    out.append('%')
+                        .append(ROUTE_PARAM_HEX[c shr HIGH_NIBBLE_SHIFT])
+                        .append(ROUTE_PARAM_HEX[c and LOW_NIBBLE_MASK])
                 }
             }
             return out.toString()

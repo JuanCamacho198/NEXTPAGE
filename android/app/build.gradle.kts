@@ -200,45 +200,44 @@ sentry {
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2026.05.01")
-    val coilVersion = "2.7.0"
+    val composeBom = platform(libs.compose.bom)
 
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
-    implementation("androidx.core:core-ktx:1.13.1")
-    implementation("androidx.core:core-splashscreen:1.0.1")
-    implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
-    implementation("androidx.activity:activity-compose:1.9.2")
-    implementation("androidx.fragment:fragment-ktx:1.8.5")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.6")
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.splash)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.lifecycle.runtime)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.fragment.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
 
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.material:material-icons-extended")
+    implementation(libs.compose.ui)
+    implementation(libs.compose.ui.tooling.preview)
+    implementation(libs.compose.material3)
+    implementation(libs.compose.material.icons.extended)
     // Lottie for the Home streak widget (REQ-streak-widget-4). 6.6.6 verified
     // against Kotlin 1.9.24 (kotlin-stdlib 1.9.22 metadata); fallback 6.5.2.
     implementation("com.airbnb.android:lottie-compose:6.6.6")
-    implementation("io.coil-kt:coil:$coilVersion")
-    implementation("io.coil-kt:coil-compose:$coilVersion")
+    implementation(libs.coil)
+    implementation(libs.coil.compose)
     implementation("androidx.webkit:webkit:1.12.1")
 
     implementation("androidx.navigation:navigation-compose:2.8.2")
     androidTestImplementation("androidx.navigation:navigation-testing:2.8.2")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
 
-    implementation("androidx.room:room-runtime:2.8.4")
-    implementation("androidx.room:room-ktx:2.8.4")
-    implementation("androidx.room:room-paging:2.8.4")
-    ksp("androidx.room:room-compiler:2.8.4")
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    implementation(libs.room.paging)
+    ksp(libs.room.compiler)
     androidTestImplementation("androidx.room:room-testing:2.8.4")
     testImplementation("androidx.room:room-testing:2.8.4")
 
     // Paging 3
-    implementation("androidx.paging:paging-runtime-ktx:3.3.6")
-    implementation("androidx.paging:paging-compose:3.3.6")
+    implementation(libs.paging.runtime)
+    implementation(libs.paging.compose)
 
     // Google Drive REST API + Credential Manager
     implementation("com.google.android.gms:play-services-auth:21.3.0")

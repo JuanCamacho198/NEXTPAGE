@@ -323,6 +323,7 @@
       <button
         type="button"
         class="mt-5 cursor-pointer border-none bg-transparent p-0 text-sm text-(--color-text-muted) hover:text-(--color-primary) transition-colors"
+        onclick={toggleLocalForm}
       >
         {t('welcome.cardCreateAccount')}
       </button>

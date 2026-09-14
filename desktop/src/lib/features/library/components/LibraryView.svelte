@@ -51,7 +51,7 @@
   } = $props();
 
   const collectionDropdownOptions = $derived([
-    { value: '', label: 'All' },
+    { value: '', label: t('app.all') },
     ...collections.map((c) => ({ value: String(c.id), label: c.name })),
   ]);
 
@@ -221,7 +221,7 @@
                     <button
                       type="button"
                       class="rounded-md border border-(--color-border) px-2 py-1 text-xs text-(--color-text-muted) hover:bg-(--color-surface-hover)"
-                      >...</button
+                      aria-label={t('library.optionsFor', { title: book.title })}>...</button
                     >
                   {/snippet}
                   <button
@@ -347,7 +347,7 @@
                     <button
                       type="button"
                       class="rounded-md border border-(--color-border) px-2 py-1 text-xs text-(--color-text-muted)"
-                      >...</button
+                      aria-label={t('library.optionsFor', { title: book.title })}>...</button
                     >
                   {/snippet}
                   <button

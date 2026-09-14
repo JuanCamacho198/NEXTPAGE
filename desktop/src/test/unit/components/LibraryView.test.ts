@@ -155,6 +155,33 @@ describe('LibraryView', () => {
     expect(onHide.mock.calls[0][0].id).toBe('book-hide-1');
   });
 
+  it('labels the item menu trigger with the book title', async () => {
+    render(LibraryView, {
+      books: [
+        {
+          id: 'book-label-1',
+          title: 'Book Label Test',
+          author: 'Author',
+          format: 'epub',
+          currentPage: 1,
+          totalPages: 10,
+          progressPercentage: 10,
+          coverPath: null,
+          minutesRead: 1,
+          updatedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+        },
+      ] satisfies LibraryBookDto[],
+      selectedBookId: null,
+      isLoading: false,
+      disabledReason: null,
+      viewMode: 'list',
+      t,
+    });
+
+    expect(screen.getByRole('button', { name: 'Options for Book Label Test' })).toBeInTheDocument();
+  });
+
   it('falls back to placeholder when cover image fails to load', async () => {
     mockedReadFile.mockRejectedValueOnce(new Error('cover not found'));
 

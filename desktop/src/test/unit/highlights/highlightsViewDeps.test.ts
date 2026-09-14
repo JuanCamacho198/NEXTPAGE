@@ -10,6 +10,7 @@ describe('createHighlightsViewDeps', () => {
 
     const spyList = vi.spyOn(mock, 'listHighlights');
     const spyDelete = vi.spyOn(mock, 'deleteHighlight');
+    const spyUpdate = vi.spyOn(mock, 'updateHighlight');
     const spyTags = vi.spyOn(mock, 'listTags');
     const spyTagsFor = vi.spyOn(mock, 'listTagsForHighlight');
 
@@ -31,6 +32,23 @@ describe('createHighlightsViewDeps', () => {
     });
     await deps.deleteHighlight('h1');
     expect(spyDelete).toHaveBeenCalledWith('h1');
+
+    // seed a second highlight to update the note
+    await mock.saveHighlight({
+      id: 'h2',
+      bookId: 'b1',
+      text: 'hi 2',
+      color: '#facc15',
+      pageNumber: 2,
+      rectLeft: 0,
+      rectRight: 10,
+      rectTop: 0,
+      rectBottom: 10,
+      cfi: null,
+    });
+    const updated = await deps.updateHighlight({ id: 'h2', note: 'edited' });
+    expect(spyUpdate).toHaveBeenCalledWith({ id: 'h2', note: 'edited' });
+    expect(updated.note).toBe('edited');
 
     await deps.listTags();
     expect(spyTags).toHaveBeenCalled();
@@ -97,6 +115,7 @@ describe('createHighlightsViewDeps', () => {
     const deps = createHighlightsViewDeps();
     expect(deps.listHighlights).toBeDefined();
     expect(deps.deleteHighlight).toBeDefined();
+    expect(deps.updateHighlight).toBeDefined();
     expect(deps.upsertRemoteHighlights).toBeDefined();
     expect(deps.listTags).toBeDefined();
     expect(deps.listTagsForHighlight).toBeDefined();

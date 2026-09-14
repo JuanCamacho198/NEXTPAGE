@@ -31,9 +31,31 @@ import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.presentation.viewmodel.HomeUiState
 import com.nextpage.presentation.viewmodel.HomeViewModel
 import com.nextpage.ui.components.atoms.NextPageEmptyState
+import com.nextpage.ui.components.molecules.ContinueReadingSkeleton
 import com.nextpage.ui.components.molecules.NextPageHeader
 import com.nextpage.ui.components.molecules.NotificationSheet
+import com.nextpage.ui.components.molecules.QuickAccessSkeleton
 import com.nextpage.ui.icons.NextPageIcons
+
+/**
+ * Render mode for a Home section that owns an empty state.
+ *
+ * Pure and JVM-testable so the loading gate (LS1-LS3) is verifiable without a
+ * device: a section shows its skeleton until the first content resolves, its
+ * empty state only after loading finished, and its content otherwise.
+ */
+internal enum class HomeSectionRenderState { SKELETON, EMPTY, CONTENT }
+
+/**
+ * @return [HomeSectionRenderState.SKELETON] while [isLoading] and the section
+ *   has not emitted any item yet, [HomeSectionRenderState.EMPTY] when loading
+ *   finished with no items, otherwise [HomeSectionRenderState.CONTENT].
+ */
+internal fun homeSectionRenderState(isLoading: Boolean, isEmpty: Boolean): HomeSectionRenderState = when {
+    isLoading && isEmpty -> HomeSectionRenderState.SKELETON
+    isEmpty -> HomeSectionRenderState.EMPTY
+    else -> HomeSectionRenderState.CONTENT
+}
 
 @Composable
 fun HomeScreen(contentPadding: PaddingValues, viewModel: HomeViewModel, onNavigateToLibrary: () -> Unit, onNavigateToHighlights: () -> Unit, onNavigateToSettings: () -> Unit, onOpenAccount: () -> Unit = {}, onNavigateToStatistics: () -> Unit, onBookSelected: (String, String, String) -> Unit, onContinueReading: (String, String?, String) -> Unit, onImportBook: () -> Unit, onEditBook: (Book) -> Unit = {}, onMarkCompleted: (Book) -> Unit = {}, onMarkPlanToRead: (Book) -> Unit = {}, onShareBook: (Book) -> Unit = {}, onRequestDeleteBook: (Book) -> Unit = {}) {
@@ -55,9 +77,29 @@ fun HomeScreenContent(uiState: HomeUiState, contentPadding: PaddingValues, onNav
             item { NextPageHeader(title = stringResource(R.string.home_nextpage_title), avatarImageUrl = uiState.avatarUrl, avatarInitials = uiState.userName.take(1).uppercase(), onAvatarClick = onOpenAccount, avatarContentDescription = stringResource(R.string.home_avatar_content_description), onSearchClick = onToggleSearch, onNotificationsClick = { showNotifications = true }) }
             item { GreetingSection(userName = uiState.userName) }
             item { TodaySummarySection(minutesReadToday = uiState.minutesReadToday, sessionsToday = uiState.sessionsToday, currentStreak = uiState.currentStreak) }
-            item { ContinueReadingSection(books = uiState.currentBooks, progressPercentByBook = uiState.progressPercentByBook, onBookSelected = onBookSelected, onContinueReading = onContinueReading, onEdit = onEditBook, onMarkCompleted = onMarkCompleted, onMarkPlanToRead = onMarkPlanToRead, onShare = onShareBook, onDelete = onRequestDeleteBook) }
-            item { MyBookshelfSection(books = uiState.recentBooks, onViewAll = onNavigateToLibrary, onBookSelected = onBookSelected) }
-            item { QuickAccessSection(onImportBook = onImportBook, onHighlights = onNavigateToHighlights, onStatistics = onNavigateToStatistics, onSettings = onNavigateToSettings) }
+            item {
+                if (homeSectionRenderState(uiState.isLoading, uiState.currentBooks.isEmpty()) == HomeSectionRenderState.SKELETON) {
+                    ContinueReadingSkeleton()
+                } else {
+                    ContinueReadingSection(books = uiState.currentBooks, progressPercentByBook = uiState.progressPercentByBook, onBookSelected = onBookSelected, onContinueReading = onContinueReading, onEdit = onEditBook, onMarkCompleted = onMarkCompleted, onMarkPlanToRead = onMarkPlanToRead, onShare = onShareBook, onDelete = onRequestDeleteBook)
+                }
+            }
+            item {
+                if (homeSectionRenderState(uiState.isLoading, uiState.recentBooks.isEmpty()) == HomeSectionRenderState.SKELETON) {
+                    // My Bookshelf is a horizontal card row like the carousel, so it
+                    // reuses the horizontal card skeleton with the shelf's card count.
+                    ContinueReadingSkeleton(cards = 4)
+                } else {
+                    MyBookshelfSection(books = uiState.recentBooks, onViewAll = onNavigateToLibrary, onBookSelected = onBookSelected)
+                }
+            }
+            item {
+                if (uiState.isLoading) {
+                    QuickAccessSkeleton()
+                } else {
+                    QuickAccessSection(onImportBook = onImportBook, onHighlights = onNavigateToHighlights, onStatistics = onNavigateToStatistics, onSettings = onNavigateToSettings)
+                }
+            }
         }
         item { Spacer(modifier = Modifier.height(NextPageDimens.spacingMd)) }
         if (com.nextpage.BuildConfig.DEBUG) {

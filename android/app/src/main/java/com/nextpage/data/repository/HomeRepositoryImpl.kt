@@ -5,6 +5,7 @@ import com.nextpage.data.local.dao.ReadingProgressDao
 import com.nextpage.data.local.dao.ReadingSessionDao
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.model.ReadingStats
+import com.nextpage.domain.model.isActiveReadingCandidate
 import com.nextpage.domain.repository.HomeRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -41,7 +42,7 @@ class HomeRepositoryImpl(
             entities.map { entity ->
                 val canonical = progressById[entity.id]
                 if (canonical != null) entity.toBookWithCanonical(canonical) else entity.toBook()
-            }
+            }.filter { it.isActiveReadingCandidate() }
         }
 
 

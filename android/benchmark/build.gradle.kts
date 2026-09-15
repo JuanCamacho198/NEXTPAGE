@@ -6,6 +6,10 @@ plugins {
     // Same formatting gate as `:app` (Spotless targets **/*.kt + **/*.kts), so the
     // root `spotlessApply` / `spotlessCheck` covers this module's Kotlin too.
     alias(libs.plugins.spotless)
+    // SDD android-stack-modernization S11: Baseline Profile PRODUCER plugin. Turns this
+    // module into the device-side generator that `:app:generateReleaseBaselineProfile`
+    // drives (BaselineProfileGenerator.kt lives beside the S9 journeys here).
+    alias(libs.plugins.androidx.baselineprofile)
 }
 
 // Spotless is configured per module (mirrors :app) — the plugin alone defines no
@@ -59,12 +63,37 @@ android {
     experimentalProperties["android.experimental.self-instrumenting"] = true
 }
 
-// Nothing but the `benchmark` variant is built; the module is never part of a
-// normal `assemble`/`test` run.
+// Variants this module serves. `benchmark` is the S9 macrobenchmark variant paired with
+// `:app:benchmark`; `nonMinifiedRelease` and `benchmarkRelease` are the synthetic build
+// types the `androidx.baselineprofile` PRODUCER plugin creates (S11) so this module has a
+// variant for every `:app` variant the profile generation instruments.
+private val servedBuildTypes = setOf("benchmark", "nonMinifiedRelease", "benchmarkRelease")
+
+// Nothing but the variants above is built; the module is never part of a normal
+// `assemble`/`test` run.
+//
+// This MUST stay a plain assignment (`=`), not a narrowing guard. The producer plugin's
+// own `onTestBeforeVariants` callback ANDs its allow-list into `enable`, and it is
+// registered from the `plugins {}` block — i.e. BEFORE this callback runs. Assignment
+// here is therefore the last word, and it is what keeps BOTH the S9 macrobenchmark
+// variant (`:benchmark:connectedBenchmarkAndroidTest`) and the S11 generation variants
+// alive. Dropping `benchmark` from the set would silently delete the macrobenchmark
+// suite; dropping the synthetic pair would leave `:app:generateReleaseBaselineProfile`
+// with no producer variant to run.
 androidComponents {
     beforeVariants(selector().all()) {
-        it.enable = it.buildType == "benchmark"
+        it.enable = it.buildType in servedBuildTypes
     }
+}
+
+// SDD android-stack-modernization S11: profile-collection settings. `useConnectedDevices`
+// is the plugin's own default (true) and is stated explicitly because it IS the S11
+// route: the profile is collected on a CONNECTED device — the CI emulator booted by the
+// dispatch-only `android-baseline-profile` job — not on a Gradle Managed Device. No
+// `managedDevices` list is declared on purpose: declaring one would make the plugin
+// prefer a managed device over the emulator CI already boots.
+baselineProfile {
+    useConnectedDevices = true
 }
 
 dependencies {

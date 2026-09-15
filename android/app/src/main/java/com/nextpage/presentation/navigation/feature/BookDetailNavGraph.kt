@@ -14,6 +14,7 @@ import com.nextpage.di.AppContainer
 import com.nextpage.presentation.feature.bookdetail.BookDetailScreen
 import com.nextpage.presentation.feature.editmetadata.EditBookMetadataScreen
 import com.nextpage.presentation.navigation.NextPageDestination
+import com.nextpage.presentation.navigation.ReaderRoute
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 
 /**
@@ -47,8 +48,8 @@ fun NavGraphBuilder.bookDetailGraph(
             onEditBook = { navController.navigate("book_edit/$bookId") },
             onContinueReading = { id, filePath, format ->
                 onSelectBook(id, filePath, format)
-                navController.navigate(NextPageDestination.Reader.routeFor(id, filePath, format)) {
-                    popUpTo(NextPageDestination.Reader.route) { inclusive = true }
+                navController.navigate(ReaderRoute(id, filePath, format)) {
+                    popUpTo<ReaderRoute> { inclusive = true }
                 }
             },
         )

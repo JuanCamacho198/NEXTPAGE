@@ -7,10 +7,9 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
-import androidx.navigation.NavType
 import androidx.navigation.compose.composable
-import androidx.navigation.navArgument
-import com.nextpage.presentation.navigation.NextPageDestination
+import androidx.navigation.toRoute
+import com.nextpage.presentation.navigation.ReaderRoute
 import com.nextpage.presentation.screen.ReaderScreen
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 
@@ -18,11 +17,11 @@ import com.nextpage.presentation.viewmodel.ReaderViewModel
  * Feature NavGraph for Reader.
  *
  * Holds no VM creation; receives host [readerViewModel] + selectedBook* values
- * as a backup. The book identity travels as navigation arguments on the
- * Reader destination (see [NextPageDestination.Reader.routeFor]); args win
- * over the host snapshot, which previously arrived blank because the NavHost
- * composition captured [selectedBookId] before the selection write landed.
- * Preserves slide transitions verbatim.
+ * as a backup. The book identity travels as the typed [ReaderRoute] navigation
+ * arguments on the Reader destination; args win over the host snapshot, which
+ * previously arrived blank because the NavHost composition captured
+ * [selectedBookId] before the selection write landed. Preserves slide
+ * transitions verbatim.
  */
 fun NavGraphBuilder.readerGraph(
     navController: NavController,
@@ -32,51 +31,74 @@ fun NavGraphBuilder.readerGraph(
     selectedBookFormat: String,
     contentPadding: PaddingValues,
 ) {
-    composable(
-        route = NextPageDestination.Reader.route,
-        arguments =
-            listOf(
-                navArgument(NextPageDestination.Reader.ARG_BOOK_ID) {
-                    type = NavType.StringType
-                    defaultValue = ""
-                },
-                navArgument(NextPageDestination.Reader.ARG_BOOK_PATH) {
-                    type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
-                },
-                navArgument(NextPageDestination.Reader.ARG_BOOK_FORMAT) {
-                    type = NavType.StringType
-                    defaultValue = "epub"
-                },
-            ),
+    composable<ReaderRoute>(
         enterTransition = { slideInHorizontally { it } + fadeIn() },
         exitTransition = { slideOutHorizontally { it } + fadeOut() },
         popEnterTransition = { slideInHorizontally { -it } + fadeIn() },
         popExitTransition = { slideOutHorizontally { -it } + fadeOut() },
     ) { backStackEntry ->
-        val argBookId = backStackEntry.arguments?.getString(NextPageDestination.Reader.ARG_BOOK_ID).orEmpty()
-        val argBookPath = backStackEntry.arguments?.getString(NextPageDestination.Reader.ARG_BOOK_PATH)
-        val argBookFormat = backStackEntry.arguments?.getString(NextPageDestination.Reader.ARG_BOOK_FORMAT) ?: "epub"
-        // Args are fresh per destination entry (process-death safe); the host
-        // snapshot is kept only as a backup for bare "reader" navigations.
-        val hasArgs = argBookId.isNotBlank()
-        val effectiveBookId = if (hasArgs) argBookId else selectedBookId
-        val effectiveBookPath =
-            if (hasArgs) {
-                argBookPath?.takeIf { it.isNotBlank() }
-            } else {
-                selectedBookFilePath
-            }
-        val effectiveBookFormat = if (hasArgs) argBookFormat else selectedBookFormat
+        val identity =
+            resolveReaderBookIdentity(
+                route = backStackEntry.toRoute<ReaderRoute>(),
+                snapshotBookId = selectedBookId,
+                snapshotBookPath = selectedBookFilePath,
+                snapshotBookFormat = selectedBookFormat,
+            )
         ReaderScreen(
             contentPadding = contentPadding,
-            selectedBookId = effectiveBookId,
-            bookFilePath = effectiveBookPath,
-            bookFormat = effectiveBookFormat,
-            bookIdentitySource = if (hasArgs) "args" else "snapshot",
+            selectedBookId = identity.bookId,
+            bookFilePath = identity.bookPath,
+            bookFormat = identity.bookFormat,
+            bookIdentitySource = identity.source,
             viewModel = readerViewModel,
             onNavigateBack = { navController.popBackStack() },
+        )
+    }
+}
+
+/**
+ * Book identity the Reader destination resolves for [ReaderScreen].
+ *
+ * [source] is the verbatim debug tag the screen logs: `"args"` when the typed
+ * route carried a book id, `"snapshot"` when the host's `rememberSaveable`
+ * backup was used.
+ */
+internal data class ReaderBookIdentity(
+    val bookId: String,
+    val bookPath: String?,
+    val bookFormat: String,
+    val source: String,
+)
+
+/**
+ * Resolves the Reader's book identity from its typed route, falling back to the
+ * host snapshot exactly as the string-route graph did.
+ *
+ * Args are fresh per destination entry (process-death safe); the host snapshot
+ * is kept only as a backup for bare Reader navigations (blank [ReaderRoute.bookId]).
+ * A blank `bookPath` normalises to `null`, matching the previous behaviour where
+ * the route builder omitted it and the screen received `null`.
+ */
+internal fun resolveReaderBookIdentity(
+    route: ReaderRoute,
+    snapshotBookId: String,
+    snapshotBookPath: String?,
+    snapshotBookFormat: String,
+): ReaderBookIdentity {
+    val hasArgs = route.bookId.isNotBlank()
+    return if (hasArgs) {
+        ReaderBookIdentity(
+            bookId = route.bookId,
+            bookPath = route.bookPath?.takeIf { it.isNotBlank() },
+            bookFormat = route.bookFormat,
+            source = "args",
+        )
+    } else {
+        ReaderBookIdentity(
+            bookId = snapshotBookId,
+            bookPath = snapshotBookPath,
+            bookFormat = snapshotBookFormat,
+            source = "snapshot",
         )
     }
 }

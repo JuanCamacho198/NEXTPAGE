@@ -32,6 +32,7 @@ import com.nextpage.domain.repository.DictionaryRepository
 import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.domain.repository.StorageRepository
 import com.nextpage.presentation.navigation.NextPageDestination
+import com.nextpage.presentation.navigation.rememberPerformanceViewModel
 import com.nextpage.presentation.screen.settings.AboutScreen
 import com.nextpage.presentation.screen.settings.PerformanceScreen
 import com.nextpage.presentation.screen.settings.SettingsAccountScreen
@@ -374,6 +375,7 @@ private fun SettingsScreenContent(
                 composable(route = NextPageDestination.SettingsPerformance.route) {
                     PerformanceScreen(
                         onBack = { nestedNavController.popBackStack() },
+                        viewModel = rememberPerformanceViewModel(),
                     )
                 }
             }

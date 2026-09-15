@@ -4,19 +4,27 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.nextpage.data.remote.addons.AddonRegistryLike
 import com.nextpage.data.remote.catalog.CatalogFeaturedSort
 import com.nextpage.data.remote.catalog.CatalogProvider
+import com.nextpage.data.storage.CoverStorage
 import com.nextpage.di.AppContainer
+import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.domain.usecase.DownloadAndImportBookUseCase
 import com.nextpage.presentation.debug.DebugViewModel
 import com.nextpage.presentation.feature.discover.DiscoverSectionViewModel
 import com.nextpage.presentation.feature.discover.DiscoverSectionViewModelFactory
+import com.nextpage.presentation.screen.settings.AddonSettingsViewModelFactory
+import com.nextpage.presentation.viewmodel.AddonSettingsViewModel
 import com.nextpage.presentation.viewmodel.AuthViewModel
+import com.nextpage.presentation.viewmodel.BookDetailViewModel
 import com.nextpage.presentation.viewmodel.DiscoverViewModel
 import com.nextpage.presentation.viewmodel.DiscoverViewModelFactory
+import com.nextpage.presentation.viewmodel.EditBookMetadataViewModel
 import com.nextpage.presentation.viewmodel.HighlightsViewModel
 import com.nextpage.presentation.viewmodel.HomeViewModel
 import com.nextpage.presentation.viewmodel.LibraryViewModel
+import com.nextpage.presentation.viewmodel.PerformanceViewModel
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 import com.nextpage.presentation.viewmodel.ReaderViewModelFactory
 import com.nextpage.presentation.viewmodel.StatisticsViewModel
@@ -28,6 +36,11 @@ import com.nextpage.presentation.viewmodel.StatisticsViewModel
  * keeps factory wiring host-local without leaking AppContainer module split (PR #4).
  * ViewModels are created once in the host via [rememberNavHostViewModels] and
  * injected into feature NavGraphBuilders — builders never call viewModel() inside composable.
+ *
+ * This file is the single designated provider for production ViewModel
+ * resolution: every `viewModel()`/`hiltViewModel()` call in `src/main` lives
+ * here, and callers receive the instance as a parameter. Enforced by
+ * `NoInlineViewModelResolutionTest` over the whole production source set.
  */
 internal data class ViewModelProviders(
     val library: LibraryViewModel,
@@ -141,5 +154,92 @@ internal fun rememberDiscoverSectionViewModel(
                 sort = sort,
                 sourceId = sourceId,
                 downloadAndImportBookUseCase = downloadAndImportBookUseCase,
+            ),
+    )
+
+/**
+ * Resolves the route-scoped [BookDetailViewModel] for one `bookId`.
+ *
+ * Book-detail VMs depend on the route's `bookId` plus the app-scoped library
+ * repository, so they cannot live in the host-scoped [rememberNavHostViewModels]
+ * holder. Resolution still stays single-sourced in this file —
+ * [com.nextpage.presentation.navigation.feature.bookDetailGraph] resolves here
+ * and passes the instance in; it never calls `viewModel()` itself.
+ */
+@Composable
+internal fun rememberBookDetailViewModel(
+    bookId: String,
+    libraryRepository: LibraryRepository,
+): BookDetailViewModel =
+    viewModel(
+        factory = BookDetailViewModel.Factory(bookId, libraryRepository),
+    )
+
+/**
+ * Resolves the route-scoped [EditBookMetadataViewModel] for one `bookId`.
+ *
+ * The factory needs the route's `onSaved` callback and the application context
+ * (cover storage), so the route cannot create it from the host holder. The
+ * settings/book-detail graph resolves here and passes the instance in.
+ */
+@Composable
+internal fun rememberEditBookMetadataViewModel(
+    bookId: String,
+    libraryRepository: LibraryRepository,
+    coverStorage: CoverStorage,
+    onSaved: () -> Unit,
+): EditBookMetadataViewModel {
+    val context = LocalContext.current
+    return viewModel(
+        factory =
+            EditBookMetadataViewModel.Factory(
+                bookId = bookId,
+                libraryRepository = libraryRepository,
+                coverStorage = coverStorage,
+                appContext = context.applicationContext,
+                onSaved = onSaved,
+            ),
+    )
+}
+
+/**
+ * Resolves the debug-only [PerformanceViewModel] for the settings sub-page.
+ *
+ * Created inside the nested settings NavHost destination, so it stays scoped to
+ * the performance back-stack entry. Resolution stays single-sourced here; the
+ * settings screen passes the instance in.
+ */
+@Composable
+internal fun rememberPerformanceViewModel(): PerformanceViewModel {
+    val context = LocalContext.current
+    return viewModel(
+        factory =
+            PerformanceViewModel.Factory(
+                context.applicationContext as android.app.Application,
+            ),
+    )
+}
+
+/**
+ * Resolves the [AddonSettingsViewModel] for the addon-management route.
+ *
+ * The registry-backed factory also needs the route's error channel, so the
+ * caller passes `onError` in; the route keeps owning the snackbar/error state.
+ * Resolution stays single-sourced here — the route never calls `viewModel()`.
+ */
+@Composable
+internal fun rememberAddonSettingsViewModel(
+    registry: AddonRegistryLike,
+    onError: (String) -> Unit,
+    hasConsent: (String) -> Boolean,
+    onConsentChange: (String, Boolean) -> Unit,
+): AddonSettingsViewModel =
+    viewModel(
+        factory =
+            AddonSettingsViewModelFactory(
+                registry = registry,
+                onError = onError,
+                hasConsent = hasConsent,
+                onConsentChange = onConsentChange,
             ),
     )

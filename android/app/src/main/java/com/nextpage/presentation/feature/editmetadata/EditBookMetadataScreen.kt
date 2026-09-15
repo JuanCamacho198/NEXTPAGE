@@ -32,10 +32,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nextpage.R
-import com.nextpage.data.storage.CoverStorage
-import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.presentation.UiEvent
 import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.presentation.viewmodel.EditBookMetadataUiState
@@ -51,23 +48,10 @@ import kotlinx.coroutines.withContext
 @Composable
 fun EditBookMetadataScreen(
     contentPadding: PaddingValues,
-    bookId: String,
-    libraryRepository: LibraryRepository,
-    coverStorage: CoverStorage,
+    viewModel: EditBookMetadataViewModel,
     onNavigateBack: () -> Unit,
 ) {
     val context = LocalContext.current
-    val viewModel: EditBookMetadataViewModel =
-        viewModel(
-            factory =
-                EditBookMetadataViewModel.Factory(
-                    bookId = bookId,
-                    libraryRepository = libraryRepository,
-                    coverStorage = coverStorage,
-                    appContext = context.applicationContext,
-                    onSaved = onNavigateBack,
-                ),
-        )
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }

@@ -6,22 +6,21 @@ import org.junit.Assert.fail
 import org.junit.Test
 
 /**
- * Konsist rule (SDD android-stack-modernization S2, R9 / SC9.1-9.2).
+ * Konsist rule (SDD android-stack-modernization R9 / SC9.1-9.2).
  *
- * ViewModel resolution in the navigation layer must be single-sourced in
- * ViewModelProviders.kt; the feature NavGraphBuilders and the host must never
- * call `viewModel()` or `hiltViewModel()` themselves — the convention stated in
- * ViewModelProviders.kt and in every `*NavGraph.kt` KDoc.
+ * ViewModel resolution in production must be single-sourced in
+ * ViewModelProviders.kt; no composable — host, feature NavGraph builder, feature
+ * screen, or settings route — may call `viewModel()` or `hiltViewModel()`
+ * directly. Callers receive the resolved instance as a parameter instead (or, for
+ * route-scoped VMs, through the `remember*ViewModel` providers in that file).
  *
- * Scope note: the enforced boundary is the navigation layer, where the
- * single-sourced host-provider pattern lives. Screen-level stateful owners
- * (PerformanceScreen, BookDetailScreen, EditBookMetadataScreen,
- * AddonManagementRoute) still resolve their own ViewModels; a project-wide rule
- * would require hoisting those four features through their NavGraphs and is
- * tracked separately (outside slice S2's boundary).
+ * Scope note: S2 enforced this over `/presentation/navigation/` only, because
+ * four screen-level resolvers lived outside the navigation layer. S13 hoisted
+ * those four (PerformanceScreen, AddonManagementRoute, EditBookMetadataScreen,
+ * BookDetailScreen) and widened the scope to the whole production source set, so
+ * the rule now matches the spec requirement literally.
  */
 class NoInlineViewModelResolutionTest {
-    private val navigationLayerMarker = "/presentation/navigation/"
     private val designatedProviderFile = "ViewModelProviders.kt"
 
     /** Matches `viewModel(` / `viewModel<T>(` and the `hiltViewModel` variants
@@ -33,21 +32,17 @@ class NoInlineViewModelResolutionTest {
     private val lineComment = Regex("""//[^\n]*""")
 
     @Test
-    fun `navigation layer resolves ViewModels only through the designated provider`() {
-        val navigationFiles =
-            Konsist
-                .scopeFromProduction()
-                .files
-                .filter { it.path.normalizedPath().contains(navigationLayerMarker) }
+    fun `production code resolves ViewModels only through the designated provider`() {
+        val productionFiles = Konsist.scopeFromProduction().files
 
         assertTrue(
-            "Konsist found no production navigation-layer files; the production scope could not be resolved",
-            navigationFiles.any { it.path.normalizedPath().endsWith("NextPageNavHost.kt") } &&
-                navigationFiles.any { it.path.normalizedPath().endsWith(designatedProviderFile) },
+            "Konsist found no production files; the production scope could not be resolved",
+            productionFiles.any { it.path.normalizedPath().endsWith("NextPageNavHost.kt") } &&
+                productionFiles.any { it.path.normalizedPath().endsWith(designatedProviderFile) },
         )
 
         val offenders =
-            navigationFiles
+            productionFiles
                 .filterNot { it.path.normalizedPath().endsWith(designatedProviderFile) }
                 .filter { file -> inlineResolution.containsMatchIn(file.text.withoutComments()) }
                 .map { it.path.normalizedPath() }
@@ -55,7 +50,7 @@ class NoInlineViewModelResolutionTest {
         if (offenders.isNotEmpty()) {
             fail(
                 "ViewModel resolution must be confined to $designatedProviderFile; " +
-                    "inline viewModel()/hiltViewModel() found in:\n" +
+                    "inline viewModel()/hiltViewModel() found in production code:\n" +
                     offenders.joinToString("\n") { "  - $it" },
             )
         }

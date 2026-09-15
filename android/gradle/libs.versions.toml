@@ -38,6 +38,7 @@ desugar = "2.1.5"
 junit4 = "4.13.2"
 mockk = "1.13.12"
 turbine = "1.2.1"
+konsist = "0.17.3"
 json = "20231013"
 androidxTestCore = "1.6.1"
 robolectric = "4.13"
@@ -141,6 +142,9 @@ hilt-testing = { group = "com.google.dagger", name = "hilt-android-testing", ver
 testing-junit4 = { group = "junit", name = "junit", version.ref = "junit4" }
 testing-mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 testing-turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
+# Konsist — executable architecture rules (JUnit-run, test-only). Never on a
+# production classpath; the rules execute inside :app:testDebugUnitTest.
+testing-konsist = { group = "com.lemonappdev", name = "konsist", version.ref = "konsist" }
 testing-json = { group = "org.json", name = "json", version.ref = "json" }
 testing-robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 

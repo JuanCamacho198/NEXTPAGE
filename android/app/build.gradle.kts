@@ -228,6 +228,10 @@ android {
 
     tasks.withType(Test::class).configureEach {
         dependsOn(copySchemasForUnitTest)
+        // Konsist parses the whole production source tree in-process. Give the
+        // shared unit-test JVM headroom so the architecture rules and the
+        // ~1100-test suite coexist without OOM (default Test heap is 512m).
+        maxHeapSize = "2g"
     }
 
     sourceSets {
@@ -353,6 +357,9 @@ dependencies {
     // Turbine — deterministic Flow/StateFlow emission assertions paired with
     // kotlinx-coroutines-test (test-only; never on a production classpath).
     testImplementation(libs.testing.turbine)
+    // Konsist — executable architecture rules that run inside
+    // :app:testDebugUnitTest (test-only; no CI gate change).
+    testImplementation(libs.testing.konsist)
     testImplementation(libs.hilt.testing)
     kspTest(libs.hilt.compiler)
     testImplementation(libs.ktor.client.mock)

@@ -9,7 +9,6 @@ import com.nextpage.domain.repository.CacheRepository
 import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.domain.repository.StorageRepository
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -57,7 +56,7 @@ class StorageViewModel(
     private val storageRepository: StorageRepository,
     private val cacheRepository: CacheRepository,
     private val libraryRepository: LibraryRepository,
-    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
+    private val mainDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(StorageUiState())
 

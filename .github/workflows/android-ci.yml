@@ -116,10 +116,14 @@ jobs:
       - name: Upload Kover coverage reports
         # Report-only: coverage is published as an artifact and never gates the
         # test result (Kover's `verify` block is deliberately absent; a coverage
-        # bound is deferred). A MISSING report, however, is a real failure —
-        # `if-no-files-found: error` turns a silently skipped report into a red
-        # step. `if: always()` keeps the report available even when an earlier
-        # gate failed, since the tests that produce it already ran.
+        # bound is deferred).
+        #
+        # `if-no-files-found: warn`, not `error`. The generation task runs in the
+        # gate step above, so a genuinely missing report already fails THERE; if
+        # the report is absent at upload time it is because an earlier gate
+        # failed, and turning that into a second red step only buries the real
+        # error under a confusing "No files were found" message.
+        # `if: always()` keeps the report available whenever it does exist.
         if: always()
         uses: actions/upload-artifact@v5
         with:
@@ -127,7 +131,7 @@ jobs:
           path: |
             android/app/build/reports/kover/reportDebug.xml
             android/app/build/reports/kover/htmlDebug/
-          if-no-files-found: error
+          if-no-files-found: warn
 
       - name: Print failed test reports
         if: failure()
@@ -151,17 +155,25 @@ jobs:
   # context. That context stays owned by the unchanged `android-checks` job
   # above, so branch protection on `main` is untouched.
   #
-  # Cadence: every PR whose change set survives the workflow-level
-  # `paths-ignore` — i.e. any PR touching `android/**`, to any base — plus
-  # manual dispatch. It deliberately does not run on a push to `main` (the spec
-  # scopes it to PRs, and that commit already ran the job on its PR).
+  # Cadence: manual dispatch, OR a pull request TARGETING `main`. Not every PR.
+  #
+  # Rationale (maintainer decision, 2026-09-15): a feature-branch-chain opens
+  # one PR per slice, and running this job on each of them boots the emulator
+  # 14+ times for the same linear content — wasted queue time, 14 extra
+  # chances of emulator flake, and real energy. The chain's tip carries the
+  # accumulated tree, so instrumenting the PR that actually targets `main`
+  # covers the same code with ONE run.
+  #
+  # The single condition also covers the push-to-`main` case: `github.base_ref`
+  # is only populated for `pull_request` events, so on a `push` this evaluates
+  # false and the merge commit does not re-boot the emulator the PR just ran.
   #
   # The macrobenchmark journeys are NOT here: four classes x five iterations,
   # each restarting the app, is far too slow for every PR. They live in
   # `android-benchmark`, which runs on dispatch only.
   android-emulator:
     name: Android instrumentation (emulator)
-    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || github.base_ref == 'main'
     runs-on: ubuntu-latest
     # Dedicated budget — never the 30m `Android checks` timeout, so a long
     # device run cannot eat the gate job's allowance (they are separate jobs
@@ -251,12 +263,15 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           working-directory: android
-          script: |
-            ./gradlew \
-              --configuration-cache \
-              --build-cache \
-              -Dorg.gradle.vfs.watch=false \
-              :app:connectedDebugAndroidTest
+          # The action hands `script` to `sh -c`, so line continuations with a
+          # trailing backslash are NOT interpreted: the `\` was passed to
+          # Gradle as a task name and the job died with `Task '\' not found`
+          # in ~54s without ever running a test. Keep this on ONE line.
+          #
+          # `--configuration-cache` is deliberately omitted here: connected
+          # device tasks are not reliably config-cache compatible, and a cache
+          # failure would masquerade as a test failure.
+          script: ./gradlew --build-cache -Dorg.gradle.vfs.watch=false :app:connectedDebugAndroidTest
 
       - name: Print failed instrumentation reports
         if: failure()
@@ -348,12 +363,10 @@ jobs:
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           working-directory: android
-          script: |
-            ./gradlew \
-              --configuration-cache \
-              --build-cache \
-              -Dorg.gradle.vfs.watch=false \
-              :benchmark:connectedBenchmarkAndroidTest
+          # ONE line for the same reason as the emulator job: the action hands
+          # this to `sh -c`, so a trailing-backslash continuation becomes a
+          # task named `\` and the run dies before executing anything.
+          script: ./gradlew --build-cache -Dorg.gradle.vfs.watch=false :benchmark:connectedBenchmarkAndroidTest
 
       - name: Verify benchmark regression against the checked-in baseline
         # Opt-in: only meaningful once a run has turned
@@ -450,12 +463,11 @@ jobs:
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           working-directory: android
-          script: |
-            ./gradlew \
-              --configuration-cache \
-              --build-cache \
-              -Dorg.gradle.vfs.watch=false \
-              :app:generateReleaseBaselineProfile
+          # ONE line: the action hands this to `sh -c`, so backslash line
+          # continuations are not interpreted and become a task named `\`.
+          # `--configuration-cache` is omitted for the same reason as the other
+          # device jobs — the generation task drives connected instrumentation.
+          script: ./gradlew --build-cache -Dorg.gradle.vfs.watch=false :app:generateReleaseBaselineProfile
 
       - name: Upload the generated baseline profile
         # THE deliverable: a maintainer commits the uploaded

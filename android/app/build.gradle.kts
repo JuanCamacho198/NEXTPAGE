@@ -48,6 +48,9 @@ ksp {
 spotless {
     kotlin {
         target("**/*.kt", "**/*.kts")
+        // Konsist fixtures under test resources are parsed data, not compiled source
+        // (see DirectViewModelConstructionFixture.kt) — keep them out of ktlint.
+        targetExclude("src/test/resources/**")
         ktlint()
     }
 }

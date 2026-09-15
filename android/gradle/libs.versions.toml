@@ -37,6 +37,7 @@ sentry = "8.54.0"
 desugar = "2.1.5"
 junit4 = "4.13.2"
 mockk = "1.13.12"
+turbine = "1.2.1"
 json = "20231013"
 androidxTestCore = "1.6.1"
 robolectric = "4.13"
@@ -139,6 +140,7 @@ hilt-testing = { group = "com.google.dagger", name = "hilt-android-testing", ver
 # testing group
 testing-junit4 = { group = "junit", name = "junit", version.ref = "junit4" }
 testing-mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
+testing-turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
 testing-json = { group = "org.json", name = "json", version.ref = "json" }
 testing-robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 

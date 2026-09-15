@@ -75,7 +75,12 @@ class NextPageNavHostStackCollapseTest {
     }
 
     @Test
-    fun `Inicio tap collapses the stack to home from every tab`() {
+    // D8/R8 reject spaces in a DEX SimpleName below DEX version 040, so a
+    // backtick-quoted name like `Inicio tap collapses ...` makes
+    // `:app:dexBuilderDebugAndroidTest` fail with "Space characters in
+    // SimpleName ... are not allowed prior to DEX version 040" — the
+    // instrumented APK could never be built, let alone run.
+    fun inicioTap_collapsesStackToHomeFromEveryTab() {
         launchMiniGraph()
 
         otherTabs.forEach { tab ->
@@ -103,7 +108,8 @@ class NextPageNavHostStackCollapseTest {
      * spaces, `/`, `&`, `+`, `%`, `#`, `?` and unicode through a real NavHost.
      */
     @Test
-    fun `typed Reader route round-trips a special-character book path`() {
+    // Same DEX SimpleName constraint as above: no spaces in the method name.
+    fun typedReaderRoute_roundTripsSpecialCharacterBookPath() {
         val specialPath = "/files/a+b & cömic/第一章/100% #1?.epub"
 
         composeRule.setContent {

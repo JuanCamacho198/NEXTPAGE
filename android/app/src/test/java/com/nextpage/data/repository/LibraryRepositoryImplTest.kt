@@ -338,59 +338,6 @@ class LibraryRepositoryImplTest {
         }
 
     @Test
-    fun observeLibraryPaged_emitsPagingDataWithDomainBooks() =
-        runBlocking {
-            val fakeDao = FakeBookDao()
-            // Populate with three books to verify the paging mapping
-            fakeDao.upsert(
-                BookEntity(
-                    id = "paged-1",
-                    title = "Paged 1",
-                    author = "Author",
-                    coverPath = null,
-                    filePath = "/p1.epub",
-                    format = "epub",
-                    updatedAtEpochMillis = 30L,
-                ),
-            )
-            fakeDao.upsert(
-                BookEntity(
-                    id = "paged-2",
-                    title = "Paged 2",
-                    author = "Author",
-                    coverPath = null,
-                    filePath = "/p2.epub",
-                    format = "epub",
-                    updatedAtEpochMillis = 20L,
-                ),
-            )
-
-            val repository =
-                LibraryRepositoryImpl(
-                    appContext = mockk(),
-                    bookDao = fakeDao,
-                    readingProgressDao = FakeReadingProgressDao(),
-                    readingStatsDao = FakeReadingStatsDao(),
-                    epubParserService = FakeEpubParserService(Result.failure(IllegalStateException("unused"))),
-                    pdfParserService = FakePdfParserService(Result.failure(IllegalStateException("unused"))),
-                    coverStorage = FakeCoverStorage(),
-                    outboxDao = mockk(),
-                )
-
-            // The PagingSource is wired from the DAO. Verify that the FakeBookDao's
-            // backing paged source returns the same data the legacy observeAllBooks()
-            // method would return — confirming the new path is consistent.
-            val pagedSource = fakeDao.observeAllBooksPaged()
-            assertEquals(2, fakeDao.count())
-            assertEquals(2, fakeDao.observeAllBooks().first().size)
-
-            // Verify the repo exposes the paged flow as PagingData<Book>, not PagingData<BookEntity>
-            val paged: kotlinx.coroutines.flow.Flow<androidx.paging.PagingData<com.nextpage.domain.model.Book>> =
-                repository.observeLibraryPaged()
-            assertNotNull(paged)
-        }
-
-    @Test
     fun pagingSource_fiftyBooks_pagesOfTwenty_splitAcrossThreePages() =
         runBlocking {
             // R4: 50 books with pageSize=20 → 3 pages (20, 20, 10).

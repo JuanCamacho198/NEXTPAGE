@@ -1,6 +1,5 @@
 package com.nextpage.domain.repository
 
-import androidx.paging.PagingData
 import com.nextpage.domain.model.Bookmark
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.ReadingProgress
@@ -26,8 +25,6 @@ interface ReaderRepository {
     )
 
     fun observeAllHighlights(): Flow<List<Highlight>>
-
-    fun observeAllHighlightsPaged(): Flow<PagingData<Highlight>>
 
     fun observeHighlights(bookId: String): Flow<List<Highlight>>
 

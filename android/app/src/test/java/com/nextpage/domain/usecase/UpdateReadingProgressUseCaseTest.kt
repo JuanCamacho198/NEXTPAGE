@@ -51,8 +51,6 @@ class UpdateReadingProgressUseCaseTest {
 
         override fun observeAllHighlights(): Flow<List<Highlight>> = MutableStateFlow(emptyList())
 
-        override fun observeAllHighlightsPaged(): Flow<androidx.paging.PagingData<Highlight>> = kotlinx.coroutines.flow.flowOf(androidx.paging.PagingData.empty())
-
         override fun observeHighlights(bookId: String): Flow<List<Highlight>> = MutableStateFlow(emptyList())
 
         override suspend fun upsertHighlight(highlight: Highlight) = Unit

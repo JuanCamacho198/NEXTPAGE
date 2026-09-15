@@ -144,8 +144,6 @@ class GetBookProgressUseCaseTest {
 
         override fun observeAllHighlights(): Flow<List<com.nextpage.domain.model.Highlight>> = MutableStateFlow(emptyList())
 
-        override fun observeAllHighlightsPaged(): Flow<androidx.paging.PagingData<com.nextpage.domain.model.Highlight>> = MutableStateFlow(androidx.paging.PagingData.empty())
-
         override fun observeHighlights(bookId: String): Flow<List<com.nextpage.domain.model.Highlight>> = MutableStateFlow(emptyList())
 
         override fun observeAllTags(): Flow<List<String>> = MutableStateFlow(emptyList())

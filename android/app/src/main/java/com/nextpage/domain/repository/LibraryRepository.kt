@@ -1,6 +1,5 @@
 package com.nextpage.domain.repository
 
-import androidx.paging.PagingData
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.model.BookImportRequest
 import com.nextpage.domain.model.ReadingProgress
@@ -9,8 +8,6 @@ import java.io.InputStream
 
 interface LibraryRepository {
     fun observeLibrary(): Flow<List<Book>>
-
-    fun observeLibraryPaged(): Flow<PagingData<Book>>
 
     fun observeBookById(bookId: String): Flow<Book?>
 

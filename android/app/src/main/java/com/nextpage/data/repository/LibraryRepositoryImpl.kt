@@ -3,11 +3,6 @@ package com.nextpage.data.repository
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
-import androidx.paging.ExperimentalPagingApi
-import androidx.paging.Pager
-import androidx.paging.PagingConfig
-import androidx.paging.PagingData
-import androidx.paging.map
 import com.nextpage.data.epub.EpubParserService
 import com.nextpage.data.local.dao.BookDao
 import com.nextpage.data.local.dao.ReadingProgressDao
@@ -69,15 +64,6 @@ class LibraryRepositoryImpl(
                 val canonical = progressById[entity.id]
                 if (canonical != null) entity.toDomainWithCanonical(canonical) else entity.toDomain()
             }
-        }
-
-    @OptIn(ExperimentalPagingApi::class)
-    override fun observeLibraryPaged(): Flow<PagingData<Book>> =
-        Pager(
-            config = PagingConfig(pageSize = 20),
-            pagingSourceFactory = { bookDao.observeAllBooksPaged() },
-        ).flow.map { pagingData ->
-            pagingData.map { it.toDomain() }
         }
 
     override fun observeBookById(bookId: String): Flow<Book?> = bookDao.observeBookById(bookId).map { it?.toDomain() }

@@ -151,17 +151,25 @@ jobs:
   # context. That context stays owned by the unchanged `android-checks` job
   # above, so branch protection on `main` is untouched.
   #
-  # Cadence: every PR whose change set survives the workflow-level
-  # `paths-ignore` — i.e. any PR touching `android/**`, to any base — plus
-  # manual dispatch. It deliberately does not run on a push to `main` (the spec
-  # scopes it to PRs, and that commit already ran the job on its PR).
+  # Cadence: manual dispatch, OR a pull request TARGETING `main`. Not every PR.
+  #
+  # Rationale (maintainer decision, 2026-09-15): a feature-branch-chain opens
+  # one PR per slice, and running this job on each of them boots the emulator
+  # 14+ times for the same linear content — wasted queue time, 14 extra
+  # chances of emulator flake, and real energy. The chain's tip carries the
+  # accumulated tree, so instrumenting the PR that actually targets `main`
+  # covers the same code with ONE run.
+  #
+  # The single condition also covers the push-to-`main` case: `github.base_ref`
+  # is only populated for `pull_request` events, so on a `push` this evaluates
+  # false and the merge commit does not re-boot the emulator the PR just ran.
   #
   # The macrobenchmark journeys are NOT here: four classes x five iterations,
   # each restarting the app, is far too slow for every PR. They live in
   # `android-benchmark`, which runs on dispatch only.
   android-emulator:
     name: Android instrumentation (emulator)
-    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || github.base_ref == 'main'
     runs-on: ubuntu-latest
     # Dedicated budget — never the 30m `Android checks` timeout, so a long
     # device run cannot eat the gate job's allowance (they are separate jobs

@@ -302,6 +302,12 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
+    // WorkManager (S6): scheduler-only outbox drain + androidx.hilt worker wiring.
+    // androidx-hilt-compiler is a SEPARATE KSP processor from Dagger's hilt-compiler
+    // above; both must run on assemble.
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.hilt.work)
+    ksp(libs.androidx.hilt.compiler)
     androidTestImplementation(libs.room.testing)
     testImplementation(libs.room.testing)
 

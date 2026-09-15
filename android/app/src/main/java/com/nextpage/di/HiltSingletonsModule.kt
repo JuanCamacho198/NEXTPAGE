@@ -18,6 +18,7 @@ import com.nextpage.domain.repository.AuthRepository
 import com.nextpage.domain.repository.HomeRepository
 import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.domain.repository.ReaderRepository
+import com.nextpage.domain.sync.OutboxDrainScheduler
 import com.nextpage.domain.sync.SessionGate
 import com.nextpage.domain.sync.SyncSettleGate
 import com.nextpage.domain.usecase.GetBookProgressUseCase
@@ -81,6 +82,10 @@ object HiltSingletonsModule {
 
     @Provides @Singleton
     fun provideSyncOrchestrator(a: AppContainer): SyncOrchestrator = a.syncOrchestrator
+
+    /** S6: WorkManager-backed outbox drain scheduler (scheduler-only). */
+    @Provides @Singleton
+    fun provideOutboxDrainScheduler(a: AppContainer): OutboxDrainScheduler = a.outboxDrainScheduler
 
     @Provides
     @Named("isAuthConfigured")

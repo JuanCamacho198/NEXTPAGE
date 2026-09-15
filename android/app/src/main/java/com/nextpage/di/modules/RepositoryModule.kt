@@ -16,6 +16,7 @@ import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.repository.ReadingStatsRepository
 import com.nextpage.domain.repository.StorageRepository
+import com.nextpage.domain.sync.OutboxDrainScheduler
 import com.nextpage.domain.sync.SyncSettleGate
 
 class RepositoryModule(
@@ -24,10 +25,20 @@ class RepositoryModule(
     storageModule: StorageModule,
     @Suppress("UNUSED_PARAMETER") preferencesModule: PreferencesModule,
     syncSettleGateProvider: () -> SyncSettleGate,
+    /**
+     * Resolves the outbox drain scheduler lazily so this module can be built
+     * while the app container is still wiring the network module (the scheduler
+     * needs the session manager). Defaults to a no-op so non-wired callers
+     * (tests) keep working.
+     */
+    drainSchedulerProvider: () -> OutboxDrainScheduler = { OutboxDrainScheduler.NoOp },
 ) {
     companion object {
         private const val TAG = "RepositoryModule"
     }
+
+    /** Resolved once; the scheduler resolves its WorkManager lazily per enqueue. */
+    private val drainScheduler: OutboxDrainScheduler = drainSchedulerProvider()
 
     /**
      * Resolves the orchestrator-backed gate lazily, on each cleanup attempt, so
@@ -47,6 +58,7 @@ class RepositoryModule(
             readingProgressDao = databaseModule.readingProgressDao,
             outboxDao = databaseModule.syncOutboxDao,
             settleGate = syncSettleGate,
+            drainScheduler = drainScheduler,
         )
     val epubImportInitTimeMs: Long = System.currentTimeMillis() - epubImportStartTime
 
@@ -62,6 +74,7 @@ class RepositoryModule(
             bookmarkDao = databaseModule.bookmarkDao,
             bookDao = databaseModule.bookDao,
             outboxDao = databaseModule.syncOutboxDao,
+            drainScheduler = drainScheduler,
         )
     val readerRepoInitTimeMs: Long = System.currentTimeMillis() - readerRepoStartTime
 
@@ -74,6 +87,7 @@ class RepositoryModule(
             readingStatsDao = databaseModule.readingStatsDao,
             readingSessionDao = databaseModule.readingSessionDao,
             outboxDao = databaseModule.syncOutboxDao,
+            drainScheduler = drainScheduler,
         )
 
     val homeRepository: HomeRepository =

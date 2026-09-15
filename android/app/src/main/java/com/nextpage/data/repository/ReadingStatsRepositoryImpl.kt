@@ -12,6 +12,7 @@ import com.nextpage.domain.model.DailyReadingActivity
 import com.nextpage.domain.model.readingSessionId
 import com.nextpage.domain.repository.ReadingStatsData
 import com.nextpage.domain.repository.ReadingStatsRepository
+import com.nextpage.domain.sync.OutboxDrainScheduler
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
@@ -23,6 +24,12 @@ class ReadingStatsRepositoryImpl(
     private val readingStatsDao: ReadingStatsDao,
     private val readingSessionDao: ReadingSessionDao,
     private val outboxDao: SyncOutboxDao? = null,
+    /**
+     * S6 scheduler seam. Nullable so non-wired callers/tests keep the previous
+     * local-only behavior; production injects the WorkManager-backed scheduler
+     * and a drain is requested after a successful reading-session enqueue.
+     */
+    private val drainScheduler: OutboxDrainScheduler? = null,
 ) : ReadingStatsRepository {
     override fun observeStats(bookId: String): Flow<ReadingStatsData?> =
         readingStatsDao.observeStatsForBook(bookId).map { entity ->
@@ -125,7 +132,8 @@ class ReadingStatsRepositoryImpl(
         require(payloadJson.isNotEmpty()) { "payloadJson must be non-empty valid JSON" }
         // Validate JSON object (throws if invalid) — ensures outbox never stores "{}" or malformed
         JSONObject(payloadJson)
-        outboxDao?.insert(
+        val dao = outboxDao ?: return
+        dao.insert(
             SyncOutboxEntity(
                 id = "outbox-${UUID.randomUUID()}",
                 entityType = SyncEntityType.READING_SESSION.name,
@@ -135,6 +143,8 @@ class ReadingStatsRepositoryImpl(
                 createdAtEpochMillis = now,
             ),
         )
+        // S6: request a drain after a successful enqueue.
+        drainScheduler?.scheduleDrain()
     }
 
     private fun todayStartMillis(): Long {

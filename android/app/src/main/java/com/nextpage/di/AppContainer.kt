@@ -22,6 +22,7 @@ import com.nextpage.data.remote.sync.DriveColdBackupService
 import com.nextpage.data.remote.sync.StorageSyncRemoteDataSource
 import com.nextpage.data.remote.sync.SyncOrchestrator
 import com.nextpage.data.remote.sync.SyncService
+import com.nextpage.data.remote.work.WorkManagerOutboxDrainScheduler
 import com.nextpage.data.session.ReaderPreferences
 import com.nextpage.data.session.ReadingGoalPreferences
 import com.nextpage.data.session.SessionManager
@@ -42,6 +43,7 @@ import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.domain.repository.ReadingStatsRepository
 import com.nextpage.domain.repository.StorageRepository
+import com.nextpage.domain.sync.OutboxDrainScheduler
 import com.nextpage.domain.sync.SessionGate
 import com.nextpage.domain.sync.SyncSettleGate
 import com.nextpage.domain.usecase.DownloadAndImportBookUseCase
@@ -59,9 +61,31 @@ class AppContainer(
 
     private val startTime = System.currentTimeMillis()
 
+    private val appContext = context.applicationContext
     private val databaseModule = DatabaseModule(context.applicationContext)
     private val storageModule = StorageModule(context.applicationContext, databaseModule)
     private val preferencesModule = PreferencesModule(context.applicationContext)
+
+    // NetworkModule is built BEFORE RepositoryModule so the drain scheduler can
+    // resolve the (lazy, dependency-free) SessionManager at container init. The
+    // two modules are otherwise independent — NetworkModule does not reference
+    // RepositoryModule.
+    private val networkModule = NetworkModule(context.applicationContext, databaseModule, preferencesModule)
+
+    /**
+     * Outbox drain scheduler (S6): WorkManager-backed, one-shot unique work per
+     * user. Lazy so no WorkManager touch happens at container construction; the
+     * scheduler also resolves WorkManager lazily on first enqueue. Declared
+     * before [repositoryModule] because the module resolves it at construction —
+     * a `by lazy` referenced before its delegate is initialised would NPE.
+     */
+    val outboxDrainScheduler: OutboxDrainScheduler by lazy {
+        WorkManagerOutboxDrainScheduler(
+            context = appContext,
+            sessionManager = networkModule.sessionManager,
+        )
+    }
+
     private val repositoryModule =
         RepositoryModule(
             context = context.applicationContext,
@@ -69,8 +93,8 @@ class AppContainer(
             storageModule = storageModule,
             preferencesModule = preferencesModule,
             syncSettleGateProvider = { syncSettleGate },
+            drainSchedulerProvider = { outboxDrainScheduler },
         )
-    private val networkModule = NetworkModule(context.applicationContext, databaseModule, preferencesModule)
     private val useCaseModule = UseCaseModule(repositoryModule, databaseModule, preferencesModule)
 
     // ── Eager delegation via get() — no double init ───────────────────

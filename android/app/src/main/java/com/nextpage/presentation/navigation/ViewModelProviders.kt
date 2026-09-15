@@ -1,6 +1,8 @@
 package com.nextpage.presentation.navigation
 
+import android.app.Application
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -9,7 +11,10 @@ import com.nextpage.data.remote.catalog.CatalogFeaturedSort
 import com.nextpage.data.remote.catalog.CatalogProvider
 import com.nextpage.data.storage.CoverStorage
 import com.nextpage.di.AppContainer
+import com.nextpage.domain.repository.CacheRepository
+import com.nextpage.domain.repository.DictionaryRepository
 import com.nextpage.domain.repository.LibraryRepository
+import com.nextpage.domain.repository.StorageRepository
 import com.nextpage.domain.usecase.DownloadAndImportBookUseCase
 import com.nextpage.presentation.debug.DebugViewModel
 import com.nextpage.presentation.feature.discover.DiscoverSectionViewModel
@@ -18,6 +23,7 @@ import com.nextpage.presentation.screen.settings.AddonSettingsViewModelFactory
 import com.nextpage.presentation.viewmodel.AddonSettingsViewModel
 import com.nextpage.presentation.viewmodel.AuthViewModel
 import com.nextpage.presentation.viewmodel.BookDetailViewModel
+import com.nextpage.presentation.viewmodel.DictionaryViewModel
 import com.nextpage.presentation.viewmodel.DiscoverViewModel
 import com.nextpage.presentation.viewmodel.DiscoverViewModelFactory
 import com.nextpage.presentation.viewmodel.EditBookMetadataViewModel
@@ -27,7 +33,10 @@ import com.nextpage.presentation.viewmodel.LibraryViewModel
 import com.nextpage.presentation.viewmodel.PerformanceViewModel
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 import com.nextpage.presentation.viewmodel.ReaderViewModelFactory
+import com.nextpage.presentation.viewmodel.SettingsDevicesViewModel
 import com.nextpage.presentation.viewmodel.StatisticsViewModel
+import com.nextpage.presentation.viewmodel.StorageViewModel
+import kotlinx.coroutines.Dispatchers
 
 /**
  * Holder grouping the host-scoped ViewModels.
@@ -39,8 +48,11 @@ import com.nextpage.presentation.viewmodel.StatisticsViewModel
  *
  * This file is the single designated provider for production ViewModel
  * resolution: every `viewModel()`/`hiltViewModel()` call in `src/main` lives
- * here, and callers receive the instance as a parameter. Enforced by
- * `NoInlineViewModelResolutionTest` over the whole production source set.
+ * here, every direct `*ViewModel(...)` construction lives here, and callers
+ * receive the instance as a parameter. Enforced over the whole production
+ * source set by `NoInlineViewModelResolutionTest` (no inline
+ * `viewModel()`/`hiltViewModel()`) and `DirectViewModelConstructionTest` (no
+ * direct construction inside a composable body).
  */
 internal data class ViewModelProviders(
     val library: LibraryViewModel,
@@ -243,3 +255,59 @@ internal fun rememberAddonSettingsViewModel(
                 onConsentChange = onConsentChange,
             ),
     )
+
+/**
+ * Resolves the Settings-screen [DictionaryViewModel].
+ *
+ * Repository-backed and screen-scoped, so it is `remember`ed on the repository
+ * key inside the settings screen — exactly as the inline `remember {}` did
+ * before S14. The nullable repository keeps the nullable-ViewModel contract:
+ * a null repository resolves to a null ViewModel and the dictionary route stays
+ * unrendered.
+ */
+@Composable
+internal fun rememberDictionaryViewModel(dictionaryRepository: DictionaryRepository?): DictionaryViewModel? =
+    remember(dictionaryRepository) {
+        dictionaryRepository?.let { DictionaryViewModel(it) }
+    }
+
+/**
+ * Resolves the Settings-screen [StorageViewModel].
+ *
+ * Screen-scoped and repository-backed: `remember`ed on the three repository
+ * keys, and only built once all three are present — the same nullability
+ * contract the inline `remember {}` had before S14.
+ */
+@Composable
+internal fun rememberStorageViewModel(
+    storageRepository: StorageRepository?,
+    cacheRepository: CacheRepository?,
+    libraryRepository: LibraryRepository?,
+): StorageViewModel? =
+    remember(storageRepository, cacheRepository, libraryRepository) {
+        if (storageRepository != null && cacheRepository != null && libraryRepository != null) {
+            StorageViewModel(storageRepository, cacheRepository, libraryRepository, Dispatchers.Main)
+        } else {
+            null
+        }
+    }
+
+/**
+ * Resolves the devices sub-page [SettingsDevicesViewModel] for one `userId`.
+ *
+ * `remember`ed on the user id inside the `SettingsDevices` destination, so it
+ * is re-created only when the signed-in user changes — the same lifetime the
+ * inline `remember {}` had before S14.
+ */
+@Composable
+internal fun rememberSettingsDevicesViewModel(userId: String?): SettingsDevicesViewModel? {
+    val context = LocalContext.current
+    return remember(userId) {
+        userId?.let { id ->
+            SettingsDevicesViewModel(
+                application = context.applicationContext as Application,
+                userId = id,
+            )
+        }
+    }
+}

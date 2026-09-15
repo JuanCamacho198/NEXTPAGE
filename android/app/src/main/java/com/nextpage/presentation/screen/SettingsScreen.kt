@@ -1,6 +1,5 @@
 package com.nextpage.presentation.screen
 
-import android.app.Application
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,9 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -32,7 +29,10 @@ import com.nextpage.domain.repository.DictionaryRepository
 import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.domain.repository.StorageRepository
 import com.nextpage.presentation.navigation.NextPageDestination
+import com.nextpage.presentation.navigation.rememberDictionaryViewModel
 import com.nextpage.presentation.navigation.rememberPerformanceViewModel
+import com.nextpage.presentation.navigation.rememberSettingsDevicesViewModel
+import com.nextpage.presentation.navigation.rememberStorageViewModel
 import com.nextpage.presentation.screen.settings.AboutScreen
 import com.nextpage.presentation.screen.settings.PerformanceScreen
 import com.nextpage.presentation.screen.settings.SettingsAccountScreen
@@ -47,11 +47,7 @@ import com.nextpage.presentation.screen.settings.SettingsThemeScreen
 import com.nextpage.presentation.screen.settings.StorageScreen
 import com.nextpage.presentation.screen.settings.SyncScreen
 import com.nextpage.presentation.theme.NextPageTheme
-import com.nextpage.presentation.viewmodel.DictionaryViewModel
-import com.nextpage.presentation.viewmodel.SettingsDevicesViewModel
 import com.nextpage.presentation.viewmodel.StatisticsViewModel
-import com.nextpage.presentation.viewmodel.StorageViewModel
-import kotlinx.coroutines.Dispatchers
 
 @Composable
 fun SettingsScreen(
@@ -124,18 +120,8 @@ private fun SettingsScreenContent(
     libraryRepository: LibraryRepository? = null,
 ) {
     val nestedNavController = rememberNavController()
-    val dictionaryViewModel =
-        remember(dictionaryRepository) {
-            dictionaryRepository?.let { DictionaryViewModel(it) }
-        }
-    val storageViewModel =
-        remember(storageRepository, cacheRepository, libraryRepository) {
-            if (storageRepository != null && cacheRepository != null && libraryRepository != null) {
-                StorageViewModel(storageRepository, cacheRepository, libraryRepository, Dispatchers.Main)
-            } else {
-                null
-            }
-        }
+    val dictionaryViewModel = rememberDictionaryViewModel(dictionaryRepository)
+    val storageViewModel = rememberStorageViewModel(storageRepository, cacheRepository, libraryRepository)
 
     val start = initialRoute ?: NextPageDestination.SettingsList.route
 
@@ -314,16 +300,7 @@ private fun SettingsScreenContent(
             }
 
             composable(route = NextPageDestination.SettingsDevices.route) {
-                val context = LocalContext.current
-                val viewModel =
-                    remember(authSession?.userId) {
-                        authSession?.userId?.let { userId ->
-                            SettingsDevicesViewModel(
-                                application = context.applicationContext as Application,
-                                userId = userId,
-                            )
-                        }
-                    }
+                val viewModel = rememberSettingsDevicesViewModel(authSession?.userId)
 
                 val lifecycleOwner = LocalLifecycleOwner.current
                 DisposableEffect(lifecycleOwner) {

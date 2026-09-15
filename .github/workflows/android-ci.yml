@@ -259,12 +259,15 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           working-directory: android
-          script: |
-            ./gradlew \
-              --configuration-cache \
-              --build-cache \
-              -Dorg.gradle.vfs.watch=false \
-              :app:connectedDebugAndroidTest
+          # The action hands `script` to `sh -c`, so line continuations with a
+          # trailing backslash are NOT interpreted: the `\` was passed to
+          # Gradle as a task name and the job died with `Task '\' not found`
+          # in ~54s without ever running a test. Keep this on ONE line.
+          #
+          # `--configuration-cache` is deliberately omitted here: connected
+          # device tasks are not reliably config-cache compatible, and a cache
+          # failure would masquerade as a test failure.
+          script: ./gradlew --build-cache -Dorg.gradle.vfs.watch=false :app:connectedDebugAndroidTest
 
       - name: Print failed instrumentation reports
         if: failure()
@@ -356,12 +359,10 @@ jobs:
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           working-directory: android
-          script: |
-            ./gradlew \
-              --configuration-cache \
-              --build-cache \
-              -Dorg.gradle.vfs.watch=false \
-              :benchmark:connectedBenchmarkAndroidTest
+          # ONE line for the same reason as the emulator job: the action hands
+          # this to `sh -c`, so a trailing-backslash continuation becomes a
+          # task named `\` and the run dies before executing anything.
+          script: ./gradlew --build-cache -Dorg.gradle.vfs.watch=false :benchmark:connectedBenchmarkAndroidTest
 
       - name: Verify benchmark regression against the checked-in baseline
         # Opt-in: only meaningful once a run has turned
@@ -458,12 +459,11 @@ jobs:
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           working-directory: android
-          script: |
-            ./gradlew \
-              --configuration-cache \
-              --build-cache \
-              -Dorg.gradle.vfs.watch=false \
-              :app:generateReleaseBaselineProfile
+          # ONE line: the action hands this to `sh -c`, so backslash line
+          # continuations are not interpreted and become a task named `\`.
+          # `--configuration-cache` is omitted for the same reason as the other
+          # device jobs — the generation task drives connected instrumentation.
+          script: ./gradlew --build-cache -Dorg.gradle.vfs.watch=false :app:generateReleaseBaselineProfile
 
       - name: Upload the generated baseline profile
         # THE deliverable: a maintainer commits the uploaded

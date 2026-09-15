@@ -3,7 +3,6 @@ package com.nextpage.presentation.navigation
 import com.nextpage.R
 import com.nextpage.data.remote.catalog.CatalogFeaturedSort
 import com.nextpage.presentation.feature.legal.addonCapabilitiesRoute
-import com.nextpage.presentation.navigation.feature.discoverSectionRoute
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -12,7 +11,12 @@ import org.junit.Test
 /**
  * Discover destinations exist with their routes and labels. v1 keeps Discover
  * out of the bottom bar (entry via Home/Library actions); the "Ver todo" section
- * list is a second destination inside the same graph.
+ * list is a second destination inside the same graph, now a typed
+ * [DiscoverSectionRoute].
+ *
+ * The generated destination pattern (`discover/section?...`) and the
+ * special-character round-trip through a real NavController are asserted in
+ * TypedRoutesNavigationTest; this file keeps the argument contract guards.
  */
 class DiscoverNavTest {
     @Test
@@ -26,28 +30,40 @@ class DiscoverNavTest {
     }
 
     @Test
-    fun discoverSection_routeCarriesTitleAndBothSelectors() {
-        val route = NextPageDestination.DiscoverSection.route
-        assertTrue(route.startsWith("discover/section?"))
-        assertTrue(route.contains("sectionTitle={sectionTitle}"))
-        assertTrue(route.contains("sort={sort}"))
-        assertTrue(route.contains("sourceId={sourceId}"))
+    fun discoverSection_typedRouteCarriesTitleAndBothSelectorDefaults() {
+        // All three query arguments are optional and default to blank, matching
+        // the `defaultValue = ""` the string route used.
+        val route = DiscoverSectionRoute()
+        assertEquals("", route.sectionTitle)
+        assertEquals("", route.sort)
+        assertEquals("", route.sourceId)
     }
 
     @Test
-    fun discoverSectionRoute_encodesLocalizedTitleAndSortSelector() {
-        val route = discoverSectionRoute("Recién agregados al catálogo", CatalogFeaturedSort.NEWEST, null)
-        assertTrue(route.startsWith("discover/section?sectionTitle="))
-        assertTrue(route.contains("&sort=NEWEST"))
-        assertTrue(route.endsWith("&sourceId="))
-        assertFalse("localized title must be percent-encoded", route.contains(" "))
+    fun discoverSectionRoute_carriesLocalizedTitleAndSortSelector() {
+        val route =
+            DiscoverSectionRoute(
+                sectionTitle = "Recién agregados al catálogo",
+                sort = CatalogFeaturedSort.NEWEST.name,
+                sourceId = "",
+            )
+
+        // The already-localized copy rides on the typed route untouched:
+        // Navigation owns percent-encoding, so nothing is pre-encoded here.
+        assertEquals("Recién agregados al catálogo", route.sectionTitle)
+        assertTrue("localized title must keep its spaces", route.sectionTitle.contains(" "))
+        assertFalse("localized title must not be pre-encoded", route.sectionTitle.contains("%"))
+        assertEquals("NEWEST", route.sort)
+        assertEquals("", route.sourceId)
     }
 
     @Test
     fun discoverSectionRoute_carriesSourceSelectorOnly() {
-        val route = discoverSectionRoute("Gutendex", null, "builtin:gutendex")
-        assertTrue(route.contains("&sort=&"))
-        assertTrue(route.endsWith("&sourceId=builtin%3Agutendex"))
+        val route = DiscoverSectionRoute(sectionTitle = "Gutendex", sort = "", sourceId = "builtin:gutendex")
+
+        assertEquals("", route.sort)
+        assertEquals("builtin:gutendex", route.sourceId)
+        assertTrue("source id must not be pre-encoded", route.sourceId.contains(":"))
     }
 
     @Test

@@ -527,7 +527,6 @@
 
     <!-- Navegación y nuevas keys -->
     <string name="tab_auth">Acceso</string>
-    <string name="tab_reader">Lector</string>
     <string name="tab_highlights">Resaltados</string>
     <string name="tab_settings">Ajustes</string>
     <string name="tab_statistics">Estadísticas</string>

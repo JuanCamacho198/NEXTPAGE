@@ -39,12 +39,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nextpage.R
 import com.nextpage.data.remote.addons.AddonRegistryLike
 import com.nextpage.data.remote.addons.InstalledAddonRow
 import com.nextpage.presentation.feature.discover.AddonCapabilityBadges
 import com.nextpage.presentation.feature.discover.AddonTrustNote
+import com.nextpage.presentation.navigation.rememberAddonSettingsViewModel
 import com.nextpage.presentation.viewmodel.AddonSettingsUiState
 import com.nextpage.presentation.viewmodel.AddonSettingsViewModel
 import com.nextpage.ui.components.atoms.NextPageButton
@@ -57,10 +57,14 @@ import com.nextpage.ui.icons.NextPageIcons
 /**
  * Stateful host for [AddonManagementScreen].
  *
- * Owns the registry-backed [AddonSettingsViewModel] (created once through its
- * factory) and the snackbar channel: install errors surface through the
- * ViewModel's `onError` callback and are shown via [NextPageSnackbar]. The
- * registry is `refresh()`-ed exactly once per composition entry.
+ * Owns the registry-backed [AddonSettingsViewModel] and the snackbar channel:
+ * install errors surface through the ViewModel's `onError` callback and are
+ * shown via [NextPageSnackbar]. The registry is `refresh()`-ed exactly once per
+ * composition entry.
+ *
+ * ViewModel resolution is single-sourced in
+ * [com.nextpage.presentation.navigation.rememberAddonSettingsViewModel], which
+ * wraps the registry-backed factory; this route never calls `viewModel()`.
  */
 @Composable
 fun AddonManagementRoute(
@@ -75,14 +79,11 @@ fun AddonManagementRoute(
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val viewModel: AddonSettingsViewModel =
-        viewModel(
-            factory =
-                AddonSettingsViewModelFactory(
-                    registry = registry,
-                    onError = { errorMessage = it },
-                    hasConsent = hasConsent,
-                    onConsentChange = onConsentChange,
-                ),
+        rememberAddonSettingsViewModel(
+            registry = registry,
+            onError = { errorMessage = it },
+            hasConsent = hasConsent,
+            onConsentChange = onConsentChange,
         )
 
     LaunchedEffect(viewModel) { viewModel.refresh() }

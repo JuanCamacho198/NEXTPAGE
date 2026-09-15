@@ -171,6 +171,25 @@ android {
             )
             signingConfig = signingConfigs.getByName("debug")
         }
+
+        // SDD android-stack-modernization S9: the macrobenchmark target variant
+        // consumed by `:benchmark` (targetProjectPath = ":app"). AGP pairs the
+        // test module's build type with the app build type of the SAME name.
+        // - isDebuggable = false: S8 established that AGP compiles NO ART profile
+        //   for debuggable variants (zero assets/dexopt/*), and macrobenchmark
+        //   measures with the shipped baseline profile — so the benchmarked app
+        //   must be the non-debuggable shape.
+        // - debug signing: the variant is never shipped; debug signing keeps it
+        //   installable without a release keystore.
+        // - matchingFallbacks: dependencies that only publish `release` resolve
+        //   for this build type.
+        // - minify stays OFF (a new build type defaults to isMinifyEnabled=false),
+        //   so the benchmark variant does not need R8 mapping/Sentry-upload wiring.
+        create("benchmark") {
+            isDebuggable = false
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+        }
     }
 
     compileOptions {

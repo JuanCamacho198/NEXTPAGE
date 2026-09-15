@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "placeholder": true,
+  "placeholderReason": "PLACEHOLDER baseline (SDD S9). The :benchmark module, its journeys and the build-failing :benchmark:verifyBenchmarkRegression gate exist, but no device/emulator run has produced real numbers yet — S10 wires the emulator CI job and S11 generates the baseline profile. While \"placeholder\" is true the gate FAILS with an explicit 'baseline not established' message instead of passing against fabricated numbers: a green result on the values below would be a lie. To establish it, run :benchmark:connectedBenchmarkAndroidTest on the S10 emulator, copy the emitted metrics-current.json metric values here, and set \"placeholder\": false.",
+  "regressionThresholdPercent": 10,
+  "metrics": {
+    "timeToInitialDisplayMs.p95": 600.0,
+    "frameDurationCpuMs.p95": 16.0
+  }
+}

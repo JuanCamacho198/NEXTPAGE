@@ -71,6 +71,19 @@ work = "2.10.5"
 androidxHilt = "1.3.0"
 kover = "0.9.3"
 spotless = "7.2.1"
+# Macrobenchmark (SDD android-stack-modernization S9). 1.5.0 is the current
+# stable `androidx.benchmark:benchmark-macro-junit4`; its POM resolves
+# kotlin-stdlib 2.1.20 (readable by this module's Kotlin 2.2.21),
+# androidx.test:runner 1.5.2 / rules 1.5.0, and androidx.test.uiautomator 2.3.0.
+# The benchmark APK is a SEPARATE artifact (com.android.test), so its androidx.test
+# graph cannot drift `:app`'s debug/release classpaths.
+benchmark = "1.5.0"
+# UIAutomator, declared explicitly because the journeys import its types directly
+# (relying on a transitive would be bad practice). 2.4.0 is the version
+# benchmark-macro:1.5.0 itself resolves to (its Gradle metadata, not the POM,
+# declares 2.4.0) — pinning the same version keeps the benchmark APK's
+# androidx.test graph consistent and avoids a misleading downgrade request.
+uiautomator = "2.4.0"
 
 [libraries]
 # androidx group
@@ -92,6 +105,10 @@ androidx-credentials-play-services = { group = "androidx.credentials", name = "c
 androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidxTestCore" }
 androidx-test-junit-ext = { group = "androidx.test.ext", name = "junit", version.ref = "junitExt" }
 androidx-test-espresso = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso" }
+# Macrobenchmark journeys + UIAutomator node lookup (benchmark module ONLY —
+# never on the app classpath).
+androidx-benchmark-macro-junit4 = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "benchmark" }
+androidx-test-uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "uiautomator" }
 # WorkManager — scheduler-only (one-shot unique drain work on write + app start).
 androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
 
@@ -186,6 +203,8 @@ testing = ["testing-junit4", "testing-mockk", "testing-robolectric"]
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+# `com.android.test` — the self-instrumenting macrobenchmark module (S9).
+android-test = { id = "com.android.test", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

@@ -9,7 +9,14 @@ ksp = "2.2.21-2.0.5"
 detekt = "1.23.7"
 sentryPlugin = "6.21.0"
 composeBom = "2026.05.01"
-coil = "2.7.0"
+# Coil 3 renames the Maven coordinates (io.coil-kt -> io.coil-kt.coil3) and the
+# Kotlin package (coil.* -> coil3.*). Networking is no longer bundled: the
+# `coil-network-okhttp` engine is mandatory or every remote cover blanks.
+# Pinned to 3.3.0 (NOT latest 3.6.2): 3.6.x pulls Compose Multiplatform 1.12.0
+# and 3.4.0+ pulls kotlin-stdlib 2.3+/2.4, both incompatible with this module's
+# toolchain (AGP 8.11.1 / Kotlin 2.2.21 / Compose BOM 1.11.2). 3.3.0 declares
+# kotlin-stdlib 2.2.0 and Compose Multiplatform 1.8.2 — both resolve cleanly.
+coil = "3.3.0"
 coreKtx = "1.13.1"
 splash = "1.0.1"
 appcompat = "1.7.0"
@@ -82,8 +89,9 @@ compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4
 compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 lottie-compose = { group = "com.airbnb.android", name = "lottie-compose", version.ref = "lottie" }
-coil = { group = "io.coil-kt", name = "coil", version.ref = "coil" }
-coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+coil = { group = "io.coil-kt.coil3", name = "coil", version.ref = "coil" }
+coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 
 # room group
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }

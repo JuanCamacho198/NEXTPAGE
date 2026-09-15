@@ -285,6 +285,9 @@ dependencies {
     implementation(libs.lottie.compose)
     implementation(libs.coil)
     implementation(libs.coil.compose)
+    // Coil 3 unbundles networking from `coil-core`; without this engine every
+    // remote cover would silently blank (spec image-loading SC13.1).
+    implementation(libs.coil.network.okhttp)
     implementation(libs.androidx.webkit)
 
     implementation(libs.androidx.navigation.compose)

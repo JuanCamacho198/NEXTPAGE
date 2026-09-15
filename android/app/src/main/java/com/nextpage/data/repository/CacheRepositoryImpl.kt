@@ -1,8 +1,8 @@
 package com.nextpage.data.repository
 
 import android.content.Context
-import coil.ImageLoader
-import coil.annotation.ExperimentalCoilApi
+import coil3.ImageLoader
+import coil3.annotation.ExperimentalCoilApi
 import com.nextpage.data.local.dao.DiscoverCacheDao
 import com.nextpage.domain.repository.CacheRepository
 import java.io.File

@@ -2,7 +2,7 @@ package com.nextpage.di
 
 import android.content.Context
 import android.util.Log
-import coil.ImageLoader
+import coil3.ImageLoader
 import com.nextpage.BuildConfig
 import com.nextpage.data.local.dao.BookDao
 import com.nextpage.data.local.dao.BookmarkDao

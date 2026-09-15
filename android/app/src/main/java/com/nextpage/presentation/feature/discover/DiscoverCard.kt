@@ -26,7 +26,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import com.nextpage.data.remote.catalog.CatalogBook
 import com.nextpage.debug.SentryMetrics
 import com.nextpage.presentation.theme.NextPageColors

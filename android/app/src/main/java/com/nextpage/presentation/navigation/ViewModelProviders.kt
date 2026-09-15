@@ -4,8 +4,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.nextpage.data.remote.catalog.CatalogFeaturedSort
+import com.nextpage.data.remote.catalog.CatalogProvider
 import com.nextpage.di.AppContainer
+import com.nextpage.domain.usecase.DownloadAndImportBookUseCase
 import com.nextpage.presentation.debug.DebugViewModel
+import com.nextpage.presentation.feature.discover.DiscoverSectionViewModel
+import com.nextpage.presentation.feature.discover.DiscoverSectionViewModelFactory
 import com.nextpage.presentation.viewmodel.AuthViewModel
 import com.nextpage.presentation.viewmodel.DiscoverViewModel
 import com.nextpage.presentation.viewmodel.DiscoverViewModelFactory
@@ -110,3 +115,31 @@ internal fun rememberNavHostViewModels(
         discover = discoverViewModel,
     )
 }
+
+/**
+ * Resolves the route-scoped [DiscoverSectionViewModel].
+ *
+ * Section VMs are scoped to the navigation back-stack entry and depend on the
+ * route's `sectionTitle`/`sort`/`sourceId` arguments, so they cannot live in the
+ * host-scoped [rememberNavHostViewModels] holder. Resolution still stays
+ * single-sourced in this file — [com.nextpage.presentation.navigation.feature.discoverGraph]
+ * never calls `viewModel()` itself (enforced by NoInlineViewModelResolutionTest).
+ */
+@Composable
+internal fun rememberDiscoverSectionViewModel(
+    catalogProvider: CatalogProvider,
+    sectionTitle: String,
+    sort: CatalogFeaturedSort?,
+    sourceId: String?,
+    downloadAndImportBookUseCase: DownloadAndImportBookUseCase?,
+): DiscoverSectionViewModel =
+    viewModel(
+        factory =
+            DiscoverSectionViewModelFactory(
+                catalogProvider = catalogProvider,
+                sectionTitle = sectionTitle,
+                sort = sort,
+                sourceId = sourceId,
+                downloadAndImportBookUseCase = downloadAndImportBookUseCase,
+            ),
+    )

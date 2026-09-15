@@ -3,7 +3,6 @@ package com.nextpage.presentation.navigation.feature
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
@@ -15,9 +14,8 @@ import com.nextpage.domain.usecase.DownloadAndImportBookUseCase
 import com.nextpage.presentation.feature.discover.DiscoverRailState
 import com.nextpage.presentation.feature.discover.DiscoverScreen
 import com.nextpage.presentation.feature.discover.DiscoverSectionScreen
-import com.nextpage.presentation.feature.discover.DiscoverSectionViewModel
-import com.nextpage.presentation.feature.discover.DiscoverSectionViewModelFactory
 import com.nextpage.presentation.navigation.NextPageDestination
+import com.nextpage.presentation.navigation.rememberDiscoverSectionViewModel
 import com.nextpage.presentation.viewmodel.DiscoverViewModel
 import java.net.URLEncoder
 
@@ -91,16 +89,13 @@ fun NavGraphBuilder.discoverGraph(
         val sortRaw = args?.getString("sort").orEmpty()
         val sort = CatalogFeaturedSort.entries.firstOrNull { it.name == sortRaw }
 
-        val sectionViewModel: DiscoverSectionViewModel =
-            viewModel(
-                factory =
-                    DiscoverSectionViewModelFactory(
-                        catalogProvider = catalogProvider,
-                        sectionTitle = sectionTitle,
-                        sort = sort,
-                        sourceId = sourceId,
-                        downloadAndImportBookUseCase = downloadAndImportBookUseCase,
-                    ),
+        val sectionViewModel =
+            rememberDiscoverSectionViewModel(
+                catalogProvider = catalogProvider,
+                sectionTitle = sectionTitle,
+                sort = sort,
+                sourceId = sourceId,
+                downloadAndImportBookUseCase = downloadAndImportBookUseCase,
             )
         DiscoverSectionScreen(
             contentPadding = contentPadding,

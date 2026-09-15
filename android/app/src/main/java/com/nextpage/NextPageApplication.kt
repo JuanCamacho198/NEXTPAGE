@@ -3,6 +3,8 @@ package com.nextpage
 import android.app.Application
 import android.content.Context
 import android.util.Log
+import androidx.hilt.work.HiltWorkerFactory
+import androidx.work.Configuration
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import com.nextpage.data.remote.supabase.SupabaseClientProvider
@@ -25,6 +27,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.io.File
+import javax.inject.Inject
 
 /**
  * Application entry point.
@@ -49,7 +52,8 @@ import java.io.File
 @HiltAndroidApp
 class NextPageApplication :
     Application(),
-    SingletonImageLoader.Factory {
+    SingletonImageLoader.Factory,
+    Configuration.Provider {
     companion object {
         private const val TAG = "NextPageApplication"
         const val PREFS_NAME = "nextpage_debug_crash"
@@ -72,6 +76,19 @@ class NextPageApplication :
     private lateinit var crashLogStore: CrashLogStore
     private lateinit var crashDir: File
     private lateinit var feedbackStore: FeedbackPersistence
+
+    /**
+     * WorkManager on-demand configuration (S6). The default
+     * `androidx.startup` WorkManagerInitializer is removed in
+     * `AndroidManifest.xml`, so this provider is the only configuration
+     * WorkManager observes — it supplies the Hilt-backed worker factory used to
+     * construct `@HiltWorker` classes (OutboxDrainWorker).
+     */
+    @Inject
+    lateinit var workerFactory: HiltWorkerFactory
+
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
 
     private val supabaseWarmupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 

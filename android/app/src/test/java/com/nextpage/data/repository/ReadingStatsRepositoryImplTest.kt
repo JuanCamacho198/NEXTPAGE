@@ -10,6 +10,7 @@ import com.nextpage.data.local.entity.SyncOutboxEntity
 import com.nextpage.data.local.model.DailyReadingMinutes
 import com.nextpage.domain.model.DailyReadingActivity
 import com.nextpage.domain.repository.ReadingStatsData
+import com.nextpage.domain.sync.OutboxDrainScheduler
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -179,6 +180,50 @@ class ReadingStatsRepositoryImplTest {
         }
 
     @Test
+    fun recordReadingSession_schedulesDrainAfterSuccessfulEnqueue() =
+        runBlocking {
+            val scheduler = RecordingDrainScheduler()
+            val repository =
+                ReadingStatsRepositoryImpl(
+                    readingStatsDao = FakeReadingStatsDao(),
+                    readingSessionDao = FakeReadingSessionDao(),
+                    outboxDao = FakeSyncOutboxDao(),
+                    drainScheduler = scheduler,
+                )
+
+            repository.recordReadingSession(
+                bookId = "book-1",
+                startTimeEpochMillis = 3000L,
+                durationMinutes = 7,
+                userId = "user-42",
+            )
+
+            assertEquals(1, scheduler.scheduleCount)
+        }
+
+    @Test
+    fun recordReadingSession_nullOutboxDao_doesNotScheduleDrain() =
+        runBlocking {
+            val scheduler = RecordingDrainScheduler()
+            val repository =
+                ReadingStatsRepositoryImpl(
+                    readingStatsDao = FakeReadingStatsDao(),
+                    readingSessionDao = FakeReadingSessionDao(),
+                    outboxDao = null,
+                    drainScheduler = scheduler,
+                )
+
+            repository.recordReadingSession(
+                bookId = "book-1",
+                startTimeEpochMillis = 4000L,
+                durationMinutes = 2,
+                userId = "user-42",
+            )
+
+            assertEquals(0, scheduler.scheduleCount)
+        }
+
+    @Test
     fun observeBookStats_mapsReadingStatsEntityToDomain() =
         runBlocking {
             val fakeStatsDao =
@@ -216,6 +261,14 @@ class ReadingStatsRepositoryImplTest {
         }
 
     // ── Fakes ───────────────────────────────────────────────────────
+
+    private class RecordingDrainScheduler : OutboxDrainScheduler {
+        var scheduleCount: Int = 0
+
+        override suspend fun scheduleDrain() {
+            scheduleCount++
+        }
+    }
 
     private class FakeReadingSessionDao : ReadingSessionDao {
         var getDailyMinutesResult: List<DailyReadingMinutes> = emptyList()

@@ -55,6 +55,20 @@ lottie = "6.6.6"
 webkit = "1.12.1"
 hilt = "2.57.1"
 hiltNavigationCompose = "1.2.0"
+# WorkManager (scheduler-only drain). Pinned to 2.10.5, NOT the latest stable
+# 2.11.2: 2.11.x declares kotlinx-coroutines-android 1.9.0, which would force a
+# coroutines upgrade over this module's frozen 1.8.1; 2.10.5 declares 1.7.3 so
+# the existing 1.8.1 pin wins with zero transitive drift (Room 2.8.4 also wins
+# over its 2.6.1 floor). No periodic worker is used — see OutboxDrainScheduler.
+work = "2.10.5"
+# androidx.hilt extensions (hilt-work + its KSP hilt-compiler). Pinned to 1.3.0,
+# NOT the latest 1.4.0: 1.4.0 depends on hilt-android 2.59 (this module is on
+# 2.57.1 — Hilt >= 2.59 requires AGP 9), while 1.3.0 depends on hilt-android
+# 2.54 so the 2.57.1 pin wins. 1.3.0's compiler targets the KSP 1.0.24 API
+# (still supported by KSP 2.0.5) and room-compiler-processing 2.6.0 (the
+# module's 2.8.4 wins). This is a DIFFERENT coordinate from
+# com.google.dagger:hilt-compiler below despite the shared artifact name.
+androidxHilt = "1.3.0"
 kover = "0.9.3"
 spotless = "7.2.1"
 
@@ -78,6 +92,8 @@ androidx-credentials-play-services = { group = "androidx.credentials", name = "c
 androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidxTestCore" }
 androidx-test-junit-ext = { group = "androidx.test.ext", name = "junit", version.ref = "junitExt" }
 androidx-test-espresso = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso" }
+# WorkManager — scheduler-only (one-shot unique drain work on write + app start).
+androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
 
 # compose group
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
@@ -145,6 +161,11 @@ hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
 hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 hilt-testing = { group = "com.google.dagger", name = "hilt-android-testing", version.ref = "hilt" }
+# androidx.hilt extensions: hilt-work supplies @HiltWorker/HiltWorkerFactory;
+# androidx-hilt-compiler is the KSP processor that generates the worker factory
+# bindings (distinct from com.google.dagger:hilt-compiler above).
+androidx-hilt-work = { group = "androidx.hilt", name = "hilt-work", version.ref = "androidxHilt" }
+androidx-hilt-compiler = { group = "androidx.hilt", name = "hilt-compiler", version.ref = "androidxHilt" }
 
 # testing group
 testing-junit4 = { group = "junit", name = "junit", version.ref = "junit4" }

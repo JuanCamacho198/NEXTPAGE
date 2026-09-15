@@ -116,10 +116,14 @@ jobs:
       - name: Upload Kover coverage reports
         # Report-only: coverage is published as an artifact and never gates the
         # test result (Kover's `verify` block is deliberately absent; a coverage
-        # bound is deferred). A MISSING report, however, is a real failure —
-        # `if-no-files-found: error` turns a silently skipped report into a red
-        # step. `if: always()` keeps the report available even when an earlier
-        # gate failed, since the tests that produce it already ran.
+        # bound is deferred).
+        #
+        # `if-no-files-found: warn`, not `error`. The generation task runs in the
+        # gate step above, so a genuinely missing report already fails THERE; if
+        # the report is absent at upload time it is because an earlier gate
+        # failed, and turning that into a second red step only buries the real
+        # error under a confusing "No files were found" message.
+        # `if: always()` keeps the report available whenever it does exist.
         if: always()
         uses: actions/upload-artifact@v5
         with:
@@ -127,7 +131,7 @@ jobs:
           path: |
             android/app/build/reports/kover/reportDebug.xml
             android/app/build/reports/kover/htmlDebug/
-          if-no-files-found: error
+          if-no-files-found: warn
 
       - name: Print failed test reports
         if: failure()

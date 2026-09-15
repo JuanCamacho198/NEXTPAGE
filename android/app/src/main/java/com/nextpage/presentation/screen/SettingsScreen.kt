@@ -50,6 +50,7 @@ import com.nextpage.presentation.viewmodel.DictionaryViewModel
 import com.nextpage.presentation.viewmodel.SettingsDevicesViewModel
 import com.nextpage.presentation.viewmodel.StatisticsViewModel
 import com.nextpage.presentation.viewmodel.StorageViewModel
+import kotlinx.coroutines.Dispatchers
 
 @Composable
 fun SettingsScreen(
@@ -129,7 +130,7 @@ private fun SettingsScreenContent(
     val storageViewModel =
         remember(storageRepository, cacheRepository, libraryRepository) {
             if (storageRepository != null && cacheRepository != null && libraryRepository != null) {
-                StorageViewModel(storageRepository, cacheRepository, libraryRepository)
+                StorageViewModel(storageRepository, cacheRepository, libraryRepository, Dispatchers.Main)
             } else {
                 null
             }

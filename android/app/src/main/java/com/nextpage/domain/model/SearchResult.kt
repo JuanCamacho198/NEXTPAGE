@@ -1,6 +1,5 @@
 package com.nextpage.domain.model
 
-import android.graphics.Rect
 import androidx.compose.runtime.Immutable
 
 /**
@@ -18,7 +17,20 @@ data class SearchResult(
     val offset: Int,
     val page: Float = 0f,
     val chapterIndex: Int = 0,
-    val rect: Rect? = null,
+    val rect: BoundingRect? = null,
     val chapterTitle: String = "",
     val cfi: String = "",
+)
+
+/**
+ * Pure-domain bounding rectangle in WebView coordinates. Replaces
+ * `android.graphics.Rect` so the project's own `domain` layer carries no
+ * Android runtime dependency (SDD android-stack-modernization S3, R7).
+ */
+@Immutable
+data class BoundingRect(
+    val left: Int,
+    val top: Int,
+    val right: Int,
+    val bottom: Int,
 )

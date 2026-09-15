@@ -1,0 +1,27 @@
+# Baseline Profile for NextPage — AOT-compiled startup paths
+# These rules ensure critical user-facing screens are pre-compiled
+# on first install, reducing cold-start JIT overhead.
+#
+# Generated manually (macrobenchmark:generateBaselineProfile pending).
+# Format: <class descriptor>; (AGP class rule — method flags are not
+# supported on class-only rules).
+
+# LibraryScreen — first screen most users see
+Lcom/nextpage/presentation/screen/LibraryScreen;
+Lcom/nextpage/presentation/screen/library/BookGridSection;
+Lcom/nextpage/presentation/screen/library/FilterSheetContent;
+Lcom/nextpage/presentation/screen/library/LibraryDialogs;
+Lcom/nextpage/presentation/screen/library/LibraryToolbar;
+Lcom/nextpage/presentation/viewmodel/LibraryViewModel;
+
+# HomeScreen — dashboard after auth or cold start
+Lcom/nextpage/presentation/screen/HomeScreen;
+Lcom/nextpage/presentation/viewmodel/HomeViewModel;
+
+# ReaderScreen — reading experience
+Lcom/nextpage/presentation/screen/ReaderScreen;
+Lcom/nextpage/presentation/viewmodel/ReaderViewModel;
+
+# AuthScreen — login/register
+Lcom/nextpage/presentation/screen/AuthScreen;
+Lcom/nextpage/presentation/viewmodel/AuthViewModel;

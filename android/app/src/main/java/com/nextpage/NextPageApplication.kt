@@ -1,9 +1,10 @@
 package com.nextpage
 
 import android.app.Application
+import android.content.Context
 import android.util.Log
-import coil.ImageLoader
-import coil.ImageLoaderFactory
+import coil3.ImageLoader
+import coil3.SingletonImageLoader
 import com.nextpage.data.remote.supabase.SupabaseClientProvider
 import com.nextpage.debug.CrashLogStore
 import com.nextpage.debug.DebugLog
@@ -28,7 +29,7 @@ import java.io.File
 /**
  * Application entry point.
  *
- * - Implements [ImageLoaderFactory] so Coil's singleton uses the tuned
+ * - Implements [SingletonImageLoader.Factory] so Coil's singleton uses the tuned
  *   [CoilModule.imageLoader] (15s connect, 30s read, retry-on-connection-failure,
  *   25% memory cache, 64MB disk cache) for every `AsyncImage` call.
  * - Installs an [Thread.UncaughtExceptionHandler] (always active) that
@@ -48,7 +49,7 @@ import java.io.File
 @HiltAndroidApp
 class NextPageApplication :
     Application(),
-    ImageLoaderFactory {
+    SingletonImageLoader.Factory {
     companion object {
         private const val TAG = "NextPageApplication"
         const val PREFS_NAME = "nextpage_debug_crash"
@@ -150,7 +151,7 @@ class NextPageApplication :
         }
     }
 
-    override fun newImageLoader(): ImageLoader = CoilModule.imageLoader(this)
+    override fun newImageLoader(context: Context): ImageLoader = CoilModule.imageLoader(context)
 
     /**
      * Public accessor for the feedback persistence — used by

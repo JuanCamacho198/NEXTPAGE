@@ -1,9 +1,9 @@
 package com.nextpage.data.repository
 
 import android.content.Context
-import coil.ImageLoader
-import coil.annotation.ExperimentalCoilApi
-import coil.disk.DiskCache
+import coil3.ImageLoader
+import coil3.annotation.ExperimentalCoilApi
+import coil3.disk.DiskCache
 import com.nextpage.data.local.dao.DiscoverCacheDao
 import io.mockk.clearAllMocks
 import io.mockk.coEvery

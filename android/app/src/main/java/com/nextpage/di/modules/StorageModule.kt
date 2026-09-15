@@ -1,7 +1,7 @@
 package com.nextpage.di.modules
 
 import android.content.Context
-import coil.ImageLoader
+import coil3.ImageLoader
 import com.nextpage.data.epub.ZipEpubParserService
 import com.nextpage.data.pdf.DefaultPdfParserService
 import com.nextpage.data.storage.AppInternalCoverStorage

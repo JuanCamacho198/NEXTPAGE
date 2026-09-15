@@ -80,7 +80,7 @@ class SupabaseProgressDataSource {
                     eq("user_id", userId)
                     eq("book_id", bookId)
                 }
-            }.decodeSingleOrNull<ReadingProgressRow>()
+            }.decodeSingleOrNullTolerant<ReadingProgressRow>()
 
     suspend fun fetchBookState(
         userId: String,
@@ -138,7 +138,7 @@ class SupabaseProgressDataSource {
                     eq("book_id", bookId)
                     eq("cfi_location", cfiLocation)
                 }
-            }.decodeSingleOrNull<BookmarkRow>()
+            }.decodeSingleOrNullTolerant<BookmarkRow>()
 
     suspend fun listBookmarks(
         userId: String,
@@ -211,7 +211,7 @@ class SupabaseProgressDataSource {
         postgrest["highlights"]
             .select {
                 filter { eq("id", id) }
-            }.decodeSingleOrNull<HighlightRow>()
+            }.decodeSingleOrNullTolerant<HighlightRow>()
 
     suspend fun listHighlights(
         userId: String,
@@ -281,7 +281,7 @@ class SupabaseProgressDataSource {
                     eq("name", name)
                 }
                 limit(1)
-            }.decodeSingleOrNull<TagRow>()
+            }.decodeSingleOrNullTolerant<TagRow>()
 
     suspend fun createTag(tag: TagRow): TagRow {
         // Empty response body = successful write (see decodeSingleOrNullTolerant).

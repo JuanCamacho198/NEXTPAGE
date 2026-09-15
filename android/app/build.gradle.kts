@@ -27,6 +27,13 @@ plugins {
     // SDD android-tooling-hygiene WS4 slice 9: Kover report-only coverage
     // (catalog alias; declared in the root build file, applied here).
     alias(libs.plugins.kover)
+
+    // SDD android-stack-modernization S11: Baseline Profile CONSUMER plugin. This is what
+    // makes the shipped profile REGENERABLE instead of hand-maintained: it wires
+    // `:app:generateReleaseBaselineProfile` to the :benchmark module's
+    // BaselineProfileGenerator and feeds the collected profile back into this module's
+    // shipped artifact (see the `baselineProfile { }` block below).
+    alias(libs.plugins.androidx.baselineprofile)
 }
 
 ksp {
@@ -259,6 +266,35 @@ android {
     }
 }
 
+// SDD android-stack-modernization S11: make the Kotlin source directories explicit BEFORE
+// the `androidx.baselineprofile` consumer plugin copies them into its synthetic variants.
+//
+// On AGP >= 8.5 this module's `main`/`release` Kotlin source sets hold their default
+// directories as ONE unresolved PROVIDER until AGP resolves it late in evaluation — read
+// early, that entry literally renders as `provider(?)`. The baselineprofile plugin mirrors
+// each non-debuggable build type into the synthetic `nonMinifiedRelease` / `benchmarkRelease`
+// variants during `onFinalizeDsl` by copying `AndroidSourceDirectorySet.directories`
+// verbatim, i.e. BEFORE that resolution, so the destination inherits the raw provider and
+// AGP resolves it against the project dir as `<projectDir>/provider(?)`. `?` is illegal in a
+// Windows path, so KSP's source-directory filter throws while configuring
+// `:app:kspNonMinifiedReleaseKotlin` — a dependency of `:app:generateReleaseBaselineProfile`
+// — and the whole S11 generation route fails to configure before any task runs.
+//
+// Replacing the provider with the two directories it expands to (`src/<sourceSet>/kotlin`
+// and `src/<sourceSet>/java`, confirmed identical to the post-resolution value) makes the
+// copy carry plain strings, so the synthetic variants configure with the real directories.
+// `src/<sourceSet>/kotlin` does not exist in this module; all Kotlin lives under
+// `src/<sourceSet>/java`. Behaviour is unchanged on Linux, where `?` is a legal filename
+// character and the bogus directory was silently inert — which is why this only ever bit
+// local Windows runs.
+listOf("main", "release").forEach { sourceSetName ->
+    android.sourceSets.findByName(sourceSetName)?.kotlin?.let { kotlinSourceSet ->
+        kotlinSourceSet.directories.clear()
+        kotlinSourceSet.directories.add("src/$sourceSetName/kotlin")
+        kotlinSourceSet.directories.add("src/$sourceSetName/java")
+    }
+}
+
 // Sentry Android Gradle Plugin extension. Out-of-android block per plugin docs.
 // - autoInstallation: enabled → plugin auto-adds the Sentry Android SDK + a
 //   Sentry OkHttp interceptor to the application.
@@ -281,6 +317,28 @@ sentry {
     authToken.set(System.getenv("SENTRY_AUTH_TOKEN") ?: "")
     // Disable telemetry to avoid phoning home
     telemetry.set(false)
+}
+
+// SDD android-stack-modernization S11: Baseline Profile generation/consumption wiring.
+//
+// S8 moved the hand-written profile to the path AGP actually consumes
+// (`app/src/main/baseline-prof.txt`) and proved consumption by differential APK
+// inspection. S11 adds the missing half: the profile is now GENERATABLE from the real
+// journeys instead of hand-maintained, because the consumer plugin maps
+// `:app:generateReleaseBaselineProfile` onto the :benchmark module's
+// BaselineProfileGenerator and merges the collected rules back into this module.
+//
+// Device-free by construction: collection needs a booted device/emulator, so it is wired
+// to the dispatch-only `android-baseline-profile` CI job and never to a normal build.
+// `automaticGenerationDuringBuild = false` is already the plugin default, but it is
+// stated explicitly because flipping it would silently turn every release build into a
+// device run — including `android-checks`, which has no device.
+baselineProfile {
+    automaticGenerationDuringBuild = false
+    // The generator lives in the existing :benchmark module — the same module that owns
+    // the S9 macrobenchmark journeys it mirrors (cold start, Library scroll, Discover
+    // fling, Reader open).
+    from(project(":benchmark"))
 }
 
 dependencies {

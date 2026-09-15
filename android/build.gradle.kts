@@ -6,6 +6,10 @@ plugins {
     // implementation artifact, and resolving the test marker against an
     // already-present classpath entry fails version-compatibility checking.
     alias(libs.plugins.android.test) apply false
+    // SDD android-stack-modernization S11: Baseline Profile Gradle plugin. Applied as a
+    // CONSUMER in app/build.gradle.kts and as a PRODUCER in benchmark/build.gradle.kts;
+    // declared here (apply false) so its version resolves ONCE.
+    alias(libs.plugins.androidx.baselineprofile) apply false
     alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.kotlin.serialization) apply false

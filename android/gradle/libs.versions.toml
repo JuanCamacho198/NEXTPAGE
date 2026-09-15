@@ -84,6 +84,13 @@ benchmark = "1.5.0"
 # declares 2.4.0) — pinning the same version keeps the benchmark APK's
 # androidx.test graph consistent and avoids a misleading downgrade request.
 uiautomator = "2.4.0"
+# Baseline Profile Gradle plugin (SDD android-stack-modernization S11). The plugin
+# MARKER (androidx.baselineprofile:androidx.baselineprofile.gradle.plugin) publishes
+# the same version as the `androidx.benchmark` libraries and depends on
+# androidx.benchmark:benchmark-baseline-profile-gradle-plugin of that version, so this
+# MUST move together with `benchmark` above. 1.5.0 is the current stable; its AGP
+# support range is [8.0.0, 10.0.0-alpha1), which AGP 8.11.1 is inside.
+baselineProfile = "1.5.0"
 
 [libraries]
 # androidx group
@@ -205,6 +212,10 @@ testing = ["testing-junit4", "testing-mockk", "testing-robolectric"]
 android-application = { id = "com.android.application", version.ref = "agp" }
 # `com.android.test` — the self-instrumenting macrobenchmark module (S9).
 android-test = { id = "com.android.test", version.ref = "agp" }
+# `androidx.baselineprofile` — applied as a CONSUMER on :app (generation + consumption
+# wiring) and as a PRODUCER on :benchmark (the device-side generator) in S11. One id,
+# two roles: the plugin decides from the module's own AGP plugin which one applies.
+androidx-baselineprofile = { id = "androidx.baselineprofile", version.ref = "baselineProfile" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

@@ -287,8 +287,9 @@ jobs:
   # Four journey classes x five measured iterations, each restarting the app
   # under a fresh compilation mode — far too slow to wire into every PR, so it
   # is manually dispatched:
-  #   * S11 uses these device runs to generate the baseline profile
-  #     (`androidx.baselineprofile`), which is out of scope here.
+  #   * S11 generates the baseline profile from a SEPARATE dispatch-only job
+  #     (`android-baseline-profile` below) so a profile run and a metrics run
+  #     stay separately attributable; this job owns only the metrics artifact.
   #   * The checked-in regression baseline (`baseline/metrics-baseline.json`) is
   #     established FROM a run of this job: S9 shipped a PLACEHOLDER, and
   #     `:benchmark:verifyBenchmarkRegression` fails loudly while it is one (a
@@ -377,4 +378,96 @@ jobs:
           path: |
             android/benchmark/build/outputs/benchmarkMetrics/
             android/benchmark/build/outputs/connected_android_test_additional_output/
+          if-no-files-found: error
+
+  # ── S11: baseline profile generation (workflow_dispatch only) ──────────────
+  # The ONLY route that produces a real generated profile. `:app` applies the
+  # `androidx.baselineprofile` consumer plugin with
+  # `automaticGenerationDuringBuild = false`, so this job is the sole caller of
+  # `:app:generateReleaseBaselineProfile`; it drives the :benchmark module's
+  # BaselineProfileGenerator (cold start, Library scroll, Discover fling, Reader
+  # open) and merges the collected rules back into :app.
+  #
+  # Dispatch-only, never on the PR path: collection needs a booted, unprofiled
+  # device and re-installs the app under test many times. The per-PR
+  # `android-checks` and `android-emulator` jobs are untouched.
+  #
+  # Deliberately a SEPARATE job from `android-benchmark` rather than an extra step
+  # in it: this job's deliverable is the profile, that job's is the metrics JSON,
+  # and one red step should name one broken thing.
+  android-baseline-profile:
+    name: Android baseline profile (dispatch only)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    # Cold emulator boot (no snapshot — see below) + the `:app` profile-generation
+    # variant + the producer test APK + 4 collection journeys (each iterating until
+    # the profile stabilizes, capped by the library default). Measured macrobenchmark
+    # journeys on the same emulator shape run 20–28m, so 60m keeps >2x headroom and,
+    # like the other device jobs, never touches the 30m `Android checks` budget.
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Java (Temurin 17)
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: false
+          add-job-summary: 'on-failure'
+
+      - name: Make gradlew executable
+        working-directory: android
+        run: chmod +x ./gradlew || true
+
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Generate the baseline profile on the emulator
+        # NO AVD snapshot cache: a restored snapshot ships a dirty, partly-warmed
+        # profile on disk, and this task's entire output IS the profile. A cold boot
+        # is the only state where "collected from a fresh install" is true.
+        #
+        # NOTE: the generation run must NOT pass `-PreleaseMinify=false`. The
+        # profile is collected from the app variant the plugin pairs with the
+        # shipped one; collecting from a non-minified build would yield rules the
+        # shipped (minified) release cannot match.
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ env.EMULATOR_API_LEVEL }}
+          target: ${{ env.EMULATOR_TARGET }}
+          arch: ${{ env.EMULATOR_ARCH }}
+          profile: ${{ env.EMULATOR_PROFILE }}
+          avd-name: ${{ env.EMULATOR_AVD_NAME }}
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          working-directory: android
+          script: |
+            ./gradlew \
+              --configuration-cache \
+              --build-cache \
+              -Dorg.gradle.vfs.watch=false \
+              :app:generateReleaseBaselineProfile
+
+      - name: Upload the generated baseline profile
+        # THE deliverable: a maintainer commits the uploaded
+        # `baseline-prof.txt` over `android/app/src/main/baseline-prof.txt` (the S8
+        # AGP-consumed path). The glob is intentionally broad — the exact output
+        # directory is chosen by the plugin (`saveInSrc`, `mergeIntoMain`), and a
+        # silently missing profile is a red step, not a warning.
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: baseline-profile
+          path: |
+            android/app/src/**/generated/baselineProfiles/**
+            android/app/build/**/baselineProfiles/**
           if-no-files-found: error

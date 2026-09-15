@@ -3,23 +3,20 @@ package com.nextpage.presentation.navigation.feature
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
-import androidx.navigation.NavType
 import androidx.navigation.compose.composable
-import androidx.navigation.navArgument
+import androidx.navigation.toRoute
 import com.nextpage.data.remote.catalog.CatalogFeaturedSort
 import com.nextpage.data.remote.catalog.CatalogProvider
 import com.nextpage.domain.usecase.DownloadAndImportBookUseCase
 import com.nextpage.presentation.feature.discover.DiscoverRailState
 import com.nextpage.presentation.feature.discover.DiscoverScreen
 import com.nextpage.presentation.feature.discover.DiscoverSectionScreen
-import com.nextpage.presentation.feature.discover.DiscoverSectionViewModel
-import com.nextpage.presentation.feature.discover.DiscoverSectionViewModelFactory
+import com.nextpage.presentation.navigation.DiscoverSectionRoute
 import com.nextpage.presentation.navigation.NextPageDestination
+import com.nextpage.presentation.navigation.rememberDiscoverSectionViewModel
 import com.nextpage.presentation.viewmodel.DiscoverViewModel
-import java.net.URLEncoder
 
 /**
  * Feature NavGraph for Discover.
@@ -52,7 +49,13 @@ fun NavGraphBuilder.discoverGraph(
             viewModel = discoverViewModel,
             userInitial = discoverUserInitial,
             onOpenSection = { rail: DiscoverRailState.Loaded, sectionTitle: String ->
-                navController.navigate(discoverSectionRoute(sectionTitle, rail.sort, rail.sourceId))
+                navController.navigate(
+                    DiscoverSectionRoute(
+                        sectionTitle = sectionTitle,
+                        sort = rail.sort?.name.orEmpty(),
+                        sourceId = rail.sourceId.orEmpty(),
+                    ),
+                )
             },
             onNavigateToSettingsAddons = {
                 navController.navigate(NextPageDestination.SettingsAddons.route)
@@ -63,44 +66,24 @@ fun NavGraphBuilder.discoverGraph(
         )
     }
 
-    composable(
-        route = NextPageDestination.DiscoverSection.route,
-        arguments =
-            listOf(
-                navArgument("sectionTitle") {
-                    type = NavType.StringType
-                    defaultValue = ""
-                },
-                navArgument("sort") {
-                    type = NavType.StringType
-                    defaultValue = ""
-                },
-                navArgument("sourceId") {
-                    type = NavType.StringType
-                    defaultValue = ""
-                },
-            ),
+    composable<DiscoverSectionRoute>(
         enterTransition = { fadeIn() },
         exitTransition = { fadeOut() },
         popEnterTransition = { fadeIn() },
         popExitTransition = { fadeOut() },
     ) { entry ->
-        val args = entry.arguments
-        val sectionTitle = args?.getString("sectionTitle").orEmpty()
-        val sourceId = args?.getString("sourceId").orEmpty().ifBlank { null }
-        val sortRaw = args?.getString("sort").orEmpty()
-        val sort = CatalogFeaturedSort.entries.firstOrNull { it.name == sortRaw }
+        val route = entry.toRoute<DiscoverSectionRoute>()
+        val sectionTitle = route.sectionTitle
+        val sourceId = route.sourceId.ifBlank { null }
+        val sort = CatalogFeaturedSort.entries.firstOrNull { it.name == route.sort }
 
-        val sectionViewModel: DiscoverSectionViewModel =
-            viewModel(
-                factory =
-                    DiscoverSectionViewModelFactory(
-                        catalogProvider = catalogProvider,
-                        sectionTitle = sectionTitle,
-                        sort = sort,
-                        sourceId = sourceId,
-                        downloadAndImportBookUseCase = downloadAndImportBookUseCase,
-                    ),
+        val sectionViewModel =
+            rememberDiscoverSectionViewModel(
+                catalogProvider = catalogProvider,
+                sectionTitle = sectionTitle,
+                sort = sort,
+                sourceId = sourceId,
+                downloadAndImportBookUseCase = downloadAndImportBookUseCase,
             )
         DiscoverSectionScreen(
             contentPadding = contentPadding,
@@ -109,21 +92,3 @@ fun NavGraphBuilder.discoverGraph(
         )
     }
 }
-
-/**
- * Builds the section route from the destination pattern so the query-argument
- * names cannot drift from [NextPageDestination.DiscoverSection]. The title is
- * percent-encoded (`URLEncoder` emits `+` for spaces, which navigation would not
- * decode, so those are rewritten to `%20`); it is already-localized copy.
- */
-internal fun discoverSectionRoute(
-    sectionTitle: String,
-    sort: CatalogFeaturedSort?,
-    sourceId: String?,
-): String =
-    "discover/section" +
-        "?sectionTitle=${encodeQueryValue(sectionTitle)}" +
-        "&sort=${encodeQueryValue(sort?.name.orEmpty())}" +
-        "&sourceId=${encodeQueryValue(sourceId.orEmpty())}"
-
-internal fun encodeQueryValue(value: String): String = URLEncoder.encode(value, Charsets.UTF_8.name()).replace("+", "%20")

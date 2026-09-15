@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SDD android-stack-modernization S9: benchmark-build-type-only manifest overlay.
+
+     Macrobenchmark can only use the shipped baseline profile / partial compilation
+     when the app process is shell-profileable. `<profileable>` is API 29+; on older
+     devices the platform ignores the element, so minSdk 26 needs no tools:targetApi.
+     This file applies to the `benchmark` build type only — the debug and release
+     manifests are untouched. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <profileable android:shell="true" />
+    </application>
+</manifest>

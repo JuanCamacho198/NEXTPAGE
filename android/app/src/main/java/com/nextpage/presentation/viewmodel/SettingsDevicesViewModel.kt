@@ -3,10 +3,10 @@ package com.nextpage.presentation.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.nextpage.data.device.detectDeviceInfo
 import com.nextpage.data.remote.supabase.SupabaseDeviceDataSource
 import com.nextpage.data.repository.DeviceRepositoryImpl
 import com.nextpage.domain.model.Device
-import com.nextpage.domain.model.detectDeviceInfo
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow

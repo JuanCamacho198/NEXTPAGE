@@ -8,7 +8,6 @@ import com.nextpage.domain.repository.ReadingStatsData
 import com.nextpage.domain.repository.ReadingStatsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.flowOf
 
 /**
  * Shared fakes for reader ViewModel slice tests (SDD reader-facade-split).
@@ -31,8 +30,6 @@ class FakeReaderRepository(
     ) = Unit
 
     override fun observeAllHighlights(): Flow<List<Highlight>> = highlightsFlow
-
-    override fun observeAllHighlightsPaged(): Flow<androidx.paging.PagingData<Highlight>> = flowOf(androidx.paging.PagingData.empty())
 
     override fun observeHighlights(bookId: String): Flow<List<Highlight>> = highlightsFlow
 

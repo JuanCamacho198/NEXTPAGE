@@ -1,10 +1,5 @@
 package com.nextpage.data.repository
 
-import androidx.paging.ExperimentalPagingApi
-import androidx.paging.Pager
-import androidx.paging.PagingConfig
-import androidx.paging.PagingData
-import androidx.paging.map
 import com.nextpage.data.local.dao.BookDao
 import com.nextpage.data.local.dao.BookmarkDao
 import com.nextpage.data.local.dao.HighlightDao
@@ -21,6 +16,7 @@ import com.nextpage.domain.model.Bookmark
 import com.nextpage.domain.model.Highlight
 import com.nextpage.domain.model.ReadingProgress
 import com.nextpage.domain.repository.ReaderRepository
+import com.nextpage.domain.sync.OutboxDrainScheduler
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.util.UUID
@@ -33,6 +29,12 @@ class ReaderRepositoryImpl(
     private val bookmarkDao: BookmarkDao,
     private val bookDao: BookDao,
     private val outboxDao: SyncOutboxDao? = null,
+    /**
+     * S6 scheduler seam. Nullable so non-wired callers/tests keep the previous
+     * local-only behavior; production injects the WorkManager-backed scheduler
+     * and a drain is requested after every successful outbox enqueue.
+     */
+    private val drainScheduler: OutboxDrainScheduler? = null,
 ) : ReaderRepository {
     override fun observeProgress(bookId: String): Flow<ReadingProgress?> =
         readingProgressDao
@@ -66,6 +68,8 @@ class ReaderRepositoryImpl(
         } else {
             dao.insert(entity)
         }
+        // S6: outbox now actually drains — request a run after a successful enqueue.
+        drainScheduler?.scheduleDrain()
     }
 
     private fun buildProgressPayload(progress: ReadingProgress): String {
@@ -107,15 +111,6 @@ class ReaderRepositoryImpl(
             .observeAllHighlights()
             .map { list -> list.map { it.toDomain() } }
 
-    @OptIn(ExperimentalPagingApi::class)
-    override fun observeAllHighlightsPaged(): Flow<PagingData<Highlight>> =
-        Pager(
-            config = PagingConfig(pageSize = 20),
-            pagingSourceFactory = { highlightDao.observeAllHighlightsPaged() },
-        ).flow.map { pagingData ->
-            pagingData.map { it.toDomain() }
-        }
-
     override fun observeHighlights(bookId: String): Flow<List<Highlight>> =
         highlightDao
             .observeHighlightsForBook(bookId)
@@ -132,7 +127,8 @@ class ReaderRepositoryImpl(
         // HIGHLIGHT per id — atomic enqueue, never coalesced across ids (desktop parity)
         // Distinguish DELETE: when deletedAt != null, outbox must be DELETE so Supabase softDelete path runs
         val operation = if (highlight.deletedAtEpochMillis != null) SyncOperation.DELETE else SyncOperation.UPDATE
-        outboxDao?.insert(
+        val dao = outboxDao ?: return
+        dao.insert(
             SyncOutboxEntity(
                 id = "outbox-${UUID.randomUUID()}",
                 entityType = SyncEntityType.HIGHLIGHT.name,
@@ -142,6 +138,8 @@ class ReaderRepositoryImpl(
                 createdAtEpochMillis = System.currentTimeMillis(),
             ),
         )
+        // S6: request a drain after a successful enqueue.
+        drainScheduler?.scheduleDrain()
     }
 
     private fun buildHighlightPayload(highlight: Highlight): String {
@@ -191,7 +189,8 @@ class ReaderRepositoryImpl(
         val payload = buildBookmarkPayload(bookmark)
         ensureValidJson(payload)
         // BOOKMARK per id — atomic enqueue, never coalesced across ids
-        outboxDao?.insert(
+        val dao = outboxDao ?: return
+        dao.insert(
             SyncOutboxEntity(
                 id = "outbox-${UUID.randomUUID()}",
                 entityType = SyncEntityType.BOOKMARK.name,
@@ -201,6 +200,8 @@ class ReaderRepositoryImpl(
                 createdAtEpochMillis = System.currentTimeMillis(),
             ),
         )
+        // S6: request a drain after a successful enqueue.
+        drainScheduler?.scheduleDrain()
     }
 
     private fun buildBookmarkPayload(bookmark: Bookmark): String {

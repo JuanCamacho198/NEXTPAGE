@@ -27,6 +27,13 @@ plugins {
     // SDD android-tooling-hygiene WS4 slice 9: Kover report-only coverage
     // (catalog alias; declared in the root build file, applied here).
     alias(libs.plugins.kover)
+
+    // SDD android-stack-modernization S11: Baseline Profile CONSUMER plugin. This is what
+    // makes the shipped profile REGENERABLE instead of hand-maintained: it wires
+    // `:app:generateReleaseBaselineProfile` to the :benchmark module's
+    // BaselineProfileGenerator and feeds the collected profile back into this module's
+    // shipped artifact (see the `baselineProfile { }` block below).
+    alias(libs.plugins.androidx.baselineprofile)
 }
 
 ksp {
@@ -41,6 +48,9 @@ ksp {
 spotless {
     kotlin {
         target("**/*.kt", "**/*.kts")
+        // Konsist fixtures under test resources are parsed data, not compiled source
+        // (see DirectViewModelConstructionFixture.kt) — keep them out of ktlint.
+        targetExclude("src/test/resources/**")
         ktlint()
     }
 }
@@ -171,6 +181,25 @@ android {
             )
             signingConfig = signingConfigs.getByName("debug")
         }
+
+        // SDD android-stack-modernization S9: the macrobenchmark target variant
+        // consumed by `:benchmark` (targetProjectPath = ":app"). AGP pairs the
+        // test module's build type with the app build type of the SAME name.
+        // - isDebuggable = false: S8 established that AGP compiles NO ART profile
+        //   for debuggable variants (zero assets/dexopt/*), and macrobenchmark
+        //   measures with the shipped baseline profile — so the benchmarked app
+        //   must be the non-debuggable shape.
+        // - debug signing: the variant is never shipped; debug signing keeps it
+        //   installable without a release keystore.
+        // - matchingFallbacks: dependencies that only publish `release` resolve
+        //   for this build type.
+        // - minify stays OFF (a new build type defaults to isMinifyEnabled=false),
+        //   so the benchmark variant does not need R8 mapping/Sentry-upload wiring.
+        create("benchmark") {
+            isDebuggable = false
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+        }
     }
 
     compileOptions {
@@ -228,11 +257,44 @@ android {
 
     tasks.withType(Test::class).configureEach {
         dependsOn(copySchemasForUnitTest)
+        // Konsist parses the whole production source tree in-process. Give the
+        // shared unit-test JVM headroom so the architecture rules and the
+        // ~1100-test suite coexist without OOM (default Test heap is 512m).
+        maxHeapSize = "2g"
     }
 
     sourceSets {
         getByName("androidTest").assets.srcDirs("$projectDir/schemas")
         getByName("test").assets.srcDirs("$projectDir/schemas")
+    }
+}
+
+// SDD android-stack-modernization S11: make the Kotlin source directories explicit BEFORE
+// the `androidx.baselineprofile` consumer plugin copies them into its synthetic variants.
+//
+// On AGP >= 8.5 this module's `main`/`release` Kotlin source sets hold their default
+// directories as ONE unresolved PROVIDER until AGP resolves it late in evaluation — read
+// early, that entry literally renders as `provider(?)`. The baselineprofile plugin mirrors
+// each non-debuggable build type into the synthetic `nonMinifiedRelease` / `benchmarkRelease`
+// variants during `onFinalizeDsl` by copying `AndroidSourceDirectorySet.directories`
+// verbatim, i.e. BEFORE that resolution, so the destination inherits the raw provider and
+// AGP resolves it against the project dir as `<projectDir>/provider(?)`. `?` is illegal in a
+// Windows path, so KSP's source-directory filter throws while configuring
+// `:app:kspNonMinifiedReleaseKotlin` — a dependency of `:app:generateReleaseBaselineProfile`
+// — and the whole S11 generation route fails to configure before any task runs.
+//
+// Replacing the provider with the two directories it expands to (`src/<sourceSet>/kotlin`
+// and `src/<sourceSet>/java`, confirmed identical to the post-resolution value) makes the
+// copy carry plain strings, so the synthetic variants configure with the real directories.
+// `src/<sourceSet>/kotlin` does not exist in this module; all Kotlin lives under
+// `src/<sourceSet>/java`. Behaviour is unchanged on Linux, where `?` is a legal filename
+// character and the bogus directory was silently inert — which is why this only ever bit
+// local Windows runs.
+listOf("main", "release").forEach { sourceSetName ->
+    android.sourceSets.findByName(sourceSetName)?.kotlin?.let { kotlinSourceSet ->
+        kotlinSourceSet.directories.clear()
+        kotlinSourceSet.directories.add("src/$sourceSetName/kotlin")
+        kotlinSourceSet.directories.add("src/$sourceSetName/java")
     }
 }
 
@@ -260,6 +322,28 @@ sentry {
     telemetry.set(false)
 }
 
+// SDD android-stack-modernization S11: Baseline Profile generation/consumption wiring.
+//
+// S8 moved the hand-written profile to the path AGP actually consumes
+// (`app/src/main/baseline-prof.txt`) and proved consumption by differential APK
+// inspection. S11 adds the missing half: the profile is now GENERATABLE from the real
+// journeys instead of hand-maintained, because the consumer plugin maps
+// `:app:generateReleaseBaselineProfile` onto the :benchmark module's
+// BaselineProfileGenerator and merges the collected rules back into this module.
+//
+// Device-free by construction: collection needs a booted device/emulator, so it is wired
+// to the dispatch-only `android-baseline-profile` CI job and never to a normal build.
+// `automaticGenerationDuringBuild = false` is already the plugin default, but it is
+// stated explicitly because flipping it would silently turn every release build into a
+// device run — including `android-checks`, which has no device.
+baselineProfile {
+    automaticGenerationDuringBuild = false
+    // The generator lives in the existing :benchmark module — the same module that owns
+    // the S9 macrobenchmark journeys it mirrors (cold start, Library scroll, Discover
+    // fling, Reader open).
+    from(project(":benchmark"))
+}
+
 dependencies {
     val composeBom = platform(libs.compose.bom)
 
@@ -281,6 +365,9 @@ dependencies {
     implementation(libs.lottie.compose)
     implementation(libs.coil)
     implementation(libs.coil.compose)
+    // Coil 3 unbundles networking from `coil-core`; without this engine every
+    // remote cover would silently blank (spec image-loading SC13.1).
+    implementation(libs.coil.network.okhttp)
     implementation(libs.androidx.webkit)
 
     implementation(libs.androidx.navigation.compose)
@@ -295,6 +382,12 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
+    // WorkManager (S6): scheduler-only outbox drain + androidx.hilt worker wiring.
+    // androidx-hilt-compiler is a SEPARATE KSP processor from Dagger's hilt-compiler
+    // above; both must run on assemble.
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.hilt.work)
+    ksp(libs.androidx.hilt.compiler)
     androidTestImplementation(libs.room.testing)
     testImplementation(libs.room.testing)
 
@@ -350,6 +443,12 @@ dependencies {
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     testImplementation(libs.bundles.testing)
+    // Turbine — deterministic Flow/StateFlow emission assertions paired with
+    // kotlinx-coroutines-test (test-only; never on a production classpath).
+    testImplementation(libs.testing.turbine)
+    // Konsist — executable architecture rules that run inside
+    // :app:testDebugUnitTest (test-only; no CI gate change).
+    testImplementation(libs.testing.konsist)
     testImplementation(libs.hilt.testing)
     kspTest(libs.hilt.compiler)
     testImplementation(libs.ktor.client.mock)

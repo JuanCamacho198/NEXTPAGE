@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.testing.TestNavHostController
+import androidx.navigation.toRoute
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -73,8 +74,13 @@ class NextPageNavHostStackCollapseTest {
         return routes
     }
 
+    // D8/R8 reject spaces in a DEX SimpleName below DEX version 040, so a
+    // backtick-quoted name like `Inicio tap collapses ...` makes
+    // `:app:dexBuilderDebugAndroidTest` fail with "Space characters in
+    // SimpleName ... are not allowed prior to DEX version 040" — the
+    // instrumented APK could never be built, let alone run.
     @Test
-    fun `Inicio tap collapses the stack to home from every tab`() {
+    fun inicioTap_collapsesStackToHomeFromEveryTab() {
         launchMiniGraph()
 
         otherTabs.forEach { tab ->
@@ -93,6 +99,45 @@ class NextPageNavHostStackCollapseTest {
                 listOf(NextPageDestination.Home.route),
                 currentStack(),
             )
+        }
+    }
+
+    /**
+     * Instrumented twin of `TypedRoutesNavigationTest`: the typed Reader route
+     * keeps the verbatim destination pattern and round-trips a book path with
+     * spaces, `/`, `&`, `+`, `%`, `#`, `?` and unicode through a real NavHost.
+     */
+    // Same DEX SimpleName constraint as above: no spaces in the method name.
+    @Test
+    fun typedReaderRoute_roundTripsSpecialCharacterBookPath() {
+        val specialPath = "/files/a+b & cömic/第一章/100% #1?.epub"
+
+        composeRule.setContent {
+            navController = TestNavHostController(LocalContext.current)
+            NavHost(
+                navController = navController,
+                startDestination = ReaderRoute(),
+            ) {
+                composable<ReaderRoute> { Text("Reader") }
+            }
+        }
+        composeRule.waitForIdle()
+
+        composeRule.runOnUiThread {
+            navController.navigate(ReaderRoute(bookId = "book-123", bookPath = specialPath, bookFormat = "epub"))
+        }
+        composeRule.waitForIdle()
+
+        composeRule.runOnUiThread {
+            val entry = checkNotNull(navController.currentBackStackEntry)
+            assertEquals(
+                "reader?bookId={bookId}&bookPath={bookPath}&bookFormat={bookFormat}",
+                entry.destination.route,
+            )
+            val decoded = entry.toRoute<ReaderRoute>()
+            assertEquals("book-123", decoded.bookId)
+            assertEquals("special-character paths must round-trip verbatim", specialPath, decoded.bookPath)
+            assertEquals("epub", decoded.bookFormat)
         }
     }
 }

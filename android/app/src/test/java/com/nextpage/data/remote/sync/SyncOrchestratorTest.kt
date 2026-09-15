@@ -1,9 +1,12 @@
 package com.nextpage.data.remote.sync
 
+import app.cash.turbine.test
 import com.nextpage.data.local.dao.SyncOutboxDao
 import com.nextpage.data.remote.supabase.SupabaseBookCatalogSync
 import com.nextpage.data.remote.supabase.SupabaseProgressSync
+import com.nextpage.domain.sync.SessionEvent
 import com.nextpage.domain.sync.SessionGate
+import com.nextpage.testutil.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -16,12 +19,13 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 
 /**
@@ -39,12 +43,16 @@ import org.junit.Test
  *    non-fatal, SYNC-ORCH-STOP fan-out + partial-failure isolation,
  *    SYNC-ORCH-PENDING sum/exclude/distinct via the shared outbox DAO.
  *
- * No `delay()` is observed from the helper, no Turbine dependency; the
- * `UnconfinedTestDispatcher` + `MutableSharedFlow` (replay=0) gives
- * deterministic subscriber-emission order for state assertions.
+ * Flow assertions use Turbine under a `StandardTestDispatcher`-backed
+ * `externalScope`; the `MutableSharedFlow` (replay=0) gate stream is
+ * subscribed before each emission, so ordering is explicit rather than
+ * inferred from an unconfined dispatcher.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class SyncOrchestratorTest {
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule(StandardTestDispatcher())
+
     // ── pure reduce() tests (SYNC-ORCH-STATE) ────────────────────────────
 
     @Test
@@ -171,7 +179,9 @@ class SyncOrchestratorTest {
         every { gate.hasLiveSession() } answers { gateLive.value }
         every { outboxDao.observePendingCount() } returns outboxPending.asStateFlow()
 
-        externalScope = CoroutineScope(UnconfinedTestDispatcher())
+        // Shares MainDispatcherRule's scheduler with `runTest`, so
+        // `advanceUntilIdle()` drains the orchestrator's own scope.
+        externalScope = CoroutineScope(mainDispatcherRule.dispatcher)
         orchestrator =
             SyncOrchestratorImpl(
                 drive = drive,
@@ -218,6 +228,7 @@ class SyncOrchestratorTest {
             }
 
             orchestrator.start("user-123")
+            advanceUntilIdle()
 
             // Catalog + Progress still ran.
             coVerify(exactly = 1) { catalog.bootstrap() }
@@ -250,6 +261,7 @@ class SyncOrchestratorTest {
             }
 
             orchestrator.start("user-123")
+            advanceUntilIdle()
 
             coVerify(exactly = 1) { progress.startProcessing() }
             coVerify(exactly = 1) { progress.subscribeToRealtimeChanges() }
@@ -279,9 +291,9 @@ class SyncOrchestratorTest {
             gateLive.value = true
 
             orchestrator.start("user-123")
+            advanceUntilIdle()
 
-            // After start, state should resolve to Idle (with UnconfinedTestDispatcher
-            // the fan-in has already re-reduced).
+            // After start + scheduler drain, the fan-in has re-reduced.
             assertEquals(SyncState.Idle, orchestrator.state.value)
         }
 
@@ -361,10 +373,17 @@ class SyncOrchestratorTest {
             outboxPending.value = 7
 
             orchestrator.start("user-123")
-            assertEquals(7, orchestrator.pendingCount.first())
 
-            orchestrator.stop()
-            assertEquals(0, orchestrator.pendingCount.first())
+            orchestrator.pendingCount.test {
+                assertEquals(0, awaitItem())
+                advanceUntilIdle()
+                assertEquals(7, awaitItem())
+
+                orchestrator.stop()
+                advanceUntilIdle()
+                assertEquals(0, awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 
     // ── PENDING aggregation (SCEN-PENDING-1..4) ──────────────────────────
@@ -374,18 +393,34 @@ class SyncOrchestratorTest {
         runTest {
             outboxPending.value = 0
             orchestrator.start("user-123")
-            outboxPending.value = 5
-            assertEquals(5, orchestrator.pendingCount.first())
+
+            orchestrator.pendingCount.test {
+                assertEquals(0, awaitItem())
+                outboxPending.value = 5
+                advanceUntilIdle()
+
+                assertEquals(5, awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 
     @Test
     fun pendingCount_distinctUntilChanged_doesNotRepeat() =
         runTest {
             orchestrator.start("user-123")
-            outboxPending.value = 3
-            // Force same value to be emitted; consumer should not see duplicate.
-            outboxPending.value = 3
-            assertEquals(3, orchestrator.pendingCount.first())
+
+            orchestrator.pendingCount.test {
+                assertEquals(0, awaitItem())
+                outboxPending.value = 3
+                advanceUntilIdle()
+                assertEquals(3, awaitItem())
+
+                // Re-emitting the same value must not surface a duplicate.
+                outboxPending.value = 3
+                advanceUntilIdle()
+                expectNoEvents()
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 
     // ── GATE → Gated state propagation ───────────────────────────────────
@@ -398,10 +433,18 @@ class SyncOrchestratorTest {
             coEvery { progress.stop() } just runs
 
             orchestrator.start("user-123")
-            gateLive.value = false
-            gateEvents.tryEmit(com.nextpage.domain.sync.SessionEvent.Lost)
+            advanceUntilIdle()
 
-            assertEquals(SyncState.Gated("session_lost"), orchestrator.state.value)
+            orchestrator.state.test {
+                assertEquals(SyncState.Idle, awaitItem())
+
+                gateLive.value = false
+                gateEvents.tryEmit(SessionEvent.Lost)
+                advanceUntilIdle()
+
+                assertEquals(SyncState.Gated("session_lost"), awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 
     @Test
@@ -412,12 +455,17 @@ class SyncOrchestratorTest {
             coEvery { progress.stop() } just runs
 
             orchestrator.start("user-123")
-            gateEvents.tryEmit(
-                com.nextpage.domain.sync.SessionEvent
-                    .Expired("refresh_token_revoked"),
-            )
+            advanceUntilIdle()
 
-            assertEquals(SyncState.Gated("refresh_token_revoked"), orchestrator.state.value)
+            orchestrator.state.test {
+                assertEquals(SyncState.Idle, awaitItem())
+
+                gateEvents.tryEmit(SessionEvent.Expired("refresh_token_revoked"))
+                advanceUntilIdle()
+
+                assertEquals(SyncState.Gated("refresh_token_revoked"), awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 
     // ── DomainState mapping (table-driven sanity over the 5 DriveSyncState variants) ─

@@ -14,13 +14,18 @@ import com.nextpage.di.AppContainer
 import com.nextpage.presentation.feature.bookdetail.BookDetailScreen
 import com.nextpage.presentation.feature.editmetadata.EditBookMetadataScreen
 import com.nextpage.presentation.navigation.NextPageDestination
+import com.nextpage.presentation.navigation.ReaderRoute
+import com.nextpage.presentation.navigation.rememberBookDetailViewModel
+import com.nextpage.presentation.navigation.rememberEditBookMetadataViewModel
 import com.nextpage.presentation.viewmodel.ReaderViewModel
 
 /**
  * Feature NavGraph for book detail + edit.
  *
  * Holds navArgument bookId and delegates selection writes via [onSelectBook] lambda
- * (host-owned rememberSaveable state). No viewModel() inside composable.
+ * (host-owned rememberSaveable state). Resolves its route-scoped ViewModels
+ * through the designated provider (ViewModelProviders.kt) and passes them in —
+ * no viewModel() inside composable.
  * Preserves slide transitions verbatim.
  */
 fun NavGraphBuilder.bookDetailGraph(
@@ -39,16 +44,20 @@ fun NavGraphBuilder.bookDetailGraph(
         popExitTransition = { slideOutHorizontally { -it } + fadeOut() },
     ) { backStackEntry ->
         val bookId = backStackEntry.arguments?.getString("bookId") ?: return@composable
+        val bookDetailViewModel =
+            rememberBookDetailViewModel(
+                bookId = bookId,
+                libraryRepository = appContainer.libraryRepository,
+            )
         BookDetailScreen(
             contentPadding = contentPadding,
-            bookId = bookId,
-            libraryRepository = appContainer.libraryRepository,
+            viewModel = bookDetailViewModel,
             onNavigateBack = { navController.popBackStack() },
             onEditBook = { navController.navigate("book_edit/$bookId") },
             onContinueReading = { id, filePath, format ->
                 onSelectBook(id, filePath, format)
-                navController.navigate(NextPageDestination.Reader.routeFor(id, filePath, format)) {
-                    popUpTo(NextPageDestination.Reader.route) { inclusive = true }
+                navController.navigate(ReaderRoute(id, filePath, format)) {
+                    popUpTo<ReaderRoute> { inclusive = true }
                 }
             },
         )
@@ -63,11 +72,16 @@ fun NavGraphBuilder.bookDetailGraph(
         popExitTransition = { slideOutHorizontally { -it } + fadeOut() },
     ) { backStackEntry ->
         val bookId = backStackEntry.arguments?.getString("bookId") ?: return@composable
+        val editBookMetadataViewModel =
+            rememberEditBookMetadataViewModel(
+                bookId = bookId,
+                libraryRepository = appContainer.libraryRepository,
+                coverStorage = appContainer.coverStorage,
+                onSaved = { navController.popBackStack() },
+            )
         EditBookMetadataScreen(
             contentPadding = contentPadding,
-            bookId = bookId,
-            libraryRepository = appContainer.libraryRepository,
-            coverStorage = appContainer.coverStorage,
+            viewModel = editBookMetadataViewModel,
             onNavigateBack = { navController.popBackStack() },
         )
     }

@@ -13,16 +13,17 @@ class ImportEpubBookUseCase(
         inputStreamProvider: suspend () -> InputStream?,
     ): Result<Book> {
         // A6 - import timing: one pair around the existing suspend call on a
-        // background dispatcher; heavy work is unchanged. runCatching keeps JVM
-        // unit tests (unmocked SystemClock) green.
-        val start = runCatching { android.os.SystemClock.elapsedRealtime() }.getOrDefault(0L)
+        // background dispatcher; heavy work is unchanged. A monotonic JVM clock
+        // keeps the domain free of `android.os.SystemClock` while preserving the
+        // measured duration (SDD android-stack-modernization S3, R7).
+        val start = System.nanoTime()
         val result =
             libraryRepository.importBookFromEpub(
                 request = request,
                 inputStreamProvider = inputStreamProvider,
             )
         runCatching {
-            val elapsed = android.os.SystemClock.elapsedRealtime() - start
+            val elapsed = (System.nanoTime() - start) / NANOS_PER_MILLI
 
             val exception = result.exceptionOrNull()
             val tags =
@@ -44,5 +45,9 @@ class ImportEpubBookUseCase(
             )
         }
         return result
+    }
+
+    private companion object {
+        const val NANOS_PER_MILLI = 1_000_000L
     }
 }

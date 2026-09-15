@@ -67,6 +67,12 @@ class SupabaseBookCatalogDataSource(
     /**
      * Get a single book row by [userId] and [bookId].
      * Returns null if not found.
+     *
+     * Uses the tolerant decoder: `decodeSingleOrNull` first decodes the body as
+     * a JSON array, so an empty body (`204`, or a proxy/RLS-stripped response)
+     * throws `Expected start of the array '[', but had 'EOF'`. For a lookup that
+     * legitimately means "no row", empty must map to null — not to a crash.
+     * This path is reached from the DELETE branch of `processBookItem`.
      */
     suspend fun getUserBook(
         userId: String,
@@ -79,13 +85,16 @@ class SupabaseBookCatalogDataSource(
                     eq("id", bookId)
                 }
                 limit(1)
-            }.decodeSingleOrNull<UserBookRow>()
+            }.decodeSingleOrNullTolerant<UserBookRow>()
 
     /**
      * Find a book row by content hash.
      * Returns the first match or null if not found.
      * Used for content-hash dedup (PR 5) — checks if a book with the
      * same SHA-256 hash already exists in the catalog for this user.
+     *
+     * Tolerant decode for the same reason as [getUserBook]: an empty body means
+     * "no match", which is a normal outcome here, not a protocol error.
      */
     suspend fun getUserBookByHash(
         userId: String,
@@ -98,7 +107,7 @@ class SupabaseBookCatalogDataSource(
                     eq("content_hash", contentHash)
                 }
                 limit(1)
-            }.decodeSingleOrNull<UserBookRow>()
+            }.decodeSingleOrNullTolerant<UserBookRow>()
 
     /**
      * Delete a book row from the catalog.

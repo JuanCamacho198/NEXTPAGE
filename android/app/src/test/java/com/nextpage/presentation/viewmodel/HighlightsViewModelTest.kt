@@ -1,5 +1,6 @@
 package com.nextpage.presentation.viewmodel
 
+import app.cash.turbine.test
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.model.Bookmark
 import com.nextpage.domain.model.Highlight
@@ -9,12 +10,10 @@ import com.nextpage.domain.repository.HomeRepository
 import com.nextpage.domain.repository.ReaderRepository
 import com.nextpage.presentation.UiEvent
 import com.nextpage.testutil.MainDispatcherRule
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -239,17 +238,14 @@ class HighlightsViewModelTest {
             val viewModel = createViewModel(highlights = listOf(highlight))
             viewModel.uiState.first()
 
-            val events = mutableListOf<UiEvent>()
-            backgroundScope.launch(Dispatchers.Main) {
-                viewModel.uiEvent.collect { events.add(it) }
+            viewModel.uiEvent.test {
+                viewModel.onCopyHighlight(highlight)
+
+                val event = awaitItem()
+                assertTrue(event is UiEvent.CopyToClipboard)
+                assertEquals("Hello world", (event as UiEvent.CopyToClipboard).text)
+                cancelAndIgnoreRemainingEvents()
             }
-
-            viewModel.onCopyHighlight(highlight)
-
-            assertEquals(1, events.size)
-            val event = events.first()
-            assertTrue(event is UiEvent.CopyToClipboard)
-            assertEquals("Hello world", (event as UiEvent.CopyToClipboard).text)
         }
 
     @Test
@@ -262,17 +258,16 @@ class HighlightsViewModelTest {
 
             viewModel.onChangeHighlightColor(highlight)
 
-            val events = mutableListOf<UiEvent>()
-            backgroundScope.launch(Dispatchers.Main) {
-                viewModel.uiEvent.collect { events.add(it) }
+            viewModel.uiEvent.test {
+                viewModel.onConfirmColorChange(HighlightColor.GREEN.hex)
+
+                assertEquals(HighlightColor.GREEN.hex, readerRepo.lastUpsertedHighlight?.color)
+                val event = awaitItem()
+                assertTrue(event is UiEvent.ShowSnackbar)
+                assertEquals("Color changed", (event as UiEvent.ShowSnackbar).message)
+                cancelAndIgnoreRemainingEvents()
             }
 
-            viewModel.onConfirmColorChange(HighlightColor.GREEN.hex)
-
-            assertEquals(HighlightColor.GREEN.hex, readerRepo.lastUpsertedHighlight?.color)
-            assertEquals(1, events.size)
-            assertTrue(events.first() is UiEvent.ShowSnackbar)
-            assertEquals("Color changed", (events.first() as UiEvent.ShowSnackbar).message)
             val state = viewModel.uiState.first()
             assertNull(state.selectedHighlightForColorChange)
         }
@@ -287,17 +282,16 @@ class HighlightsViewModelTest {
 
             viewModel.onAddHighlightTag(highlight)
 
-            val events = mutableListOf<UiEvent>()
-            backgroundScope.launch(Dispatchers.Main) {
-                viewModel.uiEvent.collect { events.add(it) }
+            viewModel.uiEvent.test {
+                viewModel.onSaveHighlightTag("my-tag")
+
+                assertEquals("my-tag", readerRepo.lastUpsertedHighlight?.tag)
+                val event = awaitItem()
+                assertTrue(event is UiEvent.ShowSnackbar)
+                assertEquals("Tag saved", (event as UiEvent.ShowSnackbar).message)
+                cancelAndIgnoreRemainingEvents()
             }
 
-            viewModel.onSaveHighlightTag("my-tag")
-
-            assertEquals("my-tag", readerRepo.lastUpsertedHighlight?.tag)
-            assertEquals(1, events.size)
-            assertTrue(events.first() is UiEvent.ShowSnackbar)
-            assertEquals("Tag saved", (events.first() as UiEvent.ShowSnackbar).message)
             val state = viewModel.uiState.first()
             assertNull(state.selectedHighlightForTagEdit)
             assertEquals("", state.editTagText)
@@ -314,18 +308,15 @@ class HighlightsViewModelTest {
             val viewModel = createViewModel(highlights = listOf(highlight))
             viewModel.uiState.first()
 
-            val events = mutableListOf<UiEvent>()
-            backgroundScope.launch(Dispatchers.Main) {
-                viewModel.uiEvent.collect { events.add(it) }
+            viewModel.uiEvent.test {
+                viewModel.onViewInBook(highlight)
+
+                val event = awaitItem()
+                assertTrue(event is UiEvent.OpenBookAtLocation)
+                assertEquals("book-42", (event as UiEvent.OpenBookAtLocation).bookId)
+                assertEquals("epubcfi(/6/2)", (event as UiEvent.OpenBookAtLocation).cfiRange)
+                cancelAndIgnoreRemainingEvents()
             }
-
-            viewModel.onViewInBook(highlight)
-
-            assertEquals(1, events.size)
-            val event = events.first()
-            assertTrue(event is UiEvent.OpenBookAtLocation)
-            assertEquals("book-42", (event as UiEvent.OpenBookAtLocation).bookId)
-            assertEquals("epubcfi(/6/2)", (event as UiEvent.OpenBookAtLocation).cfiRange)
         }
 
     // ── Helpers ─────────────────────────────────────────────────────
@@ -381,8 +372,6 @@ class HighlightsViewModelTest {
         override suspend fun getProgressForBook(bookId: String): com.nextpage.domain.model.ReadingProgress? = null
 
         override fun observeAllHighlights(): Flow<List<Highlight>> = highlightsFlow
-
-        override fun observeAllHighlightsPaged(): Flow<androidx.paging.PagingData<Highlight>> = kotlinx.coroutines.flow.flowOf(androidx.paging.PagingData.empty())
 
         override fun observeHighlights(bookId: String): Flow<List<Highlight>> = highlightsFlow
 

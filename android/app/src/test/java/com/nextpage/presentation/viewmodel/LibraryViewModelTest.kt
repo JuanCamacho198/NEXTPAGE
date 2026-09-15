@@ -1,6 +1,7 @@
 package com.nextpage.presentation.viewmodel
 
 import android.content.Context
+import app.cash.turbine.test
 import com.nextpage.data.remote.supabase.SupabaseBookCatalogSync
 import com.nextpage.data.remote.sync.DriveSyncState
 import com.nextpage.data.remote.sync.SyncService
@@ -55,26 +56,20 @@ class LibraryViewModelTest {
                     getBookProgressUseCase = mockk<GetBookProgressUseCase>(relaxed = true),
                 )
 
-            var emittedEvent: LibraryImportEvent? = null
-            val collectJob =
-                launch {
-                    viewModel.importEvents.collect { emittedEvent = it }
-                }
-            advanceUntilIdle()
+            viewModel.importEvents.test {
+                viewModel.importBookFromEpub(
+                    sourcePath = "content://books/success.epub",
+                    fallbackTitle = "Success",
+                    inputStreamProvider = { ByteArrayInputStream(byteArrayOf(1, 2, 3)) },
+                )
 
-            viewModel.importBookFromEpub(
-                sourcePath = "content://books/success.epub",
-                fallbackTitle = "Success",
-                inputStreamProvider = { ByteArrayInputStream(byteArrayOf(1, 2, 3)) },
-            )
+                assertTrue(viewModel.uiState.value.isImporting)
+                advanceUntilIdle()
 
-            assertTrue(viewModel.uiState.value.isImporting)
-            advanceUntilIdle()
-
-            assertFalse(viewModel.uiState.value.isImporting)
-            assertTrue(emittedEvent is LibraryImportEvent.Success)
-
-            collectJob.cancel()
+                assertFalse(viewModel.uiState.value.isImporting)
+                assertTrue(awaitItem() is LibraryImportEvent.Success)
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 
     @Test
@@ -94,25 +89,19 @@ class LibraryViewModelTest {
                     getBookProgressUseCase = mockk<GetBookProgressUseCase>(relaxed = true),
                 )
 
-            var emittedEvent: LibraryImportEvent? = null
-            val collectJob =
-                launch {
-                    viewModel.importEvents.collect { emittedEvent = it }
-                }
-            advanceUntilIdle()
+            viewModel.importEvents.test {
+                viewModel.importBookFromEpub(
+                    sourcePath = "content://books/failure.epub",
+                    fallbackTitle = "Failure",
+                    inputStreamProvider = { null },
+                )
 
-            viewModel.importBookFromEpub(
-                sourcePath = "content://books/failure.epub",
-                fallbackTitle = "Failure",
-                inputStreamProvider = { null },
-            )
+                advanceUntilIdle()
 
-            advanceUntilIdle()
-
-            assertFalse(viewModel.uiState.value.isImporting)
-            assertTrue(emittedEvent is LibraryImportEvent.Failure)
-
-            collectJob.cancel()
+                assertFalse(viewModel.uiState.value.isImporting)
+                assertTrue(awaitItem() is LibraryImportEvent.Failure)
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 
     @Test
@@ -170,13 +159,6 @@ class LibraryViewModelTest {
                     getBookProgressUseCase = mockk<GetBookProgressUseCase>(relaxed = true),
                 )
 
-            var emittedEvent: UiEvent? = null
-            val collectJob =
-                launch {
-                    viewModel.uiEvent.collect { emittedEvent = it }
-                }
-            advanceUntilIdle()
-
             val book =
                 Book(
                     id = "book-delete-1",
@@ -187,14 +169,16 @@ class LibraryViewModelTest {
                     format = "epub",
                     updatedAtEpochMillis = 1L,
                 )
-            viewModel.requestDeleteBook(book)
-            viewModel.confirmDeleteBook()
-            advanceUntilIdle()
 
-            assertTrue(emittedEvent is UiEvent.ShowSnackbar)
-            assertEquals(null, viewModel.uiState.value.bookToDelete)
+            viewModel.uiEvent.test {
+                viewModel.requestDeleteBook(book)
+                viewModel.confirmDeleteBook()
+                advanceUntilIdle()
 
-            collectJob.cancel()
+                assertTrue(awaitItem() is UiEvent.ShowSnackbar)
+                assertEquals(null, viewModel.uiState.value.bookToDelete)
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 
     @Test
@@ -214,13 +198,6 @@ class LibraryViewModelTest {
                     getBookProgressUseCase = mockk<GetBookProgressUseCase>(relaxed = true),
                 )
 
-            var emittedEvent: UiEvent? = null
-            val collectJob =
-                launch {
-                    viewModel.uiEvent.collect { emittedEvent = it }
-                }
-            advanceUntilIdle()
-
             val book =
                 Book(
                     id = "book-delete-2",
@@ -231,14 +208,16 @@ class LibraryViewModelTest {
                     format = "epub",
                     updatedAtEpochMillis = 1L,
                 )
-            viewModel.requestDeleteBook(book)
-            viewModel.confirmDeleteBook()
-            advanceUntilIdle()
 
-            assertTrue(emittedEvent is UiEvent.ShowSnackbar)
-            assertEquals(null, viewModel.uiState.value.bookToDelete)
+            viewModel.uiEvent.test {
+                viewModel.requestDeleteBook(book)
+                viewModel.confirmDeleteBook()
+                advanceUntilIdle()
 
-            collectJob.cancel()
+                assertTrue(awaitItem() is UiEvent.ShowSnackbar)
+                assertEquals(null, viewModel.uiState.value.bookToDelete)
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 
     @Test
@@ -424,8 +403,6 @@ class LibraryViewModelTest {
         private val readingMinutesByBookFlow = MutableStateFlow<Map<String, Long>>(emptyMap())
 
         override fun observeLibrary(): Flow<List<Book>> = booksFlow
-
-        override fun observeLibraryPaged(): Flow<androidx.paging.PagingData<Book>> = kotlinx.coroutines.flow.flowOf(androidx.paging.PagingData.empty())
 
         override fun observeBookById(bookId: String): Flow<Book?> = MutableStateFlow(null)
 

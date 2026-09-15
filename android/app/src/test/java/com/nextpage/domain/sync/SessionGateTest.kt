@@ -1,18 +1,13 @@
 package com.nextpage.domain.sync
 
+import app.cash.turbine.test
 import com.nextpage.data.session.SessionManager
 import com.nextpage.data.sync.SessionGateImpl
 import com.nextpage.domain.model.AuthSession
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.async
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -25,8 +20,9 @@ import org.junit.Test
  * Unit tests for [SessionGate] / [SessionGateImpl] (SESSION-GATE in
  * sync-layer-split/spec, id 2381).
  *
- * Covers all 6 spec scenarios via a MockK `SessionManager` and a one-shot
- * consumer on [SessionGate.sessionEvents] (no Turbine dependency).
+ * Covers all 6 spec scenarios via a MockK `SessionManager` and Turbine
+ * assertions on [SessionGate.sessionEvents] under the default
+ * `StandardTestDispatcher`.
  *
  * The impl maintains a cached `live` flag updated by `ensureFreshSession`,
  * `onSessionLost`, and `onSessionRestored`. `hasLiveSession()` is a
@@ -149,81 +145,73 @@ class SessionGateTest {
     // ─── sessionEvents ────────────────────────────────────────────────
     // MutableSharedFlow(replay=0, extraBufferCapacity=8, DROP_OLDEST) —
     // collectors MUST be subscribed BEFORE the emission to receive it.
-    // UnconfinedTestDispatcher runs eagerly so the collector's first()
-    // suspension is wired before we trigger the signal.
+    // Turbine subscribes eagerly (UNDISPATCHED) before each action, so the
+    // ordered emission is asserted instead of wired by an unconfined race.
 
     @Test
     fun sessionEvents_emitsLiveOnSuccessfulRefresh() =
-        runTest(UnconfinedTestDispatcher()) {
+        runTest {
             coEvery { sessionManager.ensureFreshSession() } returns Result.success(authSession())
-            val scope = CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
-            val deferred = scope.async { gate.sessionEvents().first() }
 
-            gate.ensureFreshSession()
+            gate.sessionEvents().test {
+                gate.ensureFreshSession()
 
-            val event = deferred.await()
-            assertEquals(SessionEvent.Live, event)
-            scope.cancel()
+                assertEquals(SessionEvent.Live, awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 
     @Test
     fun sessionEvents_emitsLostOnSessionLostSignal() =
-        runTest(UnconfinedTestDispatcher()) {
-            val scope = CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
-            val deferred = scope.async { gate.sessionEvents().first() }
+        runTest {
+            gate.sessionEvents().test {
+                gate.onSessionLost()
 
-            gate.onSessionLost()
-
-            val event = deferred.await()
-            assertEquals(SessionEvent.Lost, event)
-            scope.cancel()
+                assertEquals(SessionEvent.Lost, awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 
     @Test
     fun sessionEvents_emitsExpiredWithReasonOnEnsureFailure() =
-        runTest(UnconfinedTestDispatcher()) {
+        runTest {
             coEvery { sessionManager.ensureFreshSession() } throws RuntimeException("refresh_token_revoked")
-            val scope = CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
-            val deferred = scope.async { gate.sessionEvents().first() }
 
-            gate.ensureFreshSession()
+            gate.sessionEvents().test {
+                gate.ensureFreshSession()
 
-            val event = deferred.await()
-            assertTrue(event is SessionEvent.Expired)
-            assertEquals("refresh_token_revoked", (event as SessionEvent.Expired).reason)
-            scope.cancel()
+                val event = awaitItem()
+                assertTrue(event is SessionEvent.Expired)
+                assertEquals("refresh_token_revoked", (event as SessionEvent.Expired).reason)
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 
     @Test
     fun sessionEvents_emitsExpiredOnManagerFailureResult() =
-        runTest(UnconfinedTestDispatcher()) {
+        runTest {
             coEvery { sessionManager.ensureFreshSession() } returns Result.failure(IllegalStateException("no_session"))
-            val scope = CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
-            val deferred = scope.async { gate.sessionEvents().first() }
 
-            gate.ensureFreshSession()
+            gate.sessionEvents().test {
+                gate.ensureFreshSession()
 
-            val event = deferred.await()
-            assertTrue(event is SessionEvent.Expired)
-            assertEquals("no_session", (event as SessionEvent.Expired).reason)
-            scope.cancel()
+                val event = awaitItem()
+                assertTrue(event is SessionEvent.Expired)
+                assertEquals("no_session", (event as SessionEvent.Expired).reason)
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 
     @Test
     fun sessionEvents_emitsLostThenLiveInOrder() =
-        runTest(UnconfinedTestDispatcher()) {
-            val scope = CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher(testScheduler))
-            val lostDeferred = scope.async { gate.sessionEvents().first() }
+        runTest {
+            gate.sessionEvents().test {
+                gate.onSessionLost()
+                assertEquals(SessionEvent.Lost, awaitItem())
 
-            gate.onSessionLost()
-            val lostEvent = lostDeferred.await()
-            assertEquals(SessionEvent.Lost, lostEvent)
-
-            val liveDeferred = scope.async { gate.sessionEvents().first() }
-            gate.onSessionRestored()
-            val liveEvent = liveDeferred.await()
-            assertEquals(SessionEvent.Live, liveEvent)
-
-            scope.cancel()
+                gate.onSessionRestored()
+                assertEquals(SessionEvent.Live, awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
         }
 }

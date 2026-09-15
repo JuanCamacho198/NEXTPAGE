@@ -119,6 +119,53 @@ class OutboxDrainSchedulerTest {
             }
         }
 
+    // ── S7 drain invariants (T7.2) ──────────────────────────────────
+
+    /**
+     * A write while offline must still enqueue. The scheduler deliberately has no
+     * connectivity dependency: it enqueues unconditionally and the CONNECTED
+     * constraint defers execution until the network returns. The absence of any
+     * connectivity check is the invariant under test (there is nothing to stub for
+     * "offline"), and the constraint is the deferral mechanism.
+     */
+    @Test
+    fun scheduleDrain_whileOffline_stillEnqueuesConstrainedWork() =
+        runTest {
+            val workManager = mockk<WorkManager>(relaxed = true)
+            val request = slot<OneTimeWorkRequest>()
+            val scheduler = schedulerFor(workManager, FakeSessionManager(session("user-1")))
+
+            scheduler.scheduleDrain()
+
+            verify(exactly = 1) {
+                workManager.enqueueUniqueWork("outbox-drain-user-1", ExistingWorkPolicy.KEEP, capture(request))
+            }
+            val constraints = readField(readField(request.captured, "workSpec"), "constraints") as Constraints
+            assertEquals(NetworkType.CONNECTED, constraints.requiredNetworkType)
+        }
+
+    /**
+     * Duplicate drain requests must target the SAME unique name so that
+     * `ExistingWorkPolicy.KEEP` suppresses a second concurrent run. This is the
+     * scheduler-side half of the no-double-drain guarantee; WorkManager owns the
+     * other half.
+     */
+    @Test
+    fun scheduleDrain_duplicateRequests_reuseTheSameUniqueNameForKeepDedup() =
+        runTest {
+            val workManager = mockk<WorkManager>(relaxed = true)
+            val names = mutableListOf<String>()
+            val scheduler = schedulerFor(workManager, FakeSessionManager(session("user-1")))
+
+            scheduler.scheduleDrain()
+            scheduler.scheduleDrain()
+
+            verify(exactly = 2) {
+                workManager.enqueueUniqueWork(capture(names), ExistingWorkPolicy.KEEP, any<OneTimeWorkRequest>())
+            }
+            assertEquals(listOf("outbox-drain-user-1", "outbox-drain-user-1"), names)
+        }
+
     // ── helpers ─────────────────────────────────────────────────────
 
     private fun schedulerFor(

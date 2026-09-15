@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SDD android-stack-modernization S9: minimal macrobenchmark test-APK manifest.
+     The module is self-instrumenting (no <instrumentation> node here — AGP builds
+     it from testInstrumentationRunner). Journey permissions are none: UIAutomator
+     drives the target app through the accessibility/input APIs. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" />

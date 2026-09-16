@@ -13,11 +13,18 @@ export type CatalogSource = string & { readonly __catalogSource: true };
 
 export const BUILTIN_GUTENDEX = 'builtin:gutendex' as CatalogSource;
 export const BUILTIN_OPENLIBRARY = 'builtin:openlibrary' as CatalogSource;
+/**
+ * Key-gated Google Books source. Registered in the closed built-in registry so
+ * `parseCatalogSource('builtin:googlebooks')` accepts it, but the provider is
+ * only constructed when `VITE_GOOGLE_BOOKS_KEY` is non-blank (fail-closed).
+ */
+export const BUILTIN_GOOGLEBOOKS = 'builtin:googlebooks' as CatalogSource;
 
 /** Closed registry of first-party built-in source names (curated bundle included). */
 const KNOWN_BUILTIN_NAMES = [
   'gutendex',
   'openlibrary',
+  'googlebooks',
   'standard-ebooks',
   'librivox',
   'wikisource',
@@ -68,6 +75,18 @@ export interface CatalogBook {
   languages: string[];
   subjects: string[];
   downloadUrl: string | null;
+  /**
+   * WU1 additive-optional enrichment (Android parity). All optional so
+   * existing providers, fixtures, and cached payloads keep compiling.
+   */
+  description?: string | null;
+  formats?: Record<string, string>;
+  isbn10?: string | null;
+  isbn13?: string | null;
+  isPublicDomain?: boolean | null;
+  openLibraryWorkId?: string | null;
+  internetArchiveId?: string | null;
+  googleBooksId?: string | null;
 }
 
 export interface PagedResult {

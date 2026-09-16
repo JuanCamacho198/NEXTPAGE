@@ -8,6 +8,10 @@
       "copyright": false,
       "languages": ["en"],
       "subjects": ["Love stories", "Domestic fiction"],
+      "summaries": [
+        "It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.",
+        "Elizabeth Bennet spars with the proud Mr. Darcy."
+      ],
       "formats": {
         "application/epub+zip": "https://www.gutenberg.org/ebooks/1342.epub3.images",
         "text/plain": "https://www.gutenberg.org/ebooks/1342.txt.utf8",

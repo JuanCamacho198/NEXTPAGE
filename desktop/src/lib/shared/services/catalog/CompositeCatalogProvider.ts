@@ -24,6 +24,7 @@ import {
   type DiscoverCacheStore,
 } from './DiscoverCache';
 import { GutendexCatalogProvider } from './BuiltInCatalogProviders';
+import { GoogleBooksCatalogProvider, googleBooksProviderOrNull } from './BuiltInCatalogProviders';
 import { OpenLibraryCatalogProvider } from './BuiltInCatalogProviders';
 import { mergeResults, resolveDownloadUrl, resolveTotalCount, toPagedResult } from './mappers';
 import { DEBOUNCE_MS, createSearchDebouncer } from './policy';
@@ -55,18 +56,29 @@ import { CuratedCatalogProvider } from '../addons/CuratedCatalogProvider';
 import { AddonCatalogProvider } from '../addons/AddonCatalogProvider';
 import type { AddonTransport, InstalledAddonRow } from '../addons/AddonRegistry';
 
-/** Default provider list: built-ins first, then the curated bundle, then
- * enabled addons in install order (disabled rows are excluded). */
+/**
+ * Default provider list: built-ins first (Gutendex, Open Library, then the
+ * key-gated Google Books provider), then the curated bundle, then enabled
+ * addons in install order (disabled rows are excluded).
+ *
+ * `googleBooksKey` defaults to blank, which omits Google Books entirely
+ * (fail-closed); the app composition root passes
+ * `googleBooksKeyFromEnv()` so the ambient environment never leaks into
+ * provider construction made by tests.
+ */
 export function defaultCatalogProviders(
   installedAddons: InstalledAddonRow[] = [],
   addonTransport?: AddonTransport,
+  googleBooksKey = '',
 ): CatalogProvider[] {
   const addonProviders = installedAddons
     .filter((row) => row.enabled)
     .map((row) => new AddonCatalogProvider(row.manifest, row.id, addonTransport));
+  const googleBooks: GoogleBooksCatalogProvider | null = googleBooksProviderOrNull(googleBooksKey);
   return [
     new GutendexCatalogProvider(),
     new OpenLibraryCatalogProvider(),
+    ...(googleBooks ? [googleBooks] : []),
     new CuratedCatalogProvider(),
     ...addonProviders,
   ];
@@ -89,6 +101,7 @@ export interface CatalogProviderSupplier {
 export function createRebuildingCatalogProvider(
   loadRows: () => Promise<InstalledAddonRow[]>,
   addonTransport?: AddonTransport,
+  googleBooksKey = '',
 ): CatalogProviderSupplier {
   let current: Promise<CompositeCatalogProvider> | null = null;
   let built: CompositeCatalogProvider | null = null;
@@ -98,7 +111,7 @@ export function createRebuildingCatalogProvider(
       const gen = generation;
       return (current ??= loadRows().then((rows) => {
         const composite = new CompositeCatalogProvider(
-          defaultCatalogProviders(rows, addonTransport),
+          defaultCatalogProviders(rows, addonTransport, googleBooksKey),
         );
         if (gen === generation) built = composite;
         return composite;

@@ -12,6 +12,7 @@ pub mod bookmarks;
 pub mod collections;
 pub mod diagnostics;
 pub mod dictionary;
+pub mod discover_cache;
 pub mod epub_reader;
 pub mod files;
 pub mod highlights;
@@ -36,6 +37,8 @@ pub use collections::*;
 pub use diagnostics::*;
 #[allow(unused_imports)]
 pub use dictionary::*;
+#[allow(unused_imports)]
+pub use discover_cache::*;
 #[allow(unused_imports)]
 pub use epub_reader::*;
 #[allow(unused_imports)]

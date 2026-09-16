@@ -210,7 +210,9 @@ fn main() {
             commands::listInstalledAddons,
             commands::upsertInstalledAddon,
             commands::setAddonEnabled,
-            commands::deleteInstalledAddon
+            commands::deleteInstalledAddon,
+            commands::discoverCacheRead,
+            commands::discoverCachePut
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

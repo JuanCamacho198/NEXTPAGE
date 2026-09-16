@@ -719,11 +719,48 @@ mod download_tests {
         Sleep(Duration),
     }
 
+    /// Read timeout for one `drain_request_head` read and the overall bound on
+    /// how long the harness waits for a request head to arrive.
+    const REQUEST_READ_TIMEOUT: Duration = Duration::from_millis(500);
+    const REQUEST_DRAIN_BUDGET: Duration = Duration::from_secs(5);
+    const MAX_REQUEST_HEAD_BYTES: usize = 8 * 1024;
+
+    /// Reads until the request head (`\r\n\r\n`) is consumed, so the request is
+    /// fully drained before the harness writes its response.
+    ///
+    /// This is not cosmetic. On Windows a socket that is closed while inbound
+    /// data is still unread sends an RST instead of a FIN, and the peer then
+    /// fails the exchange with `WSAECONNRESET` (os error 10054) even though the
+    /// server answered. Reading the head first makes the close graceful.
+    ///
+    /// Bounded: a client that connects and sends nothing is given
+    /// `REQUEST_DRAIN_BUDGET` before the harness answers anyway.
+    fn drain_request_head(stream: &mut std::net::TcpStream) {
+        let mut buffer = [0u8; 1024];
+        let mut head: Vec<u8> = Vec::new();
+        let deadline = Instant::now() + REQUEST_DRAIN_BUDGET;
+        while Instant::now() < deadline {
+            match stream.read(&mut buffer) {
+                Ok(0) => return,
+                Ok(read) => {
+                    head.extend_from_slice(&buffer[..read]);
+                    let head_complete = head.windows(4).any(|window| window == b"\r\n\r\n");
+                    if head_complete || head.len() >= MAX_REQUEST_HEAD_BYTES {
+                        return;
+                    }
+                }
+                Err(err)
+                    if err.kind() == std::io::ErrorKind::WouldBlock
+                        || err.kind() == std::io::ErrorKind::TimedOut => {}
+                Err(_) => return,
+            }
+        }
+    }
+
     /// Every test that drives the shared async runtime (`tauri::async_runtime`)
-    /// holds this lock: concurrent `block_on` calls plus loopback sockets
-    /// produced intermittent transport failures on Windows, so the transfer
-    /// tests run one at a time and stay deterministic. Pure tests (path
-    /// sanitizing, throttle math, registries) still run in parallel.
+    /// holds this lock, so the transfer tests run one at a time against a single
+    /// shared executor. Pure tests (path sanitizing, throttle math, registries)
+    /// still run in parallel.
     fn runtime_guard() -> std::sync::MutexGuard<'static, ()> {
         static RUNTIME_LOCK: Mutex<()> = Mutex::new(());
         RUNTIME_LOCK.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
@@ -757,6 +794,11 @@ mod download_tests {
 
     impl Drop for TestServer {
         fn drop(&mut self) {
+            // Teardown must never block on the accept loop's idle limit: once
+            // the owner is gone no further connection is expected, so the loop
+            // is signalled to exit and the join returns promptly even when a
+            // failed assertion left part of the script unserved.
+            self.stop();
             if let Some(handle) = self.handle.take() {
                 let _ = handle.join();
             }
@@ -767,6 +809,17 @@ mod download_tests {
         vec![ServerStep::Write(text.into())]
     }
 
+    /// Binds a loopback listener with one script per accepted connection.
+    ///
+    /// Only the LISTENER is non-blocking (so the accept loop can honour the stop
+    /// flag and its idle limit). Every accepted stream is switched back to
+    /// blocking before it is read, because Windows `accept()` inherits the
+    /// listener's non-blocking mode: a non-blocking accepted stream makes the
+    /// request read return `WSAEWOULDBLOCK` (os error 10035) instead of waiting
+    /// for the request, which leaves the request unconsumed and turns the
+    /// subsequent close into an RST the client reports as `WSAECONNRESET` (os
+    /// error 10054). That single race was what failed one transfer test per
+    /// affected run before the harness drained its requests.
     fn spawn_server(connections: Vec<Vec<ServerStep>>) -> TestServer {
         let listener = TcpListener::bind("127.0.0.1:0").expect("bind loopback");
         let port = listener.local_addr().expect("local addr").port();
@@ -790,9 +843,12 @@ mod download_tests {
                         served += 1;
                         served_by_thread.fetch_add(1, Ordering::SeqCst);
                         last_activity = Instant::now();
-                        let _ = stream.set_read_timeout(Some(Duration::from_millis(500)));
-                        let mut request = [0u8; 2048];
-                        let _ = stream.read(&mut request);
+                        // Undo the non-blocking flag the accepted stream
+                        // inherited from the listener, so the read below waits
+                        // for the request instead of failing with WouldBlock.
+                        let _ = stream.set_nonblocking(false);
+                        let _ = stream.set_read_timeout(Some(REQUEST_READ_TIMEOUT));
+                        drain_request_head(&mut stream);
                         for step in &connections[served - 1] {
                             match step {
                                 ServerStep::Write(text) => {
@@ -804,6 +860,10 @@ mod download_tests {
                                 ServerStep::Sleep(duration) => std::thread::sleep(*duration),
                             }
                         }
+                        // Explicit half-close: every canned response carries its
+                        // Content-Length, so the client sees a clean FIN instead
+                        // of relying on the socket drop to close the exchange.
+                        let _ = stream.shutdown(std::net::Shutdown::Write);
                     }
                     Err(err) if err.kind() == std::io::ErrorKind::WouldBlock => {
                         if Instant::now().duration_since(last_activity) > idle_limit {
@@ -877,28 +937,16 @@ mod download_tests {
     /// http, which `perform_download` must reject, so transport tests call the
     /// post-gate seam while the gate itself is pinned separately.
     ///
-    /// Loopback sends occasionally fail on Windows (dynamic-port reuse) before a
-    /// single byte is transferred; such an attempt is retried a few times so the
-    /// assertions describe transfer behavior, not host networking. Any outcome
-    /// that carries transport-independent meaning (HTTP status, size cap,
-    /// cancellation, a failure after bytes were written) is returned as is.
+    /// Deliberately a single attempt with no transport retry. The harness drains
+    /// and answers every request, so a transport failure here is a real defect
+    /// and must fail the test instead of being retried away.
     fn run_download(
         client: &reqwest::Client,
         app_data_dir: &Path,
         input: &DownloadRemoteBookInput,
         sink: &mut impl ProgressSink,
     ) -> Result<DownloadRemoteBookResult, DownloadError> {
-        for attempt in 0..4 {
-            let result =
-                tauri::async_runtime::block_on(perform_transfer(client, app_data_dir, input, sink));
-            match result {
-                Err(err) if err.code == ERR_NETWORK && err.downloaded == 0 && attempt < 3 => {
-                    std::thread::sleep(Duration::from_millis(20 * (attempt + 1)));
-                }
-                other => return other,
-            }
-        }
-        unreachable!("the retry loop always returns")
+        tauri::async_runtime::block_on(perform_transfer(client, app_data_dir, input, sink))
     }
 
     /// Drives the full entry point, policy gate included.
@@ -911,33 +959,18 @@ mod download_tests {
         tauri::async_runtime::block_on(perform_download(client, app_data_dir, input, sink))
     }
 
-    /// Sends one request through a fresh loopback server. A policy outcome
-    /// (`is_redirect`) is returned immediately; a transport flake is retried
-    /// with a brand-new server, because a half-served script is exactly what
-    /// makes the next request look like a refusal.
-    fn send_through_fresh_server<F>(mut make: F) -> Result<reqwest::Response, reqwest::Error>
+    /// Sends one request through a fresh loopback server: the response, or the
+    /// error the client raised (`is_redirect` for an over-long chain). No retry —
+    /// the harness answers deterministically, so a transport error must surface.
+    fn send_through_fresh_server<F>(make: F) -> Result<reqwest::Response, reqwest::Error>
     where
-        F: FnMut() -> (TestServer, String),
+        F: FnOnce() -> (TestServer, String),
     {
-        let mut last_error: Option<reqwest::Error> = None;
-        for attempt in 0..4 {
-            let (server, url) = make();
-            let client = test_client();
-            let result = tauri::async_runtime::block_on(async { client.get(&url).send().await });
-            match result {
-                Ok(response) => {
-                    drop(server);
-                    return Ok(response);
-                }
-                Err(err) if err.is_redirect() => return Err(err),
-                Err(err) => {
-                    last_error = Some(err);
-                    drop(server);
-                    std::thread::sleep(Duration::from_millis(20 * (attempt + 1)));
-                }
-            }
-        }
-        panic!("the loopback request never reached the server: {last_error:?}")
+        let (server, url) = make();
+        let client = test_client();
+        let result = tauri::async_runtime::block_on(async { client.get(&url).send().await });
+        drop(server);
+        result
     }
 
     fn run_stream<T, E, S>(
@@ -1350,63 +1383,52 @@ mod download_tests {
         let half = PROGRESS_MIN_BYTES as usize;
         let total = half * 2;
 
-        for attempt in 0..3 {
-            let head =
-                format!("HTTP/1.1 200 OK\r\nContent-Length: {total}\r\nConnection: close\r\n\r\n");
-            let server = spawn_server(vec![vec![
-                ServerStep::Write(format!("{head}{}", "x".repeat(half))),
-                ServerStep::Sleep(Duration::from_millis(800)),
-                ServerStep::Write("x".repeat(half)),
-            ]]);
-            let url = server.url("/slow.epub");
+        let head =
+            format!("HTTP/1.1 200 OK\r\nContent-Length: {total}\r\nConnection: close\r\n\r\n");
+        let server = spawn_server(vec![vec![
+            ServerStep::Write(format!("{head}{}", "x".repeat(half))),
+            ServerStep::Sleep(Duration::from_millis(800)),
+            ServerStep::Write("x".repeat(half)),
+        ]]);
+        let url = server.url("/slow.epub");
 
-            let sink = SharedSink::default();
-            let recorder = sink.clone();
-            let reported_dir = dir_path.clone();
-            let thread_dir = dir_path.clone();
-            let handle = std::thread::spawn(move || {
-                let client = test_client();
-                let mut recorder = recorder;
-                let input = input_for("cancel-mid-stream", &url);
-                run_download(&client, &thread_dir, &input, &mut recorder)
-            });
+        let sink = SharedSink::default();
+        let recorder = sink.clone();
+        let reported_dir = dir_path.clone();
+        let thread_dir = dir_path.clone();
+        let handle = std::thread::spawn(move || {
+            let client = test_client();
+            let mut recorder = recorder;
+            let input = input_for("cancel-mid-stream", &url);
+            run_download(&client, &thread_dir, &input, &mut recorder)
+        });
 
-            // Wait for the first half to land (reported as progress) or for the
-            // transfer to end without it.
-            let mut waited = 0;
-            while sink.progress_count() == 0 && sink.recorded().terminal_count() == 0 {
-                std::thread::sleep(Duration::from_millis(5));
-                waited += 1;
-                assert!(
-                    waited < 600,
-                    "the transfer neither wrote a chunk nor ended: {:?}",
-                    sink.recorded().events
-                );
-            }
-
-            if sink.progress_count() == 0 && attempt < 2 {
-                // A loopback hiccup ended the transfer before any byte was
-                // written: retry with a fresh server instead of asserting on it.
-                let _ = handle.join();
-                continue;
-            }
-
-            assert!(cancel_transfer("cancel-mid-stream"), "an in-flight transfer is cancellable");
-
-            let result = handle.join().expect("download thread");
-            let sink = sink.recorded();
-            assert_eq!(result.unwrap_err().code, ERR_CANCELLED);
-            assert_eq!(sink.terminal_count(), 1);
-            assert_eq!(sink.last().phase, PHASE_CANCELLED);
-            assert_eq!(sink.last().downloaded, half as u64);
-            assert_eq!(sink.last().total, Some(total as u64));
+        // The first half must land and be reported before the cancel: the
+        // transfer cannot end (terminal event) while the second half is still
+        // held back by `ServerStep::Sleep`, so this waits for a real progress
+        // event rather than for an outcome. A transport failure would surface as
+        // a terminal event instead, and the assertions below then fail.
+        let mut waited = 0;
+        while sink.progress_count() == 0 && sink.recorded().terminal_count() == 0 {
+            std::thread::sleep(Duration::from_millis(5));
+            waited += 1;
             assert!(
-                download_entries(reported_dir.as_path()).is_empty(),
-                "the .part file is removed"
+                waited < 600,
+                "the transfer neither wrote a chunk nor ended: {:?}",
+                sink.recorded().events
             );
-            return;
         }
-        panic!("the transfer never reached its first chunk");
+
+        assert!(cancel_transfer("cancel-mid-stream"), "an in-flight transfer is cancellable");
+
+        let result = handle.join().expect("download thread");
+        let sink = sink.recorded();
+        assert_eq!(result.unwrap_err().code, ERR_CANCELLED);
+        assert_eq!(sink.terminal_count(), 1);
+        assert_eq!(sink.last().phase, PHASE_CANCELLED);
+        assert_eq!(sink.last().downloaded, half as u64);
+        assert_eq!(sink.last().total, Some(total as u64));
+        assert!(download_entries(reported_dir.as_path()).is_empty(), "the .part file is removed");
     }
 
     /// Writes land per chunk (never one buffered blob) and an absent
@@ -1508,5 +1530,64 @@ mod download_tests {
 
         assert_eq!(err.code, ERR_NETWORK);
         assert_eq!(err.downloaded, 4);
+    }
+
+    /// Regression guard for the loopback harness itself (the defect that made
+    /// `cargo test download` intermittently fail one transport test per run).
+    ///
+    /// The accept loop needs a non-blocking LISTENER to honour its stop flag and
+    /// idle limit, but on Windows the socket returned by `accept()` INHERITS the
+    /// listener's non-blocking mode. A non-blocking accepted stream makes the
+    /// request read return `WSAEWOULDBLOCK` (os error 10035) immediately instead
+    /// of waiting; the request then stays unconsumed, and closing a socket that
+    /// still has unread inbound data makes Windows send an RST instead of a FIN.
+    /// The client sees `WSAECONNRESET` (os error 10054) in the connect/send
+    /// phase, which is why the failure landed in a different test each run and
+    /// never in the module's logic assertions.
+    ///
+    /// `spawn_server` therefore switches every accepted stream back to blocking
+    /// and drains the request head before answering. This pins the property that
+    /// makes that work: an accepted stream must WAIT for a request that arrives
+    /// after the connection was accepted. A stream left non-blocking returns at
+    /// once; the blocking stream stays parked until its read timeout.
+    #[test]
+    fn accepted_loopback_streams_wait_for_the_request() {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind loopback");
+        let port = listener.local_addr().expect("local addr").port();
+        listener.set_nonblocking(true).expect("non blocking accept");
+
+        let server = std::thread::spawn(move || loop {
+            match listener.accept() {
+                Ok((mut stream, _)) => {
+                    // Exactly what `spawn_server` does per accepted stream.
+                    let _ = stream.set_nonblocking(false);
+                    let _ = stream.set_read_timeout(Some(REQUEST_READ_TIMEOUT));
+                    let mut buffer = [0u8; 128];
+                    let started = Instant::now();
+                    let result = stream.read(&mut buffer);
+                    return (result, started.elapsed());
+                }
+                Err(err) if err.kind() == std::io::ErrorKind::WouldBlock => {
+                    std::thread::sleep(Duration::from_millis(2));
+                }
+                Err(err) => panic!("accept failed: {err}"),
+            }
+        });
+
+        // Connect and send NOTHING: the exact window in which the inherited
+        // non-blocking read used to return WouldBlock and abandon the request.
+        let _client = std::net::TcpStream::connect(("127.0.0.1", port)).expect("connect");
+        let (read_result, waited) = server.join().expect("server thread");
+
+        let err = read_result.expect_err("no bytes were sent, so the read cannot succeed");
+        assert!(
+            matches!(err.kind(), std::io::ErrorKind::TimedOut | std::io::ErrorKind::WouldBlock),
+            "expected the read to end on its timeout, got {err:?}"
+        );
+        assert!(
+            waited >= Duration::from_millis(400),
+            "the accepted stream must wait for the request instead of returning immediately \
+             (which is what an inherited non-blocking socket does): {waited:?}"
+        );
     }
 }

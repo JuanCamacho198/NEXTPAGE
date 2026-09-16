@@ -80,14 +80,16 @@ describe('DiscoverDomainState (PR2 RED)', () => {
     expect(state.status).toBe('idle');
   });
 
-  it('search loads books with Gutendex authority and OL cover fallback', async () => {
+  it('search loads books with Gutendex authority and Gutenberg cover', async () => {
     const { state } = stateWith(searchBodies());
     state.setQuery('pride');
     await state.searchFirstPage();
     expect(state.status).toBe('loaded');
     expect(state.totalCount).toBe(3);
     const pride = state.books.find((b) => b.id === 'gutendex:1342');
-    expect(pride?.coverUrl).toBe('https://covers.openlibrary.org/b/id/6794977-M.jpg');
+    expect(pride?.coverUrl).toBe(
+      'https://www.gutenberg.org/cache/epub/1342/pg1342.cover.medium.jpg',
+    );
     expect(state.books.some((b) => b.title === 'Borrow Restricted Title')).toBe(false);
   });
 

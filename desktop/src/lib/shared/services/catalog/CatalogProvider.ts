@@ -68,6 +68,18 @@ export interface CatalogBook {
   languages: string[];
   subjects: string[];
   downloadUrl: string | null;
+  /**
+   * WU1 additive-optional enrichment (Android parity). All optional so
+   * existing providers, fixtures, and cached payloads keep compiling.
+   */
+  description?: string | null;
+  formats?: Record<string, string>;
+  isbn10?: string | null;
+  isbn13?: string | null;
+  isPublicDomain?: boolean | null;
+  openLibraryWorkId?: string | null;
+  internetArchiveId?: string | null;
+  googleBooksId?: string | null;
 }
 
 export interface PagedResult {

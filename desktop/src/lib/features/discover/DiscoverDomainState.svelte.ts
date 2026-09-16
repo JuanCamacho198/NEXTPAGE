@@ -5,11 +5,13 @@ import {
   type CatalogProvider,
   type CatalogSourceInfo,
 } from '$lib/shared/services/catalog';
+import { importDiscoverFile, type DiscoverDownloadPorts } from './discoverDownloadImport';
 import {
-  fetchBytesWithProgress,
-  importDiscoverBytes,
-  type DiscoverDownloadPorts,
-} from './discoverDownloadImport';
+  createTauriDownloadTransfer,
+  isDownloadCancelled,
+  type DownloadTransferPort,
+} from './downloadTransfer';
+import { discardRemoteDownload } from '$lib/shared/api/downloadApi';
 import { TRENDING_CHIPS } from './discoverChips';
 import {
   catalogCodeOf,
@@ -34,6 +36,15 @@ export { CHIP_KEYWORDS, TRENDING_CHIPS, filterBooksByChip, matchesChip } from '.
 /** The 3-rail plan lives in `railPlan.ts`; re-exported so existing imports keep working. */
 export { DISCOVER_RAIL_COUNT, DISCOVER_RAIL_LIMIT, type DiscoverRailSpec } from './railPlan';
 export type { DiscoverBrowseScope, DiscoverRailState } from './DiscoverRailsDomainState.svelte';
+
+/** Single production transfer port; the Rust command owns the actual transfer. */
+const defaultDownloadTransfer: DownloadTransferPort = createTauriDownloadTransfer();
+
+function messageOf(err: unknown): string {
+  if (typeof err === 'string') return err;
+  if (err instanceof Error) return err.message;
+  return String(err);
+}
 
 class DiscoverDomainState {
   query = $state('');
@@ -60,7 +71,12 @@ class DiscoverDomainState {
   readonly railsState: DiscoverRailsDomainState;
 
   private lastAttemptedPage = 0;
-  private downloadController: AbortController | null = null;
+  /** Transfer id of the in-flight backend download, or null. */
+  private activeTransferId: string | null = null;
+  /** Set by `cancelDownload` so a late settle becomes `cancelled`, never `imported`. */
+  private cancelRequested = false;
+  /** Bumped by `resetDownload` so a superseded transfer cannot touch the machine. */
+  private transferGeneration = 0;
 
   constructor(
     private readonly provider: CatalogProvider = liveCatalogProvider,
@@ -139,8 +155,7 @@ class DiscoverDomainState {
 
   async openDetail(id: string): Promise<void> {
     // Opening a book supersedes any transfer in flight for the previous one.
-    this.downloadController?.abort();
-    this.downloadController = null;
+    this.cancelDownload();
     this.resetDownload();
     this.detailStatus = 'loading';
     this.detail = null;
@@ -154,73 +169,102 @@ class DiscoverDomainState {
   }
 
   dismissDetail(): void {
-    this.downloadController?.abort();
-    this.downloadController = null;
+    this.cancelDownload();
     this.detail = null;
     this.detailStatus = 'closed';
     this.resetDownload();
   }
 
   /**
-   * Fetch the open book's catalog URL, then import the bytes into the
-   * library. Progress reports received bytes; cancel aborts the fetch so a
-   * halted transfer never reaches persistence.
+   * Transfer the open detail book through the backend port, then import the
+   * resulting local file into the library. Progress reports received bytes;
+   * cancel aborts the backend transfer so a halted transfer never reaches
+   * persistence.
    */
   async startDownload(): Promise<void> {
     if (this.downloadState === 'downloading' || this.downloadState === 'importing') return;
     const book = this.detail;
-    const url = book?.downloadUrl;
+    const url = book?.downloadUrl ?? null;
     if (!book || !url || url.trim() === '') {
       this.downloadState = 'error';
       this.downloadError = 'UNAVAILABLE_DOWNLOAD';
       return;
     }
-    const controller = new AbortController();
-    this.downloadController = controller;
+    await this.startDownloadUrl(book, url);
+  }
+
+  /**
+   * Start a transfer of `url` for `book` on the single download machine.
+   * `downloading` → `importing` → `imported`, plus `error` and `cancelled`;
+   * the backend byte source replaces the previous webview fetch. On success the
+   * backend's temp file is discarded best-effort.
+   */
+  async startDownloadUrl(book: CatalogBook, url: string): Promise<void> {
+    if (this.downloadState === 'downloading' || this.downloadState === 'importing') return;
+    const trimmed = typeof url === 'string' ? url.trim() : '';
+    if (!book || trimmed === '') {
+      this.downloadState = 'error';
+      this.downloadError = 'UNAVAILABLE_DOWNLOAD';
+      return;
+    }
+    const transferId = crypto.randomUUID();
+    const generation = this.transferGeneration;
+    const transfer = this.downloadPorts.transfer ?? defaultDownloadTransfer;
+    this.activeTransferId = transferId;
+    this.cancelRequested = false;
     this.downloadState = 'downloading';
     this.downloadError = null;
     this.progressBytes = 0;
     this.progressTotal = null;
     try {
-      const bytes = await fetchBytesWithProgress(
-        url,
-        controller.signal,
+      const { filePath } = await transfer.download(
+        { transferId, url: trimmed, format: 'epub' },
         (done, total) => {
           this.progressBytes = done;
           this.progressTotal = total;
         },
-        this.downloadPorts.fetchFn,
       );
-      if (controller.signal.aborted) {
-        this.downloadState = 'cancelled';
+      if (this.transferGeneration !== generation) return;
+      if (this.cancelRequested) {
+        this.settleCancelled(filePath);
         return;
       }
       this.downloadState = 'importing';
-      const result = await importDiscoverBytes(book, bytes, this.downloadPorts);
+      const result = await importDiscoverFile(book, filePath, this.downloadPorts);
+      if (this.transferGeneration !== generation) return;
       if (result.ok) {
         this.downloadState = 'imported';
         this.downloadError = null;
+        this.discardDownloadedFile(filePath);
       } else {
         this.downloadState = 'error';
         this.downloadError = result.error;
       }
     } catch (err) {
-      if (controller.signal.aborted || (err instanceof Error && err.name === 'AbortError')) {
+      if (this.transferGeneration !== generation) return;
+      if (this.cancelRequested || isDownloadCancelled(err)) {
         this.downloadState = 'cancelled';
         this.downloadError = null;
       } else {
         this.downloadState = 'error';
-        this.downloadError = err instanceof Error ? err.message : 'DOWNLOAD_FAILED';
+        this.downloadError = messageOf(err);
       }
     } finally {
-      if (this.downloadController === controller) this.downloadController = null;
+      if (this.transferGeneration === generation) this.activeTransferId = null;
     }
   }
 
-  /** Abort an in-flight fetch; the halted transfer is never persisted. */
+  /**
+   * Cancel the in-flight backend transfer (the single cancel path). The halted
+   * transfer settles as `cancelled` and is never imported.
+   */
   cancelDownload(): void {
     if (this.downloadState !== 'downloading') return;
-    this.downloadController?.abort();
+    const transferId = this.activeTransferId;
+    if (transferId === null) return;
+    this.cancelRequested = true;
+    const transfer = this.downloadPorts.transfer ?? defaultDownloadTransfer;
+    void transfer.cancel(transferId).catch(() => undefined);
   }
 
   /** Re-run the last failed or halted transfer for the same open book. */
@@ -286,7 +330,22 @@ class DiscoverDomainState {
     this.lastAttemptedPage = 0;
   }
 
+  /** Best-effort removal of the backend's temp file; never affects the UI state. */
+  private discardDownloadedFile(filePath: string): void {
+    void discardRemoteDownload(filePath).catch(() => undefined);
+  }
+
+  /** Settle a transfer the user cancelled after the backend had finished it. */
+  private settleCancelled(filePath: string): void {
+    this.downloadState = 'cancelled';
+    this.downloadError = null;
+    this.discardDownloadedFile(filePath);
+  }
+
   private resetDownload(): void {
+    this.transferGeneration += 1;
+    this.activeTransferId = null;
+    this.cancelRequested = false;
     this.downloadState = 'idle';
     this.downloadError = null;
     this.progressBytes = 0;

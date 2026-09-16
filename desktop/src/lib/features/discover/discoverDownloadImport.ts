@@ -1,11 +1,14 @@
 /**
  * Discover download-to-import bridge (WU2).
  *
- * Fetches the open detail book's catalog URL with progress/cancel support,
- * then reuses the verified `importRecoveredBook` pipeline via a synthetic
- * entry: no `contentHash` (hash check skipped) with EPUB metadata fallback,
- * mirroring the shelf download flow. The entry is marked imported only when
- * a live user session exists; otherwise the mark step is a no-op.
+ * The byte source is the native backend: `downloadTransfer.ts` streams the
+ * remote URL to a local file through the Rust command, and this module reads
+ * that local file and reuses the verified `importRecoveredBook` pipeline via a
+ * synthetic entry: no `contentHash` (hash check skipped) with EPUB metadata
+ * fallback, mirroring the shelf download flow. The entry is marked imported only
+ * when a live user session exists; otherwise the mark step is a no-op.
+ *
+ * No webview `fetch` remains anywhere in `features/discover/*`.
  */
 import { authState } from '$lib/shared/stores/AuthState.svelte';
 import type { CatalogBook } from '$lib/shared/services/catalog';
@@ -15,14 +18,18 @@ import { importRecoveredBook, type ImportDeps } from '$lib/shared/recovery/deskt
 import type { SupabaseUserBookRow } from '$lib/shared/sync/SupabaseBookCatalogSync';
 import { SupabaseBookCatalogSync } from '$lib/shared/sync/SupabaseBookCatalogSync';
 import { extractEpubMetadataFromBytes } from '$lib/shared/services/epubImportMetadata';
+import type { DownloadTransferPort } from './downloadTransfer';
 
-export type DiscoverProgressFn = (doneBytes: number, totalBytes: number | null) => void;
+export type { DiscoverProgressFn } from './downloadTransfer';
 
 export interface DiscoverDownloadPorts {
-  fetchFn?: typeof fetch;
+  /** Backend transfer port; defaults to the Tauri command-backed port. */
+  transfer?: DownloadTransferPort;
   importFn?: typeof importRecoveredBook;
   persist?: ImportDeps['persist'];
   markImported?: ImportDeps['markImported'];
+  /** Local file reader; defaults to the existing `getFileBytes` command. */
+  readFile?: (filePath: string) => Promise<Uint8Array>;
 }
 
 let discoverLibraryPort: LibraryPort = new TauriLibraryAdapter();
@@ -39,51 +46,9 @@ function isFallbackTitle(title: string, id: string): boolean {
   return title === id || UUID_LIKE_TITLE_RE.test(title);
 }
 
-function totalOrNull(header: string | null): number | null {
-  if (header === null || header.trim() === '') return null;
-  const parsed = Number(header);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
-}
-
-/**
- * Fetch a catalog URL into memory, reporting byte progress. Rejects with an
- * `AbortError` when `signal` aborts; rejects with the HTTP status line on
- * non-2xx responses (redacted at the call site to a code-only message).
- */
-export async function fetchBytesWithProgress(
-  url: string,
-  signal: AbortSignal,
-  onProgress: DiscoverProgressFn,
-  fetchFn: typeof fetch = fetch,
-): Promise<Uint8Array> {
-  const response = await fetchFn(url, { signal });
-  if (!response.ok) throw new Error(`DOWNLOAD_HTTP_${response.status}`);
-  const total = totalOrNull(response.headers.get('content-length'));
-  const reader = response.body?.getReader();
-  if (!reader) {
-    const fallback = new Uint8Array(await response.arrayBuffer());
-    onProgress(fallback.length, total);
-    return fallback;
-  }
-  const chunks: Uint8Array[] = [];
-  let done = 0;
-  for (;;) {
-    const { done: finished, value } = await reader.read();
-    if (finished) break;
-    if (value) {
-      chunks.push(value);
-      done += value.length;
-      onProgress(done, total);
-    }
-  }
-  const merged = new Uint8Array(done);
-  let offset = 0;
-  for (const chunk of chunks) {
-    merged.set(chunk, offset);
-    offset += chunk.length;
-  }
-  onProgress(done, total);
-  return merged;
+/** Default local reader: the existing `getFileBytes` library command. */
+async function defaultReadFile(filePath: string): Promise<Uint8Array> {
+  return new Uint8Array(await discoverLibraryPort.getFileBytes(filePath));
 }
 
 /** Synthetic entry so the verified import pipeline can be reused as-is. */
@@ -135,21 +100,22 @@ export interface DiscoverImportResult {
 }
 
 /**
- * Import already-fetched catalog bytes into the library. Returns
+ * Import a backend-downloaded local file into the library. Returns
  * `{ ok: true }` for both fresh and idempotent (`already_imported`)
  * outcomes; anything else maps to `{ ok: false, error }` for retry UI.
- * The `download` closure serves the fetched bytes so no second request
- * is issued — a cancelled fetch therefore never reaches persistence.
+ * The file is read lazily inside the import's `download` dependency, so a
+ * cancelled transfer never reaches persistence.
  */
-export async function importDiscoverBytes(
+export async function importDiscoverFile(
   book: CatalogBook,
-  bytes: Uint8Array,
+  filePath: string,
   ports: DiscoverDownloadPorts = {},
 ): Promise<DiscoverImportResult> {
   const row = buildDiscoverImportRow(book);
+  const readFile = ports.readFile ?? defaultReadFile;
   const importFn = ports.importFn ?? importRecoveredBook;
   const result = await importFn(row, {
-    download: async () => bytes,
+    download: async () => readFile(filePath),
     persist: ports.persist ?? defaultPersist,
     markImported:
       ports.markImported ??

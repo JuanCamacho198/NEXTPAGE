@@ -15,6 +15,7 @@ import type { MessageKey } from '$lib/shared/i18n/messages.en';
 import type { CatalogBook, CatalogProvider } from '$lib/shared/services/catalog/CatalogProvider';
 import { catalogError } from '$lib/shared/services/catalog/errors';
 import { importRecoveredBook } from '$lib/shared/recovery/desktopRecoveryImport';
+import type { DownloadTransferRequest } from '$lib/features/discover/downloadTransfer';
 
 const t = (key: MessageKey): string => key;
 
@@ -68,30 +69,27 @@ function fakeProvider(books: Record<string, CatalogBook>): CatalogProvider {
   };
 }
 
-function okFetch(bytes: number[] = [1, 2, 3]): typeof fetch {
-  return (async () =>
-    new Response(new Uint8Array(bytes), {
-      status: 200,
-      headers: { 'content-length': String(bytes.length) },
-    })) as typeof fetch;
-}
-
-function hangingFetch(): typeof fetch {
-  return ((_: unknown, init?: RequestInit) => {
-    if (init?.signal?.aborted) return Promise.reject(new DOMException('Aborted', 'AbortError'));
-    return new Promise<Response>((_, reject) => {
-      init?.signal?.addEventListener('abort', () => {
-        reject(new DOMException('Aborted', 'AbortError'));
-      });
-    });
-  }) as typeof fetch;
-}
-
 function importedStub(): typeof importRecoveredBook {
   return (async () => ({
     bookId: 'gutendex:1342',
     outcome: 'imported' as const,
   })) as typeof importRecoveredBook;
+}
+
+/** Command-backed byte source: the Rust transfer settles the local file. */
+function fakeTransfer() {
+  const transferId = 'transfer-1';
+  const download = vi.fn(
+    async (
+      _req: DownloadTransferRequest,
+      onProgress: (done: number, total: number | null) => void,
+    ) => {
+      onProgress(3, 3);
+      return { filePath: `/tmp/downloads/${transferId}.epub`, bytes: 3 };
+    },
+  );
+  const cancel = vi.fn(async (_transferId: string) => undefined);
+  return { download, cancel };
 }
 
 describe('discoverDetailFormat pure helpers', () => {
@@ -151,12 +149,22 @@ describe('discoverDetailFormat pure helpers', () => {
 describe('DiscoverDomainState download-to-import (WU2)', () => {
   it('successful download imports and reports progress', async () => {
     const book = fakeBook();
-    const fetchFn = vi.fn(okFetch());
+    const { download, cancel } = fakeTransfer();
     const importFn = vi.fn(importedStub());
-    const state = new DiscoverDomainState(fakeProvider({ [book.id]: book }), { fetchFn, importFn });
+    const state = new DiscoverDomainState(fakeProvider({ [book.id]: book }), {
+      transfer: { download, cancel },
+      importFn,
+    });
     await state.openDetail(book.id);
     await state.startDownload();
-    expect(fetchFn).toHaveBeenCalledWith(book.downloadUrl, expect.anything());
+    expect(download).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: book.downloadUrl,
+        format: 'epub',
+        transferId: expect.any(String),
+      }),
+      expect.any(Function),
+    );
     expect(state.downloadState).toBe('imported');
     expect(state.downloadError).toBeNull();
     expect(state.progressBytes).toBe(3);
@@ -164,11 +172,25 @@ describe('DiscoverDomainState download-to-import (WU2)', () => {
     expect(importFn).toHaveBeenCalledOnce();
   });
 
-  it('cancel aborts the fetch and never reaches persistence', async () => {
+  it('cancel stops the backend transfer and never reaches persistence', async () => {
     const book = fakeBook();
     const importFn = vi.fn(importedStub());
+    let requestedTransferId = '';
+    let rejectDownload: ((err: unknown) => void) | null = null;
+    const download = vi.fn(
+      (req: DownloadTransferRequest): Promise<{ filePath: string; bytes: number }> => {
+        requestedTransferId = req.transferId;
+        return new Promise((_, reject) => {
+          rejectDownload = reject;
+        });
+      },
+    );
+    const cancel = vi.fn(async (transferId: string) => {
+      expect(transferId).toBe(requestedTransferId);
+      rejectDownload?.('BOOK_DOWNLOAD_CANCELLED');
+    });
     const state = new DiscoverDomainState(fakeProvider({ [book.id]: book }), {
-      fetchFn: hangingFetch(),
+      transfer: { download, cancel },
       importFn,
     });
     await state.openDetail(book.id);
@@ -178,6 +200,7 @@ describe('DiscoverDomainState download-to-import (WU2)', () => {
     expect(state.downloadState).toBe('downloading');
     state.cancelDownload();
     await pending;
+    expect(cancel).toHaveBeenCalledOnce();
     expect(state.downloadState).toBe('cancelled');
     expect(importFn).not.toHaveBeenCalled();
   });
@@ -185,15 +208,12 @@ describe('DiscoverDomainState download-to-import (WU2)', () => {
   it('failed download offers retry that recovers', async () => {
     const book = fakeBook();
     let failing = true;
-    const fetchFn = vi.fn((async () => {
+    const download = vi.fn(async (req: DownloadTransferRequest) => {
       if (failing) throw new Error('boom');
-      return new Response(new Uint8Array([1, 2, 3]), {
-        status: 200,
-        headers: { 'content-length': '3' },
-      });
-    }) as typeof fetch);
+      return { filePath: `/tmp/downloads/${req.transferId}.epub`, bytes: 3 };
+    });
     const state = new DiscoverDomainState(fakeProvider({ [book.id]: book }), {
-      fetchFn,
+      transfer: { download, cancel: vi.fn(async () => undefined) },
       importFn: importedStub(),
     });
     await state.openDetail(book.id);
@@ -207,16 +227,16 @@ describe('DiscoverDomainState download-to-import (WU2)', () => {
 
   it('missing download URL fails closed without I/O', async () => {
     const book = fakeBook({ downloadUrl: null });
-    const fetchFn = vi.fn(okFetch());
+    const { download, cancel } = fakeTransfer();
     const state = new DiscoverDomainState(fakeProvider({ [book.id]: book }), {
-      fetchFn,
+      transfer: { download, cancel },
       importFn: importedStub(),
     });
     await state.openDetail(book.id);
     await state.startDownload();
     expect(state.downloadState).toBe('error');
     expect(state.downloadError).toBe('UNAVAILABLE_DOWNLOAD');
-    expect(fetchFn).not.toHaveBeenCalled();
+    expect(download).not.toHaveBeenCalled();
   });
 
   it('openDetail and dismissDetail reset the transfer state', async () => {
@@ -224,7 +244,7 @@ describe('DiscoverDomainState download-to-import (WU2)', () => {
     const second = fakeBook({ id: 'gutendex:11', title: 'Second' });
     const state = new DiscoverDomainState(
       fakeProvider({ [first.id]: first, [second.id]: second }),
-      { fetchFn: okFetch(), importFn: importedStub() },
+      { transfer: fakeTransfer(), importFn: importedStub() },
     );
     await state.openDetail(first.id);
     await state.startDownload();

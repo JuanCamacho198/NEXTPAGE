@@ -46,6 +46,15 @@ describe('discover i18n EN+ES parity (PR4)', () => {
       'discover.accessWebSearch',
       'discover.accessBuy',
       'discover.accessSubscribe',
+      'discover.rail.newest',
+      'discover.rail.popular',
+      'discover.rail.thematic.fiction',
+      'discover.rail.thematic.classic',
+      'discover.rail.thematic.adventure',
+      'discover.rail.thematic.mystery',
+      'discover.rail.thematic.romance',
+      'discover.rail.thematic.science',
+      'discover.rail.thematic.history',
     ] as const;
 
     for (const key of discoverKeys) {
@@ -55,5 +64,10 @@ describe('discover i18n EN+ES parity (PR4)', () => {
 
     expect(messagesEs['discover.search']).toBe('Buscar');
     expect(messagesEs['sidebar.discover']).toBe('Descubrir');
+    expect(messagesEn['discover.rail.newest']).toBe('Recently added');
+    expect(messagesEn['discover.rail.popular']).toBe('Popular');
+    expect(messagesEs['discover.rail.newest']).toBe('Recién agregados');
+    expect(messagesEs['discover.rail.popular']).toBe('Populares');
+    expect(messagesEs['discover.rail.thematic.science']).toBe('Ciencia ficción');
   });
 });

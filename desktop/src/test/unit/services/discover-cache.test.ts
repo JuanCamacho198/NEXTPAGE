@@ -152,7 +152,7 @@ describe('CompositeCatalogProvider cache read-through', () => {
     expect(calls.g).toBe(1);
   });
 
-  it('merges cover fallback identically on cache miss and hit', async () => {
+  it('merges Gutenberg cover identically on cache miss and hit', async () => {
     const calls = { g: 0, o: 0 };
     const { g, o } = stubbedSources(calls);
     const provider = new CompositeCatalogProvider(
@@ -167,7 +167,9 @@ describe('CompositeCatalogProvider cache read-through', () => {
     const hit = await provider.search('pride', 1);
     const prideMiss = miss.results.find((b) => b.id === 'gutendex:1342');
     const prideHit = hit.results.find((b) => b.id === 'gutendex:1342');
-    expect(prideMiss?.coverUrl).toBe('https://covers.openlibrary.org/b/id/6794977-M.jpg');
+    expect(prideMiss?.coverUrl).toBe(
+      'https://www.gutenberg.org/cache/epub/1342/pg1342.cover.medium.jpg',
+    );
     expect(prideHit).toEqual(prideMiss);
   });
 });

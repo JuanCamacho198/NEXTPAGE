@@ -17,12 +17,17 @@ import type {
   CatalogSourceInfo,
   PagedResult,
 } from './CatalogProvider';
+import { googleBooksKeyFromEnv } from './BuiltInCatalogProviders';
 import { resolveDownloadUrl } from './mappers';
 import { AddonRegistry } from '../addons/AddonRegistry';
 
 const registry = new AddonRegistry();
-const supplier: CatalogProviderSupplier = createRebuildingCatalogProvider(() =>
-  registry.listInstalled(),
+// Google Books is registered only when `VITE_GOOGLE_BOOKS_KEY` is non-blank;
+// a blank key omits the provider and the app keeps working on Gutendex + OL.
+const supplier: CatalogProviderSupplier = createRebuildingCatalogProvider(
+  () => registry.listInstalled(),
+  undefined,
+  googleBooksKeyFromEnv(),
 );
 registry.onChanged(() => supplier.invalidate());
 

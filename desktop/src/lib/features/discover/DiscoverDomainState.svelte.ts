@@ -10,11 +10,20 @@ import type {
   CatalogProvider,
   CatalogSourceInfo,
 } from '$lib/shared/services/catalog';
+import {
+  fetchBytesWithProgress,
+  importDiscoverBytes,
+  type DiscoverDownloadPorts,
+} from './discoverDownloadImport';
 
 export type DiscoverStatus =
   'idle' | 'loading' | 'loadingMore' | 'loaded' | 'empty' | 'error' | 'offline';
 
 export type DiscoverDetailStatus = 'closed' | 'loading' | 'loaded' | 'notFound' | 'error';
+
+/** In-app download-to-import lifecycle for the open detail book. */
+export type DiscoverDownloadState =
+  'idle' | 'downloading' | 'importing' | 'imported' | 'cancelled' | 'error';
 
 /** Rail visibility machine: unserved/error rails collapse to Hidden. */
 export type DiscoverRailState =
@@ -49,6 +58,43 @@ export const TRENDING_CHIPS: readonly string[] = [
   'Ciencia ficción',
   'Historia',
 ];
+
+/**
+ * Spanish chip label → English subject keywords. Catalog subjects arrive in
+ * English (Gutendex/Open Library), so a normalized substring check alone
+ * would miss (`ficción` vs `fiction`); keywords bridge the locale gap.
+ * Pure client-side filter — never triggers a catalog call.
+ */
+const CHIP_KEYWORDS: Record<string, readonly string[]> = {
+  Ficción: ['fiction'],
+  Clásicos: ['classic'],
+  Aventura: ['adventure'],
+  Misterio: ['mystery', 'detective'],
+  Romance: ['romance', 'love'],
+  'Ciencia ficción': ['science'],
+  Historia: ['history'],
+};
+
+function normalizeHaystack(value: string): string {
+  return value.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+/** True when a book matches a trending chip (label substring or keyword hit). */
+export function matchesChip(book: CatalogBook, chip: string): boolean {
+  const haystack = normalizeHaystack(
+    `${book.title} ${book.authors.join(' ')} ${book.subjects.join(' ')}`,
+  );
+  const needle = normalizeHaystack(chip);
+  if (needle !== '' && haystack.includes(needle)) return true;
+  const keywords = CHIP_KEYWORDS[chip] ?? [];
+  return keywords.some((keyword) => haystack.includes(keyword));
+}
+
+/** Client-side rail filter; `null` chip returns the slice untouched. */
+export function filterBooksByChip(books: CatalogBook[], chip: string | null): CatalogBook[] {
+  if (chip === null) return books;
+  return books.filter((book) => matchesChip(book, chip));
+}
 
 /**
  * Static curated first slice for the Recomendados rail: visual parity without
@@ -140,6 +186,14 @@ class DiscoverDomainState {
   errorCode = $state<CatalogErrorCode | null>(null);
   detail = $state<CatalogBook | null>(null);
   detailStatus = $state<DiscoverDetailStatus>('closed');
+  /** Download-to-import lifecycle for the open detail book. */
+  downloadState = $state<DiscoverDownloadState>('idle');
+  /** Code-only failure message for the retry UI (redacted at the boundary). */
+  downloadError = $state<string | null>(null);
+  /** Bytes received so far in the current download. */
+  progressBytes = $state(0);
+  /** Total bytes from `content-length`, or null when the host omits it. */
+  progressTotal = $state<number | null>(null);
 
   /** Four browse rails; Hidden rails render nothing (fail-closed). */
   rails = $state<DiscoverRailState[]>([
@@ -154,8 +208,12 @@ class DiscoverDomainState {
   isOnline = $state(true);
 
   private lastAttemptedPage = 0;
+  private downloadController: AbortController | null = null;
 
-  constructor(private readonly provider: CatalogProvider = liveCatalogProvider) {}
+  constructor(
+    private readonly provider: CatalogProvider = liveCatalogProvider,
+    private readonly downloadPorts: DiscoverDownloadPorts = {},
+  ) {}
 
   setQuery(query: string): void {
     this.query = query;
@@ -215,6 +273,10 @@ class DiscoverDomainState {
   }
 
   async openDetail(id: string): Promise<void> {
+    // Opening a book supersedes any transfer in flight for the previous one.
+    this.downloadController?.abort();
+    this.downloadController = null;
+    this.resetDownload();
     this.detailStatus = 'loading';
     this.detail = null;
     try {
@@ -227,8 +289,79 @@ class DiscoverDomainState {
   }
 
   dismissDetail(): void {
+    this.downloadController?.abort();
+    this.downloadController = null;
     this.detail = null;
     this.detailStatus = 'closed';
+    this.resetDownload();
+  }
+
+  /**
+   * Fetch the open book's catalog URL, then import the bytes into the
+   * library. Progress reports received bytes; cancel aborts the fetch so a
+   * halted transfer never reaches persistence.
+   */
+  async startDownload(): Promise<void> {
+    if (this.downloadState === 'downloading' || this.downloadState === 'importing') return;
+    const book = this.detail;
+    const url = book?.downloadUrl;
+    if (!book || !url || url.trim() === '') {
+      this.downloadState = 'error';
+      this.downloadError = 'UNAVAILABLE_DOWNLOAD';
+      return;
+    }
+    const controller = new AbortController();
+    this.downloadController = controller;
+    this.downloadState = 'downloading';
+    this.downloadError = null;
+    this.progressBytes = 0;
+    this.progressTotal = null;
+    try {
+      const bytes = await fetchBytesWithProgress(
+        url,
+        controller.signal,
+        (done, total) => {
+          this.progressBytes = done;
+          this.progressTotal = total;
+        },
+        this.downloadPorts.fetchFn,
+      );
+      if (controller.signal.aborted) {
+        this.downloadState = 'cancelled';
+        return;
+      }
+      this.downloadState = 'importing';
+      const result = await importDiscoverBytes(book, bytes, this.downloadPorts);
+      if (result.ok) {
+        this.downloadState = 'imported';
+        this.downloadError = null;
+      } else {
+        this.downloadState = 'error';
+        this.downloadError = result.error;
+      }
+    } catch (err) {
+      if (controller.signal.aborted || (err instanceof Error && err.name === 'AbortError')) {
+        this.downloadState = 'cancelled';
+        this.downloadError = null;
+      } else {
+        this.downloadState = 'error';
+        this.downloadError = err instanceof Error ? err.message : 'DOWNLOAD_FAILED';
+      }
+    } finally {
+      if (this.downloadController === controller) this.downloadController = null;
+    }
+  }
+
+  /** Abort an in-flight fetch; the halted transfer is never persisted. */
+  cancelDownload(): void {
+    if (this.downloadState !== 'downloading') return;
+    this.downloadController?.abort();
+  }
+
+  /** Re-run the last failed or halted transfer for the same open book. */
+  async retryDownload(): Promise<void> {
+    if (this.downloadState !== 'error' && this.downloadState !== 'cancelled') return;
+    await this.startDownload();
   }
 
   async retry(): Promise<void> {
@@ -321,6 +454,13 @@ class DiscoverDomainState {
     this.errorCode = null;
     this.status = 'idle';
     this.lastAttemptedPage = 0;
+  }
+
+  private resetDownload(): void {
+    this.downloadState = 'idle';
+    this.downloadError = null;
+    this.progressBytes = 0;
+    this.progressTotal = null;
   }
 }
 

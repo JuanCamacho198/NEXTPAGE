@@ -24,6 +24,7 @@ import {
 import {
   BUILTIN_GUTENDEX,
   catalogError,
+  REQUEST_DEADLINE_MS,
   type CatalogBook,
   type CatalogFeaturedSort,
   type CatalogProvider,
@@ -61,6 +62,9 @@ function book(id: string): CatalogBook {
 function paged(books: CatalogBook[]): PagedResult {
   return { results: books, nextPage: null, totalCount: books.length };
 }
+
+/** Let already-resolved rail promises publish without advancing fake timers. */
+const flushMicrotasks = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
 type RailRequest =
   | { kind: 'featured'; sort: CatalogFeaturedSort; limit: number }
@@ -243,14 +247,18 @@ describe('discover rails — fixed three-rail set', () => {
 
 describe('discover rails — isolated error and retry', () => {
   it('isolates a failing rail: the other rails keep their books', async () => {
-    const { provider } = recordingProvider({
+    const { provider, requests } = recordingProvider({
       featured: () => [book('gutendex:1')],
       searching: () => [book('gutendex:2')],
     });
+    // The failing rail still issues its request (recorded) before throwing.
     const flaky: CatalogProvider = {
       ...provider,
       featured: async (sort, limit) => {
-        if (sort === 'POPULAR') throw catalogError('UPSTREAM_ERROR', 'boom');
+        if (sort === 'POPULAR') {
+          requests.push({ kind: 'featured', sort, limit });
+          throw catalogError('UPSTREAM_ERROR', 'boom');
+        }
         return provider.featured(sort, limit);
       },
     };
@@ -263,9 +271,18 @@ describe('discover rails — isolated error and retry', () => {
     expect(state.settled).toBe(true);
 
     const untouched = state.rails[0];
+    const beforeRetry = requests.length;
     await state.retryRail(1);
     expect(state.rails[0]).toBe(untouched);
     expect(state.rails[2].kind).toBe('Loaded');
+    // Retry re-resolved ONLY the failing rail: exactly one new request, for it.
+    expect(requests.slice(beforeRetry)).toEqual([
+      { kind: 'featured', sort: 'POPULAR', limit: DISCOVER_RAIL_LIMIT },
+    ]);
+
+    // A rail that is not in `Error` is never re-resolved.
+    await state.retryRail(0);
+    expect(requests.length).toBe(beforeRetry + 1);
   });
 
   it('flips the connectivity flag only for offline failures', async () => {
@@ -454,5 +471,205 @@ describe('discover rails — bounded rail attempt helper', () => {
     });
     await vi.advanceTimersByTimeAsync(15_000);
     await assertion;
+  });
+});
+
+describe('discover rails — progressive per-rail publish', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('publishes a fast rail while a slow rail is still Loading, index-stably', async () => {
+    let releaseSlow!: (books: CatalogBook[]) => void;
+    const slow = new Promise<CatalogBook[]>((resolve) => {
+      releaseSlow = resolve;
+    });
+    const base = recordingProvider({
+      featured: () => [book('gutendex:1')],
+      searching: () => [book('gutendex:3')],
+    }).provider;
+    const provider: CatalogProvider = {
+      ...base,
+      featured: async (sort, limit) =>
+        sort === 'POPULAR' ? paged((await slow).slice(0, limit)) : base.featured(sort, limit),
+    };
+    const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
+
+    const pending = state.refreshRails();
+    await flushMicrotasks();
+    // Each rail published on its own; nothing waits for the slowest rail.
+    expect(state.rails.map((rail) => rail.kind)).toEqual(['Loaded', 'Loading', 'Loaded']);
+    expect(state.settled).toBe(false);
+
+    releaseSlow([book('gutendex:2')]);
+    await pending;
+    expect(state.rails.map((rail) => rail.kind)).toEqual(['Loaded', 'Loaded', 'Loaded']);
+    expect(state.rails[1].kind === 'Loaded' ? state.rails[1].books[0]?.id : '').toBe('gutendex:2');
+    expect(state.settled).toBe(true);
+  });
+
+  it('settles a hung rail to Error at the deadline and never leaves it Loading', async () => {
+    vi.useFakeTimers();
+    const hung = new Promise<PagedResult>(() => undefined);
+    const base = recordingProvider({
+      featured: () => [book('gutendex:1')],
+      searching: () => [book('gutendex:3')],
+    }).provider;
+    const provider: CatalogProvider = {
+      ...base,
+      featured: async (sort, limit) => (sort === 'POPULAR' ? hung : base.featured(sort, limit)),
+    };
+    const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
+
+    const pending = state.refreshRails();
+    await vi.advanceTimersByTimeAsync(0);
+    // One hung rail never blocks the healthy rails from settling.
+    expect(state.rails[0].kind).toBe('Loaded');
+    expect(state.rails[2].kind).toBe('Loaded');
+    expect(state.rails[1].kind).toBe('Loading');
+
+    await vi.advanceTimersByTimeAsync(REQUEST_DEADLINE_MS);
+    await pending;
+    expect(state.rails[1]).toEqual({ kind: 'Error', code: 'NETWORK_ERROR', offline: true });
+    expect(state.rails.some((rail) => rail.kind === 'Loading')).toBe(false);
+    expect(state.isOnline).toBe(false);
+  });
+
+  it('keeps no aggregate all-rails-settled publish gate in the state layer', () => {
+    const source = readSource('DiscoverRailsDomainState.svelte.ts');
+    expect(source).toContain('this.rails[index] = settled');
+    expect(source).not.toMatch(/Promise\.all\(/);
+  });
+});
+
+describe('discover rails — rail-scoped "Ver todo"', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('opens a term scope and pages the source search', async () => {
+    const { provider, requests } = recordingProvider({
+      featured: () => [book('gutendex:1')],
+      searching: (query) => [book(`gutendex:${query}`)],
+    });
+    const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
+    await state.refreshRails();
+    const before = requests.length;
+
+    await state.openScope({
+      kind: 'term',
+      term: 'fiction',
+      titleKey: 'discover.rail.thematic.fiction',
+    });
+
+    expect(state.scope).toEqual({
+      kind: 'term',
+      term: 'fiction',
+      titleKey: 'discover.rail.thematic.fiction',
+    });
+    expect(state.scopeBooks.map((scoped) => scoped.id)).toEqual(['gutendex:fiction']);
+    expect(state.scopeError).toBeNull();
+    expect(sourceRequests(requests.slice(before))).toEqual([
+      { kind: 'searchSource', sourceId: BUILTIN_GUTENDEX, query: 'fiction', page: 1 },
+    ]);
+  });
+
+  it('opens a featured scope with a single page and no extra query', async () => {
+    const { provider, requests } = recordingProvider({
+      featured: (sort, limit) => [book(`${sort}:${limit}`)],
+      searching: () => [book('gutendex:term')],
+    });
+    const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
+    await state.refreshRails();
+    const before = requests.length;
+
+    await state.openScope({ kind: 'featured', sort: 'POPULAR', titleKey: 'discover.rail.popular' });
+
+    expect(requests.slice(before)).toEqual([
+      { kind: 'featured', sort: 'POPULAR', limit: RAIL_SCOPE_LIMIT },
+    ]);
+    expect(state.scopeBooks.map((scoped) => scoped.id)).toEqual([`POPULAR:${RAIL_SCOPE_LIMIT}`]);
+    expect(state.scopeExhausted).toBe(true);
+
+    // The featured port is first-page-only: a further page is a no-op.
+    await state.loadScopeNextPage();
+    expect(requests.length).toBe(before + 1);
+  });
+
+  it('captures a scope failure instead of throwing and clears it on retry', async () => {
+    const behaviour: FakeBehaviour = {
+      featured: () => [book('gutendex:1')],
+      searching: () => [book('gutendex:term')],
+    };
+    const { provider } = recordingProvider(behaviour);
+    const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
+    await state.refreshRails();
+
+    behaviour.searchSourceError = catalogError('NETWORK_ERROR', 'offline');
+    await state.openScope({
+      kind: 'term',
+      term: 'fiction',
+      titleKey: 'discover.rail.thematic.fiction',
+    });
+    expect(state.scopeError).toBe('NETWORK_ERROR');
+    expect(state.scopeBooks).toEqual([]);
+
+    behaviour.searchSourceError = null;
+    behaviour.searching = () => [book('gutendex:recovered')];
+    await state.loadScopeNextPage();
+    expect(state.scopeError).toBeNull();
+    expect(state.scopeBooks.map((scoped) => scoped.id)).toEqual(['gutendex:recovered']);
+  });
+
+  it('leaves hero, search and chips state untouched when a rail scope opens', async () => {
+    const { provider } = recordingProvider({
+      featured: () => [book('gutendex:1')],
+      searching: () => [book('gutendex:2')],
+    });
+    const state = new DiscoverDomainState(provider, {}, { now: pinnedNow });
+    await state.ensureRailsLoaded();
+    state.setQuery('dune');
+
+    await state.openRailScope({
+      kind: 'featured',
+      sort: 'NEWEST',
+      titleKey: 'discover.rail.newest',
+    });
+
+    // "Ver todo" must never write the hero search query.
+    expect(state.query).toBe('dune');
+    expect(state.status).toBe('idle');
+    expect(state.books).toEqual([]);
+
+    state.closeRailScope();
+    expect(state.railsState.scope).toBeNull();
+    expect(state.railsState.scopeBooks).toEqual([]);
+  });
+});
+
+describe('discover rails — per-rail error presentation', () => {
+  it('exposes an inline rail error component reusing the shared copy', () => {
+    const source = readSource('DiscoverRailError.svelte');
+    expect(source).toContain("t('discover.offline')");
+    expect(source).toContain("t('discover.errorUpstream')");
+    expect(source).toContain("t('discover.retry')");
+  });
+
+  it('renders Loading, Loaded and Error per rail with a "Ver todo" header control', () => {
+    const source = readSource('DiscoverRailSection.svelte');
+    expect(source).toContain("state.kind === 'Loading'");
+    expect(source).toContain("state.kind === 'Error'");
+    expect(source).toContain('<DiscoverRailError');
+    expect(source).toContain("t('discover.rail.viewAll')");
+    expect(source).toContain('onViewAll');
+  });
+
+  it('wires rail actions and the scoped view in the screen without an aggregate gate', () => {
+    const source = readSource('DiscoverScreen.svelte');
+    expect(source).toContain('openRailScope(index)');
+    expect(source).toContain('discoverState.retryRail(index)');
+    expect(source).toContain("t('discover.railScope.back')");
+    expect(source).toContain('discover.railScope.singlePage');
+    expect(source).not.toContain('railViews');
   });
 });

@@ -50,6 +50,7 @@ export type { DiscoverCacheStore } from './DiscoverCache';
 export {
   backoffDelayMs,
   clampPageSize,
+  composeDeadline,
   createRateLimiter,
   createSearchDebouncer,
   fetchWithRetry,
@@ -63,8 +64,10 @@ export {
   MAX_PAGE_SIZE,
   MIN_PAGE_SIZE,
   OL_MIN_GAP_MS,
+  REQUEST_DEADLINE_MS,
   RETRY_BASE_DELAY_MS,
 } from './policy';
+export type { ComposedDeadline } from './policy';
 export {
   computeNextPage,
   firstIsbn10,

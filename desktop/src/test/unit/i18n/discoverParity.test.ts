@@ -55,6 +55,9 @@ describe('discover i18n EN+ES parity (PR4)', () => {
       'discover.rail.thematic.romance',
       'discover.rail.thematic.science',
       'discover.rail.thematic.history',
+      'discover.rail.viewAll',
+      'discover.railScope.back',
+      'discover.railScope.singlePage',
     ] as const;
 
     for (const key of discoverKeys) {
@@ -69,5 +72,11 @@ describe('discover i18n EN+ES parity (PR4)', () => {
     expect(messagesEs['discover.rail.newest']).toBe('Recién agregados');
     expect(messagesEs['discover.rail.popular']).toBe('Populares');
     expect(messagesEs['discover.rail.thematic.science']).toBe('Ciencia ficción');
+    expect(messagesEs['discover.rail.viewAll']).toBe('Ver todo');
+    expect(messagesEn['discover.rail.viewAll']).toBe('View all');
+    expect(messagesEs['discover.railScope.back']).toBeTruthy();
+    expect(messagesEn['discover.railScope.back']).toBeTruthy();
+    expect(messagesEs['discover.railScope.singlePage']).toContain('{{count}}');
+    expect(messagesEn['discover.railScope.singlePage']).toContain('{{count}}');
   });
 });

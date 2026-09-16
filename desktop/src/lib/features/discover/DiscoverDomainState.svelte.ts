@@ -1,13 +1,129 @@
-import { isCatalogError, liveCatalogProvider } from '$lib/shared/services/catalog';
-import type { CatalogBook, CatalogErrorCode, CatalogProvider } from '$lib/shared/services/catalog';
+import {
+  BUILTIN_GUTENDEX,
+  isCatalogError,
+  liveCatalogProvider,
+} from '$lib/shared/services/catalog';
+import type {
+  CatalogBook,
+  CatalogErrorCode,
+  CatalogFeaturedSort,
+  CatalogProvider,
+  CatalogSourceInfo,
+} from '$lib/shared/services/catalog';
 
 export type DiscoverStatus =
   'idle' | 'loading' | 'loadingMore' | 'loaded' | 'empty' | 'error' | 'offline';
 
 export type DiscoverDetailStatus = 'closed' | 'loading' | 'loaded' | 'notFound' | 'error';
 
+/** Rail visibility machine: unserved/error rails collapse to Hidden. */
+export type DiscoverRailState =
+  | { kind: 'Hidden' }
+  | { kind: 'Loading' }
+  | { kind: 'Loaded'; books: CatalogBook[]; totalCount: number };
+
+export interface DiscoverRailSpec {
+  title: string;
+  sort: CatalogFeaturedSort;
+  limit: number;
+}
+
+export const DISCOVER_RAIL_COUNT = 4;
+export const DISCOVER_RAIL_LIMIT = 6;
+
+/** Rail order: Recién agregados (NEWEST), Populares (POPULAR), Recomendados, Gutenberg. */
+export const DISCOVER_RAIL_SPECS: readonly DiscoverRailSpec[] = [
+  { title: 'Recién agregados', sort: 'NEWEST', limit: DISCOVER_RAIL_LIMIT },
+  { title: 'Populares', sort: 'POPULAR', limit: DISCOVER_RAIL_LIMIT },
+  { title: 'Recomendados', sort: 'POPULAR', limit: DISCOVER_RAIL_LIMIT },
+  { title: 'Gutenberg', sort: 'NEWEST', limit: DISCOVER_RAIL_LIMIT },
+];
+
+/** Seven static chips; selection filters loaded rails client-side only (no catalog call). */
+export const TRENDING_CHIPS: readonly string[] = [
+  'Ficción',
+  'Clásicos',
+  'Aventura',
+  'Misterio',
+  'Romance',
+  'Ciencia ficción',
+  'Historia',
+];
+
+/**
+ * Static curated first slice for the Recomendados rail: visual parity without
+ * blocking on sort-literal verification. Swapped for live data after the
+ * Gutendex `featured()` literals prove out.
+ */
+const CURATED_FIRST_SLICE: readonly CatalogBook[] = [
+  {
+    id: 'curated:pride-and-prejudice',
+    provider: 'curated',
+    title: 'Pride and Prejudice',
+    authors: ['Jane Austen'],
+    coverUrl: null,
+    languages: ['en'],
+    subjects: ['Classic fiction'],
+    downloadUrl: null,
+  },
+  {
+    id: 'curated:moby-dick',
+    provider: 'curated',
+    title: 'Moby Dick; Or, The Whale',
+    authors: ['Herman Melville'],
+    coverUrl: null,
+    languages: ['en'],
+    subjects: ['Adventure fiction'],
+    downloadUrl: null,
+  },
+  {
+    id: 'curated:frankenstein',
+    provider: 'curated',
+    title: 'Frankenstein; Or, The Modern Prometheus',
+    authors: ['Mary Wollstonecraft Shelley'],
+    coverUrl: null,
+    languages: ['en'],
+    subjects: ['Gothic fiction'],
+    downloadUrl: null,
+  },
+  {
+    id: 'curated:sherlock-holmes',
+    provider: 'curated',
+    title: 'The Adventures of Sherlock Holmes',
+    authors: ['Arthur Conan Doyle'],
+    coverUrl: null,
+    languages: ['en'],
+    subjects: ['Mystery fiction'],
+    downloadUrl: null,
+  },
+  {
+    id: 'curated:dracula',
+    provider: 'curated',
+    title: 'Dracula',
+    authors: ['Bram Stoker'],
+    coverUrl: null,
+    languages: ['en'],
+    subjects: ['Gothic fiction'],
+    downloadUrl: null,
+  },
+  {
+    id: 'curated:jane-eyre',
+    provider: 'curated',
+    title: 'Jane Eyre: An Autobiography',
+    authors: ['Charlotte Brontë'],
+    coverUrl: null,
+    languages: ['en'],
+    subjects: ['Classic fiction'],
+    downloadUrl: null,
+  },
+];
+
 function statusForCode(code: CatalogErrorCode): DiscoverStatus {
-  return code === 'NETWORK_ERROR' || code === 'RATE_LIMITED' ? 'offline' : 'error';
+  return isOfflineCode(code) ? 'offline' : 'error';
+}
+
+function isOfflineCode(code: CatalogErrorCode): boolean {
+  return code === 'NETWORK_ERROR' || code === 'RATE_LIMITED';
 }
 
 function codeOf(err: unknown): CatalogErrorCode {
@@ -24,6 +140,18 @@ class DiscoverDomainState {
   errorCode = $state<CatalogErrorCode | null>(null);
   detail = $state<CatalogBook | null>(null);
   detailStatus = $state<DiscoverDetailStatus>('closed');
+
+  /** Four browse rails; Hidden rails render nothing (fail-closed). */
+  rails = $state<DiscoverRailState[]>([
+    { kind: 'Hidden' },
+    { kind: 'Hidden' },
+    { kind: 'Hidden' },
+    { kind: 'Hidden' },
+  ]);
+  /** Static chip labels for client-side filtering over loaded rails. */
+  trending = $state<string[]>([...TRENDING_CHIPS]);
+  /** False once any rail observes a connectivity failure. */
+  isOnline = $state(true);
 
   private lastAttemptedPage = 0;
 
@@ -110,6 +238,79 @@ class DiscoverDomainState {
     }
     this.nextPage = this.lastAttemptedPage;
     await this.loadNextPage();
+  }
+
+  /**
+   * Live source list for the hero pill (`En línea · N fuentes` where
+   * N = the returned length). Pure read-through, no I/O.
+   */
+  refreshSources(): CatalogSourceInfo[] {
+    return this.provider.listSources();
+  }
+
+  /**
+   * Load all four rails. Each rail is isolated: success maps to Loaded
+   * (truncated to the rail limit, short rails render as-is, empty rails
+   * collapse to Hidden) and any throw maps to Hidden without affecting the
+   * other rails. Connectivity throws flip `isOnline` to false.
+   */
+  async refreshRails(): Promise<void> {
+    this.rails = DISCOVER_RAIL_SPECS.map(() => ({ kind: 'Loading' }) as DiscoverRailState);
+    this.isOnline = true;
+    let offlineSeen = false;
+    const settled = await Promise.all([
+      this.loadFeaturedRail('NEWEST', DISCOVER_RAIL_LIMIT),
+      this.loadFeaturedRail('POPULAR', DISCOVER_RAIL_LIMIT),
+      this.loadCuratedRail(),
+      this.loadGutenbergRail(),
+    ]);
+    for (const rail of settled) {
+      if (rail.kind === 'Hidden' && rail.offline) offlineSeen = true;
+    }
+    this.rails = settled.map((rail) => (rail.kind === 'Hidden' ? { kind: 'Hidden' } : rail.state));
+    if (offlineSeen) this.isOnline = false;
+  }
+
+  private async loadFeaturedRail(
+    sort: CatalogFeaturedSort,
+    limit: number,
+  ): Promise<{ kind: 'Hidden'; offline: boolean } | { kind: 'Loaded'; state: DiscoverRailState }> {
+    try {
+      const page = await this.provider.featured(sort, limit);
+      const books = page.results.slice(0, limit);
+      if (books.length === 0) return { kind: 'Hidden', offline: false };
+      return {
+        kind: 'Loaded',
+        state: { kind: 'Loaded', books, totalCount: page.totalCount },
+      };
+    } catch (err) {
+      return { kind: 'Hidden', offline: isOfflineCode(codeOf(err)) };
+    }
+  }
+
+  /** Static first slice: no I/O, always Loaded. */
+  private loadCuratedRail(): { kind: 'Loaded'; state: DiscoverRailState } {
+    const books = CURATED_FIRST_SLICE.slice(0, DISCOVER_RAIL_LIMIT);
+    return {
+      kind: 'Loaded',
+      state: { kind: 'Loaded', books: [...books], totalCount: books.length },
+    };
+  }
+
+  private async loadGutenbergRail(): Promise<
+    { kind: 'Hidden'; offline: boolean } | { kind: 'Loaded'; state: DiscoverRailState }
+  > {
+    try {
+      const page = await this.provider.searchSource(BUILTIN_GUTENDEX, '', 1);
+      const books = page.results.slice(0, DISCOVER_RAIL_LIMIT);
+      if (books.length === 0) return { kind: 'Hidden', offline: false };
+      return {
+        kind: 'Loaded',
+        state: { kind: 'Loaded', books, totalCount: page.totalCount },
+      };
+    } catch (err) {
+      return { kind: 'Hidden', offline: isOfflineCode(codeOf(err)) };
+    }
   }
 
   private resetToIdle(): void {

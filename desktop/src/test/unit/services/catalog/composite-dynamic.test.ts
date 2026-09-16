@@ -112,6 +112,19 @@ class FakeAddonProvider implements CatalogProvider {
       ? [{ sourceId: addonSource(ADDON_ID), name: 'Fake Addon', kind: 'addon' }]
       : [];
   }
+
+  /** Test fake: no featured capability (fail-closed, never called by fan-out). */
+  async featured(): Promise<PagedResult> {
+    return { results: [], nextPage: null, totalCount: 0 };
+  }
+
+  supportsFeatured(): boolean {
+    return false;
+  }
+
+  async searchSource(): Promise<PagedResult> {
+    return this.search('', 1);
+  }
 }
 
 class DisabledProvider implements CatalogProvider {
@@ -128,6 +141,19 @@ class DisabledProvider implements CatalogProvider {
   }
   listSources(): CatalogSourceInfo[] {
     return [];
+  }
+
+  /** Test fake: no featured capability (fail-closed, never called by fan-out). */
+  async featured(): Promise<PagedResult> {
+    return { results: [], nextPage: null, totalCount: 0 };
+  }
+
+  supportsFeatured(): boolean {
+    return false;
+  }
+
+  async searchSource(): Promise<PagedResult> {
+    return { results: [], nextPage: null, totalCount: 0 };
   }
 }
 

@@ -11,7 +11,9 @@ import {
 } from './CompositeCatalogProvider';
 import type {
   CatalogBook,
+  CatalogFeaturedSort,
   CatalogProvider,
+  CatalogSource,
   CatalogSourceInfo,
   PagedResult,
 } from './CatalogProvider';
@@ -33,6 +35,18 @@ class LiveCatalogProvider implements CatalogProvider {
 
   getDetails(id: string): Promise<CatalogBook> {
     return supplier.current().then((c) => c.getDetails(id));
+  }
+
+  featured(sort: CatalogFeaturedSort, limit: number): Promise<PagedResult> {
+    return supplier.current().then((c) => c.featured(sort, limit));
+  }
+
+  supportsFeatured(sort: CatalogFeaturedSort): boolean {
+    return supplier.peek()?.supportsFeatured(sort) ?? false;
+  }
+
+  searchSource(sourceId: CatalogSource, query: string, page: number): Promise<PagedResult> {
+    return supplier.current().then((c) => c.searchSource(sourceId, query, page));
   }
 
   resolveDownloadUrl(formats: Record<string, string>, preferEpub: boolean): string {

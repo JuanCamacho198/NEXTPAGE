@@ -112,8 +112,15 @@
     <DiscoverDetail
       detail={discoverState.detail}
       detailStatus={discoverState.detailStatus}
+      downloadState={discoverState.downloadState}
+      downloadError={discoverState.downloadError}
+      progressBytes={discoverState.progressBytes}
+      progressTotal={discoverState.progressTotal}
       {t}
       onDismiss={() => discoverState.dismissDetail()}
+      onDownload={() => void discoverState.startDownload()}
+      onCancelDownload={() => discoverState.cancelDownload()}
+      onRetryDownload={() => void discoverState.retryDownload()}
     />
   {/if}
 

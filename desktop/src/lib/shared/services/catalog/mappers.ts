@@ -3,7 +3,7 @@
  * Pure functions — fully testable offline with fixture JSON.
  */
 import { catalogError } from './errors';
-import { BUILTIN_GUTENDEX, BUILTIN_OPENLIBRARY } from './CatalogProvider';
+import { BUILTIN_GUTENDEX, BUILTIN_GOOGLEBOOKS, BUILTIN_OPENLIBRARY } from './CatalogProvider';
 import type { CatalogBook, PagedResult } from './CatalogProvider';
 
 export interface GutendexAuthor {
@@ -195,6 +195,101 @@ export function computeNextPage(
 ): number | null {
   const offset = (page - 1) * pageLength;
   return offset + pageLength < totalCount ? page + 1 : null;
+}
+
+// ── Google Books (WU3) ──────────────────────────────────────────────
+
+/** Google Books `industryIdentifiers` entry (`ISBN_10` / `ISBN_13` / other). */
+export interface GoogleBooksIndustryIdentifier {
+  type?: string | null;
+  identifier?: string | null;
+}
+
+export interface GoogleBooksImageLinks {
+  thumbnail?: string | null;
+  smallThumbnail?: string | null;
+}
+
+export interface GoogleBooksVolumeInfo {
+  title?: string | null;
+  authors?: string[] | null;
+  description?: string | null;
+  language?: string | null;
+  categories?: string[] | null;
+  imageLinks?: GoogleBooksImageLinks | null;
+  industryIdentifiers?: GoogleBooksIndustryIdentifier[] | null;
+}
+
+export interface GoogleBooksVolumeItem {
+  id?: string | null;
+  volumeInfo?: GoogleBooksVolumeInfo | null;
+}
+
+export interface GoogleBooksSearchResponse {
+  totalItems?: number | null;
+  items?: GoogleBooksVolumeItem[] | null;
+}
+
+/** Google Books `industryIdentifiers` type literal for ISBN-13. */
+const GOOGLE_ISBN13_TYPE = 'ISBN_13';
+/** Google Books `industryIdentifiers` type literal for ISBN-10. */
+const GOOGLE_ISBN10_TYPE = 'ISBN_10';
+
+/**
+ * Normalize a Google Books thumbnail to https (mixed-content safe). The live
+ * API returns `http://books.google.com/...`; anything not https afterwards is
+ * dropped so the UI falls back to the initial-letter block.
+ */
+export function googleBooksCoverUrl(thumbnail: string | null | undefined): string | null {
+  if (thumbnail == null || thumbnail.trim() === '') return null;
+  const https = thumbnail.startsWith('http://')
+    ? `https://${thumbnail.slice('http://'.length)}`
+    : thumbnail;
+  return https.startsWith('https://') ? https : null;
+}
+
+/** Blank-safe identifier of `type` from a Google Books `industryIdentifiers` list. */
+export function googleIndustryIdentifier(
+  identifiers: GoogleBooksIndustryIdentifier[] | null | undefined,
+  type: string,
+): string | null {
+  const found = (identifiers ?? []).find((entry) => entry.type === type)?.identifier;
+  return found == null || found.trim() === '' ? null : found;
+}
+
+/**
+ * Map a Google Books volume; null when the volume carries no usable id/title.
+ * Google Books is a metadata/enrichment source — `downloadUrl` is always null,
+ * so the in-app download path can never come from a Google Books hit.
+ */
+export function mapGoogleBooksVolume(item: GoogleBooksVolumeItem): CatalogBook | null {
+  const id = (item.id ?? '').trim();
+  const info = item.volumeInfo ?? {};
+  const title = (info.title ?? '').trim();
+  if (id === '' || title === '') return null;
+  const isbn13 = digitsOf(
+    googleIndustryIdentifier(info.industryIdentifiers, GOOGLE_ISBN13_TYPE) ?? '',
+  );
+  const isbn10 = digitsOf(
+    googleIndustryIdentifier(info.industryIdentifiers, GOOGLE_ISBN10_TYPE) ?? '',
+  );
+  const language = info.language;
+  const description = info.description;
+  return {
+    id: `googlebooks:${id}`,
+    provider: BUILTIN_GOOGLEBOOKS,
+    title,
+    authors: info.authors ?? [],
+    coverUrl: googleBooksCoverUrl(info.imageLinks?.thumbnail ?? info.imageLinks?.smallThumbnail),
+    languages: language != null && language.trim() !== '' ? [language] : [],
+    subjects: (info.categories ?? []).slice(0, 8),
+    downloadUrl: null,
+    description: description != null && description.trim() !== '' ? description : undefined,
+    isbn13: isbn13.length === 13 ? isbn13 : null,
+    isbn10: isbn10.length === 10 ? isbn10 : null,
+    isPublicDomain: null,
+    googleBooksId: id,
+  };
 }
 
 export function toPagedResult(

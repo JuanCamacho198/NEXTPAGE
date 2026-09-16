@@ -1,8 +1,9 @@
 <script lang="ts">
   import Modal from '$lib/shared/ui/layout/Modal.svelte';
   import type { MessageKey } from '$lib/shared/i18n/messages.en';
-  import type { CatalogBook } from '$lib/shared/services/catalog';
+  import { resolveAccess, type CatalogBook } from '$lib/shared/services/catalog';
   import type { DiscoverDetailStatus, DiscoverDownloadState } from './DiscoverDomainState.svelte';
+  import DiscoverAccessSection from './DiscoverAccessSection.svelte';
   import {
     discoverDescription,
     discoverExternalLink,
@@ -85,11 +86,11 @@
       ? t('discover.externalOpenLibrary')
       : t('discover.externalGutenberg'),
   );
-  const showDownloadCta = $derived(
-    detail?.downloadUrl !== null &&
-      detail?.downloadUrl !== undefined &&
-      detail.downloadUrl.trim() !== '',
-  );
+  /** PD-gated access model: FREE/BUY/SUBSCRIBE options + in-app download flag. */
+  const access = $derived(detail ? resolveAccess(detail) : null);
+  // The in-app download is offered only for public-domain https downloads, so a
+  // non-PD book with a catalog URL never surfaces an in-app transfer CTA.
+  const showDownloadCta = $derived(access?.canDownloadInApp === true);
   const progressPct = $derived(
     progressTotal !== null && progressTotal > 0
       ? Math.min(100, Math.round((progressBytes / progressTotal) * 100))
@@ -177,6 +178,9 @@
         >
           {externalLabel}
         </a>
+      {/if}
+      {#if access !== null}
+        <DiscoverAccessSection {access} {t} />
       {/if}
       {#if showDownloadCta}
         <div class="mt-4">

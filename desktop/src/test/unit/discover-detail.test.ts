@@ -34,6 +34,8 @@ function fakeBook(overrides: Partial<CatalogBook> = {}): CatalogBook {
       'application/pdf': 'https://www.gutenberg.org/files/1342/1342-pdf.pdf',
       'unknown-xyz': 'https://example.com/unknown',
     },
+    // PD gate: the in-app download CTA requires `isPublicDomain === true`.
+    isPublicDomain: true,
     ...overrides,
   };
 }
@@ -250,7 +252,7 @@ describe('DiscoverDetail modal (WU2)', () => {
     expect(screen.getByText('EPUB')).toBeInTheDocument();
     expect(screen.getByText('PDF')).toBeInTheDocument();
     expect(screen.queryByText('unknown-xyz')).not.toBeInTheDocument();
-    expect(screen.getByRole('link')).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'discover.externalGutenberg' })).toHaveAttribute(
       'href',
       'https://www.gutenberg.org/ebooks/1342',
     );
@@ -275,7 +277,7 @@ describe('DiscoverDetail modal (WU2)', () => {
     });
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
     expect(screen.queryByText('discover.formats')).not.toBeInTheDocument();
-    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.queryByText('discover.externalGutenberg')).not.toBeInTheDocument();
     expect(screen.queryByText('discover.download')).not.toBeInTheDocument();
   });
 
@@ -309,5 +311,96 @@ describe('DiscoverDetail modal (WU2)', () => {
     await fireEvent.keyDown(window, { key: 'Escape' });
     await tick();
     expect(onDismiss).toHaveBeenCalled();
+  });
+});
+
+describe('DiscoverDetail access section (WU3)', () => {
+  it('renders the grouped access section with identity web options', async () => {
+    render(DiscoverDetail, {
+      props: {
+        detail: fakeBook({
+          openLibraryWorkId: '/works/OL66554W',
+          internetArchiveId: 'prideandprejudice0000aust',
+          googleBooksId: 'abc123',
+          isbn13: '9780141439518',
+        }),
+        detailStatus: 'loaded',
+        t,
+        onDismiss: vi.fn(),
+      },
+    });
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('discover.accessTitle')).toBeInTheDocument();
+    expect(screen.getByText('discover.accessGroupFree')).toBeInTheDocument();
+    expect(screen.getByText('discover.accessGroupBuy')).toBeInTheDocument();
+    expect(screen.getByText('discover.accessGroupSubscribe')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'discover.accessOpenLibrary' })).toHaveAttribute(
+      'href',
+      'https://openlibrary.org/works/OL66554W',
+    );
+    expect(screen.getByRole('link', { name: 'discover.accessInternetArchive' })).toHaveAttribute(
+      'href',
+      'https://archive.org/details/prideandprejudice0000aust',
+    );
+    expect(screen.getByRole('link', { name: 'discover.accessGooglePreview' })).toHaveAttribute(
+      'href',
+      'https://books.google.com/books?id=abc123',
+    );
+    expect(screen.getByRole('link', { name: 'discover.accessGutenberg' })).toHaveAttribute(
+      'href',
+      'https://www.gutenberg.org/ebooks/1342',
+    );
+    for (const link of screen.getAllByRole('link')) {
+      expect(link.getAttribute('href')?.startsWith('https://')).toBe(true);
+    }
+  });
+
+  it('gates the in-app download CTA on the public-domain flag', async () => {
+    const { unmount } = render(DiscoverDetail, {
+      props: {
+        detail: fakeBook({ isPublicDomain: false }),
+        detailStatus: 'loaded',
+        t,
+        onDismiss: vi.fn(),
+      },
+    });
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    // Non-PD: web options still render, the in-app transfer never does.
+    expect(screen.getByText('discover.accessTitle')).toBeInTheDocument();
+    expect(screen.queryByText('discover.download')).not.toBeInTheDocument();
+    unmount();
+
+    render(DiscoverDetail, {
+      props: {
+        detail: fakeBook({ isPublicDomain: null }),
+        detailStatus: 'loaded',
+        t,
+        onDismiss: vi.fn(),
+      },
+    });
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(screen.queryByText('discover.download')).not.toBeInTheDocument();
+  });
+
+  it('falls back to generic web search when the book has no identity', async () => {
+    render(DiscoverDetail, {
+      props: {
+        detail: fakeBook({
+          id: 'openlibrary:/works/OL00000W',
+          provider: 'builtin:openlibrary',
+          isPublicDomain: null,
+          downloadUrl: null,
+        }),
+        detailStatus: 'loaded',
+        t,
+        onDismiss: vi.fn(),
+      },
+    });
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    const webSearch = screen.getByRole('link', { name: 'discover.accessWebSearch' });
+    expect(webSearch.getAttribute('href')?.startsWith('https://www.google.com/search?q=')).toBe(
+      true,
+    );
+    expect(screen.queryByText('discover.accessDownload')).not.toBeInTheDocument();
   });
 });

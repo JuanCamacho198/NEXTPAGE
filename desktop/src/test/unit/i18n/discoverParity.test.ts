@@ -34,6 +34,18 @@ describe('discover i18n EN+ES parity (PR4)', () => {
       'discover.byAuthors',
       'discover.languages',
       'discover.subjects',
+      'discover.accessTitle',
+      'discover.accessGroupFree',
+      'discover.accessGroupBuy',
+      'discover.accessGroupSubscribe',
+      'discover.accessDownload',
+      'discover.accessOpenLibrary',
+      'discover.accessInternetArchive',
+      'discover.accessGooglePreview',
+      'discover.accessGutenberg',
+      'discover.accessWebSearch',
+      'discover.accessBuy',
+      'discover.accessSubscribe',
     ] as const;
 
     for (const key of discoverKeys) {

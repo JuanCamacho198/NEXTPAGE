@@ -1,5 +1,6 @@
 export {
   BUILTIN_GUTENDEX,
+  BUILTIN_GOOGLEBOOKS,
   BUILTIN_OPENLIBRARY,
   addonSource,
   addonSourceIdOf,
@@ -17,6 +18,19 @@ export type {
 export { CatalogError, catalogError, isCatalogError, mapHttpStatusToCode } from './errors';
 export type { CatalogErrorCode } from './errors';
 export { GutendexDataSource, GUTENDEX_BASE_URL } from './GutendexDataSource';
+export {
+  GoogleBooksDataSource,
+  GOOGLE_BOOKS_BASE_URL,
+  GOOGLE_BOOKS_VOLUME_FIELDS,
+  buildGoogleBooksQuery,
+} from './GoogleBooksDataSource';
+export {
+  GoogleBooksCatalogProvider,
+  googleBooksKeyFromEnv,
+  googleBooksProviderOrNull,
+} from './BuiltInCatalogProviders';
+export { resolveAccess, isHttpsUrl } from './accessResolver';
+export type { AccessGroup, AccessOption, LegalAccess } from './accessResolver';
 export { OpenLibraryDataSource, OPEN_LIBRARY_BASE_URL } from './OpenLibraryDataSource';
 export {
   CompositeCatalogProvider,
@@ -53,8 +67,13 @@ export {
 } from './policy';
 export {
   computeNextPage,
+  firstIsbn10,
+  firstIsbn13,
+  googleBooksCoverUrl,
+  googleIndustryIdentifier,
   isGutendexPublicDomain,
   isOpenLibraryPublic,
+  mapGoogleBooksVolume,
   mapGutendexBook,
   mapOpenLibraryDoc,
   mergeResults,
@@ -64,4 +83,12 @@ export {
   resolveTotalCount,
   toPagedResult,
 } from './mappers';
-export type { GutendexRecord, OpenLibraryDoc } from './mappers';
+export type {
+  GoogleBooksImageLinks,
+  GoogleBooksIndustryIdentifier,
+  GoogleBooksSearchResponse,
+  GoogleBooksVolumeInfo,
+  GoogleBooksVolumeItem,
+  GutendexRecord,
+  OpenLibraryDoc,
+} from './mappers';

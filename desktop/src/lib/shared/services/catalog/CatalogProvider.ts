@@ -77,6 +77,17 @@ export interface PagedResult {
   totalCount: number;
 }
 
+/**
+ * Closed domain of featured orderings: every entry maps to a verified
+ * upstream literal, so no caller can ever pass a raw `sort` string through
+ * to Gutendex. Mirrors Android `CatalogFeaturedSort`.
+ *
+ * - `POPULAR` -> `sort=popular` (all-time download count, HTTP 200 verified).
+ * - `NEWEST` -> `sort=descending` (newest-by-id, HTTP 200 verified). Note this
+ *   is *not* week-scoped: Gutendex exposes no time-windowed ordering.
+ */
+export type CatalogFeaturedSort = 'POPULAR' | 'NEWEST';
+
 export interface CatalogProvider {
   /** `page` is 1-based; `page < 1` rejects with INVALID_PAGE before any I/O. */
   search(query: string, page: number): Promise<PagedResult>;
@@ -90,6 +101,29 @@ export interface CatalogProvider {
 
   /** Pure function (no I/O): the sources this provider can serve, in order. */
   listSources(): CatalogSourceInfo[];
+
+  /**
+   * Featured rail page (first slice): `limit` books in `sort` order, page 1.
+   * `limit` must be an integer >= 1, else rejects INVALID_PAGE before any I/O.
+   *
+   * Fail-closed default semantics: a provider with no featured capability
+   * returns an empty page, so its rail auto-hides instead of surfacing an
+   * error or a placeholder section.
+   */
+  featured(sort: CatalogFeaturedSort, limit: number): Promise<PagedResult>;
+
+  /**
+   * Fail-closed capability probe: false means "do not build a featured rail"
+   * for `sort` with this provider.
+   */
+  supportsFeatured(sort: CatalogFeaturedSort): boolean;
+
+  /**
+   * Per-source search scoped to one `sourceId`. Fail-closed: an unsupported
+   * id yields an empty page rather than a crash. `page` is 1-based and
+   * rejects INVALID_PAGE before any I/O.
+   */
+  searchSource(sourceId: CatalogSource, query: string, page: number): Promise<PagedResult>;
 }
 
 export type { CatalogErrorCode };

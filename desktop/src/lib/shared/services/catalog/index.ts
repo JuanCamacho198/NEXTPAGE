@@ -7,6 +7,7 @@ export {
 } from './CatalogProvider';
 export type {
   CatalogBook,
+  CatalogFeaturedSort,
   CatalogProvider,
   CatalogSource,
   CatalogSourceInfo,

@@ -10,7 +10,9 @@
 import { catalogError } from '../catalog/errors';
 import type {
   CatalogBook,
+  CatalogFeaturedSort,
   CatalogProvider,
+  CatalogSource,
   CatalogSourceInfo,
   PagedResult,
 } from '../catalog/CatalogProvider';
@@ -59,6 +61,27 @@ export class CuratedCatalogProvider implements CatalogProvider {
   /** Curated sources are not routable; stable NOT_FOUND, no I/O. */
   async getDetails(id: string): Promise<CatalogBook> {
     throw catalogError('NOT_FOUND', `curated sources are not routable: ${id}`);
+  }
+
+  /** Browse-only bundle: no featured rails, the rail auto-hides (fail-closed). */
+  async featured(_sort: CatalogFeaturedSort, limit: number): Promise<PagedResult> {
+    if (!Number.isInteger(limit) || limit < 1) {
+      throw catalogError('INVALID_PAGE', `limit must be >= 1, got ${limit}`);
+    }
+    return EMPTY_PAGE;
+  }
+
+  supportsFeatured(_sort: CatalogFeaturedSort): boolean {
+    return false;
+  }
+
+  /** Curated sources serve no per-source search; fail closed, no I/O. */
+  async searchSource(
+    _sourceId: CatalogSource,
+    _query: string,
+    _page: number,
+  ): Promise<PagedResult> {
+    return EMPTY_PAGE;
   }
 
   resolveDownloadUrl(formats: Record<string, string>, preferEpub: boolean): string {

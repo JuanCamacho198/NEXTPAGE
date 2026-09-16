@@ -12,7 +12,9 @@ import { catalogError, mapHttpStatusToCode } from '../catalog/errors';
 import { backoffDelayMs, MAX_PAGE_SIZE, shouldRetryStatus } from '../catalog/policy';
 import type {
   CatalogBook,
+  CatalogFeaturedSort,
   CatalogProvider,
+  CatalogSource,
   CatalogSourceInfo,
   PagedResult,
 } from '../catalog/CatalogProvider';
@@ -144,6 +146,29 @@ export class AddonCatalogProvider implements CatalogProvider {
       bookId: encodeURIComponent(id.slice(prefix.length)),
     });
     return parseAddonBook(await this.fetchJson(url), id, this.source.sourceId);
+  }
+
+  /** Addons opt out of featured rails; the rail auto-hides (fail-closed). */
+  async featured(_sort: CatalogFeaturedSort, limit: number): Promise<PagedResult> {
+    if (!Number.isInteger(limit) || limit < 1) {
+      throw catalogError('INVALID_PAGE', `limit must be >= 1, got ${limit}`);
+    }
+    return EMPTY_PAGE;
+  }
+
+  supportsFeatured(_sort: CatalogFeaturedSort): boolean {
+    return false;
+  }
+
+  /**
+   * Per-source search scoped to this addon's own source; anything else fails
+   * closed with an empty page (never a crash, never a silent composite search).
+   */
+  async searchSource(sourceId: CatalogSource, query: string, page: number): Promise<PagedResult> {
+    if (sourceId !== this.source.sourceId) {
+      return EMPTY_PAGE;
+    }
+    return this.search(query, page);
   }
 
   private async fetchJson(url: string): Promise<unknown> {

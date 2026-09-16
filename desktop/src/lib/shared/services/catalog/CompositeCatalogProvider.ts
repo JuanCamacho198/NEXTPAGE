@@ -10,7 +10,9 @@
 import { catalogError } from './errors';
 import type {
   CatalogBook,
+  CatalogFeaturedSort,
   CatalogProvider,
+  CatalogSource,
   CatalogSourceInfo,
   PagedResult,
 } from './CatalogProvider';
@@ -148,6 +150,59 @@ export class CompositeCatalogProvider implements CatalogProvider {
       }
     }
     return out;
+  }
+
+  /**
+   * True when at least one active provider opts in, so the shell can decide
+   * whether any featured work is possible at all. Mirrors Android.
+   */
+  supportsFeatured(sort: CatalogFeaturedSort): boolean {
+    return this.searchableProviders().some((p) => p.supportsFeatured(sort));
+  }
+
+  /**
+   * Featured rails fan out over the providers that opt in via
+   * `supportsFeatured`, then merge with the same `mergePaged` left-fold used
+   * by search. A provider that does not opt in is never called, so its rail
+   * can only ever come back empty (fail-closed) and be hidden. Each opted-in
+   * provider is isolated: a throw maps to an empty page, never failing the
+   * whole fan-out. Mirrors Android.
+   */
+  async featured(sort: CatalogFeaturedSort, limit: number): Promise<PagedResult> {
+    if (!Number.isInteger(limit) || limit < 1) {
+      throw catalogError('INVALID_PAGE', `limit must be >= 1, got ${limit}`);
+    }
+    const pages = await Promise.all(
+      this.searchableProviders()
+        .filter((provider) => provider.supportsFeatured(sort))
+        .map(async (provider) => {
+          try {
+            return await provider.featured(sort, limit);
+          } catch {
+            return { results: [], nextPage: null, totalCount: 0 } satisfies PagedResult;
+          }
+        }),
+    );
+    return this.mergePaged(pages, 1);
+  }
+
+  /**
+   * Per-source search: exact match over the active source set, routed to the
+   * single provider that owns `sourceId`. An unknown or inactive source fails
+   * closed with an empty page — never a crash, never a silent composite
+   * search. Mirrors Android.
+   */
+  async searchSource(sourceId: CatalogSource, query: string, page: number): Promise<PagedResult> {
+    if (!Number.isInteger(page) || page < 1) {
+      throw catalogError('INVALID_PAGE', `page must be >= 1, got ${page}`);
+    }
+    const owner = this.searchableProviders().find((provider) =>
+      provider.listSources().some((source) => source.sourceId === sourceId),
+    );
+    if (!owner) {
+      return { results: [], nextPage: null, totalCount: 0 };
+    }
+    return owner.search(query, page);
   }
 
   /**

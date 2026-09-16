@@ -313,6 +313,91 @@ describe('discover rails — isolated error and retry', () => {
   });
 });
 
+describe('discover rails — remount dedup (spec: "Remount does not refetch resolved rails")', () => {
+  it('issues no additional provider request when a resolved rail set is mounted again', async () => {
+    const { provider, requests } = recordingProvider({
+      featured: () => [book('gutendex:1')],
+      searching: () => [book('gutendex:2')],
+    });
+    // The screen shares one `DiscoverDomainState` singleton, so a remount runs
+    // this same load path again; requests are counted, not just state observed.
+    const state = new DiscoverDomainState(provider, {}, { now: pinnedNow });
+
+    await state.ensureRailsLoaded();
+    const afterFirstMount = requests.length;
+    expect(afterFirstMount).toBe(DISCOVER_RAIL_COUNT);
+    const published = state.rails;
+    expect(state.rails.map((rail) => rail.kind)).toEqual(['Loaded', 'Loaded', 'Loaded']);
+
+    await state.ensureRailsLoaded();
+    await state.ensureRailsLoaded();
+
+    expect(requests.length).toBe(afterFirstMount);
+    // Reused content, not a refetched replacement.
+    expect(state.rails).toBe(published);
+
+    // "…until an explicit refresh or invalidation occurs": the explicit
+    // refresh path still resolves a fresh plan.
+    await state.refreshRails();
+    expect(requests.length).toBe(afterFirstMount + DISCOVER_RAIL_COUNT);
+  });
+
+  it('joins an in-flight rail load instead of issuing a second round of requests', async () => {
+    const requests: RailRequest[] = [];
+    let releaseRails!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      releaseRails = resolve;
+    });
+    const gated: CatalogProvider = {
+      async search(query, page): Promise<PagedResult> {
+        requests.push({ kind: 'search', query, page });
+        return paged([]);
+      },
+      async getDetails(id: string): Promise<CatalogBook> {
+        throw catalogError('NOT_FOUND', `unknown catalog id ${id}`);
+      },
+      async featured(sort, limit): Promise<PagedResult> {
+        requests.push({ kind: 'featured', sort, limit });
+        await gate;
+        return paged([book(`gutendex:${sort}`)]);
+      },
+      supportsFeatured(): boolean {
+        return true;
+      },
+      async searchSource(sourceId, query, page): Promise<PagedResult> {
+        requests.push({ kind: 'searchSource', sourceId, query, page });
+        await gate;
+        return paged([book(`gutendex:${query}`)]);
+      },
+      resolveDownloadUrl(): string {
+        throw catalogError('UNAVAILABLE_DOWNLOAD', 'no usable url');
+      },
+      listSources(): CatalogSourceInfo[] {
+        return [{ sourceId: BUILTIN_GUTENDEX, name: 'Gutendex', kind: 'builtin' }];
+      },
+    };
+    const state = new DiscoverRailsDomainState({ provider: gated, now: pinnedNow });
+
+    const firstMount = state.ensureLoaded();
+    await flushMicrotasks();
+    // Every rail is in flight (`Loading`) and no rail has settled yet.
+    expect(state.settled).toBe(false);
+    expect(state.rails.map((rail) => rail.kind)).toEqual(['Loading', 'Loading', 'Loading']);
+    expect(requests).toHaveLength(DISCOVER_RAIL_COUNT);
+
+    // A remount while `Loading` must not re-request any rail.
+    const remount = state.ensureLoaded();
+    expect(requests).toHaveLength(DISCOVER_RAIL_COUNT);
+
+    releaseRails();
+    await Promise.all([firstMount, remount]);
+
+    expect(requests).toHaveLength(DISCOVER_RAIL_COUNT);
+    expect(state.settled).toBe(true);
+    expect(state.rails.map((rail) => rail.kind)).toEqual(['Loaded', 'Loaded', 'Loaded']);
+  });
+});
+
 describe('discover rails — thematic rotation', () => {
   it('never degrades to an unsorted query across empty, error and retry', async () => {
     const behaviour: FakeBehaviour = {

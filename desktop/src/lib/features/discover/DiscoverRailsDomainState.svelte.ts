@@ -85,6 +85,12 @@ export class DiscoverRailsDomainState {
   private scopePage = 0;
   /** Guards a stale refresh/retry from overwriting a newer publish. */
   private generation = 0;
+  /**
+   * The rail load currently in flight, if any. Every mount joins this promise,
+   * so a remount (or any repeat call on the load path) during `Loading` never
+   * issues a second round of rail requests.
+   */
+  private inFlight: Promise<void> | null = null;
 
   constructor(deps: DiscoverRailsDeps = {}) {
     this.provider = deps.provider ?? liveCatalogProvider;
@@ -94,9 +100,14 @@ export class DiscoverRailsDomainState {
     this.rails = this.specs.map(() => ({ kind: 'Hidden' }) as DiscoverRailState);
   }
 
-  /** Mount hook: a settled rail set is reused, so remounts do not refetch. */
+  /**
+   * Mount hook. Remount dedup (spec: "Remount does not refetch resolved rails"):
+   * a settled rail set is reused, and a load already in flight is joined, so the
+   * load path short-circuits without a new provider request either way.
+   */
   async ensureLoaded(): Promise<void> {
     if (this.settled) return;
+    if (this.inFlight) return this.inFlight;
     await this.refreshRails();
   }
 
@@ -105,11 +116,27 @@ export class DiscoverRailsDomainState {
    * rail renders while a slow one is still `Loading`, and positions stay
    * index-stable. Each rail is isolated — a throw or the deadline becomes that
    * rail's `Error` and empty results collapse to `Hidden`.
+   *
+   * An explicit refresh always resolves a fresh plan once the previous load has
+   * finished; a refresh requested while one is already running joins it instead
+   * of duplicating every rail request.
    */
   async refreshRails(): Promise<void> {
+    if (this.inFlight) return this.inFlight;
+    const run = this.runRefresh();
+    this.inFlight = run;
+    try {
+      await run;
+    } finally {
+      if (this.inFlight === run) this.inFlight = null;
+    }
+  }
+
+  private async runRefresh(): Promise<void> {
     this.specs = [...buildRailSpecs(this.now())];
     this.rails = this.specs.map(() => ({ kind: 'Loading' }) as DiscoverRailState);
     this.isOnline = true;
+    this.settled = false;
     const generation = (this.generation += 1);
     // Every rail is in flight immediately; awaiting them one by one lets
     // `refreshRails` settle the whole set without gating any publish on the

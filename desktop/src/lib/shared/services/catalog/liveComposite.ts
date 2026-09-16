@@ -9,6 +9,7 @@ import {
   createRebuildingCatalogProvider,
   type CatalogProviderSupplier,
 } from './CompositeCatalogProvider';
+import { PersistentDiscoverCache, TauriDiscoverCachePort } from './DiscoverCache';
 import type {
   CatalogBook,
   CatalogFeaturedSort,
@@ -22,12 +23,23 @@ import { resolveDownloadUrl } from './mappers';
 import { AddonRegistry } from '../addons/AddonRegistry';
 
 const registry = new AddonRegistry();
+
+/**
+ * Production Discover cache: an in-memory mirror over the durable
+ * `discover_cache` table (best-effort write-through, bounded featured preload).
+ * Constructed once so every composite rebuild shares one mirror — this is what
+ * makes rail caching real in production instead of test-only.
+ */
+export const discoverCache = new PersistentDiscoverCache(new TauriDiscoverCachePort());
+
 // Google Books is registered only when `VITE_GOOGLE_BOOKS_KEY` is non-blank;
 // a blank key omits the provider and the app keeps working on Gutendex + OL.
+// Every rebuild re-runs the cache preload, so addon changes re-seed the mirror.
 const supplier: CatalogProviderSupplier = createRebuildingCatalogProvider(
   () => registry.listInstalled(),
   undefined,
   googleBooksKeyFromEnv(),
+  { cache: discoverCache },
 );
 registry.onChanged(() => supplier.invalidate());
 

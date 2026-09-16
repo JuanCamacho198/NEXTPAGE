@@ -18,10 +18,13 @@ import type {
 } from './CatalogProvider';
 import {
   DETAIL_TTL_S,
+  FEATURED_TTL_S,
   PAGE_TTL_S,
   detailCacheKey,
+  featuredCacheKey,
   pageCacheKey,
   type DiscoverCacheStore,
+  type PreloadableCache,
 } from './DiscoverCache';
 import { GutendexCatalogProvider } from './BuiltInCatalogProviders';
 import { GoogleBooksCatalogProvider, googleBooksProviderOrNull } from './BuiltInCatalogProviders';
@@ -50,6 +53,36 @@ export function bookIdPrefixForSource(sourceId: string): string | null {
 function singleSource(provider: CatalogProvider): CatalogSourceInfo | null {
   const sources = provider.listSources();
   return sources.length === 1 ? sources[0] : null;
+}
+
+/**
+ * Resident payload read: uses the store's additive `read()` when present
+ * (fresh-or-stale, non-mutating) and falls back to the fresh-only `get()` for
+ * stores that only implement the original contract. A throwing or half-broken
+ * store is treated as a miss — a cache must never fail a fetch.
+ */
+function readCachedPayload(
+  store: DiscoverCacheStore,
+  key: string,
+  nowEpochSecs: number,
+): { payload: string; stale: boolean } | null {
+  const read = store.read;
+  try {
+    if (read) {
+      const hit = read.call(store, key, nowEpochSecs);
+      return hit ? { payload: hit.payload, stale: hit.stale } : null;
+    }
+    const fresh = store.get(key, nowEpochSecs);
+    return fresh === null ? null : { payload: fresh, stale: false };
+  } catch {
+    return null;
+  }
+}
+
+function isPreloadable(
+  cache: DiscoverCacheStore | null,
+): cache is DiscoverCacheStore & PreloadableCache {
+  return typeof (cache as Partial<PreloadableCache> | null)?.preload === 'function';
 }
 
 import { CuratedCatalogProvider } from '../addons/CuratedCatalogProvider';
@@ -98,22 +131,52 @@ export interface CatalogProviderSupplier {
   invalidate(): void;
 }
 
+/** Rebuild-time options: the Discover cache the composite reads and writes. */
+export interface RebuildingCatalogProviderOptions {
+  cache?: DiscoverCacheStore | null;
+}
+
+/**
+ * Seeds the durable cache mirror once per composite build, bounded to the
+ * featured keys of the active sources. Absent or non-preloadable caches are a
+ * no-op, and a failed preload degrades to an unseeded mirror (the first rail
+ * simply refetches) — never a build failure.
+ */
+async function preloadDiscoverCache(
+  cache: DiscoverCacheStore | null,
+  composite: CompositeCatalogProvider,
+): Promise<void> {
+  if (!isPreloadable(cache)) return;
+  try {
+    await cache.preload(composite.listSources().map((source) => source.sourceId));
+  } catch {
+    // Best-effort: an unseeded mirror is an empty cache, not an error.
+  }
+}
+
 export function createRebuildingCatalogProvider(
   loadRows: () => Promise<InstalledAddonRow[]>,
   addonTransport?: AddonTransport,
   googleBooksKey = '',
+  options: RebuildingCatalogProviderOptions = {},
 ): CatalogProviderSupplier {
+  const cache = options.cache ?? null;
   let current: Promise<CompositeCatalogProvider> | null = null;
   let built: CompositeCatalogProvider | null = null;
   let generation = 0;
   return {
     current(): Promise<CompositeCatalogProvider> {
       const gen = generation;
-      return (current ??= loadRows().then((rows) => {
+      return (current ??= loadRows().then(async (rows) => {
         const composite = new CompositeCatalogProvider(
           defaultCatalogProviders(rows, addonTransport, googleBooksKey),
+          { cache },
         );
         if (gen === generation) built = composite;
+        // The supplier's current() is already async, so the preload stays off
+        // the composite's synchronous read path. Every invalidate() rebuild
+        // re-preloads, so addon install/enable/disable/uninstall re-seed it.
+        await preloadDiscoverCache(cache, composite);
         return composite;
       }));
     },
@@ -137,6 +200,8 @@ export class CompositeCatalogProvider implements CatalogProvider {
   private readonly debounced: { search: (query: string, page: number) => Promise<PagedResult> };
   private readonly cache: DiscoverCacheStore | null;
   private readonly nowEpochSecs: () => number;
+  /** Featured cache keys with a stale-while-revalidate refresh already in flight. */
+  private readonly featuredRefreshes = new Set<string>();
 
   constructor(
     private readonly providers: CatalogProvider[] = defaultCatalogProviders(),
@@ -176,21 +241,37 @@ export class CompositeCatalogProvider implements CatalogProvider {
   /**
    * Featured rails fan out over the providers that opt in via
    * `supportsFeatured`, then merge with the same `mergePaged` left-fold used
-   * by search. A provider that does not opt in is never called, so its rail
-   * can only ever come back empty (fail-closed) and be hidden. Each opted-in
-   * provider is isolated: a throw maps to an empty page, never failing the
-   * whole fan-out. Mirrors Android.
+   * by search. Each opted-in provider reads through the Discover cache under
+   * its `f:v2:{sourceId}:{sort}` key with the 6h featured TTL:
+   *
+   * - a fresh entry is served with zero I/O;
+   * - a stale-but-resident entry is served immediately while a guarded
+   *   background refresh replaces it (stale-while-revalidate);
+   * - a miss fetches and caches.
+   *
+   * Sources that are not active at read time are never served (design A1).
+   * A provider that does not opt in is never called, so its rail can only ever
+   * come back empty (fail-closed) and be hidden. Each provider stays isolated:
+   * a throw maps to an empty page, never failing the whole fan-out.
    */
   async featured(sort: CatalogFeaturedSort, limit: number): Promise<PagedResult> {
     if (!Number.isInteger(limit) || limit < 1) {
       throw catalogError('INVALID_PAGE', `limit must be >= 1, got ${limit}`);
     }
+    const active = this.activeSourceIds();
     const pages = await Promise.all(
       this.searchableProviders()
         .filter((provider) => provider.supportsFeatured(sort))
         .map(async (provider) => {
           try {
-            return await provider.featured(sort, limit);
+            const hit = this.readFeaturedHit(provider, sort, active);
+            if (hit) {
+              if (hit.stale) this.startFeaturedRefresh(provider, sort, limit, active, hit.key);
+              return hit.page;
+            }
+            const result = await provider.featured(sort, limit);
+            this.cacheFeatured(provider, sort, result, active);
+            return result;
           } catch {
             return { results: [], nextPage: null, totalCount: 0 } satisfies PagedResult;
           }
@@ -201,9 +282,10 @@ export class CompositeCatalogProvider implements CatalogProvider {
 
   /**
    * Per-source search: exact match over the active source set, routed to the
-   * single provider that owns `sourceId`. An unknown or inactive source fails
-   * closed with an empty page — never a crash, never a silent composite
-   * search. Mirrors Android.
+   * single provider that owns `sourceId`, with the same page-cache read-through
+   * as `search` (the thematic rail resolves through here, so its page is cached
+   * too). An unknown or inactive source fails closed with an empty page — never
+   * a crash, never a silent composite search. Mirrors Android.
    */
   async searchSource(sourceId: CatalogSource, query: string, page: number): Promise<PagedResult> {
     if (!Number.isInteger(page) || page < 1) {
@@ -215,7 +297,12 @@ export class CompositeCatalogProvider implements CatalogProvider {
     if (!owner) {
       return { results: [], nextPage: null, totalCount: 0 };
     }
-    return owner.search(query, page);
+    const active = this.activeSourceIds();
+    const cached = this.readPageHit(owner, query, page, active);
+    if (cached !== null) return cached;
+    const result = await owner.search(query, page);
+    this.cachePage(owner, query, page, result, active);
+    return result;
   }
 
   /**
@@ -308,6 +395,73 @@ export class CompositeCatalogProvider implements CatalogProvider {
       this.nowEpochSecs(),
       PAGE_TTL_S,
     );
+  }
+
+  /**
+   * Featured read-through under `f:v2:{sourceId}:{sort}`. Returns the resident
+   * page plus whether it is stale; a corrupt payload is a miss (refetch), and
+   * an inactive or unroutable source is never served.
+   */
+  private readFeaturedHit(
+    provider: CatalogProvider,
+    sort: CatalogFeaturedSort,
+    active: Set<string>,
+  ): { key: string; page: PagedResult; stale: boolean } | null {
+    if (!this.cache) return null;
+    const source = singleSource(provider);
+    if (!source || !active.has(source.sourceId)) return null;
+    const key = featuredCacheKey(source.sourceId, sort);
+    const cached = readCachedPayload(this.cache, key, this.nowEpochSecs());
+    if (!cached) return null;
+    try {
+      return { key, page: JSON.parse(cached.payload) as PagedResult, stale: cached.stale };
+    } catch {
+      return null;
+    }
+  }
+
+  private cacheFeatured(
+    provider: CatalogProvider,
+    sort: CatalogFeaturedSort,
+    result: PagedResult,
+    active: Set<string>,
+  ): void {
+    if (!this.cache) return;
+    const source = singleSource(provider);
+    if (!source || !active.has(source.sourceId)) return;
+    this.cache.put(
+      featuredCacheKey(source.sourceId, sort),
+      JSON.stringify(result),
+      this.nowEpochSecs(),
+      FEATURED_TTL_S,
+    );
+  }
+
+  /**
+   * Stale-while-revalidate refresh: at most one in flight per cache key. A
+   * success replaces the resident entry; a failure is swallowed so the stale
+   * value already served stays the answer and the rail never depends on a
+   * refresh nobody awaited.
+   */
+  private startFeaturedRefresh(
+    provider: CatalogProvider,
+    sort: CatalogFeaturedSort,
+    limit: number,
+    active: Set<string>,
+    key: string,
+  ): void {
+    if (this.featuredRefreshes.has(key)) return;
+    this.featuredRefreshes.add(key);
+    void (async () => {
+      try {
+        const result = await provider.featured(sort, limit);
+        this.cacheFeatured(provider, sort, result, active);
+      } catch {
+        // Swallowed: the served stale page remains the best answer available.
+      } finally {
+        this.featuredRefreshes.delete(key);
+      }
+    })();
   }
 
   /**

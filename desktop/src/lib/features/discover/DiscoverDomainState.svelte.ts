@@ -1,20 +1,24 @@
 import {
-  BUILTIN_GUTENDEX,
-  isCatalogError,
   liveCatalogProvider,
-} from '$lib/shared/services/catalog';
-import type {
-  CatalogBook,
-  CatalogErrorCode,
-  CatalogFeaturedSort,
-  CatalogProvider,
-  CatalogSourceInfo,
+  type CatalogBook,
+  type CatalogErrorCode,
+  type CatalogProvider,
+  type CatalogSourceInfo,
 } from '$lib/shared/services/catalog';
 import {
   fetchBytesWithProgress,
   importDiscoverBytes,
   type DiscoverDownloadPorts,
 } from './discoverDownloadImport';
+import { TRENDING_CHIPS } from './discoverChips';
+import {
+  catalogCodeOf,
+  DiscoverRailsDomainState,
+  isOfflineCatalogCode,
+  type DiscoverBrowseScope,
+  type DiscoverRailState,
+  type DiscoverRailsDeps,
+} from './DiscoverRailsDomainState.svelte';
 
 export type DiscoverStatus =
   'idle' | 'loading' | 'loadingMore' | 'loaded' | 'empty' | 'error' | 'offline';
@@ -25,156 +29,11 @@ export type DiscoverDetailStatus = 'closed' | 'loading' | 'loaded' | 'notFound' 
 export type DiscoverDownloadState =
   'idle' | 'downloading' | 'importing' | 'imported' | 'cancelled' | 'error';
 
-/** Rail visibility machine: unserved/error rails collapse to Hidden. */
-export type DiscoverRailState =
-  | { kind: 'Hidden' }
-  | { kind: 'Loading' }
-  | { kind: 'Loaded'; books: CatalogBook[]; totalCount: number };
-
-export interface DiscoverRailSpec {
-  title: string;
-  sort: CatalogFeaturedSort;
-  limit: number;
-}
-
-export const DISCOVER_RAIL_COUNT = 4;
-export const DISCOVER_RAIL_LIMIT = 6;
-
-/** Rail order: Recién agregados (NEWEST), Populares (POPULAR), Recomendados, Gutenberg. */
-export const DISCOVER_RAIL_SPECS: readonly DiscoverRailSpec[] = [
-  { title: 'Recién agregados', sort: 'NEWEST', limit: DISCOVER_RAIL_LIMIT },
-  { title: 'Populares', sort: 'POPULAR', limit: DISCOVER_RAIL_LIMIT },
-  { title: 'Recomendados', sort: 'POPULAR', limit: DISCOVER_RAIL_LIMIT },
-  { title: 'Gutenberg', sort: 'NEWEST', limit: DISCOVER_RAIL_LIMIT },
-];
-
-/** Seven static chips; selection filters loaded rails client-side only (no catalog call). */
-export const TRENDING_CHIPS: readonly string[] = [
-  'Ficción',
-  'Clásicos',
-  'Aventura',
-  'Misterio',
-  'Romance',
-  'Ciencia ficción',
-  'Historia',
-];
-
-/**
- * Spanish chip label → English subject keywords. Catalog subjects arrive in
- * English (Gutendex/Open Library), so a normalized substring check alone
- * would miss (`ficción` vs `fiction`); keywords bridge the locale gap.
- * Pure client-side filter — never triggers a catalog call.
- */
-const CHIP_KEYWORDS: Record<string, readonly string[]> = {
-  Ficción: ['fiction'],
-  Clásicos: ['classic'],
-  Aventura: ['adventure'],
-  Misterio: ['mystery', 'detective'],
-  Romance: ['romance', 'love'],
-  'Ciencia ficción': ['science'],
-  Historia: ['history'],
-};
-
-function normalizeHaystack(value: string): string {
-  return value.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-}
-
-/** True when a book matches a trending chip (label substring or keyword hit). */
-export function matchesChip(book: CatalogBook, chip: string): boolean {
-  const haystack = normalizeHaystack(
-    `${book.title} ${book.authors.join(' ')} ${book.subjects.join(' ')}`,
-  );
-  const needle = normalizeHaystack(chip);
-  if (needle !== '' && haystack.includes(needle)) return true;
-  const keywords = CHIP_KEYWORDS[chip] ?? [];
-  return keywords.some((keyword) => haystack.includes(keyword));
-}
-
-/** Client-side rail filter; `null` chip returns the slice untouched. */
-export function filterBooksByChip(books: CatalogBook[], chip: string | null): CatalogBook[] {
-  if (chip === null) return books;
-  return books.filter((book) => matchesChip(book, chip));
-}
-
-/**
- * Static curated first slice for the Recomendados rail: visual parity without
- * blocking on sort-literal verification. Swapped for live data after the
- * Gutendex `featured()` literals prove out.
- */
-const CURATED_FIRST_SLICE: readonly CatalogBook[] = [
-  {
-    id: 'curated:pride-and-prejudice',
-    provider: 'curated',
-    title: 'Pride and Prejudice',
-    authors: ['Jane Austen'],
-    coverUrl: null,
-    languages: ['en'],
-    subjects: ['Classic fiction'],
-    downloadUrl: null,
-  },
-  {
-    id: 'curated:moby-dick',
-    provider: 'curated',
-    title: 'Moby Dick; Or, The Whale',
-    authors: ['Herman Melville'],
-    coverUrl: null,
-    languages: ['en'],
-    subjects: ['Adventure fiction'],
-    downloadUrl: null,
-  },
-  {
-    id: 'curated:frankenstein',
-    provider: 'curated',
-    title: 'Frankenstein; Or, The Modern Prometheus',
-    authors: ['Mary Wollstonecraft Shelley'],
-    coverUrl: null,
-    languages: ['en'],
-    subjects: ['Gothic fiction'],
-    downloadUrl: null,
-  },
-  {
-    id: 'curated:sherlock-holmes',
-    provider: 'curated',
-    title: 'The Adventures of Sherlock Holmes',
-    authors: ['Arthur Conan Doyle'],
-    coverUrl: null,
-    languages: ['en'],
-    subjects: ['Mystery fiction'],
-    downloadUrl: null,
-  },
-  {
-    id: 'curated:dracula',
-    provider: 'curated',
-    title: 'Dracula',
-    authors: ['Bram Stoker'],
-    coverUrl: null,
-    languages: ['en'],
-    subjects: ['Gothic fiction'],
-    downloadUrl: null,
-  },
-  {
-    id: 'curated:jane-eyre',
-    provider: 'curated',
-    title: 'Jane Eyre: An Autobiography',
-    authors: ['Charlotte Brontë'],
-    coverUrl: null,
-    languages: ['en'],
-    subjects: ['Classic fiction'],
-    downloadUrl: null,
-  },
-];
-
-function statusForCode(code: CatalogErrorCode): DiscoverStatus {
-  return isOfflineCode(code) ? 'offline' : 'error';
-}
-
-function isOfflineCode(code: CatalogErrorCode): boolean {
-  return code === 'NETWORK_ERROR' || code === 'RATE_LIMITED';
-}
-
-function codeOf(err: unknown): CatalogErrorCode {
-  return isCatalogError(err) ? err.code : 'UPSTREAM_ERROR';
-}
+/** Chip taxonomy + chip filtering live in `discoverChips.ts`; re-exported for consumers. */
+export { CHIP_KEYWORDS, TRENDING_CHIPS, filterBooksByChip, matchesChip } from './discoverChips';
+/** The 3-rail plan lives in `railPlan.ts`; re-exported so existing imports keep working. */
+export { DISCOVER_RAIL_COUNT, DISCOVER_RAIL_LIMIT, type DiscoverRailSpec } from './railPlan';
+export type { DiscoverBrowseScope, DiscoverRailState } from './DiscoverRailsDomainState.svelte';
 
 class DiscoverDomainState {
   query = $state('');
@@ -194,18 +53,11 @@ class DiscoverDomainState {
   progressBytes = $state(0);
   /** Total bytes from `content-length`, or null when the host omits it. */
   progressTotal = $state<number | null>(null);
-
-  /** Four browse rails; Hidden rails render nothing (fail-closed). */
-  rails = $state<DiscoverRailState[]>([
-    { kind: 'Hidden' },
-    { kind: 'Hidden' },
-    { kind: 'Hidden' },
-    { kind: 'Hidden' },
-  ]);
   /** Static chip labels for client-side filtering over loaded rails. */
   trending = $state<string[]>([...TRENDING_CHIPS]);
-  /** False once any rail observes a connectivity failure. */
-  isOnline = $state(true);
+
+  /** Rail orchestration (3-rail plan, per-rail machine, scoped browse). */
+  readonly railsState: DiscoverRailsDomainState;
 
   private lastAttemptedPage = 0;
   private downloadController: AbortController | null = null;
@@ -213,7 +65,20 @@ class DiscoverDomainState {
   constructor(
     private readonly provider: CatalogProvider = liveCatalogProvider,
     private readonly downloadPorts: DiscoverDownloadPorts = {},
-  ) {}
+    rails: Pick<DiscoverRailsDeps, 'now'> = {},
+  ) {
+    this.railsState = new DiscoverRailsDomainState({ provider: this.provider, now: rails.now });
+  }
+
+  /** Browse rails in stable index order; `Hidden` rails render nothing. */
+  get rails(): DiscoverRailState[] {
+    return this.railsState.rails;
+  }
+
+  /** False once any rail observed a connectivity failure. */
+  get isOnline(): boolean {
+    return this.railsState.isOnline;
+  }
 
   setQuery(query: string): void {
     this.query = query;
@@ -238,7 +103,7 @@ class DiscoverDomainState {
       this.activePage = 1;
       this.status = page.results.length === 0 ? 'empty' : 'loaded';
     } catch (err) {
-      const code = codeOf(err);
+      const code = catalogCodeOf(err);
       this.errorCode = code;
       this.status = statusForCode(code);
     }
@@ -266,7 +131,7 @@ class DiscoverDomainState {
       this.errorCode = null;
       this.status = 'loaded';
     } catch (err) {
-      const code = codeOf(err);
+      const code = catalogCodeOf(err);
       this.errorCode = code;
       this.status = statusForCode(code);
     }
@@ -283,7 +148,7 @@ class DiscoverDomainState {
       this.detail = await this.provider.getDetails(id);
       this.detailStatus = 'loaded';
     } catch (err) {
-      const code = codeOf(err);
+      const code = catalogCodeOf(err);
       this.detailStatus = code === 'NOT_FOUND' ? 'notFound' : 'error';
     }
   }
@@ -381,69 +246,34 @@ class DiscoverDomainState {
     return this.provider.listSources();
   }
 
-  /**
-   * Load all four rails. Each rail is isolated: success maps to Loaded
-   * (truncated to the rail limit, short rails render as-is, empty rails
-   * collapse to Hidden) and any throw maps to Hidden without affecting the
-   * other rails. Connectivity throws flip `isOnline` to false.
-   */
+  /** Load the rail set once per session; a settled set is reused on remount. */
+  async ensureRailsLoaded(): Promise<void> {
+    await this.railsState.ensureLoaded();
+  }
+
+  /** Re-resolve every rail of the index-stable 3-rail plan. */
   async refreshRails(): Promise<void> {
-    this.rails = DISCOVER_RAIL_SPECS.map(() => ({ kind: 'Loading' }) as DiscoverRailState);
-    this.isOnline = true;
-    let offlineSeen = false;
-    const settled = await Promise.all([
-      this.loadFeaturedRail('NEWEST', DISCOVER_RAIL_LIMIT),
-      this.loadFeaturedRail('POPULAR', DISCOVER_RAIL_LIMIT),
-      this.loadCuratedRail(),
-      this.loadGutenbergRail(),
-    ]);
-    for (const rail of settled) {
-      if (rail.kind === 'Hidden' && rail.offline) offlineSeen = true;
-    }
-    this.rails = settled.map((rail) => (rail.kind === 'Hidden' ? { kind: 'Hidden' } : rail.state));
-    if (offlineSeen) this.isOnline = false;
+    await this.railsState.refreshRails();
   }
 
-  private async loadFeaturedRail(
-    sort: CatalogFeaturedSort,
-    limit: number,
-  ): Promise<{ kind: 'Hidden'; offline: boolean } | { kind: 'Loaded'; state: DiscoverRailState }> {
-    try {
-      const page = await this.provider.featured(sort, limit);
-      const books = page.results.slice(0, limit);
-      if (books.length === 0) return { kind: 'Hidden', offline: false };
-      return {
-        kind: 'Loaded',
-        state: { kind: 'Loaded', books, totalCount: page.totalCount },
-      };
-    } catch (err) {
-      return { kind: 'Hidden', offline: isOfflineCode(codeOf(err)) };
-    }
+  /** Re-resolve only the rail at `index`; other rails keep their content. */
+  async retryRail(index: number): Promise<void> {
+    await this.railsState.retryRail(index);
   }
 
-  /** Static first slice: no I/O, always Loaded. */
-  private loadCuratedRail(): { kind: 'Loaded'; state: DiscoverRailState } {
-    const books = CURATED_FIRST_SLICE.slice(0, DISCOVER_RAIL_LIMIT);
-    return {
-      kind: 'Loaded',
-      state: { kind: 'Loaded', books: [...books], totalCount: books.length },
-    };
+  /** Open the rail-scoped browse view for a rail header ("Ver todo"). */
+  async openRailScope(scope: DiscoverBrowseScope): Promise<void> {
+    await this.railsState.openScope(scope);
   }
 
-  private async loadGutenbergRail(): Promise<
-    { kind: 'Hidden'; offline: boolean } | { kind: 'Loaded'; state: DiscoverRailState }
-  > {
-    try {
-      const page = await this.provider.searchSource(BUILTIN_GUTENDEX, '', 1);
-      const books = page.results.slice(0, DISCOVER_RAIL_LIMIT);
-      if (books.length === 0) return { kind: 'Hidden', offline: false };
-      return {
-        kind: 'Loaded',
-        state: { kind: 'Loaded', books, totalCount: page.totalCount },
-      };
-    } catch (err) {
-      return { kind: 'Hidden', offline: isOfflineCode(codeOf(err)) };
-    }
+  /** Append the next page of the open rail scope. */
+  async loadRailScopeNextPage(): Promise<void> {
+    await this.railsState.loadScopeNextPage();
+  }
+
+  /** Leave the rail-scoped browse view. */
+  closeRailScope(): void {
+    this.railsState.closeScope();
   }
 
   private resetToIdle(): void {
@@ -462,6 +292,10 @@ class DiscoverDomainState {
     this.progressBytes = 0;
     this.progressTotal = null;
   }
+}
+
+function statusForCode(code: CatalogErrorCode): DiscoverStatus {
+  return isOfflineCatalogCode(code) ? 'offline' : 'error';
 }
 
 export const discoverState = new DiscoverDomainState();

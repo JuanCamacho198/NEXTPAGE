@@ -1,10 +1,7 @@
 <script lang="ts">
-  import {
-    DISCOVER_RAIL_LIMIT,
-    DISCOVER_RAIL_SPECS,
-    discoverState,
-    filterBooksByChip,
-  } from './DiscoverDomainState.svelte';
+  import { discoverState, filterBooksByChip } from './DiscoverDomainState.svelte';
+  import { DISCOVER_RAIL_LIMIT } from './railPlan';
+  import type { CatalogBook } from '$lib/shared/services/catalog';
   import type { MessageKey } from '$lib/shared/i18n/messages.en';
   import { navigationState } from '$lib/shared/stores/NavigationDomainState.svelte';
   import DiscoverCard from './DiscoverCard.svelte';
@@ -16,23 +13,26 @@
 
   type Translate = (key: MessageKey, params?: Record<string, string | number>) => string;
 
+  /** One slot per rail index: Loading skeleton, Loaded section, or inline Error. */
+  type RailView =
+    | { index: number; kind: 'Loading'; title: string }
+    | { index: number; kind: 'Loaded'; title: string; books: CatalogBook[] }
+    | { index: number; kind: 'Error'; title: string; offline: boolean };
+
   let { t }: { t: Translate } = $props();
 
   /** Live source count for the hero pill (`En línea · N fuentes`). */
   let sourceCount = $state(0);
   /** Selected trending chip; filters loaded rails client-side only (no catalog call). */
   let selectedChip = $state<string | null>(null);
-  /** True once the first `refreshRails()` settled (success or fail-closed). */
-  let railsReady = $state(false);
 
   async function loadRails(): Promise<void> {
-    await discoverState.refreshRails();
+    await discoverState.ensureRailsLoaded();
     sourceCount = discoverState.refreshSources().length;
-    railsReady = true;
   }
 
-  // Browse-first load: rails resolve through `featured()`/`searchSource()`,
-  // each rail failing closed to Hidden without affecting the others.
+  // Browse-first load: every rail resolves through an explicit featured ordering
+  // or a non-empty term search, and each rail fails without affecting the others.
   $effect(() => {
     void loadRails();
   });
@@ -61,26 +61,35 @@
     searchActive && (discoverState.status === 'loaded' || discoverState.status === 'loadingMore'),
   );
 
-  const railsLoading = $derived(
-    !railsReady || discoverState.rails.some((rail) => rail.kind === 'Loading'),
-  );
-
   /**
-   * Visible rails in spec order. Hidden rails render nothing (fail-closed);
-   * chip-filtered rails with zero matches collapse too. Pure `$derived`
-   * over already-loaded books — zero catalog calls.
+   * Per-index rail views. Rendering is never gated on an all-rails-settled
+   * condition: each index publishes its own slot, so rail order stays stable
+   * while rails settle one by one. Hidden rails render nothing and a chip-filter
+   * with zero matches collapses like a Hidden rail. Pure `$derived` over
+   * already-loaded books — zero catalog calls.
    */
-  const visibleRails = $derived(
-    DISCOVER_RAIL_SPECS.map((spec, index) => {
-      const rail = discoverState.rails[index];
-      if (!rail || rail.kind !== 'Loaded') return null;
-      const books = filterBooksByChip(rail.books, selectedChip);
-      if (books.length === 0) return null;
-      return { title: spec.title, books };
-    }).filter((rail) => rail !== null),
-  );
+  const railViews = $derived.by<RailView[]>(() => {
+    const specs = discoverState.railsState.specs;
+    const views: RailView[] = [];
+    for (const [index, rail] of discoverState.rails.entries()) {
+      const spec = specs[index];
+      if (!spec) continue;
+      const title = t(spec.titleKey);
+      if (rail.kind === 'Loading') {
+        views.push({ index, kind: 'Loading', title });
+      } else if (rail.kind === 'Error') {
+        views.push({ index, kind: 'Error', title, offline: rail.offline });
+      } else if (rail.kind === 'Loaded') {
+        const books = filterBooksByChip(rail.books, selectedChip);
+        if (books.length > 0) views.push({ index, kind: 'Loaded', title, books });
+      }
+    }
+    return views;
+  });
 
-  const showOffline = $derived(!discoverState.isOnline && visibleRails.length === 0);
+  const showOffline = $derived(
+    !discoverState.isOnline && discoverState.rails.every((rail) => rail.kind !== 'Loaded'),
+  );
 
   function submitSearch(query: string): void {
     discoverState.setQuery(query);
@@ -88,14 +97,13 @@
   }
 
   function retryRails(): void {
-    railsReady = false;
-    void loadRails();
+    void discoverState.refreshRails();
   }
 </script>
 
 <!--
   Flow layout (`h-auto`, no `overflow-y-auto`): the AppRouter `#main-content`
-  is the single scroller for the 1800px rail page; titlebar/sidebar stay fixed.
+  is the single scroller for the rail page; titlebar/sidebar stay fixed.
 -->
 <section aria-labelledby="discover-heading" class="flex h-auto flex-col gap-6">
   <DiscoverHero
@@ -172,29 +180,45 @@
         {/if}
       {/if}
     </div>
-  {:else if railsLoading}
-    {#each DISCOVER_RAIL_SPECS as spec (spec.title)}
-      <section aria-label={spec.title} class="flex flex-col gap-3">
-        <h2 class="m-0 text-lg font-semibold text-(--color-primary)">{spec.title}</h2>
-        <div
-          class="grid gap-3"
-          style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr))"
-        >
-          {#each Array.from({ length: DISCOVER_RAIL_LIMIT }, (_, i) => i) as i (i)}
-            <DiscoverSkeletonCard />
-          {/each}
-        </div>
-      </section>
-    {/each}
   {:else if showOffline}
     <DiscoverOfflineState {t} onRetry={retryRails} />
   {:else}
-    {#each visibleRails as rail (rail.title)}
-      <DiscoverRailSection
-        title={rail.title}
-        books={rail.books}
-        onOpen={(id) => void discoverState.openDetail(id)}
-      />
+    {#each railViews as view (view.index)}
+      {#if view.kind === 'Loading'}
+        <section aria-label={view.title} class="flex flex-col gap-3">
+          <h2 class="m-0 text-lg font-semibold text-(--color-primary)">{view.title}</h2>
+          <div
+            class="grid gap-3"
+            style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr))"
+          >
+            {#each Array.from({ length: DISCOVER_RAIL_LIMIT }, (_, i) => i) as i (i)}
+              <DiscoverSkeletonCard />
+            {/each}
+          </div>
+        </section>
+      {:else if view.kind === 'Loaded'}
+        <DiscoverRailSection
+          title={view.title}
+          books={view.books}
+          onOpen={(id) => void discoverState.openDetail(id)}
+        />
+      {:else}
+        <section aria-label={view.title} class="flex flex-col gap-3">
+          <h2 class="m-0 text-lg font-semibold text-(--color-primary)">{view.title}</h2>
+          <div class="flex flex-col items-start gap-2">
+            <p class="m-0 text-sm text-(--color-text-muted)">
+              {view.offline ? t('discover.offline') : t('discover.errorUpstream')}
+            </p>
+            <button
+              type="button"
+              class="rounded-md border border-(--color-primary)/25 bg-(--color-primary)/8 px-3 py-1.5 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/15"
+              onclick={() => void discoverState.retryRail(view.index)}
+            >
+              {t('discover.retry')}
+            </button>
+          </div>
+        </section>
+      {/if}
     {/each}
   {/if}
 </section>

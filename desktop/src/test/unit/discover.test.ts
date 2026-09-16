@@ -490,34 +490,34 @@ describe('desktop-descubrir Phase 3.2 — pill count, chip filter, fail-closed, 
     expect(TRENDING_CHIPS).toHaveLength(7);
   });
 
-  it('per-rail fail-closed: featured throw hides rails without affecting curated', async () => {
+  it('per-rail fail-closed: a featured throw fails only the featured rails', async () => {
     const provider = fakeProvider({
       featuredError: catalogError('UPSTREAM_ERROR', 'boom'),
       searchSourceBooks: [fakeBook('gutendex:9')],
     });
     const state = new DiscoverDomainState(provider);
     await state.refreshRails();
-    expect(state.rails[0]).toEqual({ kind: 'Hidden' });
-    expect(state.rails[1]).toEqual({ kind: 'Hidden' });
+    expect(state.rails).toHaveLength(3);
+    expect(state.rails[0]).toEqual({ kind: 'Error', code: 'UPSTREAM_ERROR', offline: false });
+    expect(state.rails[1]).toEqual({ kind: 'Error', code: 'UPSTREAM_ERROR', offline: false });
     expect(state.rails[2]?.kind).toBe('Loaded');
-    expect(state.rails[3]?.kind).toBe('Loaded');
     expect(state.isOnline).toBe(true);
   });
 
-  it('per-rail fail-closed: Gutenberg error hides only that rail', async () => {
+  it('per-rail fail-closed: a thematic term error fails only that rail', async () => {
     const provider = fakeProvider({
       featuredBySort: {
         NEWEST: [fakeBook('gutendex:1')],
         POPULAR: [fakeBook('gutendex:2')],
       },
-      searchSourceError: catalogError('UPSTREAM_ERROR', 'gutenberg down'),
+      searchSourceError: catalogError('UPSTREAM_ERROR', 'term search down'),
     });
     const state = new DiscoverDomainState(provider);
     await state.refreshRails();
+    expect(state.rails).toHaveLength(3);
     expect(state.rails[0]?.kind).toBe('Loaded');
     expect(state.rails[1]?.kind).toBe('Loaded');
-    expect(state.rails[2]?.kind).toBe('Loaded');
-    expect(state.rails[3]).toEqual({ kind: 'Hidden' });
+    expect(state.rails[2]).toEqual({ kind: 'Error', code: 'UPSTREAM_ERROR', offline: false });
   });
 
   it('short rails render as-is and long rails truncate to the rail limit', async () => {
@@ -573,17 +573,17 @@ describe('desktop-descubrir Phase 3.3 — skeleton, offline retry, discover rout
         if (failing) throw catalogError('NETWORK_ERROR', 'offline');
         return base.featured(sort, limit);
       },
-      searchSource: async () => {
+      searchSource: async (sourceId, query, page) => {
         if (failing) throw catalogError('NETWORK_ERROR', 'offline');
-        return paged([fakeBook('gutendex:3')]);
+        return base.searchSource(sourceId, query, page);
       },
     };
     const state = new DiscoverDomainState(flaky);
     await state.refreshRails();
     expect(state.isOnline).toBe(false);
-    expect(state.rails[0]).toEqual({ kind: 'Hidden' });
-    // Curated static rail survives the outage.
-    expect(state.rails[2]?.kind).toBe('Loaded');
+    expect(state.rails).toHaveLength(3);
+    expect(state.rails.map((rail) => rail.kind)).toEqual(['Error', 'Error', 'Error']);
+    expect(state.rails[0]).toEqual({ kind: 'Error', code: 'NETWORK_ERROR', offline: true });
     failing = false;
     await state.refreshRails();
     expect(state.isOnline).toBe(true);

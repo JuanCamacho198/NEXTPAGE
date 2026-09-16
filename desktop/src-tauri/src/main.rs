@@ -212,7 +212,10 @@ fn main() {
             commands::setAddonEnabled,
             commands::deleteInstalledAddon,
             commands::discoverCacheRead,
-            commands::discoverCachePut
+            commands::discoverCachePut,
+            commands::downloadRemoteBook,
+            commands::cancelRemoteDownload,
+            commands::discardRemoteDownload
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

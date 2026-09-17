@@ -3,6 +3,7 @@
  * Gutendex is metadata/download authority; Open Library enriches + cover fallback.
  */
 import { catalogError, type CatalogErrorCode } from './errors';
+import type { AccessOption } from './accessResolver';
 
 /**
  * Strict catalog source ids: 'builtin:<name>' for first-party sources,
@@ -13,11 +14,18 @@ export type CatalogSource = string & { readonly __catalogSource: true };
 
 export const BUILTIN_GUTENDEX = 'builtin:gutendex' as CatalogSource;
 export const BUILTIN_OPENLIBRARY = 'builtin:openlibrary' as CatalogSource;
+/**
+ * Key-gated Google Books source. Registered in the closed built-in registry so
+ * `parseCatalogSource('builtin:googlebooks')` accepts it, but the provider is
+ * only constructed when `VITE_GOOGLE_BOOKS_KEY` is non-blank (fail-closed).
+ */
+export const BUILTIN_GOOGLEBOOKS = 'builtin:googlebooks' as CatalogSource;
 
 /** Closed registry of first-party built-in source names (curated bundle included). */
 const KNOWN_BUILTIN_NAMES = [
   'gutendex',
   'openlibrary',
+  'googlebooks',
   'standard-ebooks',
   'librivox',
   'wikisource',
@@ -68,6 +76,18 @@ export interface CatalogBook {
   languages: string[];
   subjects: string[];
   downloadUrl: string | null;
+  /**
+   * WU1 additive-optional enrichment (Android parity). All optional so
+   * existing providers, fixtures, and cached payloads keep compiling.
+   */
+  description?: string | null;
+  formats?: Record<string, string>;
+  isbn10?: string | null;
+  isbn13?: string | null;
+  isPublicDomain?: boolean | null;
+  openLibraryWorkId?: string | null;
+  internetArchiveId?: string | null;
+  googleBooksId?: string | null;
 }
 
 export interface PagedResult {
@@ -76,6 +96,29 @@ export interface PagedResult {
   nextPage: number | null;
   totalCount: number;
 }
+
+/**
+ * Addon access resolution (slice 9): the in-app download gate plus the
+ * external-open options. `downloadUrl` is non-null only when
+ * `canDownloadInApp` is true. `options` reuses the `AccessOption` shape with
+ * `titleKey: 'discover.accessOpen'` and `opensInApp: false`.
+ */
+export interface AddonAccessResolution {
+  canDownloadInApp: boolean;
+  downloadUrl: string | null;
+  options: AccessOption[];
+}
+
+/**
+ * Closed domain of featured orderings: every entry maps to a verified
+ * upstream literal, so no caller can ever pass a raw `sort` string through
+ * to Gutendex. Mirrors Android `CatalogFeaturedSort`.
+ *
+ * - `POPULAR` -> `sort=popular` (all-time download count, HTTP 200 verified).
+ * - `NEWEST` -> `sort=descending` (newest-by-id, HTTP 200 verified). Note this
+ *   is *not* week-scoped: Gutendex exposes no time-windowed ordering.
+ */
+export type CatalogFeaturedSort = 'POPULAR' | 'NEWEST';
 
 export interface CatalogProvider {
   /** `page` is 1-based; `page < 1` rejects with INVALID_PAGE before any I/O. */
@@ -88,8 +131,39 @@ export interface CatalogProvider {
    */
   resolveDownloadUrl(formats: Record<string, string>, preferEpub: boolean): string;
 
+  /**
+   * Addon-owned access resolve (slice 9, additive + optional): render the
+   * addon's `resolveUrl` from the book identity and resolve reading access.
+   * Absent ⇒ the book has no addon resolution (empty result, zero I/O).
+   * `resolveDownloadUrl` semantics are untouched.
+   */
+  resolveAddonAccess?(book: CatalogBook): Promise<AddonAccessResolution>;
+
   /** Pure function (no I/O): the sources this provider can serve, in order. */
   listSources(): CatalogSourceInfo[];
+
+  /**
+   * Featured rail page (first slice): `limit` books in `sort` order, page 1.
+   * `limit` must be an integer >= 1, else rejects INVALID_PAGE before any I/O.
+   *
+   * Fail-closed default semantics: a provider with no featured capability
+   * returns an empty page, so its rail auto-hides instead of surfacing an
+   * error or a placeholder section.
+   */
+  featured(sort: CatalogFeaturedSort, limit: number): Promise<PagedResult>;
+
+  /**
+   * Fail-closed capability probe: false means "do not build a featured rail"
+   * for `sort` with this provider.
+   */
+  supportsFeatured(sort: CatalogFeaturedSort): boolean;
+
+  /**
+   * Per-source search scoped to one `sourceId`. Fail-closed: an unsupported
+   * id yields an empty page rather than a crash. `page` is 1-based and
+   * rejects INVALID_PAGE before any I/O.
+   */
+  searchSource(sourceId: CatalogSource, query: string, page: number): Promise<PagedResult>;
 }
 
 export type { CatalogErrorCode };

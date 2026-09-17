@@ -12,7 +12,7 @@ import {
 } from '$lib/shared/stores/HomeState';
 
 export type AppRoute =
-  'home' | 'reader' | 'library' | 'stats' | 'highlights' | 'settings' | 'welcome';
+  'home' | 'reader' | 'library' | 'stats' | 'highlights' | 'settings' | 'welcome' | 'discover';
 
 class HomeStateManager {
   route = $state<AppRoute>('home');

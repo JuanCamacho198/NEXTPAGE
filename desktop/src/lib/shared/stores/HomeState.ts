@@ -23,6 +23,7 @@ export type AppRoute =
   | 'home'
   | 'library'
   | 'discover'
+  | 'addons'
   | 'stats'
   | 'reader'
   | 'highlights'

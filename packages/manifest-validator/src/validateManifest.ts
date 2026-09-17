@@ -43,6 +43,14 @@ export interface AddonManifest {
   searchUrl?: string;
   /** Optional detail endpoint template: `{bookId}` placeholder. */
   detailsUrl?: string;
+  /**
+   * Optional v2 resolve endpoint template: `{isbn}`, `{title}`, `{author}`,
+   * `{openLibraryId}`, `{googleBooksId}` placeholders. Validated https by
+   * `parseEndpoint`, so a non-https value is rejected before any resolve I/O.
+   */
+  resolveUrl?: string;
+  /** Optional v2 capability ids (open set; `resolve` is the known id). */
+  capabilities?: string[];
 }
 
 function addonFetchError(code: AddonFetchErrorCode, detail?: string): AddonFetchError {
@@ -139,6 +147,31 @@ function parseEndpoint(value: unknown): string | undefined {
   return value;
 }
 
+export const MAX_CAPABILITIES = 16;
+export const MAX_CAPABILITY_CHARS = 64;
+
+/**
+ * Optional v2 capability list: absent ⇒ `undefined` (the endpoint fields
+ * stay authoritative for v1-style manifests); present ⇒ a string array with
+ * `1 ≤ length ≤ MAX_CAPABILITIES`, each entry non-empty and
+ * `≤ MAX_CAPABILITY_CHARS`. Anything else ⇒ `ADDON_FETCH_INVALID_MANIFEST`.
+ */
+function parseCapabilities(value: unknown): string[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || value.length === 0 || value.length > MAX_CAPABILITIES) {
+    throw addonFetchError(
+      AddonFetchErrorCode.INVALID_MANIFEST,
+      'capabilities must be a non-empty array of at most 16 entries',
+    );
+  }
+  return value.map((entry) => {
+    if (!isNonEmptyString(entry) || entry.length > MAX_CAPABILITY_CHARS) {
+      throw addonFetchError(AddonFetchErrorCode.INVALID_MANIFEST, 'invalid capability entry');
+    }
+    return entry;
+  });
+}
+
 function parseManifestObject(value: unknown): AddonManifest {
   if (!isPlainObject(value)) {
     throw addonFetchError(AddonFetchErrorCode.INVALID_MANIFEST, 'manifest must be a JSON object');
@@ -165,7 +198,18 @@ function parseManifestObject(value: unknown): AddonManifest {
     resources: parseResources(value.resources),
     searchUrl: parseEndpoint(value.searchUrl),
     detailsUrl: parseEndpoint(value.detailsUrl),
+    resolveUrl: parseEndpoint(value.resolveUrl),
+    capabilities: parseCapabilities(value.capabilities),
   };
+}
+
+/**
+ * Declared v2 capability ids. An absent list leaves endpoint fields
+ * authoritative (v1-style manifests); an empty capability array therefore
+ * normalizes to `[]`, not `undefined`.
+ */
+export function declaredCapabilities(manifest: AddonManifest): string[] {
+  return manifest.capabilities ?? [];
 }
 
 /**

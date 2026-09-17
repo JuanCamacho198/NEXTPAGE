@@ -8,7 +8,7 @@ use tauri::{AppHandle, Manager};
 
 use crate::error::{AppError, AppResult};
 
-const MIGRATIONS: [(&str, &str); 17] = [
+const MIGRATIONS: [(&str, &str); 18] = [
     ("0001_init", include_str!("../migrations/0001_init.sql")),
     ("0002_books", include_str!("../migrations/0002_books.sql")),
     ("0003_highlights", include_str!("../migrations/0003_highlights.sql")),
@@ -29,6 +29,7 @@ const MIGRATIONS: [(&str, &str); 17] = [
     ("0015_dictionary_sync", include_str!("../migrations/0015_dictionary_sync.sql")),
     ("0016_discover_cache", include_str!("../migrations/0016_discover_cache.sql")),
     ("0017_addon_registry", include_str!("../migrations/0017_addon_registry.sql")),
+    ("0018_addon_consent", include_str!("../migrations/0018_addon_consent.sql")),
 ];
 
 pub fn resolve_db_path(app: &AppHandle) -> AppResult<PathBuf> {
@@ -294,6 +295,35 @@ pub fn discover_cache_get(
     }
     Ok(Some(payload))
 }
+
+/// Resident Discover cache row, exactly as stored.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DiscoverCacheRow {
+    pub payload: String,
+    pub fetched_at: i64,
+    pub ttl_s: i64,
+}
+
+/// Resident read for stale-while-revalidate: returns the stored row WITHOUT
+/// judging TTL and WITHOUT deleting anything, so a stale entry survives to be
+/// served while a background refresh replaces it. TTL judgement belongs to the
+/// frontend (`PersistentDiscoverCache`), which owns the stale/fresh decision.
+///
+/// [`discover_cache_get`] deliberately keeps its eager-eviction semantics and
+/// is unchanged; this helper is the only new db seam.
+pub fn discover_cache_read(
+    connection: &Connection,
+    key: &str,
+) -> AppResult<Option<DiscoverCacheRow>> {
+    let row: Option<(String, i64, i64)> = connection
+        .query_row(
+            "SELECT payload, fetched_at, ttl_s FROM discover_cache WHERE key = ?1 LIMIT 1",
+            [key],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .optional()?;
+    Ok(row.map(|(payload, fetched_at, ttl_s)| DiscoverCacheRow { payload, fetched_at, ttl_s }))
+}
 fn has_column(connection: &Connection, table_name: &str, column_name: &str) -> AppResult<bool> {
     let mut statement = connection.prepare(&format!("PRAGMA table_info({})", table_name))?;
     let rows = statement.query_map([], |row| row.get::<_, String>(1))?;
@@ -505,5 +535,44 @@ mod tests {
         let hit =
             discover_cache_get(&connection, "p:composite:pride:1", 2_001).expect("get succeeds");
         assert_eq!(hit.as_deref(), Some("{\"n\":2}"));
+    }
+
+    /// Stale-while-revalidate needs the expired row to SURVIVE the read:
+    /// `discover_cache_read` returns it verbatim while `discover_cache_get`
+    /// still evicts it eagerly.
+    #[test]
+    fn test_discover_cache_read_returns_expired_row_without_deleting() {
+        let connection = memory_db_with_cache_table();
+        discover_cache_put(&connection, "f:v2:builtin:gutendex:NEWEST", "{\"n\":1}", 1_000, 10)
+            .expect("put succeeds");
+
+        let resident = discover_cache_read(&connection, "f:v2:builtin:gutendex:NEWEST")
+            .expect("read succeeds")
+            .expect("expired row is still resident");
+        assert_eq!(resident.payload, "{\"n\":1}");
+        assert_eq!(resident.fetched_at, 1_000);
+        assert_eq!(resident.ttl_s, 10);
+
+        // No delete happened: the same row is still there on a later read.
+        let again = discover_cache_read(&connection, "f:v2:builtin:gutendex:NEWEST")
+            .expect("read succeeds");
+        assert_eq!(again.as_ref().map(|row| row.payload.as_str()), Some("{\"n\":1}"));
+
+        // `discover_cache_get` keeps its eager eviction, so the row then goes away.
+        let evicted = discover_cache_get(&connection, "f:v2:builtin:gutendex:NEWEST", 1_000 + 11)
+            .expect("get succeeds");
+        assert_eq!(evicted, None);
+        assert_eq!(
+            discover_cache_read(&connection, "f:v2:builtin:gutendex:NEWEST")
+                .expect("read succeeds"),
+            None
+        );
+    }
+
+    #[test]
+    fn test_discover_cache_read_misses_unknown_key() {
+        let connection = memory_db_with_cache_table();
+        let miss = discover_cache_read(&connection, "p:v2:missing:1").expect("read succeeds");
+        assert_eq!(miss, None);
     }
 }

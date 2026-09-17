@@ -1,5 +1,6 @@
 export {
   BUILTIN_GUTENDEX,
+  BUILTIN_GOOGLEBOOKS,
   BUILTIN_OPENLIBRARY,
   addonSource,
   addonSourceIdOf,
@@ -7,15 +8,36 @@ export {
 } from './CatalogProvider';
 export type {
   CatalogBook,
+  CatalogFeaturedSort,
   CatalogProvider,
   CatalogSource,
   CatalogSourceInfo,
   CatalogSourceKind,
   PagedResult,
+  AddonAccessResolution,
 } from './CatalogProvider';
-export { CatalogError, catalogError, isCatalogError, mapHttpStatusToCode } from './errors';
+export {
+  CatalogError,
+  catalogError,
+  isCatalogError,
+  isRetryableCatalogCode,
+  mapHttpStatusToCode,
+} from './errors';
 export type { CatalogErrorCode } from './errors';
 export { GutendexDataSource, GUTENDEX_BASE_URL } from './GutendexDataSource';
+export {
+  GoogleBooksDataSource,
+  GOOGLE_BOOKS_BASE_URL,
+  GOOGLE_BOOKS_VOLUME_FIELDS,
+  buildGoogleBooksQuery,
+} from './GoogleBooksDataSource';
+export {
+  GoogleBooksCatalogProvider,
+  googleBooksKeyFromEnv,
+  googleBooksProviderOrNull,
+} from './BuiltInCatalogProviders';
+export { resolveAccess, isHttpsUrl } from './accessResolver';
+export type { AccessGroup, AccessOption, LegalAccess } from './accessResolver';
 export { OpenLibraryDataSource, OPEN_LIBRARY_BASE_URL } from './OpenLibraryDataSource';
 export {
   CompositeCatalogProvider,
@@ -35,6 +57,7 @@ export type { DiscoverCacheStore } from './DiscoverCache';
 export {
   backoffDelayMs,
   clampPageSize,
+  composeDeadline,
   createRateLimiter,
   createSearchDebouncer,
   fetchWithRetry,
@@ -48,12 +71,19 @@ export {
   MAX_PAGE_SIZE,
   MIN_PAGE_SIZE,
   OL_MIN_GAP_MS,
+  REQUEST_DEADLINE_MS,
   RETRY_BASE_DELAY_MS,
 } from './policy';
+export type { ComposedDeadline } from './policy';
 export {
   computeNextPage,
+  firstIsbn10,
+  firstIsbn13,
+  googleBooksCoverUrl,
+  googleIndustryIdentifier,
   isGutendexPublicDomain,
   isOpenLibraryPublic,
+  mapGoogleBooksVolume,
   mapGutendexBook,
   mapOpenLibraryDoc,
   mergeResults,
@@ -63,4 +93,12 @@ export {
   resolveTotalCount,
   toPagedResult,
 } from './mappers';
-export type { GutendexRecord, OpenLibraryDoc } from './mappers';
+export type {
+  GoogleBooksImageLinks,
+  GoogleBooksIndustryIdentifier,
+  GoogleBooksSearchResponse,
+  GoogleBooksVolumeInfo,
+  GoogleBooksVolumeItem,
+  GutendexRecord,
+  OpenLibraryDoc,
+} from './mappers';

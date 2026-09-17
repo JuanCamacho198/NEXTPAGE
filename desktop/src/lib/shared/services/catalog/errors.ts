@@ -8,7 +8,8 @@ export type CatalogErrorCode =
   | 'NOT_FOUND'
   | 'RATE_LIMITED'
   | 'UPSTREAM_ERROR'
-  | 'NETWORK_ERROR';
+  | 'NETWORK_ERROR'
+  | 'CONSENT_REQUIRED';
 
 export class CatalogError extends Error {
   readonly code: CatalogErrorCode;
@@ -30,6 +31,15 @@ export function catalogError(code: CatalogErrorCode, detail?: string): CatalogEr
 
 export function isCatalogError(err: unknown): err is CatalogError {
   return err instanceof CatalogError;
+}
+
+/**
+ * Code-level view of the same retryable classification `catalogError` applies,
+ * for callers that kept only the code (e.g. the Discover rail machine). Derived
+ * from `catalogError` so there is a single source of truth, never a second list.
+ */
+export function isRetryableCatalogCode(code: CatalogErrorCode): boolean {
+  return catalogError(code).retryable;
 }
 
 /** Map an upstream HTTP status to a stable contract code. */

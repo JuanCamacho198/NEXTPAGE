@@ -36,6 +36,11 @@ class NavigationDomainState {
     this.shelfDetailsBookId = null;
   };
 
+  navigateToAddons = (): void => {
+    this.route = 'addons';
+    this.shelfDetailsBookId = null;
+  };
+
   navigateToStats = (): void => {
     this.route = 'stats';
     this.shelfDetailsBookId = null;

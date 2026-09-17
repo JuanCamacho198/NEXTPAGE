@@ -2,6 +2,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { CatalogError } from '$lib/shared/services/catalog/errors';
 import {
   computeNextPage,
+  firstIsbn10,
+  firstIsbn13,
+  gutenbergCoverUrl,
   isGutendexPublicDomain,
   isOpenLibraryPublic,
   mapGutendexBook,
@@ -99,14 +102,71 @@ describe('PD predicates and mappers', () => {
   });
 });
 
+describe('WU1 plumbing: description, cover, formats', () => {
+  it('joins Gutendex summaries with blank-line separators', () => {
+    const book = mapGutendexBook(gutendexRecords[0]);
+    expect(book?.description).toBe(
+      'It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.\n\nElizabeth Bennet spars with the proud Mr. Darcy.',
+    );
+  });
+
+  it('leaves description undefined when summaries are missing or blank', () => {
+    const book = mapGutendexBook(gutendexRecords[2]);
+    expect(book?.description).toBeUndefined();
+    expect(
+      mapGutendexBook({
+        id: 1,
+        title: 'Blank',
+        copyright: false,
+        summaries: ['   '],
+      })?.description,
+    ).toBeUndefined();
+  });
+
+  it('derives the Gutenberg cover and leaves non-Gutenberg books unaffected', () => {
+    expect(gutenbergCoverUrl(1342)).toBe(
+      'https://www.gutenberg.org/cache/epub/1342/pg1342.cover.medium.jpg',
+    );
+    expect(gutenbergCoverUrl(0)).toBeNull();
+    expect(mapGutendexBook(gutendexRecords[0])?.coverUrl).toBe(gutenbergCoverUrl(1342));
+    expect(mapOpenLibraryDoc(olDocs[0])?.coverUrl).toBe(
+      'https://covers.openlibrary.org/b/id/6794977-M.jpg',
+    );
+  });
+
+  it('threads formats verbatim and resolves downloadUrl from them', () => {
+    const book = mapGutendexBook(gutendexRecords[0]);
+    expect(book?.formats?.['text/plain']).toBe('https://www.gutenberg.org/ebooks/1342.txt.utf8');
+    expect(book?.downloadUrl).toBe('https://www.gutenberg.org/ebooks/1342.epub3.images');
+    // Empty formats map → no usable URL → null (never throws out of the mapper).
+    expect(mapGutendexBook(gutendexRecords[2])?.downloadUrl).toBeNull();
+  });
+
+  it('splits OL ISBNs by digit length and carries work/IA identity', () => {
+    expect(firstIsbn13(['978-0141439518', '0141439513'])).toBe('9780141439518');
+    expect(firstIsbn10(['978-0141439518', '0141439513'])).toBe('0141439513');
+    const book = mapOpenLibraryDoc(olDocs[0]);
+    expect(book?.isbn13).toBe('9780141439518');
+    expect(book?.isbn10).toBe('0141439513');
+    expect(book?.openLibraryWorkId).toBe('/works/OL66554W');
+    expect(book?.internetArchiveId).toBe('prideandprejudice0000aust');
+  });
+});
+
 describe('merge and pagination', () => {
-  it('lets Gutendex win and fills the cover from OL', () => {
+  it('lets Gutendex win (Gutenberg cover) and fills identity from OL', () => {
     const gBooks = gutendexRecords.map(mapGutendexBook).filter((b) => b !== null);
     const oBooks = olDocs.map(mapOpenLibraryDoc).filter((b) => b !== null);
     const merged = mergeResults(gBooks, oBooks);
     const pride = merged.find((b) => b.id === 'gutendex:1342');
     expect(pride?.provider).toBe('builtin:gutendex');
-    expect(pride?.coverUrl).toBe('https://covers.openlibrary.org/b/id/6794977-M.jpg');
+    // Gutendex derives its own cover from the record id, so the Gutenberg
+    // URL wins and OL no longer fills the gap for this book (Android parity).
+    expect(pride?.coverUrl).toBe(
+      'https://www.gutenberg.org/cache/epub/1342/pg1342.cover.medium.jpg',
+    );
+    expect(pride?.isbn13).toBe('9780141439518');
+    expect(pride?.openLibraryWorkId).toBe('/works/OL66554W');
     // Borrowable OL doc dropped by the mapper, so it never reaches the merge.
     expect(merged.some((b) => b.title === 'Borrow Restricted Title')).toBe(false);
   });
@@ -228,12 +288,14 @@ describe('CompositeCatalogProvider', () => {
     expect(calls).toEqual({ g: 0, o: 0 });
   });
 
-  it('merges with Gutendex authority and OL cover fallback', async () => {
+  it('merges with Gutendex authority (Gutenberg cover wins)', async () => {
     const { provider } = stubbedComposite();
     const page = await provider.search('pride', 1);
     expect(page.totalCount).toBe(3);
     const pride = page.results.find((b) => b.id === 'gutendex:1342');
-    expect(pride?.coverUrl).toBe('https://covers.openlibrary.org/b/id/6794977-M.jpg');
+    expect(pride?.coverUrl).toBe(
+      'https://www.gutenberg.org/cache/epub/1342/pg1342.cover.medium.jpg',
+    );
     expect(page.results.some((b) => b.title === 'Borrow Restricted Title')).toBe(false);
   });
 

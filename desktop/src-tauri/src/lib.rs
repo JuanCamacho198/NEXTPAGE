@@ -1,6 +1,7 @@
 pub mod commands;
 pub mod db;
 pub mod error;
+pub mod filename;
 pub mod logger;
 pub mod models;
 pub mod queue;

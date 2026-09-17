@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   AddonFetchError,
   AddonFetchErrorCode,
+  declaredCapabilities,
   validateManifest,
   assertHttpsInstallUrl,
   MAX_MANIFEST_BYTES,
@@ -228,8 +229,101 @@ describe('validateManifest', () => {
     });
   });
 
-  describe('parity fixtures', () => {
-    const fixtureNames = [
+  describe('manifest v2 (slice 9)', () => {
+    it('a v1 manifest (no capabilities/resolveUrl) stays valid and installs unchanged', () => {
+      const manifest = validateManifest(encode(VALID_MANIFEST), 'application/json');
+      expect(manifest.resolveUrl).toBeUndefined();
+      expect(manifest.capabilities).toBeUndefined();
+      expect(declaredCapabilities(manifest)).toEqual([]);
+    });
+
+    it('a v2 manifest with well-formed capabilities + https resolveUrl is accepted with both retained', () => {
+      const manifest = validateManifest(
+        encode({
+          ...VALID_MANIFEST,
+          resolveUrl: 'https://example.com/resolve?isbn={isbn}&title={title}',
+          capabilities: ['resolve'],
+        }),
+        'application/json',
+      );
+      expect(manifest.resolveUrl).toBe('https://example.com/resolve?isbn={isbn}&title={title}');
+      expect(manifest.capabilities).toEqual(['resolve']);
+      expect(declaredCapabilities(manifest)).toEqual(['resolve']);
+    });
+
+    it('malformed capabilities reject with INVALID_MANIFEST', () => {
+      const cases = [
+        { ...VALID_MANIFEST, capabilities: 'resolve' },
+        { ...VALID_MANIFEST, capabilities: [] },
+        { ...VALID_MANIFEST, capabilities: [''] },
+        { ...VALID_MANIFEST, capabilities: ['ok', 42] },
+        { ...VALID_MANIFEST, capabilities: ['x'.repeat(65)] },
+        { ...VALID_MANIFEST, capabilities: Array.from({ length: 17 }, (_, i) => `c${i}`) },
+      ];
+      for (const broken of cases) {
+        try {
+          validateManifest(encode(broken), 'application/json');
+          throw new Error(`should have thrown for ${JSON.stringify(broken.capabilities)}`);
+        } catch (err) {
+          expect((err as AddonFetchError).code).toBe(AddonFetchErrorCode.INVALID_MANIFEST);
+        }
+      }
+    });
+
+    it('a non-https resolveUrl is rejected pre-I/O with INVALID_MANIFEST', () => {
+      for (const bad of ['http://example.com/r', 'ftp://example.com/r', 'not a url']) {
+        try {
+          validateManifest(
+            encode({ ...VALID_MANIFEST, resolveUrl: bad, capabilities: ['resolve'] }),
+            'application/json',
+          );
+          throw new Error('should have thrown');
+        } catch (err) {
+          expect((err as AddonFetchError).code).toBe(AddonFetchErrorCode.INVALID_MANIFEST);
+        }
+      }
+    });
+
+    it('unknown v2-adjacent fields are ignored and ineffective', () => {
+      const manifest = validateManifest(
+        encode({
+          ...VALID_MANIFEST,
+          resolveUrl: 'https://example.com/resolve?isbn={isbn}',
+          capabilities: ['resolve'],
+          futureTopLevelField: { nested: true },
+        }),
+        'application/json',
+      );
+      expect(manifest.resolveUrl).toBe('https://example.com/resolve?isbn={isbn}');
+      expect(declaredCapabilities(manifest)).toEqual(['resolve']);
+      expect((manifest as Record<string, unknown>)['futureTopLevelField']).toBeUndefined();
+    });
+
+    it('v2 parity fixtures yield the shared expected outcome', () => {
+      for (const name of ['v2-valid', 'v2-unknown-fields']) {
+        const fixture = loadFixture(name);
+        const manifest = validateManifest(
+          encode(fixture.manifest),
+          fixture.contentType ?? 'application/json',
+        );
+        expect(manifest.id).toBe(fixture.manifest.id);
+        expect(manifest.resolveUrl).toBe(fixture.manifest.resolveUrl);
+        expect(declaredCapabilities(manifest)).toEqual(fixture.manifest.capabilities);
+      }
+      for (const name of ['v2-malformed-capabilities', 'v2-http-resolve-url']) {
+        const fixture = loadFixture(name);
+        try {
+          validateManifest(encode(fixture.manifest), fixture.contentType ?? 'application/json');
+          throw new Error(`fixture ${name} should have been rejected`);
+        } catch (err) {
+          expect(err).toBeInstanceOf(AddonFetchError);
+          expect((err as AddonFetchError).code).toBe(fixture.expectedCode);
+        }
+      }
+    });
+  });
+
+  describe('parity fixtures', () => {    const fixtureNames = [
       'valid',
       'unknown-fields',
       'http-url',

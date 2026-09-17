@@ -52,10 +52,22 @@ const prideGolden: CatalogBook = {
   provider: 'builtin:gutendex',
   title: 'Pride and Prejudice',
   authors: ['Austen, Jane'],
-  coverUrl: 'https://covers.openlibrary.org/b/id/6794977-M.jpg',
+  coverUrl: 'https://www.gutenberg.org/cache/epub/1342/pg1342.cover.medium.jpg',
   languages: ['en'],
   subjects: ['Love stories', 'Domestic fiction'],
-  downloadUrl: null,
+  downloadUrl: 'https://www.gutenberg.org/ebooks/1342.epub3.images',
+  description:
+    'It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.\n\nElizabeth Bennet spars with the proud Mr. Darcy.',
+  formats: {
+    'application/epub+zip': 'https://www.gutenberg.org/ebooks/1342.epub3.images',
+    'text/plain': 'https://www.gutenberg.org/ebooks/1342.txt.utf8',
+    'text/html': 'https://www.gutenberg.org/ebooks/1342.html.images',
+  },
+  isbn13: '9780141439518',
+  isbn10: '0141439513',
+  isPublicDomain: true,
+  openLibraryWorkId: '/works/OL66554W',
+  internetArchiveId: 'prideandprejudice0000aust',
 };
 
 const aliceGolden: CatalogBook = {
@@ -63,10 +75,17 @@ const aliceGolden: CatalogBook = {
   provider: 'builtin:gutendex',
   title: "Alice's Adventures in Wonderland",
   authors: ['Carroll, Lewis'],
-  coverUrl: null,
+  coverUrl: 'https://www.gutenberg.org/cache/epub/11/pg11.cover.medium.jpg',
   languages: ['en'],
   subjects: ['Fantasy fiction'],
   downloadUrl: null,
+  description: undefined,
+  formats: {},
+  isbn13: null,
+  isbn10: null,
+  isPublicDomain: true,
+  openLibraryWorkId: '/works/OL11W',
+  internetArchiveId: null,
 };
 
 class FakeAddonProvider implements CatalogProvider {
@@ -112,6 +131,19 @@ class FakeAddonProvider implements CatalogProvider {
       ? [{ sourceId: addonSource(ADDON_ID), name: 'Fake Addon', kind: 'addon' }]
       : [];
   }
+
+  /** Test fake: no featured capability (fail-closed, never called by fan-out). */
+  async featured(): Promise<PagedResult> {
+    return { results: [], nextPage: null, totalCount: 0 };
+  }
+
+  supportsFeatured(): boolean {
+    return false;
+  }
+
+  async searchSource(): Promise<PagedResult> {
+    return this.search('', 1);
+  }
 }
 
 class DisabledProvider implements CatalogProvider {
@@ -128,6 +160,19 @@ class DisabledProvider implements CatalogProvider {
   }
   listSources(): CatalogSourceInfo[] {
     return [];
+  }
+
+  /** Test fake: no featured capability (fail-closed, never called by fan-out). */
+  async featured(): Promise<PagedResult> {
+    return { results: [], nextPage: null, totalCount: 0 };
+  }
+
+  supportsFeatured(): boolean {
+    return false;
+  }
+
+  async searchSource(): Promise<PagedResult> {
+    return { results: [], nextPage: null, totalCount: 0 };
   }
 }
 

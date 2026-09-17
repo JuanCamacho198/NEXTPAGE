@@ -88965,6 +88965,4465 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "m8I21w",
+      "x": 5711,
+      "y": 7032,
+      "name": "Descubrir / NextPage Desktop 1280x1800 DARK",
+      "theme": {
+        "Mode": "Dark"
+      },
+      "reusable": true,
+      "clip": true,
+      "width": 1280,
+      "height": 1800,
+      "fill": "$--np-bg",
+      "children": [
+        {
+          "id": "e1Zob",
+          "type": "ref",
+          "ref": "GLF3m",
+          "name": "Sidebar",
+          "width": 72,
+          "height": "fill_container"
+        },
+        {
+          "type": "frame",
+          "id": "Z75xK4",
+          "name": "Main",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "children": [
+            {
+              "id": "x4PstW",
+              "type": "ref",
+              "ref": "LmYln",
+              "name": "TitleBar",
+              "width": "fill_container"
+            },
+            {
+              "type": "frame",
+              "id": "EFKYP",
+              "name": "Breadcrumb",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                20,
+                32,
+                0,
+                32
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "s7Lan",
+                  "name": "Root",
+                  "fill": "$--np-text-muted",
+                  "content": "Inicio",
+                  "fontFamily": "Manrope",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "iKUdm",
+                  "name": "Sep",
+                  "fill": "$--np-text-tertiary",
+                  "content": "/",
+                  "fontFamily": "Manrope",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "dgPBt",
+                  "name": "Current",
+                  "fill": "$--np-text-secondary",
+                  "content": "Descubrir",
+                  "fontFamily": "Manrope",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "D7zRx",
+              "name": "Hero",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 20,
+              "padding": [
+                20,
+                32,
+                24,
+                32
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "M2XEbY",
+                  "name": "Hero Top Row",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "BIsO4",
+                      "name": "Title Block",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "nPwax",
+                          "name": "Title",
+                          "fill": "$--np-text-primary",
+                          "content": "Descubrir",
+                          "fontFamily": "Manrope",
+                          "fontSize": 32,
+                          "fontWeight": "800"
+                        },
+                        {
+                          "type": "text",
+                          "id": "k96eSv",
+                          "name": "Subtitle",
+                          "fill": "$--np-text-muted",
+                          "textGrowth": "fixed-width",
+                          "width": 720,
+                          "content": "Explora libros de tu biblioteca, catálogos en la nube y tus addons instalados",
+                          "fontFamily": "Manrope",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "zOkOI",
+                      "name": "Connectivity Pill",
+                      "fill": "$--np-success-soft",
+                      "cornerRadius": 999,
+                      "gap": 8,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "sM6tL",
+                          "name": "Dot",
+                          "width": 8,
+                          "height": 8,
+                          "fill": "$--np-success",
+                          "cornerRadius": 999
+                        },
+                        {
+                          "type": "text",
+                          "id": "yzTtd",
+                          "name": "Status",
+                          "fill": "$--np-success",
+                          "content": "En línea · 4 fuentes",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "T2uXe",
+                  "type": "ref",
+                  "ref": "dbDB7",
+                  "name": "Search",
+                  "width": "fill_container"
+                },
+                {
+                  "type": "frame",
+                  "id": "rNKAP",
+                  "name": "Trending Chips",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "bJZg8",
+                      "name": "Chip Todos Active",
+                      "fill": "$--np-accent-soft",
+                      "cornerRadius": 999,
+                      "stroke": "$--np-accent",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "BB7PM",
+                          "name": "Label",
+                          "fill": "$--np-accent",
+                          "content": "Todos",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Nth0R",
+                      "name": "Chip Ficción",
+                      "fill": "$--np-panel",
+                      "cornerRadius": 999,
+                      "stroke": "$--np-border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "VzVyi",
+                          "name": "Label",
+                          "fill": "$--np-text-secondary",
+                          "content": "Ficción",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "eSwre",
+                      "name": "Chip Ensayo",
+                      "fill": "$--np-panel",
+                      "cornerRadius": 999,
+                      "stroke": "$--np-border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "XoWi9",
+                          "name": "Label",
+                          "fill": "$--np-text-secondary",
+                          "content": "Ensayo",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Nn1GJ",
+                      "name": "Chip Poesía",
+                      "fill": "$--np-panel",
+                      "cornerRadius": 999,
+                      "stroke": "$--np-border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "CDPIh",
+                          "name": "Label",
+                          "fill": "$--np-text-secondary",
+                          "content": "Poesía",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "f5fuw",
+                      "name": "Chip Ciencia",
+                      "fill": "$--np-panel",
+                      "cornerRadius": 999,
+                      "stroke": "$--np-border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "jPlqE",
+                          "name": "Label",
+                          "fill": "$--np-text-secondary",
+                          "content": "Ciencia",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "vcCFw",
+                      "name": "Chip Historia",
+                      "fill": "$--np-panel",
+                      "cornerRadius": 999,
+                      "stroke": "$--np-border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Uo5pq",
+                          "name": "Label",
+                          "fill": "$--np-text-secondary",
+                          "content": "Historia",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "IMkqc",
+                      "name": "Chip Filosofía",
+                      "fill": "$--np-panel",
+                      "cornerRadius": 999,
+                      "stroke": "$--np-border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "u56zc",
+                          "name": "Label",
+                          "fill": "$--np-text-secondary",
+                          "content": "Filosofía",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "rERXA",
+              "name": "Rails",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "gap": 32,
+              "padding": [
+                8,
+                32,
+                32,
+                32
+              ],
+              "children": [
+                {
+                  "id": "CznHw",
+                  "type": "ref",
+                  "ref": "TLuQP",
+                  "name": "Rail Recién agregados",
+                  "width": "fill_container",
+                  "descendants": {
+                    "dwjr2": {
+                      "content": "Recién agregados"
+                    },
+                    "NKNOO": {
+                      "content": "Últimos libros incorporados a tu biblioteca y catálogo"
+                    },
+                    "gVMCL": {
+                      "children": [
+                        {
+                          "id": "jQLsz",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book Cien años de soledad",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#49D4FF",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#0F2A36",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "CI",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "Cien años de soledad"
+                            },
+                            "ADmpR": {
+                              "content": "Gabriel García Márquez"
+                            },
+                            "W1I1y": {
+                              "content": "Gutenberg"
+                            }
+                          }
+                        },
+                        {
+                          "id": "R5Ake",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book Rayuela",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#FFA94D",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#3A2418",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "RA",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "Rayuela"
+                            },
+                            "ADmpR": {
+                              "content": "Julio Cortázar"
+                            },
+                            "W1I1y": {
+                              "content": "Open Library"
+                            }
+                          }
+                        },
+                        {
+                          "id": "UtqNv",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book El amor en los tiempos del cólera",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#FBBF24",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#332A14",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "EL",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "El amor en los tiempos del cólera"
+                            },
+                            "ADmpR": {
+                              "content": "G. García Márquez"
+                            },
+                            "W1I1y": {
+                              "content": "Gutenberg"
+                            }
+                          }
+                        },
+                        {
+                          "id": "rH4ib",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book Pedro Páramo",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#60A5FA",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#162A4A",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "PE",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "Pedro Páramo"
+                            },
+                            "ADmpR": {
+                              "content": "Juan Rulfo"
+                            },
+                            "W1I1y": {
+                              "content": "Open Library"
+                            }
+                          }
+                        },
+                        {
+                          "id": "KSQAy",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book La casa de los espíritus",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#2DD4BF",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#14332F",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "LA",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "La casa de los espíritus"
+                            },
+                            "ADmpR": {
+                              "content": "Isabel Allende"
+                            },
+                            "W1I1y": {
+                              "content": "Gutenberg"
+                            }
+                          }
+                        },
+                        {
+                          "id": "oNACS",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book Ficciones",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#FF7B83",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#2A1A22",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "FI",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "Ficciones"
+                            },
+                            "ADmpR": {
+                              "content": "Jorge Luis Borges"
+                            },
+                            "W1I1y": {
+                              "content": "Open Library"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "k5C10",
+                  "type": "ref",
+                  "ref": "TLuQP",
+                  "name": "Rail Populares esta semana",
+                  "width": "fill_container",
+                  "descendants": {
+                    "dwjr2": {
+                      "content": "Populares esta semana"
+                    },
+                    "NKNOO": {
+                      "content": "Lo que más está leyendo la comunidad en este momento"
+                    },
+                    "gVMCL": {
+                      "children": [
+                        {
+                          "id": "huTRE",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book Don Quijote de la Mancha",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#FFA94D",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#3A2418",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "DO",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "Don Quijote de la Mancha"
+                            },
+                            "ADmpR": {
+                              "content": "Miguel de Cervantes"
+                            },
+                            "W1I1y": {
+                              "content": "Gutenberg"
+                            }
+                          }
+                        },
+                        {
+                          "id": "Pi3P8",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book Crimen y castigo",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#60A5FA",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#162A4A",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "CR",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "Crimen y castigo"
+                            },
+                            "ADmpR": {
+                              "content": "Fiódor Dostoyevski"
+                            },
+                            "W1I1y": {
+                              "content": "Gutenberg"
+                            }
+                          }
+                        },
+                        {
+                          "id": "IxEFz",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book La Odisea",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#49D4FF",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#0F2A36",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "LA",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "La Odisea"
+                            },
+                            "ADmpR": {
+                              "content": "Homero"
+                            },
+                            "W1I1y": {
+                              "content": "Gutenberg"
+                            }
+                          }
+                        },
+                        {
+                          "id": "MmDm7",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book Orgullo y prejuicio",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#FBBF24",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#332A14",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "OR",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "Orgullo y prejuicio"
+                            },
+                            "ADmpR": {
+                              "content": "Jane Austen"
+                            },
+                            "W1I1y": {
+                              "content": "Open Library"
+                            }
+                          }
+                        },
+                        {
+                          "id": "E9srfv",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book 1984",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#FF7B83",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#2A1A22",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "19",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "1984"
+                            },
+                            "ADmpR": {
+                              "content": "George Orwell"
+                            },
+                            "W1I1y": {
+                              "content": "Gutenberg"
+                            }
+                          }
+                        },
+                        {
+                          "id": "j5xjg",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book El principito",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#2DD4BF",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#14332F",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "EL",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "El principito"
+                            },
+                            "ADmpR": {
+                              "content": "Antoine de Saint-Exupéry"
+                            },
+                            "W1I1y": {
+                              "content": "Gutenberg"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "uszCs",
+                  "type": "ref",
+                  "ref": "TLuQP",
+                  "name": "Rail Recomendados por la comunidad",
+                  "width": "fill_container",
+                  "descendants": {
+                    "dwjr2": {
+                      "content": "Recomendados por la comunidad"
+                    },
+                    "NKNOO": {
+                      "content": "Selección basada en lo que otros lectores marcaron como favoritos"
+                    },
+                    "gVMCL": {
+                      "children": [
+                        {
+                          "id": "xbDAg",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book Sapiens",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#49D4FF",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#0F2A36",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "SA",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "Sapiens"
+                            },
+                            "ADmpR": {
+                              "content": "Yuval Noah Harari"
+                            },
+                            "W1I1y": {
+                              "content": "Open Library"
+                            }
+                          }
+                        },
+                        {
+                          "id": "Oqkco",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book El poder de los hábitos",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#FFA94D",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#3A2418",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "EL",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "El poder de los hábitos"
+                            },
+                            "ADmpR": {
+                              "content": "Charles Duhigg"
+                            },
+                            "W1I1y": {
+                              "content": "Open Library"
+                            }
+                          }
+                        },
+                        {
+                          "id": "Ud8o5",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book Pensar rápido, pensar despacio",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#60A5FA",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#162A4A",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "PE",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "Pensar rápido, pensar despacio"
+                            },
+                            "ADmpR": {
+                              "content": "Daniel Kahneman"
+                            },
+                            "W1I1y": {
+                              "content": "Open Library"
+                            }
+                          }
+                        },
+                        {
+                          "id": "Uiv8e",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book Una breve historia del tiempo",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#FBBF24",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#332A14",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "UN",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "Una breve historia del tiempo"
+                            },
+                            "ADmpR": {
+                              "content": "Stephen Hawking"
+                            },
+                            "W1I1y": {
+                              "content": "Gutenberg"
+                            }
+                          }
+                        },
+                        {
+                          "id": "Ycm3X",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book La estructura de las revoluciones científicas",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#FF7B83",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#2A1A22",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "LA",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "La estructura de las revoluciones científicas"
+                            },
+                            "ADmpR": {
+                              "content": "Thomas Kuhn"
+                            },
+                            "W1I1y": {
+                              "content": "Open Library"
+                            }
+                          }
+                        },
+                        {
+                          "id": "EyWJx",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book Meditaciones",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#2DD4BF",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#14332F",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "ME",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "Meditaciones"
+                            },
+                            "ADmpR": {
+                              "content": "Marco Aurelio"
+                            },
+                            "W1I1y": {
+                              "content": "Gutenberg"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "Tw3ZJ",
+                  "type": "ref",
+                  "ref": "TLuQP",
+                  "name": "Rail De Project Gutenberg",
+                  "width": "fill_container",
+                  "descendants": {
+                    "dwjr2": {
+                      "content": "De Project Gutenberg"
+                    },
+                    "NKNOO": {
+                      "content": "Clásicos de dominio público listos para descargar"
+                    },
+                    "z0jM6": {
+                      "type": "frame",
+                      "id": "ImufU",
+                      "name": "Header Right",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "nEe6H",
+                          "name": "Attribution",
+                          "fill": "$--np-panel-accent",
+                          "cornerRadius": 10,
+                          "gap": 8,
+                          "padding": [
+                            8,
+                            12
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "h9LiGT",
+                              "name": "Icon",
+                              "fill": "$--np-text-secondary",
+                              "content": "ⓘ",
+                              "fontFamily": "Manrope",
+                              "fontSize": 12,
+                              "fontWeight": "700"
+                            },
+                            {
+                              "type": "text",
+                              "id": "cv4f5",
+                              "name": "Label",
+                              "fill": "$--np-text-secondary",
+                              "content": "vía Project Gutenberg",
+                              "fontFamily": "Manrope",
+                              "fontSize": 12,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "lcx5z",
+                          "name": "Ver Todo",
+                          "fill": "$--np-panel",
+                          "cornerRadius": 10,
+                          "stroke": "$--np-border",
+                          "strokeWidth": 1,
+                          "gap": 6,
+                          "padding": [
+                            8,
+                            14
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "MfivZ",
+                              "name": "Label",
+                              "fill": "$--np-text-secondary",
+                              "content": "Ver todo",
+                              "fontFamily": "Manrope",
+                              "fontSize": 12,
+                              "fontWeight": "600"
+                            },
+                            {
+                              "type": "text",
+                              "id": "xL5FB",
+                              "name": "Arrow",
+                              "fill": "$--np-text-secondary",
+                              "content": "→",
+                              "fontFamily": "Manrope",
+                              "fontSize": 12,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "gVMCL": {
+                      "children": [
+                        {
+                          "id": "UbWy0",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book La metamorfosis",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#60A5FA",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#162A4A",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "LA",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "La metamorfosis"
+                            },
+                            "ADmpR": {
+                              "content": "Franz Kafka"
+                            },
+                            "W1I1y": {
+                              "content": "Gutenberg"
+                            }
+                          }
+                        },
+                        {
+                          "id": "PgIdU",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book Cumbres borrascosas",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#FFA94D",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#3A2418",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "CU",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "Cumbres borrascosas"
+                            },
+                            "ADmpR": {
+                              "content": "Emily Brontë"
+                            },
+                            "W1I1y": {
+                              "content": "Gutenberg"
+                            }
+                          }
+                        },
+                        {
+                          "id": "HSbAl",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book Frankenstein",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#FF7B83",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#2A1A22",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "FR",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "Frankenstein"
+                            },
+                            "ADmpR": {
+                              "content": "Mary Shelley"
+                            },
+                            "W1I1y": {
+                              "content": "Gutenberg"
+                            }
+                          }
+                        },
+                        {
+                          "id": "j0CRL",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book Alicia en el país de las maravillas",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#2DD4BF",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#14332F",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "AL",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "Alicia en el país de las maravillas"
+                            },
+                            "ADmpR": {
+                              "content": "Lewis Carroll"
+                            },
+                            "W1I1y": {
+                              "content": "Gutenberg"
+                            }
+                          }
+                        },
+                        {
+                          "id": "RgPhC",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book Drácula",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#FBBF24",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#332A14",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "DR",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "Drácula"
+                            },
+                            "ADmpR": {
+                              "content": "Bram Stoker"
+                            },
+                            "W1I1y": {
+                              "content": "Gutenberg"
+                            }
+                          }
+                        },
+                        {
+                          "id": "Ico9M",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book Veinte mil leguas de viaje submarino",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#49D4FF",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#0F2A36",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "VE",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "Veinte mil leguas de viaje submarino"
+                            },
+                            "ADmpR": {
+                              "content": "Jules Verne"
+                            },
+                            "W1I1y": {
+                              "content": "Gutenberg"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "Y4YpG",
+      "x": 9000,
+      "y": 1900,
+      "name": "NP Discover Book Card",
+      "reusable": true,
+      "width": 200,
+      "height": 320,
+      "fill": "$--np-panel",
+      "cornerRadius": 14,
+      "stroke": "$--np-border",
+      "strokeWidth": 1,
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "haHj7",
+          "name": "Cover",
+          "width": "fill_container",
+          "height": 240,
+          "fill": {
+            "type": "gradient",
+            "gradientType": "linear",
+            "enabled": true,
+            "rotation": 135,
+            "size": {
+              "height": 1
+            },
+            "colors": [
+              {
+                "color": "#49D4FF",
+                "position": 0
+              },
+              {
+                "color": "#0F2A36",
+                "position": 1
+              }
+            ]
+          },
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "CGNwA",
+              "name": "Cover Mark",
+              "fill": "#FFFFFFCC",
+              "content": "✦",
+              "fontFamily": "Manrope",
+              "fontSize": 32,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "aNF5F",
+          "name": "Meta",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 4,
+          "padding": [
+            12,
+            14,
+            14,
+            14
+          ],
+          "children": [
+            {
+              "type": "text",
+              "id": "xMXha",
+              "name": "Title",
+              "fill": "$--np-text-primary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Título del libro",
+              "fontFamily": "Manrope",
+              "fontSize": 13,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "ADmpR",
+              "name": "Author",
+              "fill": "$--np-text-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "Autor",
+              "fontFamily": "Manrope",
+              "fontSize": 11,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "yW6Aj",
+              "name": "Source Badge",
+              "fill": "$--np-panel-accent",
+              "cornerRadius": 999,
+              "padding": [
+                3,
+                8
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "W1I1y",
+                  "name": "Source Label",
+                  "fill": "$--np-text-secondary",
+                  "content": "Source",
+                  "fontFamily": "Manrope",
+                  "fontSize": 10,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "TLuQP",
+      "x": 9000,
+      "y": 2280,
+      "name": "NP Discover Rail",
+      "reusable": true,
+      "width": 1216,
+      "height": 400,
+      "layout": "vertical",
+      "gap": 16,
+      "children": [
+        {
+          "type": "frame",
+          "id": "dYZ0q",
+          "name": "Header",
+          "width": "fill_container",
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "ADXEX",
+              "name": "Header Left",
+              "layout": "vertical",
+              "gap": 2,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "dwjr2",
+                  "name": "Title",
+                  "fill": "$--np-text-primary",
+                  "content": "Título del rail",
+                  "fontFamily": "Manrope",
+                  "fontSize": 18,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "NKNOO",
+                  "name": "Subtitle",
+                  "fill": "$--np-text-muted",
+                  "content": "Subtítulo del rail",
+                  "fontFamily": "Manrope",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "z0jM6",
+              "name": "Header Right",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "bKbwc",
+                  "name": "Ver Todo",
+                  "fill": "$--np-panel",
+                  "cornerRadius": 10,
+                  "stroke": "$--np-border",
+                  "strokeWidth": 1,
+                  "gap": 6,
+                  "padding": [
+                    8,
+                    14
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "URRT6",
+                      "name": "Label",
+                      "fill": "$--np-text-secondary",
+                      "content": "Ver todo",
+                      "fontFamily": "Manrope",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "ar4wA",
+                      "name": "Arrow",
+                      "fill": "$--np-text-secondary",
+                      "content": "→",
+                      "fontFamily": "Manrope",
+                      "fontSize": 12,
+                      "fontWeight": "700"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "gVMCL",
+          "name": "Scroll Row",
+          "clip": true,
+          "width": "fill_container",
+          "height": 332,
+          "gap": 16
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "RL4Jx",
+      "x": 9000,
+      "y": 2780,
+      "name": "NP Discover Skeleton Card",
+      "reusable": true,
+      "width": 200,
+      "height": 320,
+      "fill": "$--np-panel",
+      "cornerRadius": 14,
+      "stroke": "$--np-border",
+      "strokeWidth": 1,
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "JWoQ4",
+          "name": "Cover Skeleton",
+          "width": "fill_container",
+          "height": 240,
+          "fill": "$--np-panel-accent"
+        },
+        {
+          "type": "frame",
+          "id": "j61sR",
+          "name": "Meta Skeleton",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "padding": [
+            12,
+            14,
+            14,
+            14
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "CFlTF",
+              "name": "Title Skeleton",
+              "width": "fill_container",
+              "height": 14,
+              "fill": "$--np-panel-accent",
+              "cornerRadius": 4
+            },
+            {
+              "type": "frame",
+              "id": "QTtpL",
+              "name": "Author Skeleton",
+              "width": 120,
+              "height": 11,
+              "fill": "$--np-panel-accent",
+              "cornerRadius": 4
+            },
+            {
+              "type": "frame",
+              "id": "t7lKxs",
+              "name": "Badge Skeleton",
+              "width": 60,
+              "height": 16,
+              "fill": "$--np-panel-accent",
+              "cornerRadius": 999
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "SIZhC",
+      "x": 9000,
+      "y": 1900,
+      "name": "Descubrir / NextPage Desktop 1280x1800 DARK (Cargando)",
+      "theme": {
+        "Mode": "Dark"
+      },
+      "clip": true,
+      "width": 1280,
+      "height": 1800,
+      "fill": "$--np-bg",
+      "children": [
+        {
+          "id": "e9I1m",
+          "type": "ref",
+          "ref": "GLF3m",
+          "name": "Sidebar",
+          "width": 72,
+          "height": "fill_container"
+        },
+        {
+          "type": "frame",
+          "id": "DZw8L",
+          "name": "Main",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "children": [
+            {
+              "id": "HggGF",
+              "type": "ref",
+              "ref": "LmYln",
+              "name": "TitleBar",
+              "width": "fill_container"
+            },
+            {
+              "type": "frame",
+              "id": "LZ9B0",
+              "name": "Breadcrumb",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                20,
+                32,
+                0,
+                32
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "JImDc",
+                  "name": "Root",
+                  "fill": "$--np-text-muted",
+                  "content": "Inicio",
+                  "fontFamily": "Manrope",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "jQJDg",
+                  "name": "Sep",
+                  "fill": "$--np-text-tertiary",
+                  "content": "/",
+                  "fontFamily": "Manrope",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "ATI4z",
+                  "name": "Current",
+                  "fill": "$--np-text-secondary",
+                  "content": "Descubrir",
+                  "fontFamily": "Manrope",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "SeKzx",
+              "name": "Hero",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 20,
+              "padding": [
+                20,
+                32,
+                24,
+                32
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "ITXKA",
+                  "name": "Status Skeleton",
+                  "width": 200,
+                  "height": 32,
+                  "fill": "$--np-panel-accent",
+                  "cornerRadius": 999,
+                  "padding": [
+                    8,
+                    14
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "L8sfar",
+                  "name": "Hero Top",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "zxxMx",
+                      "name": "Hero Left Skeletons",
+                      "layout": "vertical",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "qsNw7",
+                          "name": "Title Skeleton",
+                          "width": 240,
+                          "height": 36,
+                          "fill": "$--np-panel-accent",
+                          "cornerRadius": 8
+                        },
+                        {
+                          "type": "frame",
+                          "id": "rAMZs",
+                          "name": "Subtitle Skeleton",
+                          "width": 560,
+                          "height": 14,
+                          "fill": "$--np-panel-accent",
+                          "cornerRadius": 4
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ghSd3",
+                  "name": "Search Skeleton",
+                  "width": "fill_container",
+                  "height": 40,
+                  "fill": "$--np-panel-accent",
+                  "cornerRadius": 10
+                },
+                {
+                  "type": "frame",
+                  "id": "gmeQI",
+                  "name": "Chips Skeleton Row",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "C317n",
+                      "name": "Chip Skeleton",
+                      "width": 60,
+                      "height": 32,
+                      "fill": "$--np-panel-accent",
+                      "cornerRadius": 999
+                    },
+                    {
+                      "type": "frame",
+                      "id": "k6EqV",
+                      "name": "Chip Skeleton",
+                      "width": 70,
+                      "height": 32,
+                      "fill": "$--np-panel-accent",
+                      "cornerRadius": 999
+                    },
+                    {
+                      "type": "frame",
+                      "id": "e47FvK",
+                      "name": "Chip Skeleton",
+                      "width": 80,
+                      "height": 32,
+                      "fill": "$--np-panel-accent",
+                      "cornerRadius": 999
+                    },
+                    {
+                      "type": "frame",
+                      "id": "j9qhg",
+                      "name": "Chip Skeleton",
+                      "width": 90,
+                      "height": 32,
+                      "fill": "$--np-panel-accent",
+                      "cornerRadius": 999
+                    },
+                    {
+                      "type": "frame",
+                      "id": "vyb7P",
+                      "name": "Chip Skeleton",
+                      "width": 100,
+                      "height": 32,
+                      "fill": "$--np-panel-accent",
+                      "cornerRadius": 999
+                    },
+                    {
+                      "type": "frame",
+                      "id": "YsWeU",
+                      "name": "Chip Skeleton",
+                      "width": 110,
+                      "height": 32,
+                      "fill": "$--np-panel-accent",
+                      "cornerRadius": 999
+                    },
+                    {
+                      "type": "frame",
+                      "id": "C3K3Dh",
+                      "name": "Chip Skeleton",
+                      "width": 120,
+                      "height": 32,
+                      "fill": "$--np-panel-accent",
+                      "cornerRadius": 999
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "FFzRr",
+              "name": "Rails",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "gap": 32,
+              "padding": [
+                8,
+                32,
+                32,
+                32
+              ],
+              "children": [
+                {
+                  "id": "v48JyT",
+                  "type": "ref",
+                  "ref": "TLuQP",
+                  "name": "Rail Recién agregados (Cargando)",
+                  "width": "fill_container",
+                  "descendants": {
+                    "ADXEX": {
+                      "type": "frame",
+                      "id": "H9POR",
+                      "name": "Header Left Skeletons",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "AuVgj",
+                          "name": "Title Skeleton",
+                          "width": 220,
+                          "height": 20,
+                          "fill": "$--np-panel-accent",
+                          "cornerRadius": 6
+                        },
+                        {
+                          "type": "frame",
+                          "id": "QizVS",
+                          "name": "Subtitle Skeleton",
+                          "width": 320,
+                          "height": 12,
+                          "fill": "$--np-panel-accent",
+                          "cornerRadius": 4
+                        }
+                      ]
+                    },
+                    "gVMCL": {
+                      "children": [
+                        {
+                          "id": "F4ha4",
+                          "type": "ref",
+                          "ref": "RL4Jx",
+                          "name": "Skeleton Card 0"
+                        },
+                        {
+                          "id": "ZBcGA",
+                          "type": "ref",
+                          "ref": "RL4Jx",
+                          "name": "Skeleton Card 1"
+                        },
+                        {
+                          "id": "CWgtP",
+                          "type": "ref",
+                          "ref": "RL4Jx",
+                          "name": "Skeleton Card 2"
+                        },
+                        {
+                          "id": "hQaoW",
+                          "type": "ref",
+                          "ref": "RL4Jx",
+                          "name": "Skeleton Card 3"
+                        },
+                        {
+                          "id": "bn0UG",
+                          "type": "ref",
+                          "ref": "RL4Jx",
+                          "name": "Skeleton Card 4"
+                        },
+                        {
+                          "id": "A9vyd",
+                          "type": "ref",
+                          "ref": "RL4Jx",
+                          "name": "Skeleton Card 5"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "DHjzV",
+                  "type": "ref",
+                  "ref": "TLuQP",
+                  "name": "Rail Populares esta semana (Cargando)",
+                  "width": "fill_container",
+                  "descendants": {
+                    "ADXEX": {
+                      "type": "frame",
+                      "id": "FV8n3",
+                      "name": "Header Left Skeletons",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "QeYjK",
+                          "name": "Title Skeleton",
+                          "width": 220,
+                          "height": 20,
+                          "fill": "$--np-panel-accent",
+                          "cornerRadius": 6
+                        },
+                        {
+                          "type": "frame",
+                          "id": "aMVas",
+                          "name": "Subtitle Skeleton",
+                          "width": 320,
+                          "height": 12,
+                          "fill": "$--np-panel-accent",
+                          "cornerRadius": 4
+                        }
+                      ]
+                    },
+                    "gVMCL": {
+                      "children": [
+                        {
+                          "id": "by2ap",
+                          "type": "ref",
+                          "ref": "RL4Jx",
+                          "name": "Skeleton Card 0"
+                        },
+                        {
+                          "id": "F2wQc",
+                          "type": "ref",
+                          "ref": "RL4Jx",
+                          "name": "Skeleton Card 1"
+                        },
+                        {
+                          "id": "qgmuF",
+                          "type": "ref",
+                          "ref": "RL4Jx",
+                          "name": "Skeleton Card 2"
+                        },
+                        {
+                          "id": "S4jO3V",
+                          "type": "ref",
+                          "ref": "RL4Jx",
+                          "name": "Skeleton Card 3"
+                        },
+                        {
+                          "id": "aoOWx",
+                          "type": "ref",
+                          "ref": "RL4Jx",
+                          "name": "Skeleton Card 4"
+                        },
+                        {
+                          "id": "pSzRN",
+                          "type": "ref",
+                          "ref": "RL4Jx",
+                          "name": "Skeleton Card 5"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "zAq1b",
+                  "type": "ref",
+                  "ref": "TLuQP",
+                  "name": "Rail Recomendados por la comunidad (Cargando)",
+                  "width": "fill_container",
+                  "descendants": {
+                    "ADXEX": {
+                      "type": "frame",
+                      "id": "ku4xh",
+                      "name": "Header Left Skeletons",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Xdxzz",
+                          "name": "Title Skeleton",
+                          "width": 220,
+                          "height": 20,
+                          "fill": "$--np-panel-accent",
+                          "cornerRadius": 6
+                        },
+                        {
+                          "type": "frame",
+                          "id": "nzRel",
+                          "name": "Subtitle Skeleton",
+                          "width": 320,
+                          "height": 12,
+                          "fill": "$--np-panel-accent",
+                          "cornerRadius": 4
+                        }
+                      ]
+                    },
+                    "gVMCL": {
+                      "children": [
+                        {
+                          "id": "BNUrC",
+                          "type": "ref",
+                          "ref": "RL4Jx",
+                          "name": "Skeleton Card 0"
+                        },
+                        {
+                          "id": "yG32V",
+                          "type": "ref",
+                          "ref": "RL4Jx",
+                          "name": "Skeleton Card 1"
+                        },
+                        {
+                          "id": "E5YDLy",
+                          "type": "ref",
+                          "ref": "RL4Jx",
+                          "name": "Skeleton Card 2"
+                        },
+                        {
+                          "id": "DjOfi",
+                          "type": "ref",
+                          "ref": "RL4Jx",
+                          "name": "Skeleton Card 3"
+                        },
+                        {
+                          "id": "V11PI",
+                          "type": "ref",
+                          "ref": "RL4Jx",
+                          "name": "Skeleton Card 4"
+                        },
+                        {
+                          "id": "XN0r1",
+                          "type": "ref",
+                          "ref": "RL4Jx",
+                          "name": "Skeleton Card 5"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "l1ts9",
+                  "type": "ref",
+                  "ref": "TLuQP",
+                  "name": "Rail De Project Gutenberg (Cargando)",
+                  "width": "fill_container",
+                  "descendants": {
+                    "ADXEX": {
+                      "type": "frame",
+                      "id": "qpeSb",
+                      "name": "Header Left Skeletons",
+                      "layout": "vertical",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "s5ANMC",
+                          "name": "Title Skeleton",
+                          "width": 220,
+                          "height": 20,
+                          "fill": "$--np-panel-accent",
+                          "cornerRadius": 6
+                        },
+                        {
+                          "type": "frame",
+                          "id": "AS2x1",
+                          "name": "Subtitle Skeleton",
+                          "width": 320,
+                          "height": 12,
+                          "fill": "$--np-panel-accent",
+                          "cornerRadius": 4
+                        }
+                      ]
+                    },
+                    "gVMCL": {
+                      "children": [
+                        {
+                          "id": "a9eWd",
+                          "type": "ref",
+                          "ref": "RL4Jx",
+                          "name": "Skeleton Card 0"
+                        },
+                        {
+                          "id": "x8epgp",
+                          "type": "ref",
+                          "ref": "RL4Jx",
+                          "name": "Skeleton Card 1"
+                        },
+                        {
+                          "id": "SgedK",
+                          "type": "ref",
+                          "ref": "RL4Jx",
+                          "name": "Skeleton Card 2"
+                        },
+                        {
+                          "id": "N8Y2k",
+                          "type": "ref",
+                          "ref": "RL4Jx",
+                          "name": "Skeleton Card 3"
+                        },
+                        {
+                          "id": "wVy0x",
+                          "type": "ref",
+                          "ref": "RL4Jx",
+                          "name": "Skeleton Card 4"
+                        },
+                        {
+                          "id": "EHTox",
+                          "type": "ref",
+                          "ref": "RL4Jx",
+                          "name": "Skeleton Card 5"
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "qQHkT",
+      "x": 10400,
+      "y": 47,
+      "name": "Descubrir / NextPage Desktop 1280x1800 DARK (Sin conexión)",
+      "theme": {
+        "Mode": "Dark"
+      },
+      "clip": true,
+      "width": 1280,
+      "height": 1800,
+      "fill": "$--np-bg",
+      "children": [
+        {
+          "id": "TBIRD",
+          "type": "ref",
+          "ref": "GLF3m",
+          "name": "Sidebar",
+          "width": 72,
+          "height": "fill_container"
+        },
+        {
+          "type": "frame",
+          "id": "W8601",
+          "name": "Main",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "children": [
+            {
+              "id": "VmC3v",
+              "type": "ref",
+              "ref": "LmYln",
+              "name": "TitleBar",
+              "width": "fill_container"
+            },
+            {
+              "type": "frame",
+              "id": "FZ9Jo",
+              "name": "Offline Banner",
+              "width": "fill_container",
+              "fill": "$--np-warning-soft",
+              "stroke": "$--np-warning",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "gap": 12,
+              "padding": [
+                12,
+                32
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "S8EQx",
+                  "name": "Icon Wrap",
+                  "width": 28,
+                  "height": 28,
+                  "fill": "$--np-warning",
+                  "cornerRadius": 999,
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "sp9oy",
+                      "name": "Glyph",
+                      "fill": "$--np-bg",
+                      "content": "!",
+                      "fontFamily": "Manrope",
+                      "fontSize": 14,
+                      "fontWeight": "800"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "qTC2j",
+                  "name": "Banner Text",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "DDNcj",
+                      "name": "Title",
+                      "fill": "$--np-text-primary",
+                      "content": "Sin conexión",
+                      "fontFamily": "Manrope",
+                      "fontSize": 13,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "FVp33",
+                      "name": "Description",
+                      "fill": "$--np-text-secondary",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Mostrando contenido en caché. Los catálogos en la nube y addons no están disponibles hasta que recuperes la conexión.",
+                      "fontFamily": "Manrope",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "b1l8ZS",
+                  "name": "Retry Pill",
+                  "fill": "$--np-warning",
+                  "cornerRadius": 8,
+                  "gap": 6,
+                  "padding": [
+                    8,
+                    14
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "l3CxR0",
+                      "name": "Icon",
+                      "fill": "$--np-bg",
+                      "content": "↻",
+                      "fontFamily": "Manrope",
+                      "fontSize": 13,
+                      "fontWeight": "800"
+                    },
+                    {
+                      "type": "text",
+                      "id": "lujM0",
+                      "name": "Label",
+                      "fill": "$--np-bg",
+                      "content": "Reintentar",
+                      "fontFamily": "Manrope",
+                      "fontSize": 12,
+                      "fontWeight": "700"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "U5gNOf",
+              "name": "Breadcrumb",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                20,
+                32,
+                0,
+                32
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "UmLF1",
+                  "name": "Root",
+                  "fill": "$--np-text-muted",
+                  "content": "Inicio",
+                  "fontFamily": "Manrope",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "Dsz9l",
+                  "name": "Sep",
+                  "fill": "$--np-text-tertiary",
+                  "content": "/",
+                  "fontFamily": "Manrope",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "o53Ol",
+                  "name": "Current",
+                  "fill": "$--np-text-secondary",
+                  "content": "Descubrir",
+                  "fontFamily": "Manrope",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Djv2n",
+              "name": "Hero",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 20,
+              "padding": [
+                20,
+                32,
+                24,
+                32
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "JgehK",
+                  "name": "Hero Top Row",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "yTR5c",
+                      "name": "Title Block",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "YRzbW",
+                          "name": "Title",
+                          "fill": "$--np-text-primary",
+                          "content": "Descubrir",
+                          "fontFamily": "Manrope",
+                          "fontSize": 32,
+                          "fontWeight": "800"
+                        },
+                        {
+                          "type": "text",
+                          "id": "WPojL",
+                          "name": "Subtitle",
+                          "fill": "$--np-text-muted",
+                          "textGrowth": "fixed-width",
+                          "width": 720,
+                          "content": "Explora libros de tu biblioteca, catálogos en la nube y tus addons instalados",
+                          "fontFamily": "Manrope",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "I1204",
+                      "name": "Connectivity Pill",
+                      "fill": "$--np-error-soft",
+                      "cornerRadius": 999,
+                      "gap": 8,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "ngBaN",
+                          "name": "Dot",
+                          "width": 8,
+                          "height": 8,
+                          "fill": "$--np-error",
+                          "cornerRadius": 999
+                        },
+                        {
+                          "type": "text",
+                          "id": "vavTZ",
+                          "name": "Status",
+                          "fill": "$--np-error",
+                          "content": "Sin conexión · mostrando caché",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "W0OGcx",
+                  "type": "ref",
+                  "ref": "dbDB7",
+                  "name": "Search",
+                  "width": "fill_container"
+                },
+                {
+                  "type": "frame",
+                  "id": "snLpf",
+                  "name": "Trending Chips",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "QCVcK",
+                      "name": "Chip Todos Active",
+                      "fill": "$--np-accent-soft",
+                      "cornerRadius": 999,
+                      "stroke": "$--np-accent",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "xFFlZ",
+                          "name": "Label",
+                          "fill": "$--np-accent",
+                          "content": "Todos",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "k1TKQk",
+                      "name": "Chip Ficción",
+                      "fill": "$--np-panel",
+                      "cornerRadius": 999,
+                      "stroke": "$--np-border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "WIg66",
+                          "name": "Label",
+                          "fill": "$--np-text-secondary",
+                          "content": "Ficción",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "frjMP",
+                      "name": "Chip Ensayo",
+                      "fill": "$--np-panel",
+                      "cornerRadius": 999,
+                      "stroke": "$--np-border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "ovsiF",
+                          "name": "Label",
+                          "fill": "$--np-text-secondary",
+                          "content": "Ensayo",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "NMq9t",
+                      "name": "Chip Poesía",
+                      "fill": "$--np-panel",
+                      "cornerRadius": 999,
+                      "stroke": "$--np-border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "DM8LU",
+                          "name": "Label",
+                          "fill": "$--np-text-secondary",
+                          "content": "Poesía",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "yMj3x",
+                      "name": "Chip Ciencia",
+                      "fill": "$--np-panel",
+                      "cornerRadius": 999,
+                      "stroke": "$--np-border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "B6urP",
+                          "name": "Label",
+                          "fill": "$--np-text-secondary",
+                          "content": "Ciencia",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "PgsGA",
+                      "name": "Chip Historia",
+                      "fill": "$--np-panel",
+                      "cornerRadius": 999,
+                      "stroke": "$--np-border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "z1R50U",
+                          "name": "Label",
+                          "fill": "$--np-text-secondary",
+                          "content": "Historia",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "DRe1G",
+                      "name": "Chip Filosofía",
+                      "fill": "$--np-panel",
+                      "cornerRadius": 999,
+                      "stroke": "$--np-border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "v8nv0K",
+                          "name": "Label",
+                          "fill": "$--np-text-secondary",
+                          "content": "Filosofía",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "U9WQg",
+              "name": "Rails",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "gap": 32,
+              "padding": [
+                8,
+                32,
+                32,
+                32
+              ],
+              "children": [
+                {
+                  "id": "CY6HA",
+                  "type": "ref",
+                  "ref": "TLuQP",
+                  "name": "Rail Recién agregados (Sin conexión)",
+                  "width": "fill_container",
+                  "descendants": {
+                    "dwjr2": {
+                      "content": "Recién agregados (caché)"
+                    },
+                    "NKNOO": {
+                      "content": "Últimos libros guardados en tu dispositivo"
+                    },
+                    "gVMCL": {
+                      "children": [
+                        {
+                          "id": "WHGLh",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book Cien años de soledad",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#49D4FF",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#0F2A36",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "CI",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "Cien años de soledad"
+                            },
+                            "ADmpR": {
+                              "content": "Gabriel García Márquez"
+                            },
+                            "W1I1y": {
+                              "content": "Caché"
+                            }
+                          }
+                        },
+                        {
+                          "id": "BuqXU",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book Rayuela",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#FFA94D",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#3A2418",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "RA",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "Rayuela"
+                            },
+                            "ADmpR": {
+                              "content": "Julio Cortázar"
+                            },
+                            "W1I1y": {
+                              "content": "Caché"
+                            }
+                          }
+                        },
+                        {
+                          "id": "nLcoC",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book Pedro Páramo",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#60A5FA",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#162A4A",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "PE",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "Pedro Páramo"
+                            },
+                            "ADmpR": {
+                              "content": "Juan Rulfo"
+                            },
+                            "W1I1y": {
+                              "content": "Caché"
+                            }
+                          }
+                        },
+                        {
+                          "id": "QG8ky",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book La Odisea",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#FBBF24",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#332A14",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "LA",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "La Odisea"
+                            },
+                            "ADmpR": {
+                              "content": "Homero"
+                            },
+                            "W1I1y": {
+                              "content": "Caché"
+                            }
+                          }
+                        },
+                        {
+                          "id": "bEs70",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book Ficciones",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#FF7B83",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#2A1A22",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "FI",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "Ficciones"
+                            },
+                            "ADmpR": {
+                              "content": "Jorge Luis Borges"
+                            },
+                            "W1I1y": {
+                              "content": "Caché"
+                            }
+                          }
+                        },
+                        {
+                          "id": "a7ukz",
+                          "type": "ref",
+                          "ref": "Y4YpG",
+                          "name": "Book Meditaciones",
+                          "descendants": {
+                            "haHj7": {
+                              "fill": {
+                                "type": "gradient",
+                                "gradientType": "linear",
+                                "enabled": true,
+                                "rotation": 135,
+                                "size": {
+                                  "height": 1
+                                },
+                                "colors": [
+                                  {
+                                    "color": "#2DD4BF",
+                                    "position": 0
+                                  },
+                                  {
+                                    "color": "#14332F",
+                                    "position": 1
+                                  }
+                                ]
+                              }
+                            },
+                            "CGNwA": {
+                              "content": "ME",
+                              "fill": "#FFFFFF"
+                            },
+                            "xMXha": {
+                              "content": "Meditaciones"
+                            },
+                            "ADmpR": {
+                              "content": "Marco Aurelio"
+                            },
+                            "W1I1y": {
+                              "content": "Caché"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "mcA2V",
+                  "type": "ref",
+                  "ref": "TLuQP",
+                  "name": "Rail Populares esta semana (Sin conexión)",
+                  "width": "fill_container",
+                  "descendants": {
+                    "dwjr2": {
+                      "content": "Populares esta semana"
+                    },
+                    "NKNOO": {
+                      "content": "No disponible sin conexión"
+                    },
+                    "gVMCL": {
+                      "children": [
+                        {
+                          "id": "JnLPh",
+                          "type": "ref",
+                          "ref": "gVDTL",
+                          "name": "Offline Card 0"
+                        },
+                        {
+                          "id": "M5UsUC",
+                          "type": "ref",
+                          "ref": "gVDTL",
+                          "name": "Offline Card 1"
+                        },
+                        {
+                          "id": "EJMqc",
+                          "type": "ref",
+                          "ref": "gVDTL",
+                          "name": "Offline Card 2"
+                        },
+                        {
+                          "id": "XWCup",
+                          "type": "ref",
+                          "ref": "gVDTL",
+                          "name": "Offline Card 3"
+                        },
+                        {
+                          "id": "pA8SI",
+                          "type": "ref",
+                          "ref": "gVDTL",
+                          "name": "Offline Card 4"
+                        },
+                        {
+                          "id": "MhWdM",
+                          "type": "ref",
+                          "ref": "gVDTL",
+                          "name": "Offline Card 5"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "Yabaf",
+                  "type": "ref",
+                  "ref": "TLuQP",
+                  "name": "Rail Recomendados por la comunidad (Sin conexión)",
+                  "width": "fill_container",
+                  "descendants": {
+                    "dwjr2": {
+                      "content": "Recomendados por la comunidad"
+                    },
+                    "NKNOO": {
+                      "content": "No disponible sin conexión"
+                    },
+                    "gVMCL": {
+                      "children": [
+                        {
+                          "id": "rvBLA",
+                          "type": "ref",
+                          "ref": "gVDTL",
+                          "name": "Offline Card 0"
+                        },
+                        {
+                          "id": "k4iNv",
+                          "type": "ref",
+                          "ref": "gVDTL",
+                          "name": "Offline Card 1"
+                        },
+                        {
+                          "id": "UZDci",
+                          "type": "ref",
+                          "ref": "gVDTL",
+                          "name": "Offline Card 2"
+                        },
+                        {
+                          "id": "haxpQ",
+                          "type": "ref",
+                          "ref": "gVDTL",
+                          "name": "Offline Card 3"
+                        },
+                        {
+                          "id": "QRZu7",
+                          "type": "ref",
+                          "ref": "gVDTL",
+                          "name": "Offline Card 4"
+                        },
+                        {
+                          "id": "r7BECF",
+                          "type": "ref",
+                          "ref": "gVDTL",
+                          "name": "Offline Card 5"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "h8fDaF",
+                  "type": "ref",
+                  "ref": "TLuQP",
+                  "name": "Rail De Project Gutenberg (Sin conexión)",
+                  "width": "fill_container",
+                  "descendants": {
+                    "dwjr2": {
+                      "content": "De Project Gutenberg"
+                    },
+                    "NKNOO": {
+                      "content": "No disponible sin conexión"
+                    },
+                    "gVMCL": {
+                      "children": [
+                        {
+                          "id": "Cprms",
+                          "type": "ref",
+                          "ref": "gVDTL",
+                          "name": "Offline Card 0"
+                        },
+                        {
+                          "id": "h4mi8j",
+                          "type": "ref",
+                          "ref": "gVDTL",
+                          "name": "Offline Card 1"
+                        },
+                        {
+                          "id": "O81cT",
+                          "type": "ref",
+                          "ref": "gVDTL",
+                          "name": "Offline Card 2"
+                        },
+                        {
+                          "id": "CGLtK",
+                          "type": "ref",
+                          "ref": "gVDTL",
+                          "name": "Offline Card 3"
+                        },
+                        {
+                          "id": "R8vot",
+                          "type": "ref",
+                          "ref": "gVDTL",
+                          "name": "Offline Card 4"
+                        },
+                        {
+                          "id": "fZ4Iw",
+                          "type": "ref",
+                          "ref": "gVDTL",
+                          "name": "Offline Card 5"
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "gVDTL",
+      "x": 9000,
+      "y": 3140,
+      "name": "NP Discover Offline Card",
+      "reusable": true,
+      "width": 200,
+      "height": 320,
+      "fill": "$--np-panel",
+      "cornerRadius": 14,
+      "stroke": "$--np-border",
+      "strokeWidth": 1,
+      "layout": "vertical",
+      "gap": 12,
+      "padding": 16,
+      "justifyContent": "center",
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "WSNEv",
+          "name": "Icon Container",
+          "width": 56,
+          "height": 56,
+          "fill": "$--np-warning-soft",
+          "cornerRadius": 999,
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "gHWu7",
+              "name": "Icon",
+              "fill": "$--np-warning",
+              "content": "⊘",
+              "fontFamily": "Manrope",
+              "fontSize": 28,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "A0g90",
+          "name": "Title",
+          "fill": "$--np-text-primary",
+          "content": "Sin conexión",
+          "textAlign": "center",
+          "fontFamily": "Manrope",
+          "fontSize": 13,
+          "fontWeight": "700"
+        },
+        {
+          "type": "text",
+          "id": "mY57Z",
+          "name": "Description",
+          "fill": "$--np-text-muted",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "Esta fuente no está disponible ahora",
+          "textAlign": "center",
+          "fontFamily": "Manrope",
+          "fontSize": 11,
+          "fontWeight": "normal"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "qRy9m",
+      "x": 10400,
+      "y": 1900,
+      "name": "Descubrir / NextPage Desktop 1280x1800 DARK (Vacío)",
+      "theme": {
+        "Mode": "Dark"
+      },
+      "clip": true,
+      "width": 1280,
+      "height": 1800,
+      "fill": "$--np-bg",
+      "children": [
+        {
+          "id": "yF6l2",
+          "type": "ref",
+          "ref": "GLF3m",
+          "name": "Sidebar",
+          "width": 72,
+          "height": "fill_container"
+        },
+        {
+          "type": "frame",
+          "id": "KJjrF",
+          "name": "Main",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "children": [
+            {
+              "id": "bxyIm",
+              "type": "ref",
+              "ref": "LmYln",
+              "name": "TitleBar",
+              "width": "fill_container"
+            },
+            {
+              "type": "frame",
+              "id": "A4M64h",
+              "name": "Breadcrumb",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                20,
+                32,
+                0,
+                32
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "airGY",
+                  "name": "Root",
+                  "fill": "$--np-text-muted",
+                  "content": "Inicio",
+                  "fontFamily": "Manrope",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "E8go3",
+                  "name": "Sep",
+                  "fill": "$--np-text-tertiary",
+                  "content": "/",
+                  "fontFamily": "Manrope",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "i60Pn8",
+                  "name": "Current",
+                  "fill": "$--np-text-secondary",
+                  "content": "Descubrir",
+                  "fontFamily": "Manrope",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "f08C0",
+              "name": "Hero",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 20,
+              "padding": [
+                20,
+                32,
+                24,
+                32
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "JynWS",
+                  "name": "Hero Top Row",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "EhkMT",
+                      "name": "Title Block",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "c1JtmP",
+                          "name": "Title",
+                          "fill": "$--np-text-primary",
+                          "content": "Descubrir",
+                          "fontFamily": "Manrope",
+                          "fontSize": 32,
+                          "fontWeight": "800"
+                        },
+                        {
+                          "type": "text",
+                          "id": "bFeru",
+                          "name": "Subtitle",
+                          "fill": "$--np-text-muted",
+                          "textGrowth": "fixed-width",
+                          "width": 720,
+                          "content": "Explora libros de tu biblioteca, catálogos en la nube y tus addons instalados",
+                          "fontFamily": "Manrope",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "SQDVO",
+                      "name": "Connectivity Pill",
+                      "fill": "$--np-success-soft",
+                      "cornerRadius": 999,
+                      "gap": 8,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "JliNI",
+                          "name": "Dot",
+                          "width": 8,
+                          "height": 8,
+                          "fill": "$--np-success",
+                          "cornerRadius": 999
+                        },
+                        {
+                          "type": "text",
+                          "id": "a2WkY",
+                          "name": "Status",
+                          "fill": "$--np-success",
+                          "content": "En línea · 0 resultados",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "asGc1",
+                  "type": "ref",
+                  "ref": "dbDB7",
+                  "name": "Search",
+                  "width": "fill_container"
+                },
+                {
+                  "type": "frame",
+                  "id": "bUkz7",
+                  "name": "Trending Chips",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "CTch5",
+                      "name": "Chip Todos Active",
+                      "fill": "$--np-accent-soft",
+                      "cornerRadius": 999,
+                      "stroke": "$--np-accent",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "WlqzG",
+                          "name": "Label",
+                          "fill": "$--np-accent",
+                          "content": "Todos",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "C3tBL",
+                      "name": "Chip Ficción",
+                      "fill": "$--np-panel",
+                      "cornerRadius": 999,
+                      "stroke": "$--np-border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "IDCol",
+                          "name": "Label",
+                          "fill": "$--np-text-secondary",
+                          "content": "Ficción",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "EJBEw",
+                      "name": "Chip Ensayo",
+                      "fill": "$--np-panel",
+                      "cornerRadius": 999,
+                      "stroke": "$--np-border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "tNlrv",
+                          "name": "Label",
+                          "fill": "$--np-text-secondary",
+                          "content": "Ensayo",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "P2fSUl",
+                      "name": "Chip Poesía",
+                      "fill": "$--np-panel",
+                      "cornerRadius": 999,
+                      "stroke": "$--np-border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "jBPEY",
+                          "name": "Label",
+                          "fill": "$--np-text-secondary",
+                          "content": "Poesía",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "AfnGB",
+                      "name": "Chip Ciencia",
+                      "fill": "$--np-panel",
+                      "cornerRadius": 999,
+                      "stroke": "$--np-border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "q9AqtT",
+                          "name": "Label",
+                          "fill": "$--np-text-secondary",
+                          "content": "Ciencia",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "jnhdr",
+                      "name": "Chip Historia",
+                      "fill": "$--np-panel",
+                      "cornerRadius": 999,
+                      "stroke": "$--np-border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "a5byre",
+                          "name": "Label",
+                          "fill": "$--np-text-secondary",
+                          "content": "Historia",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Hg1lV",
+              "name": "Empty Area",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "padding": [
+                40,
+                32
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "W4jkik",
+                  "name": "Empty Card",
+                  "width": 480,
+                  "fill": "$--np-panel",
+                  "cornerRadius": 16,
+                  "stroke": "$--np-border",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 16,
+                  "padding": [
+                    40,
+                    48
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "NtTOK",
+                      "name": "Icon Container",
+                      "width": 80,
+                      "height": 80,
+                      "fill": "$--np-accent-soft",
+                      "cornerRadius": 999,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "lKmqY",
+                          "name": "Icon",
+                          "fill": "$--np-accent",
+                          "content": "✦",
+                          "fontFamily": "Manrope",
+                          "fontSize": 40,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "NDsjS",
+                      "name": "Title",
+                      "fill": "$--np-text-primary",
+                      "content": "Aún no hay libros para mostrar",
+                      "textAlign": "center",
+                      "fontFamily": "Manrope",
+                      "fontSize": 20,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "S8Prg5",
+                      "name": "Description",
+                      "fill": "$--np-text-muted",
+                      "textGrowth": "fixed-width",
+                      "width": 360,
+                      "content": "Instala un addon de catálogo para empezar a explorar miles de títulos, o importa un EPUB a tu biblioteca para personalizar tus recomendaciones.",
+                      "lineHeight": 1.5,
+                      "textAlign": "center",
+                      "fontFamily": "Manrope",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "rAPMb",
+                      "name": "CTAs",
+                      "gap": 12,
+                      "padding": [
+                        8,
+                        0,
+                        0,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Ib8gz",
+                          "name": "CTA Primary",
+                          "fill": "$--np-accent",
+                          "cornerRadius": 10,
+                          "gap": 8,
+                          "padding": [
+                            10,
+                            18
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "l2sUE7",
+                              "name": "Label",
+                              "fill": "$--np-bg",
+                              "content": "Gestionar addons",
+                              "fontFamily": "Manrope",
+                              "fontSize": 13,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "fS7qV",
+                          "name": "CTA Secondary",
+                          "fill": "$--np-panel",
+                          "cornerRadius": 10,
+                          "stroke": "$--np-border",
+                          "strokeWidth": 1,
+                          "gap": 8,
+                          "padding": [
+                            10,
+                            18
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "JNRrh",
+                              "name": "Label",
+                              "fill": "$--np-text-secondary",
+                              "content": "Importar EPUB",
+                              "fontFamily": "Manrope",
+                              "fontSize": 13,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "w8m6L",
+      "x": 11800,
+      "y": 47,
+      "name": "Descubrir / NextPage Desktop 1280x1800 DARK (Error)",
+      "theme": {
+        "Mode": "Dark"
+      },
+      "clip": true,
+      "width": 1280,
+      "height": 1800,
+      "fill": "$--np-bg",
+      "children": [
+        {
+          "id": "MlLcj",
+          "type": "ref",
+          "ref": "GLF3m",
+          "name": "Sidebar",
+          "width": 72,
+          "height": "fill_container"
+        },
+        {
+          "type": "frame",
+          "id": "hOnvZ",
+          "name": "Main",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "children": [
+            {
+              "id": "Rbq9a",
+              "type": "ref",
+              "ref": "LmYln",
+              "name": "TitleBar",
+              "width": "fill_container"
+            },
+            {
+              "type": "frame",
+              "id": "BYSLg",
+              "name": "Breadcrumb",
+              "width": "fill_container",
+              "gap": 8,
+              "padding": [
+                20,
+                32,
+                0,
+                32
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "jHxnb",
+                  "name": "Root",
+                  "fill": "$--np-text-muted",
+                  "content": "Inicio",
+                  "fontFamily": "Manrope",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "ApLeJ",
+                  "name": "Sep",
+                  "fill": "$--np-text-tertiary",
+                  "content": "/",
+                  "fontFamily": "Manrope",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "nI2f3",
+                  "name": "Current",
+                  "fill": "$--np-text-secondary",
+                  "content": "Descubrir",
+                  "fontFamily": "Manrope",
+                  "fontSize": 12,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "T4Ahb",
+              "name": "Hero",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 20,
+              "padding": [
+                20,
+                32,
+                24,
+                32
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "P3C7WT",
+                  "name": "Hero Top Row",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "XISBx",
+                      "name": "Title Block",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "X2wfbw",
+                          "name": "Title",
+                          "fill": "$--np-text-primary",
+                          "content": "Descubrir",
+                          "fontFamily": "Manrope",
+                          "fontSize": 32,
+                          "fontWeight": "800"
+                        },
+                        {
+                          "type": "text",
+                          "id": "FxmYL",
+                          "name": "Subtitle",
+                          "fill": "$--np-text-muted",
+                          "textGrowth": "fixed-width",
+                          "width": 720,
+                          "content": "Explora libros de tu biblioteca, catálogos en la nube y tus addons instalados",
+                          "fontFamily": "Manrope",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "hhICD",
+                      "name": "Connectivity Pill",
+                      "fill": "$--np-error-soft",
+                      "cornerRadius": 999,
+                      "gap": 8,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "nR3hR",
+                          "name": "Dot",
+                          "width": 8,
+                          "height": 8,
+                          "fill": "$--np-error",
+                          "cornerRadius": 999
+                        },
+                        {
+                          "type": "text",
+                          "id": "N83Aj",
+                          "name": "Status",
+                          "fill": "$--np-error",
+                          "content": "Error al conectar con los catálogos",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "chBru",
+                  "type": "ref",
+                  "ref": "dbDB7",
+                  "name": "Search",
+                  "width": "fill_container"
+                },
+                {
+                  "type": "frame",
+                  "id": "B1hAxv",
+                  "name": "Trending Chips",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "pUNB1",
+                      "name": "Chip Todos Active",
+                      "fill": "$--np-accent-soft",
+                      "cornerRadius": 999,
+                      "stroke": "$--np-accent",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "LX3fy",
+                          "name": "Label",
+                          "fill": "$--np-accent",
+                          "content": "Todos",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "700"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "IDSpD",
+                      "name": "Chip Ficción",
+                      "fill": "$--np-panel",
+                      "cornerRadius": 999,
+                      "stroke": "$--np-border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "VfDmV",
+                          "name": "Label",
+                          "fill": "$--np-text-secondary",
+                          "content": "Ficción",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "iy3J3",
+                      "name": "Chip Ensayo",
+                      "fill": "$--np-panel",
+                      "cornerRadius": 999,
+                      "stroke": "$--np-border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "SeMw6",
+                          "name": "Label",
+                          "fill": "$--np-text-secondary",
+                          "content": "Ensayo",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "J0kpss",
+                      "name": "Chip Poesía",
+                      "fill": "$--np-panel",
+                      "cornerRadius": 999,
+                      "stroke": "$--np-border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "dwgtm",
+                          "name": "Label",
+                          "fill": "$--np-text-secondary",
+                          "content": "Poesía",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "guCJ2",
+                      "name": "Chip Ciencia",
+                      "fill": "$--np-panel",
+                      "cornerRadius": 999,
+                      "stroke": "$--np-border",
+                      "strokeWidth": 1,
+                      "gap": 6,
+                      "padding": [
+                        8,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "CuZbg",
+                          "name": "Label",
+                          "fill": "$--np-text-secondary",
+                          "content": "Ciencia",
+                          "fontFamily": "Manrope",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "OiyKz",
+              "name": "Error Area",
+              "width": "fill_container",
+              "height": "fill_container",
+              "layout": "vertical",
+              "padding": [
+                40,
+                32
+              ],
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "iRzH1",
+                  "name": "Error Card",
+                  "width": 520,
+                  "fill": "$--np-panel",
+                  "cornerRadius": 16,
+                  "stroke": "$--np-error",
+                  "strokeWidth": 1,
+                  "layout": "vertical",
+                  "gap": 16,
+                  "padding": [
+                    40,
+                    48
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "d73oD6",
+                      "name": "Icon Container",
+                      "width": 80,
+                      "height": 80,
+                      "fill": "$--np-error-soft",
+                      "cornerRadius": 999,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "TLbI5",
+                          "name": "Icon",
+                          "fill": "$--np-error",
+                          "content": "⚠",
+                          "fontFamily": "Manrope",
+                          "fontSize": 40,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "IosS0",
+                      "name": "Title",
+                      "fill": "$--np-text-primary",
+                      "content": "No pudimos cargar el catálogo",
+                      "textAlign": "center",
+                      "fontFamily": "Manrope",
+                      "fontSize": 20,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "DF0QW",
+                      "name": "Description",
+                      "fill": "$--np-text-muted",
+                      "textGrowth": "fixed-width",
+                      "width": 380,
+                      "content": "Hubo un problema al conectar con los proveedores de catálogo. Esto puede deberse a un fallo temporal del servicio.",
+                      "lineHeight": 1.5,
+                      "textAlign": "center",
+                      "fontFamily": "Manrope",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "HZoAO",
+                      "name": "Detail",
+                      "width": "fill_container",
+                      "fill": "$--np-bg",
+                      "cornerRadius": 8,
+                      "stroke": "$--np-border",
+                      "strokeWidth": 1,
+                      "gap": 8,
+                      "padding": [
+                        10,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "muw4i",
+                          "name": "Code",
+                          "fill": "$--np-text-muted",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "ERROR_NETWORK · 503",
+                          "fontFamily": "Manrope",
+                          "fontSize": 11,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "fxG6z",
+                      "name": "CTAs",
+                      "gap": 12,
+                      "padding": [
+                        8,
+                        0,
+                        0,
+                        0
+                      ],
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "jBLHn",
+                          "name": "CTA Retry",
+                          "fill": "$--np-accent",
+                          "cornerRadius": 10,
+                          "gap": 8,
+                          "padding": [
+                            10,
+                            18
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "DDjO6",
+                              "name": "Icon",
+                              "fill": "$--np-bg",
+                              "content": "↻",
+                              "fontFamily": "Manrope",
+                              "fontSize": 14,
+                              "fontWeight": "800"
+                            },
+                            {
+                              "type": "text",
+                              "id": "GfyeQ",
+                              "name": "Label",
+                              "fill": "$--np-bg",
+                              "content": "Reintentar",
+                              "fontFamily": "Manrope",
+                              "fontSize": 13,
+                              "fontWeight": "700"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "VFMWx",
+                          "name": "CTA Support",
+                          "fill": "$--np-panel",
+                          "cornerRadius": 10,
+                          "stroke": "$--np-border",
+                          "strokeWidth": 1,
+                          "gap": 8,
+                          "padding": [
+                            10,
+                            18
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "WLCPh",
+                              "name": "Label",
+                              "fill": "$--np-text-secondary",
+                              "content": "Ver logs",
+                              "fontFamily": "Manrope",
+                              "fontSize": 13,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {

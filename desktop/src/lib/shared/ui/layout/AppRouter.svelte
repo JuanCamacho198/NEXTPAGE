@@ -22,6 +22,7 @@
   import WelcomeScreen from '$lib/features/welcome/WelcomeScreen.svelte';
   import DictionaryView from '$lib/features/dictionary/components/DictionaryView.svelte';
   import DiscoverScreen from '$lib/features/discover/DiscoverScreen.svelte';
+  import AddonsScreen from '$lib/features/addons/AddonsScreen.svelte';
 
   const showSidebar = $derived(
     navigationState.route !== 'reader' && navigationState.route !== 'welcome',
@@ -32,6 +33,7 @@
       onNavigateHome: () => navigationState.navigateToHome(),
       onNavigateLibrary: () => navigationState.navigateToLibrary(),
       onNavigateDiscover: () => navigationState.navigateToDiscover(),
+      onNavigateAddons: () => navigationState.navigateToAddons(),
       onNavigateStats: () => navigationState.navigateToStats(),
       onNavigateHighlights: () => navigationState.navigateToHighlights(),
       onNavigateSettings: () => navigationState.navigateToSettings(),
@@ -237,7 +239,14 @@
             </div>
           {:else if navigationState.route === 'discover'}
             <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>
-              <DiscoverScreen t={appState.t} />
+              <DiscoverScreen
+                t={appState.t}
+                onOpenBook={(book) => void appState.startReading(book)}
+              />
+            </div>
+          {:else if navigationState.route === 'addons'}
+            <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>
+              <AddonsScreen t={appState.t} />
             </div>
           {:else if navigationState.route === 'stats'}
             <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>

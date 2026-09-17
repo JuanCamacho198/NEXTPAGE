@@ -97,6 +97,19 @@ describe('composite integration', () => {
         { sourceId: BUILTIN_OPENLIBRARY, name: 'Open Library', kind: 'builtin' as const },
       ];
     }
+
+    /** Test fake: no featured capability (fail-closed). */
+    async featured(): Promise<PagedResult> {
+      return { results: [], nextPage: null, totalCount: 0 };
+    }
+
+    supportsFeatured(): boolean {
+      return false;
+    }
+
+    async searchSource(): Promise<PagedResult> {
+      return { results: [], nextPage: null, totalCount: 0 };
+    }
   }
 
   it('curated sources never shadow the built-ins (dedupe keeps first/builtin kind)', () => {

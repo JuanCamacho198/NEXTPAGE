@@ -10,6 +10,7 @@ use uuid::Uuid;
 
 use super::LibraryRepository;
 use crate::error::{AppError, AppResult};
+use crate::filename::{sanitize_file_stem, FALLBACK_BOOK_ID, MAX_BOOK_ID_CHARS};
 use crate::models::BookCoverDto;
 
 pub(super) fn upsert_book_cover_from_file(
@@ -35,7 +36,10 @@ pub(super) fn upsert_book_cover_from_file(
         .and_then(|ext| ext.to_str())
         .map(|ext| ext.to_ascii_lowercase())
         .unwrap_or_else(|| "bin".to_string());
-    let storage_path = covers_dir.join(format!("{}.{}", book_id, extension));
+    // A catalog id contains `:`, which is an NTFS ADS separator, so the cover
+    // filename uses the same sanitized stem as the book file.
+    let stem = sanitize_file_stem(book_id.trim(), MAX_BOOK_ID_CHARS, FALLBACK_BOOK_ID);
+    let storage_path = covers_dir.join(format!("{stem}.{extension}"));
 
     fs::copy(source_cover_path, &storage_path)?;
     let metadata = fs::metadata(&storage_path)?;
@@ -124,7 +128,9 @@ pub(super) fn upsert_book_cover_from_bytes(
 
     let covers_dir = resolve_covers_dir(repo, app)?;
     fs::create_dir_all(&covers_dir)?;
-    let storage_path = covers_dir.join(format!("{}.{}", book_id, extension));
+    // Same sanitized stem as the book file: `:` cannot reach the filesystem.
+    let stem = sanitize_file_stem(book_id.trim(), MAX_BOOK_ID_CHARS, FALLBACK_BOOK_ID);
+    let storage_path = covers_dir.join(format!("{stem}.{extension}"));
 
     fs::write(&storage_path, data)?;
     let metadata = fs::metadata(&storage_path)?;

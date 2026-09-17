@@ -82,13 +82,15 @@
   >
     <div
       bind:this={dialogEl}
-      class="w-full {sizeClass} rounded-xl border border-(--color-border) bg-(--color-elevated) shadow-xl {className}"
+      class="flex max-h-[calc(100vh-2rem)] w-full {sizeClass} flex-col overflow-hidden rounded-xl border border-(--color-border) bg-(--color-elevated) shadow-xl {className}"
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
       transition:fly={{ duration: 200, opacity: 0, y: -20 }}
     >
-      <div class="flex items-center justify-between border-b border-(--color-border) px-6 py-4">
+      <div
+        class="flex shrink-0 items-center justify-between border-b border-(--color-border) px-6 py-4"
+      >
         <h2 id="modal-title" class="text-lg font-semibold text-(--color-primary)">{title}</h2>
         {#if !noCloseButton}
           <button
@@ -108,14 +110,28 @@
         {/if}
       </div>
 
-      <div class="px-6 py-4">
+      <!--
+        The body is the single scroll region: the dialog is height-bounded and
+        flex-column, so an over-tall body scrolls here while the header and
+        footer stay pinned. `tabindex="0"` + `role="region"` keep the scroll
+        region reachable by keyboard.
+      -->
+      <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
+      <div
+        class="min-h-0 flex-1 overflow-y-auto px-6 py-4"
+        tabindex="0"
+        role="region"
+        aria-label={title}
+      >
         {#if children}
           {@render children()}
         {/if}
       </div>
 
       {#if footer}
-        <div class="flex items-center justify-end gap-3 border-t border-(--color-border) px-6 py-4">
+        <div
+          class="flex shrink-0 items-center justify-end gap-3 border-t border-(--color-border) px-6 py-4"
+        >
           {@render footer()}
         </div>
       {/if}

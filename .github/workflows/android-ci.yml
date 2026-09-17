@@ -16,15 +16,14 @@ on:
   # not `main`, and a `branches: [main]` filter silently skipped CI for every
   # slice of a feature-branch-chain. Branch protection only requires this check
   # on `main`, so running it on PRs to any base is safe.
-  #
-  # `paths-ignore` (not a `paths` allow-list) is deliberate: the required
-  # `Android checks` context must always be reported, and a path-filtered-out
-  # workflow would leave it pending forever instead.
+  # No `paths-ignore` on this trigger, on purpose. Branch protection requires
+  # the `Android checks` job on `main`; with a trigger-level path filter a
+  # desktop/web/packages-only PR never started this workflow, so the required
+  # check never reported and the PR stayed permanently BLOCKED. The path
+  # filtering now lives inside the job (`Detect Android-relevant changes`): the
+  # job always runs and always reports, while the heavy Android steps below run
+  # only when Android-relevant paths actually changed.
   pull_request:
-    paths-ignore:
-      - 'desktop/**'
-      - 'web/**'
-      - 'packages/**'
   push:
     branches: [main]
     paths:
@@ -61,16 +60,45 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          # fetch-depth: 0 keeps history for release-mapping / version checks.
+          # fetch-depth: 0 keeps history for release-mapping / version checks,
+          # and lets the relevance check diff base..head by SHA below.
           fetch-depth: 0
 
+      - name: Detect Android-relevant changes
+        # This step exists so the `Android checks` job always RUNS on a pull
+        # request and always REPORTS a conclusion, which is what branch
+        # protection requires. The alternative — filtering paths on the
+        # `pull_request` trigger — skipped the workflow entirely for
+        # desktop-only PRs, so the required check never appeared and the PR was
+        # unmergeable. A non-relevant PR now reports a fast, successful no-op
+        # instead of paying for the full Android suite.
+        id: changes
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            # push/workflow_dispatch: never a required-check context, so always
+            # do the real work.
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          if git diff --name-only "$base" "$head" \
+            | grep -qE '^(android/|\.github/workflows/android-ci\.yml)'; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+            echo "No Android-relevant changes in this PR; reporting success as a no-op."
+          fi
+
       - name: Setup Java (Temurin 17)
+        if: steps.changes.outputs.relevant == 'true'
         uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Setup Gradle
+        if: steps.changes.outputs.relevant == 'true'
         uses: gradle/actions/setup-gradle@v6
         with:
           # Remote build cache + config cache reuse cut the cold JVM/config
@@ -80,6 +108,7 @@ jobs:
           add-job-summary: 'on-failure'
 
       - name: Make gradlew executable
+        if: steps.changes.outputs.relevant == 'true'
         # No-op on the Linux runner, but defensive: if a contributor ever
         # commits gradlew without the executable bit, this step restores it
         # rather than failing the job with a confusing permission error.
@@ -87,6 +116,7 @@ jobs:
         run: chmod +x ./gradlew || true
 
       - name: Run unit tests, detekt and verification gates
+        if: steps.changes.outputs.relevant == 'true'
         working-directory: android
         # Linux runner: the daemon is fine (the --no-daemon prescription was
         # for the local Windows pwsh/Gradle VFS hang; an ephemeral runner just
@@ -123,8 +153,11 @@ jobs:
         # the report is absent at upload time it is because an earlier gate
         # failed, and turning that into a second red step only buries the real
         # error under a confusing "No files were found" message.
-        # `if: always()` keeps the report available whenever it does exist.
-        if: always()
+        # The relevance guard matters: on a no-op PR no report exists at all, so
+        # the upload is skipped instead of reporting a misleading result.
+        # `if: always()` keeps the report available whenever it does exist, even
+        # when an earlier gate failed.
+        if: always() && steps.changes.outputs.relevant == 'true'
         uses: actions/upload-artifact@v5
         with:
           name: kover-coverage
@@ -134,7 +167,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Print failed test reports
-        if: failure()
+        if: failure() && steps.changes.outputs.relevant == 'true'
         working-directory: android
         # The Gradle console only shows the failing test name; the XML report
         # carries the expected/actual message needed to diagnose without SSH.

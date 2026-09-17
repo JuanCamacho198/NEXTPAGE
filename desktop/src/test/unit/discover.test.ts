@@ -2,12 +2,30 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { DiscoverDomainState } from '$lib/features/discover/DiscoverDomainState.svelte';
+import {
+  DISCOVER_RAIL_LIMIT,
+  DiscoverDomainState,
+  TRENDING_CHIPS,
+  filterBooksByChip,
+  matchesChip,
+} from '$lib/features/discover/DiscoverDomainState.svelte';
+import { homeState } from '$lib/features/home/state.svelte';
 import { CompositeCatalogProvider } from '$lib/shared/services/catalog/CompositeCatalogProvider';
+import {
+  BUILTIN_GUTENDEX,
+  type CatalogBook,
+  type CatalogFeaturedSort,
+  type CatalogProvider,
+  type CatalogSource,
+  type CatalogSourceInfo,
+  type PagedResult,
+} from '$lib/shared/services/catalog/CatalogProvider';
 import {
   GutendexCatalogProvider,
   OpenLibraryCatalogProvider,
 } from '$lib/shared/services/catalog/BuiltInCatalogProviders';
+import { catalogError } from '$lib/shared/services/catalog/errors';
+import { liveCatalogProvider } from '$lib/shared/services/catalog/liveComposite';
 import { GutendexDataSource } from '$lib/shared/services/catalog/GutendexDataSource';
 import { OpenLibraryDataSource } from '$lib/shared/services/catalog/OpenLibraryDataSource';
 import gutendexFixture from '$lib/shared/services/catalog/fixtures/gutendex-search.json';
@@ -62,14 +80,16 @@ describe('DiscoverDomainState (PR2 RED)', () => {
     expect(state.status).toBe('idle');
   });
 
-  it('search loads books with Gutendex authority and OL cover fallback', async () => {
+  it('search loads books with Gutendex authority and Gutenberg cover', async () => {
     const { state } = stateWith(searchBodies());
     state.setQuery('pride');
     await state.searchFirstPage();
     expect(state.status).toBe('loaded');
     expect(state.totalCount).toBe(3);
     const pride = state.books.find((b) => b.id === 'gutendex:1342');
-    expect(pride?.coverUrl).toBe('https://covers.openlibrary.org/b/id/6794977-M.jpg');
+    expect(pride?.coverUrl).toBe(
+      'https://www.gutenberg.org/cache/epub/1342/pg1342.cover.medium.jpg',
+    );
     expect(state.books.some((b) => b.title === 'Borrow Restricted Title')).toBe(false);
   });
 
@@ -182,11 +202,11 @@ describe('DiscoverDomainState (PR3 grid/detail state mapping)', () => {
     expect(state.errorCode).toBeNull();
   });
 
-  it('RATE_LIMITED maps to offline (retryable)', async () => {
+  it('RATE_LIMITED maps to error not offline (throttling is not a connectivity failure)', async () => {
     const { state } = stateWith(() => ({ status: 429, body: { error: 'slow down' } }));
     state.setQuery('pride');
     await state.searchFirstPage();
-    expect(state.status).toBe('offline');
+    expect(state.status).toBe('error');
     expect(state.errorCode).toBe('RATE_LIMITED');
   });
 
@@ -266,5 +286,369 @@ describe('DiscoverDomainState (PR4 hardening)', () => {
     expect(state.status).toBe('error');
     expect(state.errorCode).toBe('INVALID_PAGE');
     expect(calls.n).toBe(callsAfterLoad);
+  });
+});
+
+function fakeBook(id: string, subjects: string[] = ['Fiction']): CatalogBook {
+  return {
+    id,
+    provider: 'gutendex',
+    title: `Title ${id}`,
+    authors: ['Author'],
+    coverUrl: null,
+    languages: ['en'],
+    subjects,
+    downloadUrl: null,
+  };
+}
+
+function paged(books: CatalogBook[]): PagedResult {
+  return { results: books, nextPage: null, totalCount: books.length };
+}
+
+const EMPTY_PAGE: PagedResult = { results: [], nextPage: null, totalCount: 0 };
+
+interface FakeProviderOptions {
+  sources?: CatalogSourceInfo[];
+  featuredBySort?: Partial<Record<CatalogFeaturedSort, CatalogBook[] | Error>>;
+  featuredError?: Error;
+  supports?: boolean;
+  searchSourceError?: Error;
+  searchSourceBooks?: CatalogBook[];
+}
+
+function fakeProvider(opts: FakeProviderOptions = {}): CatalogProvider & {
+  calls: { featured: number; search: number; searchSource: number };
+} {
+  const calls = { featured: 0, search: 0, searchSource: 0 };
+  const sources: CatalogSourceInfo[] = opts.sources ?? [
+    { sourceId: 'builtin:fake' as CatalogSource, name: 'Fake', kind: 'builtin' },
+  ];
+  return {
+    calls,
+    async search(_query: string, _page: number): Promise<PagedResult> {
+      calls.search += 1;
+      return EMPTY_PAGE;
+    },
+    async getDetails(id: string): Promise<CatalogBook> {
+      throw catalogError('NOT_FOUND', `unknown catalog id ${id}`);
+    },
+    async featured(sort: CatalogFeaturedSort, limit: number): Promise<PagedResult> {
+      calls.featured += 1;
+      if (!Number.isInteger(limit) || limit < 1) {
+        throw catalogError('INVALID_PAGE', `limit must be >= 1, got ${limit}`);
+      }
+      if (opts.featuredError) throw opts.featuredError;
+      const outcome = opts.featuredBySort?.[sort];
+      if (outcome instanceof Error) throw outcome;
+      return paged(outcome ?? []);
+    },
+    supportsFeatured(_sort: CatalogFeaturedSort): boolean {
+      return opts.supports ?? true;
+    },
+    async searchSource(
+      _sourceId: CatalogSource,
+      _query: string,
+      _page: number,
+    ): Promise<PagedResult> {
+      calls.searchSource += 1;
+      if (opts.searchSourceError) throw opts.searchSourceError;
+      return paged(opts.searchSourceBooks ?? []);
+    },
+    resolveDownloadUrl(_formats: Record<string, string>, _preferEpub: boolean): string {
+      throw catalogError('UNAVAILABLE_DOWNLOAD', 'no usable url');
+    },
+    listSources(): CatalogSourceInfo[] {
+      return sources;
+    },
+  };
+}
+
+describe('desktop-descubrir Phase 3.1 — featured() sorts + liveComposite forwarding', () => {
+  it('Gutendex featured() maps POPULAR to sort=popular and NEWEST to sort=descending', async () => {
+    const seen: string[] = [];
+    const fetchFn = stubFetch((url) => {
+      seen.push(url);
+      return { status: 200, body: gutendexFixture };
+    });
+    const provider = new GutendexCatalogProvider(new GutendexDataSource(fetchFn));
+    await provider.featured('POPULAR', 6);
+    await provider.featured('NEWEST', 6);
+    expect(seen.some((url) => url.includes('sort=popular'))).toBe(true);
+    expect(seen.some((url) => url.includes('sort=descending'))).toBe(true);
+  });
+
+  it('featured() rejects INVALID_PAGE for limit < 1 before any I/O', async () => {
+    const seen: string[] = [];
+    const fetchFn = stubFetch((url) => {
+      seen.push(url);
+      return { status: 200, body: gutendexFixture };
+    });
+    const provider = new GutendexCatalogProvider(new GutendexDataSource(fetchFn));
+    await expect(provider.featured('POPULAR', 0)).rejects.toMatchObject({
+      code: 'INVALID_PAGE',
+    });
+    expect(seen).toEqual([]);
+    const composite = new CompositeCatalogProvider([fakeProvider()], { debounceMs: 0 });
+    await expect(composite.featured('NEWEST', 0)).rejects.toMatchObject({
+      code: 'INVALID_PAGE',
+    });
+  });
+
+  it('Composite featured() fans out over supportsFeatured providers and propagates a failure', async () => {
+    const healthy = fakeProvider({
+      sources: [{ sourceId: 'builtin:gutendex' as CatalogSource, name: 'G', kind: 'builtin' }],
+      featuredBySort: { POPULAR: [fakeBook('gutendex:1'), fakeBook('gutendex:2')] },
+    });
+    const throwing = fakeProvider({
+      sources: [{ sourceId: 'builtin:thrower' as CatalogSource, name: 'T', kind: 'builtin' }],
+      featuredError: catalogError('UPSTREAM_ERROR', 'boom'),
+    });
+    const optedOut = fakeProvider({
+      sources: [{ sourceId: 'builtin:quiet' as CatalogSource, name: 'Q', kind: 'builtin' }],
+      supports: false,
+      featuredBySort: { POPULAR: [fakeBook('quiet:1')] },
+    });
+    const composite = new CompositeCatalogProvider([healthy, throwing, optedOut], {
+      debounceMs: 0,
+    });
+    expect(composite.supportsFeatured('POPULAR')).toBe(true);
+    // A failing opted-in provider fails the rail (→ `Error`) instead of being
+    // swallowed into an empty page that would silently render `Hidden`.
+    await expect(composite.featured('POPULAR', 6)).rejects.toMatchObject({
+      code: 'UPSTREAM_ERROR',
+    });
+    expect(optedOut.calls.featured).toBe(0);
+  });
+
+  it('Composite featured() keeps a genuinely empty successful response empty', async () => {
+    const empty = fakeProvider({
+      sources: [{ sourceId: 'builtin:gutendex' as CatalogSource, name: 'G', kind: 'builtin' }],
+      featuredBySort: { POPULAR: [] },
+    });
+    const composite = new CompositeCatalogProvider([empty], { debounceMs: 0 });
+    const page = await composite.featured('POPULAR', 6);
+    // Empty success still merges to an empty page (the rail renders `Hidden`).
+    expect(page).toEqual({ results: [], nextPage: null, totalCount: 0 });
+  });
+
+  it('Composite featured() merges the opted-in fan-out and leaves an empty rail Hidden', async () => {
+    const first = fakeProvider({
+      sources: [{ sourceId: 'builtin:gutendex' as CatalogSource, name: 'G', kind: 'builtin' }],
+      featuredBySort: { POPULAR: [fakeBook('gutendex:1'), fakeBook('gutendex:2')] },
+    });
+    const second = fakeProvider({
+      sources: [{ sourceId: 'builtin:openlibrary' as CatalogSource, name: 'O', kind: 'builtin' }],
+      featuredBySort: { POPULAR: [] },
+    });
+    const composite = new CompositeCatalogProvider([first, second], { debounceMs: 0 });
+    const page = await composite.featured('POPULAR', 6);
+    // The healthy provider's page flows through the fan-out untouched.
+    expect(page.results.map((b) => b.id)).toEqual(['gutendex:1', 'gutendex:2']);
+
+    // Rail level: an empty featured page renders `Hidden`, never `Error`.
+    const emptyComposite = new CompositeCatalogProvider(
+      [
+        fakeProvider({
+          sources: [{ sourceId: 'builtin:gutendex' as CatalogSource, name: 'G', kind: 'builtin' }],
+          featuredBySort: {},
+        }),
+      ],
+      { debounceMs: 0 },
+    );
+    const state = new DiscoverDomainState(emptyComposite, {}, { now: () => new Date(2026, 5, 10) });
+    await state.refreshRails();
+    expect(state.rails[0]).toEqual({ kind: 'Hidden' });
+    expect(state.isOnline).toBe(true);
+  });
+
+  it('Composite searchSource() routes the exact source and fails closed on unknown ids', async () => {
+    const { state } = stateWith(searchBodies());
+    void state;
+    const provider = new CompositeCatalogProvider(
+      [
+        new GutendexCatalogProvider(new GutendexDataSource(stubFetch(searchBodies()))),
+        new OpenLibraryCatalogProvider(new OpenLibraryDataSource(stubFetch(searchBodies()))),
+      ],
+      { debounceMs: 0 },
+    );
+    const owned = await provider.searchSource(BUILTIN_GUTENDEX, '', 1);
+    expect(owned.results.length).toBeGreaterThan(0);
+    const unknown = await provider.searchSource('builtin:nope' as CatalogSource, '', 1);
+    expect(unknown).toEqual(EMPTY_PAGE);
+  });
+
+  it('liveComposite forwards featured/supportsFeatured/searchSource/listSources', () => {
+    expect(typeof liveCatalogProvider.featured).toBe('function');
+    expect(typeof liveCatalogProvider.supportsFeatured).toBe('function');
+    expect(typeof liveCatalogProvider.searchSource).toBe('function');
+    expect(typeof liveCatalogProvider.listSources).toBe('function');
+    // Pre-build peek is fail-closed: no crash, empty sources, false capability.
+    expect(liveCatalogProvider.listSources()).toEqual([]);
+    expect(liveCatalogProvider.supportsFeatured('POPULAR')).toBe(false);
+    const here = dirname(fileURLToPath(import.meta.url));
+    const source = readFileSync(
+      resolve(here, '../../lib/shared/services/catalog/liveComposite.ts'),
+      'utf8',
+    );
+    expect(source).toContain('c.featured(sort, limit)');
+    expect(source).toContain('c.searchSource(sourceId, query, page)');
+  });
+});
+
+describe('desktop-descubrir Phase 3.2 — pill count, chip filter, fail-closed, truncation', () => {
+  it('pill N equals listSources().length', () => {
+    const { state } = stateWith(searchBodies());
+    const sources = state.refreshSources();
+    expect(sources.length).toBe(2);
+    expect(sources.length).toBe(
+      new CompositeCatalogProvider(
+        [
+          new GutendexCatalogProvider(new GutendexDataSource(stubFetch(searchBodies()))),
+          new OpenLibraryCatalogProvider(new OpenLibraryDataSource(stubFetch(searchBodies()))),
+        ],
+        { debounceMs: 0 },
+      ).listSources().length,
+    );
+  });
+
+  it('chip filter is client-side with zero catalog calls', async () => {
+    const { state, calls } = stateWith(searchBodies());
+    await state.refreshRails();
+    const afterRails = calls.n;
+    const loaded = state.rails.find((rail) => rail.kind === 'Loaded');
+    expect(loaded?.kind).toBe('Loaded');
+    const books = loaded?.kind === 'Loaded' ? loaded.books : [];
+    expect(books.length).toBeGreaterThan(0);
+    const filtered = filterBooksByChip(books, 'Ficción');
+    expect(filtered.length).toBeGreaterThan(0);
+    expect(filtered.length).toBeLessThanOrEqual(books.length);
+    expect(calls.n).toBe(afterRails);
+    // Spanish label bridges to English catalog subjects.
+    expect(matchesChip(fakeBook('x:1', ['Classic fiction']), 'Ficción')).toBe(true);
+    expect(matchesChip(fakeBook('x:2', ['Science fiction']), 'Ciencia ficción')).toBe(true);
+    expect(filterBooksByChip(books, null)).toBe(books);
+  });
+
+  it('exposes 7 static trending chips', () => {
+    expect(TRENDING_CHIPS).toHaveLength(7);
+  });
+
+  it('per-rail fail-closed: a featured throw fails only the featured rails', async () => {
+    const provider = fakeProvider({
+      featuredError: catalogError('UPSTREAM_ERROR', 'boom'),
+      searchSourceBooks: [fakeBook('gutendex:9')],
+    });
+    const state = new DiscoverDomainState(provider);
+    await state.refreshRails();
+    expect(state.rails).toHaveLength(3);
+    expect(state.rails[0]).toEqual({ kind: 'Error', code: 'UPSTREAM_ERROR', offline: false });
+    expect(state.rails[1]).toEqual({ kind: 'Error', code: 'UPSTREAM_ERROR', offline: false });
+    expect(state.rails[2]?.kind).toBe('Loaded');
+    expect(state.isOnline).toBe(true);
+  });
+
+  it('per-rail fail-closed: a thematic term error fails only that rail', async () => {
+    const provider = fakeProvider({
+      featuredBySort: {
+        NEWEST: [fakeBook('gutendex:1')],
+        POPULAR: [fakeBook('gutendex:2')],
+      },
+      searchSourceError: catalogError('UPSTREAM_ERROR', 'term search down'),
+    });
+    const state = new DiscoverDomainState(provider);
+    await state.refreshRails();
+    expect(state.rails).toHaveLength(3);
+    expect(state.rails[0]?.kind).toBe('Loaded');
+    expect(state.rails[1]?.kind).toBe('Loaded');
+    expect(state.rails[2]).toEqual({ kind: 'Error', code: 'UPSTREAM_ERROR', offline: false });
+  });
+
+  it('short rails render as-is and long rails truncate to the rail limit', async () => {
+    const many = Array.from({ length: 10 }, (_, i) => fakeBook(`gutendex:${100 + i}`));
+    const provider = fakeProvider({
+      featuredBySort: {
+        NEWEST: [fakeBook('gutendex:1'), fakeBook('gutendex:2'), fakeBook('gutendex:3')],
+        POPULAR: many,
+      },
+      searchSourceBooks: [],
+    });
+    const state = new DiscoverDomainState(provider);
+    await state.refreshRails();
+    const newest = state.rails[0];
+    const popular = state.rails[1];
+    expect(newest.kind === 'Loaded' ? newest.books.length : -1).toBe(3);
+    expect(popular.kind === 'Loaded' ? popular.books.length : -1).toBe(DISCOVER_RAIL_LIMIT);
+  });
+});
+
+describe('desktop-descubrir Phase 3.3 — skeleton, offline retry, discover route', () => {
+  it('skeleton then rails: refreshRails exposes Loading before settling to Loaded', async () => {
+    let release!: (books: CatalogBook[]) => void;
+    const gate = new Promise<CatalogBook[]>((resolve) => {
+      release = resolve;
+    });
+    const base = fakeProvider({
+      featuredBySort: { NEWEST: [fakeBook('gutendex:1')], POPULAR: [fakeBook('gutendex:2')] },
+      searchSourceBooks: [fakeBook('gutendex:3')],
+    });
+    const gated: CatalogProvider = {
+      ...base,
+      featured: (sort, limit) => gate.then((books) => paged(books.slice(0, limit))),
+    };
+    const state = new DiscoverDomainState(gated);
+    expect(state.rails.every((rail) => rail.kind === 'Hidden')).toBe(true);
+    const pending = state.refreshRails();
+    expect(state.rails.every((rail) => rail.kind === 'Loading')).toBe(true);
+    release([fakeBook('gutendex:1'), fakeBook('gutendex:2')]);
+    await pending;
+    expect(state.rails.filter((rail) => rail.kind === 'Loaded').length).toBeGreaterThan(0);
+  });
+
+  it('offline then retry: connectivity failure flips isOnline false and retry recovers', async () => {
+    let failing = true;
+    const base = fakeProvider({
+      featuredBySort: { NEWEST: [fakeBook('gutendex:1')], POPULAR: [fakeBook('gutendex:2')] },
+      searchSourceBooks: [fakeBook('gutendex:3')],
+    });
+    const flaky: CatalogProvider = {
+      ...base,
+      featured: async (sort, limit) => {
+        if (failing) throw catalogError('NETWORK_ERROR', 'offline');
+        return base.featured(sort, limit);
+      },
+      searchSource: async (sourceId, query, page) => {
+        if (failing) throw catalogError('NETWORK_ERROR', 'offline');
+        return base.searchSource(sourceId, query, page);
+      },
+    };
+    const state = new DiscoverDomainState(flaky);
+    await state.refreshRails();
+    expect(state.isOnline).toBe(false);
+    expect(state.rails).toHaveLength(3);
+    expect(state.rails.map((rail) => rail.kind)).toEqual(['Error', 'Error', 'Error']);
+    expect(state.rails[0]).toEqual({ kind: 'Error', code: 'NETWORK_ERROR', offline: true });
+    failing = false;
+    await state.refreshRails();
+    expect(state.isOnline).toBe(true);
+    expect(state.rails[0]?.kind).toBe('Loaded');
+  });
+
+  it('discover route literal typechecks and AppRouter renders DiscoverScreen', () => {
+    homeState.setRoute('discover');
+    expect(homeState.route).toBe('discover');
+    homeState.setRoute('home');
+    const here = dirname(fileURLToPath(import.meta.url));
+    const router = readFileSync(
+      resolve(here, '../../lib/shared/ui/layout/AppRouter.svelte'),
+      'utf8',
+    );
+    expect(router).toContain("navigationState.route === 'discover'");
+    expect(router).toContain('DiscoverScreen');
+    const homeStateSource = readFileSync(
+      resolve(here, '../../lib/features/home/state.svelte.ts'),
+      'utf8',
+    );
+    expect(homeStateSource).toContain("'discover'");
   });
 });

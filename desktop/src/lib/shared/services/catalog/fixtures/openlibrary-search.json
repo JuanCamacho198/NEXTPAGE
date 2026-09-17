@@ -8,7 +8,9 @@
       "cover_i": 6794977,
       "ebook_access": "public",
       "language": ["eng"],
-      "subject": ["Love stories", "Classic fiction"]
+      "subject": ["Love stories", "Classic fiction"],
+      "isbn": ["978-0141439518", "0141439513"],
+      "ia": ["prideandprejudice0000aust"]
     },
     {
       "key": "/works/OL99991W",

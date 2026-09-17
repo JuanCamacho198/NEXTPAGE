@@ -5,7 +5,7 @@
 import { catalogError, isCatalogError } from './errors';
 import { DESKTOP_USER_AGENT, clampPageSize, fetchWithRetry, toCatalogError } from './policy';
 import { mapGutendexBook, type GutendexRecord } from './mappers';
-import type { CatalogBook } from './CatalogProvider';
+import type { CatalogBook, CatalogFeaturedSort } from './CatalogProvider';
 
 export const GUTENDEX_BASE_URL = 'https://gutendex.com';
 
@@ -59,5 +59,30 @@ export class GutendexDataSource {
     const book = mapGutendexBook(data);
     if (!book) throw catalogError('NOT_FOUND', `gutendex book ${numericId} unavailable`);
     return book;
+  }
+
+  /**
+   * Featured rail page. The ordering is a closed enum because an invalid
+   * upstream `sort` value hangs the call; only verified literals are emitted.
+   * Mirrors Android `GutendexDataSource.featured`.
+   */
+  async featured(
+    sort: CatalogFeaturedSort,
+    page: number,
+    pageSize = 24,
+  ): Promise<{
+    books: CatalogBook[];
+    totalCount: number;
+  }> {
+    const size = clampPageSize(pageSize);
+    const sortParam = sort === 'POPULAR' ? 'sort=popular' : 'sort=descending';
+    const data = (await this.getJson(
+      `/books/?${sortParam}&page=${page}`,
+    )) as GutendexSearchResponse;
+    const books = (data.results ?? [])
+      .map(mapGutendexBook)
+      .filter((b): b is CatalogBook => b !== null)
+      .slice(0, size);
+    return { books, totalCount: typeof data.count === 'number' ? data.count : books.length };
   }
 }

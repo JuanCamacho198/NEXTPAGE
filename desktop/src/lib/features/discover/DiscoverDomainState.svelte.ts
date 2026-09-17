@@ -320,6 +320,15 @@ class DiscoverDomainState {
     this.railsState.closeScope();
   }
 
+  /**
+   * Release rail retry timers and the connectivity listener. The screen shares
+   * one app-lifetime state, so production never disposes; teardown paths and
+   * tests do, so a discarded instance leaves no orphan timer or listener.
+   */
+  dispose(): void {
+    this.railsState.dispose();
+  }
+
   private resetToIdle(): void {
     this.books = [];
     this.totalCount = 0;

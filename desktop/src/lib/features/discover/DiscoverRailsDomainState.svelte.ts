@@ -1,6 +1,7 @@
 import {
   BUILTIN_GUTENDEX,
   isCatalogError,
+  isRetryableCatalogCode,
   liveCatalogProvider,
   REQUEST_DEADLINE_MS,
   type CatalogBook,
@@ -33,6 +34,13 @@ export type DiscoverRailState =
 export type DiscoverBrowseScope =
   | { kind: 'term'; term: string; titleKey: MessageKey }
   | { kind: 'featured'; sort: CatalogFeaturedSort; titleKey: MessageKey };
+
+/**
+ * Automatic retry backoff for a failed rail: attempt 1 at 2s, attempt 2 at 5s,
+ * attempt 3 at 15s, then stop permanently. The budget resets on a successful
+ * load and on a manual retry.
+ */
+export const AUTO_RETRY_DELAYS_MS: readonly number[] = [2_000, 5_000, 15_000];
 
 export interface DiscoverRailsDeps {
   /** Defaults to the live composite catalog; tests inject a recording fake. */
@@ -90,6 +98,15 @@ export class DiscoverRailsDomainState {
   /** Guards a stale refresh/retry from overwriting a newer publish. */
   private generation = 0;
   /**
+   * Automatic retries consumed per rail index. Bounded by
+   * `AUTO_RETRY_DELAYS_MS.length`, reset on `Loaded` and on a manual retry.
+   */
+  private retryAttempts: number[] = [];
+  /** Pending automatic-retry timers, keyed by rail index (never more than one each). */
+  private readonly retryTimers = new Map<number, ReturnType<typeof setTimeout>>();
+  /** True once `dispose()` ran: no new timers, no further listener work. */
+  private disposed = false;
+  /**
    * The rail load currently in flight, if any. Every mount joins this promise,
    * so a remount (or any repeat call on the load path) during `Loading` never
    * issues a second round of rail requests.
@@ -102,6 +119,24 @@ export class DiscoverRailsDomainState {
     this.timeoutMs = deps.timeoutMs ?? REQUEST_DEADLINE_MS;
     this.specs = [...buildRailSpecs(this.now())];
     this.rails = this.specs.map(() => ({ kind: 'Hidden' }) as DiscoverRailState);
+    this.retryAttempts = this.specs.map(() => 0);
+    if (typeof window !== 'undefined') window.addEventListener('online', this.onOnline);
+  }
+
+  /**
+   * Release every pending automatic-retry timer and detach the connectivity
+   * listener, so a torn-down instance cannot fire late or duplicate. The
+   * app-lifetime singleton never disposes; tests and future teardown paths do.
+   */
+  dispose(): void {
+    this.disposed = true;
+    this.clearAllAutoRetries();
+    if (typeof window !== 'undefined') window.removeEventListener('online', this.onOnline);
+  }
+
+  /** Automatic retry attempts consumed by the rail at `index` (diagnostics/tests). */
+  autoRetryCount(index: number): number {
+    return this.retryAttempts[index] ?? 0;
   }
 
   /**
@@ -139,6 +174,8 @@ export class DiscoverRailsDomainState {
   private async runRefresh(): Promise<void> {
     this.specs = [...buildRailSpecs(this.now())];
     this.rails = this.specs.map(() => ({ kind: 'Loading' }) as DiscoverRailState);
+    this.retryAttempts = this.specs.map(() => 0);
+    this.clearAllAutoRetries();
     this.isOnline = true;
     this.settled = false;
     const generation = (this.generation += 1);
@@ -153,15 +190,26 @@ export class DiscoverRailsDomainState {
 
   /** Re-resolve ONLY the failing rail; every other rail keeps its books and state. */
   async retryRail(index: number): Promise<void> {
+    // A manual retry cancels the pending automatic timer and refreshes the budget.
+    this.clearAutoRetry(index);
+    this.retryAttempts[index] = 0;
+    await this.resolveRail(index);
+  }
+
+  /** Re-resolve a rail currently in `Error`; a non-`Error` rail is never touched. */
+  private async resolveRail(index: number): Promise<void> {
     const spec = this.specs[index];
     const current = this.rails[index];
     if (!spec || !current || current.kind !== 'Error') return;
+    // Any resolution supersedes a pending automatic retry for this rail, so a
+    // manual retry or an `online` event can never leave a duplicate timer.
+    this.clearAutoRetry(index);
     const generation = this.generation;
     this.rails[index] = { kind: 'Loading' };
     const settled = await this.loadOne(spec);
     if (generation !== this.generation) return;
     this.rails[index] = settled;
-    if (settled.kind === 'Error' && settled.offline) this.isOnline = false;
+    this.afterSettle(index, settled);
   }
 
   /**
@@ -232,8 +280,69 @@ export class DiscoverRailsDomainState {
     const settled = await this.loadOne(spec);
     if (generation !== this.generation) return;
     this.rails[index] = settled;
-    if (settled.kind === 'Error' && settled.offline) this.isOnline = false;
+    this.afterSettle(index, settled);
   }
+
+  /**
+   * Post-publish bookkeeping: connectivity recovery/decay (G2), the auto-retry
+   * budget reset on success, and the bounded auto-retry schedule for retryable
+   * failures. Non-retryable failures stop permanently for that rail.
+   */
+  private afterSettle(index: number, settled: DiscoverRailState): void {
+    if (this.disposed) return;
+    if (settled.kind === 'Loaded') {
+      // A rail that actually loaded proves connectivity is back.
+      this.isOnline = true;
+      this.retryAttempts[index] = 0;
+      this.clearAutoRetry(index);
+      return;
+    }
+    if (settled.kind === 'Error') {
+      if (settled.offline) this.isOnline = false;
+      if (isRetryableCatalogCode(settled.code)) this.scheduleAutoRetry(index);
+    }
+  }
+
+  /** Schedule the next bounded automatic retry, or stop once the budget is spent. */
+  private scheduleAutoRetry(index: number): void {
+    if (this.disposed) return;
+    const attempt = this.retryAttempts[index] ?? 0;
+    const delay = AUTO_RETRY_DELAYS_MS[attempt];
+    if (delay === undefined) return;
+    this.retryAttempts[index] = attempt + 1;
+    const handle = setTimeout(() => {
+      this.retryTimers.delete(index);
+      if (this.disposed) return;
+      void this.resolveRail(index);
+    }, delay);
+    this.retryTimers.set(index, handle);
+  }
+
+  private clearAutoRetry(index: number): void {
+    const handle = this.retryTimers.get(index);
+    if (handle === undefined) return;
+    clearTimeout(handle);
+    this.retryTimers.delete(index);
+  }
+
+  private clearAllAutoRetries(): void {
+    for (const handle of this.retryTimers.values()) clearTimeout(handle);
+    this.retryTimers.clear();
+  }
+
+  /**
+   * A browser `online` event re-triggers ONLY rails currently in `Error` — never
+   * `Loaded`, never `Loading` — and clears the pill, since it is direct evidence
+   * that connectivity came back. Descheduled rails get one fresh attempt; the
+   * automatic backoff budget is not reset by incidental events.
+   */
+  private readonly onOnline = (): void => {
+    if (this.disposed) return;
+    this.isOnline = true;
+    this.rails.forEach((rail, index) => {
+      if (rail.kind === 'Error') void this.resolveRail(index);
+    });
+  };
 
   private async loadOne(spec: DiscoverRailSpec): Promise<DiscoverRailState> {
     try {

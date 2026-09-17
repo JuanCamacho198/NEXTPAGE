@@ -296,6 +296,8 @@ describe('discover rails — isolated error and retry', () => {
     expect(state.rails.map((rail) => rail.kind)).toEqual(['Error', 'Error', 'Error']);
     expect(state.rails[0]).toEqual({ kind: 'Error', code: 'NETWORK_ERROR', offline: true });
     expect(state.isOnline).toBe(false);
+    // NETWORK_ERROR is retryable, so automatic retries are pending; release them.
+    state.dispose();
   });
 
   it('does not refetch a settled rail set on remount', async () => {
@@ -618,6 +620,7 @@ describe('discover rails — progressive per-rail publish', () => {
     expect(state.rails[1]).toEqual({ kind: 'Error', code: 'NETWORK_ERROR', offline: true });
     expect(state.rails.some((rail) => rail.kind === 'Loading')).toBe(false);
     expect(state.isOnline).toBe(false);
+    state.dispose();
   });
 
   it('keeps no aggregate all-rails-settled publish gate in the state layer', () => {

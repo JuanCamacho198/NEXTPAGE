@@ -432,6 +432,36 @@ describe('desktop-descubrir Phase 3.1 — featured() sorts + liveComposite forwa
     expect(page).toEqual({ results: [], nextPage: null, totalCount: 0 });
   });
 
+  it('Composite featured() merges the opted-in fan-out and leaves an empty rail Hidden', async () => {
+    const first = fakeProvider({
+      sources: [{ sourceId: 'builtin:gutendex' as CatalogSource, name: 'G', kind: 'builtin' }],
+      featuredBySort: { POPULAR: [fakeBook('gutendex:1'), fakeBook('gutendex:2')] },
+    });
+    const second = fakeProvider({
+      sources: [{ sourceId: 'builtin:openlibrary' as CatalogSource, name: 'O', kind: 'builtin' }],
+      featuredBySort: { POPULAR: [] },
+    });
+    const composite = new CompositeCatalogProvider([first, second], { debounceMs: 0 });
+    const page = await composite.featured('POPULAR', 6);
+    // The healthy provider's page flows through the fan-out untouched.
+    expect(page.results.map((b) => b.id)).toEqual(['gutendex:1', 'gutendex:2']);
+
+    // Rail level: an empty featured page renders `Hidden`, never `Error`.
+    const emptyComposite = new CompositeCatalogProvider(
+      [
+        fakeProvider({
+          sources: [{ sourceId: 'builtin:gutendex' as CatalogSource, name: 'G', kind: 'builtin' }],
+          featuredBySort: {},
+        }),
+      ],
+      { debounceMs: 0 },
+    );
+    const state = new DiscoverDomainState(emptyComposite, {}, { now: () => new Date(2026, 5, 10) });
+    await state.refreshRails();
+    expect(state.rails[0]).toEqual({ kind: 'Hidden' });
+    expect(state.isOnline).toBe(true);
+  });
+
   it('Composite searchSource() routes the exact source and fails closed on unknown ids', async () => {
     const { state } = stateWith(searchBodies());
     void state;

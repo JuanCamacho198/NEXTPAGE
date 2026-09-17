@@ -343,6 +343,54 @@ describe('CompositeCatalogProvider featured caching', () => {
   });
 });
 
+describe('CompositeCatalogProvider durable detail read-through (G4)', () => {
+  it('serves a detail stored only in the durable table with zero provider I/O', async () => {
+    const port = new RecordingDurablePort();
+    const cache = new PersistentDiscoverCache(port);
+    const key = detailCacheKey(SOURCE, 'gutendex:1342');
+    port.rows.set(key, {
+      payload: JSON.stringify(book('gutendex:1342')),
+      fetchedAt: 1_000,
+      ttlS: DETAIL_TTL_S,
+    });
+    const provider = new FakeFeaturedProvider(SOURCE, page(['gutendex:1']));
+    const composite = new CompositeCatalogProvider([provider], {
+      cache,
+      nowEpochSecs: () => 1_000,
+    });
+
+    // FakeFeaturedProvider.getDetails throws: serving an id proves the durable
+    // row was reachable across sessions without any provider I/O.
+    const details = await composite.getDetails('gutendex:1342');
+    expect(details.id).toBe('gutendex:1342');
+    expect(port.reads).toEqual([key]);
+
+    // Seeded into the mirror: the next read does not touch the durable port.
+    port.reads.length = 0;
+    await composite.getDetails('gutendex:1342');
+    expect(port.reads).toEqual([]);
+  });
+
+  it('refetches a stale durable detail instead of serving it', async () => {
+    const port = new RecordingDurablePort();
+    const cache = new PersistentDiscoverCache(port);
+    port.rows.set(detailCacheKey(SOURCE, 'gutendex:1342'), {
+      payload: JSON.stringify(book('gutendex:1342')),
+      fetchedAt: 1_000,
+      ttlS: DETAIL_TTL_S,
+    });
+    const provider = new FakeFeaturedProvider(SOURCE, page(['gutendex:1']));
+    const composite = new CompositeCatalogProvider([provider], {
+      cache,
+      nowEpochSecs: () => 1_000 + DETAIL_TTL_S + 1,
+    });
+
+    await expect(composite.getDetails('gutendex:1342')).rejects.toThrow(
+      /unexpected getDetails\(gutendex:1342\)/,
+    );
+  });
+});
+
 describe('CompositeCatalogProvider searchSource page caching', () => {
   it('caches the thematic rail page under p:v2 with PAGE_TTL_S and serves repeats', async () => {
     const provider = new FakeFeaturedProvider(SOURCE, page(['gutendex:1342']));

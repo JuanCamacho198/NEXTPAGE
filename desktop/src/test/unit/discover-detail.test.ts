@@ -424,3 +424,65 @@ describe('DiscoverDetail access section (WU3)', () => {
     expect(screen.queryByText('discover.accessDownload')).not.toBeInTheDocument();
   });
 });
+
+describe('DiscoverDomainState detail offline handling (G4)', () => {
+  it('maps a connectivity detail failure to offline and recovers on retry', async () => {
+    const book = fakeBook();
+    let failing = true;
+    const base = fakeProvider({ [book.id]: book });
+    const provider: CatalogProvider = {
+      ...base,
+      async getDetails(id: string) {
+        if (failing) throw catalogError('NETWORK_ERROR', 'offline');
+        return base.getDetails(id);
+      },
+    };
+    const state = new DiscoverDomainState(provider);
+
+    await state.openDetail(book.id);
+    expect(state.detailStatus).toBe('offline');
+    expect(state.detail).toBeNull();
+
+    failing = false;
+    await state.retryDetail();
+    expect(state.detailStatus).toBe('loaded');
+    expect(state.detail?.id).toBe(book.id);
+  });
+
+  it('keeps a rate-limited detail failure as a generic error, not offline', async () => {
+    const book = fakeBook();
+    const provider: CatalogProvider = {
+      ...fakeProvider({ [book.id]: book }),
+      async getDetails() {
+        throw catalogError('RATE_LIMITED', 'slow down');
+      },
+    };
+    const state = new DiscoverDomainState(provider);
+
+    await state.openDetail(book.id);
+    expect(state.detailStatus).toBe('error');
+  });
+});
+
+describe('DiscoverDetail offline retry (G4)', () => {
+  it('renders offline copy with a retry action instead of the upstream message', async () => {
+    const onRetryDetail = vi.fn();
+    render(DiscoverDetail, {
+      props: { detail: null, detailStatus: 'offline', t, onDismiss: vi.fn(), onRetryDetail },
+    });
+
+    expect(await screen.findByText('discover.offline')).toBeInTheDocument();
+    expect(screen.queryByText('discover.errorUpstream')).not.toBeInTheDocument();
+    await fireEvent.click(screen.getByText('discover.retry'));
+    expect(onRetryDetail).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the upstream copy for a generic error', async () => {
+    render(DiscoverDetail, {
+      props: { detail: null, detailStatus: 'error', t, onDismiss: vi.fn() },
+    });
+
+    expect(await screen.findByText('discover.errorUpstream')).toBeInTheDocument();
+    expect(screen.queryByText('discover.offline')).not.toBeInTheDocument();
+  });
+});

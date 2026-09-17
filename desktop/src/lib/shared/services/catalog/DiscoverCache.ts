@@ -68,6 +68,14 @@ export interface DiscoverCacheStore {
    * fresh-only `get` when it is absent.
    */
   read?(key: string, nowEpochSecs: number): DiscoverCacheRead | null;
+  /**
+   * Durable read-through for exactly ONE key — additive and optional. On a
+   * mirror miss it reads the durable backing store, seeds the mirror and
+   * returns the resident read; a miss or a failure resolves to `null`, never a
+   * throw. Detail keys are per-book and cannot be enumerated by `preload`, so
+   * this is how a detail fetched in an earlier session stays reachable.
+   */
+  readDurable?(key: string, nowEpochSecs: number): Promise<DiscoverCacheRead | null>;
 }
 
 /** Async durable backing store: the Tauri commands in production, a fake in tests. */
@@ -150,6 +158,24 @@ export class PersistentDiscoverCache implements DiscoverCacheStore, PreloadableC
 
   read(key: string, nowEpochSecs: number): DiscoverCacheRead | null {
     return this.mirror.read(key, nowEpochSecs);
+  }
+
+  /**
+   * One-key durable read-through (bounded: exactly one backing-store read per
+   * miss). A resident mirror entry is returned without I/O, and a failed
+   * durable read degrades to a miss — a cache never fails a fetch.
+   */
+  async readDurable(key: string, nowEpochSecs: number): Promise<DiscoverCacheRead | null> {
+    const resident = this.mirror.read(key, nowEpochSecs);
+    if (resident) return resident;
+    try {
+      const row = await this.port.read(key);
+      if (!row) return null;
+      this.mirror.put(key, row.payload, row.fetchedAt, row.ttlS);
+      return this.mirror.read(key, nowEpochSecs);
+    } catch {
+      return null;
+    }
   }
 
   put(key: string, payload: string, fetchedAtEpochSecs: number, ttlS: number): void {

@@ -149,6 +149,7 @@
       onDownload={() => void discoverState.startDownload()}
       onCancelDownload={() => discoverState.cancelDownload()}
       onRetryDownload={() => void discoverState.retryDownload()}
+      onRetryDetail={() => void discoverState.retryDetail()}
     />
   {/if}
 

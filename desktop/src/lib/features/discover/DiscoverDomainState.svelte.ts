@@ -25,7 +25,7 @@ import {
 export type DiscoverStatus =
   'idle' | 'loading' | 'loadingMore' | 'loaded' | 'empty' | 'error' | 'offline';
 
-export type DiscoverDetailStatus = 'closed' | 'loading' | 'loaded' | 'notFound' | 'error';
+export type DiscoverDetailStatus = 'closed' | 'loading' | 'loaded' | 'notFound' | 'error' | 'offline';
 
 /** In-app download-to-import lifecycle for the open detail book. */
 export type DiscoverDownloadState =
@@ -71,6 +71,8 @@ class DiscoverDomainState {
   readonly railsState: DiscoverRailsDomainState;
 
   private lastAttemptedPage = 0;
+  /** Id of the last requested detail, so a failed load can be retried. */
+  private lastDetailId: string | null = null;
   /** Transfer id of the in-flight backend download, or null. */
   private activeTransferId: string | null = null;
   /** Set by `cancelDownload` so a late settle becomes `cancelled`, never `imported`. */
@@ -157,6 +159,7 @@ class DiscoverDomainState {
     // Opening a book supersedes any transfer in flight for the previous one.
     this.cancelDownload();
     this.resetDownload();
+    this.lastDetailId = id;
     this.detailStatus = 'loading';
     this.detail = null;
     try {
@@ -164,8 +167,18 @@ class DiscoverDomainState {
       this.detailStatus = 'loaded';
     } catch (err) {
       const code = catalogCodeOf(err);
-      this.detailStatus = code === 'NOT_FOUND' ? 'notFound' : 'error';
+      // Offline is its own state: the detail sheet shows connectivity copy plus
+      // a retry, not the generic "catalog unavailable" message.
+      this.detailStatus =
+        code === 'NOT_FOUND' ? 'notFound' : isOfflineCatalogCode(code) ? 'offline' : 'error';
     }
+  }
+
+  /** Re-open the last requested detail (the offline/error retry affordance). */
+  async retryDetail(): Promise<void> {
+    const id = this.lastDetailId;
+    if (id === null) return;
+    await this.openDetail(id);
   }
 
   dismissDetail(): void {

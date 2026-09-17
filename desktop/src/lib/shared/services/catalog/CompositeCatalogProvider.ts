@@ -502,20 +502,49 @@ export class CompositeCatalogProvider implements CatalogProvider {
     }
     const { provider, source } = route;
     const active = this.activeSourceIds();
-    if (this.cache && active.has(source.sourceId)) {
-      const hit = this.cache.get(detailCacheKey(source.sourceId, id), this.nowEpochSecs());
-      if (hit) return JSON.parse(hit) as CatalogBook;
+    const cache = this.cache;
+    if (cache !== null && active.has(source.sourceId)) {
+      return this.readOrFetchDetail(cache, provider, source.sourceId, id);
     }
+    return provider.getDetails(id);
+  }
+
+  /**
+   * Detail read-through: the synchronous mirror first, then a single-key
+   * durable read (so a detail fetched in a previous session is reachable
+   * again, including offline), then the provider. Only a fresh durable row is
+   * served; a stale one is refetched and replaced under `DETAIL_TTL_S`.
+   */
+  private async readOrFetchDetail(
+    cache: DiscoverCacheStore,
+    provider: CatalogProvider,
+    sourceId: string,
+    id: string,
+  ): Promise<CatalogBook> {
+    const key = detailCacheKey(sourceId, id);
+    const hit = cache.get(key, this.nowEpochSecs());
+    if (hit) return JSON.parse(hit) as CatalogBook;
+    const durable = await this.readDurableDetail(cache, key);
+    if (durable !== null) return durable;
     const book = await provider.getDetails(id);
-    if (this.cache && active.has(source.sourceId)) {
-      this.cache.put(
-        detailCacheKey(source.sourceId, id),
-        JSON.stringify(book),
-        this.nowEpochSecs(),
-        DETAIL_TTL_S,
-      );
-    }
+    cache.put(key, JSON.stringify(book), this.nowEpochSecs(), DETAIL_TTL_S);
     return book;
+  }
+
+  /** Bounded one-row durable fallback; absent support or a failure is a miss. */
+  private async readDurableDetail(
+    cache: DiscoverCacheStore,
+    key: string,
+  ): Promise<CatalogBook | null> {
+    const readDurable = cache.readDurable;
+    if (typeof readDurable !== 'function') return null;
+    try {
+      const hit = await readDurable.call(cache, key, this.nowEpochSecs());
+      if (!hit || hit.stale) return null;
+      return JSON.parse(hit.payload) as CatalogBook;
+    } catch {
+      return null;
+    }
   }
 
   private routeDetails(id: string): RoutedDetails | null {

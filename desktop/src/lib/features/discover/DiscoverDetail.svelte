@@ -24,6 +24,7 @@
     onDownload = () => {},
     onCancelDownload = () => {},
     onRetryDownload = () => {},
+    onRetryDetail = () => {},
   }: {
     detail: CatalogBook | null;
     detailStatus: DiscoverDetailStatus;
@@ -36,6 +37,7 @@
     onDownload?: () => void;
     onCancelDownload?: () => void;
     onRetryDownload?: () => void;
+    onRetryDetail?: () => void;
   } = $props();
 
   /** Modal facade (mirrors ShelfDetailModal): `bind:open` + reset-on-close. */
@@ -104,6 +106,15 @@
       <p class="text-sm text-(--color-text-muted)">{t('discover.loading')}</p>
     {:else if detailStatus === 'notFound'}
       <p class="text-sm text-(--color-text-muted)">{t('discover.detailNotFound')}</p>
+    {:else if detailStatus === 'offline'}
+      <p class="text-sm text-(--color-text-muted)">{t('discover.offline')}</p>
+      <button
+        type="button"
+        class="mt-2 rounded-md border border-(--color-primary)/25 bg-(--color-primary)/8 px-3 py-1.5 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/15"
+        onclick={onRetryDetail}
+      >
+        {t('discover.retry')}
+      </button>
     {:else if detailStatus === 'error' || detail === null}
       <p class="text-sm text-(--color-text-muted)">{t('discover.errorUpstream')}</p>
     {:else}

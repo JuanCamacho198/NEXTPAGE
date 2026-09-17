@@ -210,8 +210,9 @@ class DiscoverDomainState {
   /**
    * Start a transfer of `url` for `book` on the single download machine.
    * `downloading` → `importing` → `imported`, plus `error` and `cancelled`;
-   * the backend byte source replaces the previous webview fetch. On success the
-   * backend's temp file is discarded best-effort.
+   * the backend byte source replaces the previous webview fetch. The backend's
+   * temp file is discarded best-effort on success and on a failed import, so
+   * retries never accumulate leftovers.
    */
   async startDownloadUrl(book: CatalogBook, url: string): Promise<void> {
     if (this.downloadState === 'downloading' || this.downloadState === 'importing') return;
@@ -253,6 +254,9 @@ class DiscoverDomainState {
       } else {
         this.downloadState = 'error';
         this.downloadError = result.error;
+        // A failed import must not strand the transfer file: each retry mints a
+        // fresh id, so keeping it would accumulate one download per attempt.
+        this.discardDownloadedFile(filePath);
       }
     } catch (err) {
       if (this.transferGeneration !== generation) return;

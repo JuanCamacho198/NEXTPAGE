@@ -346,7 +346,7 @@ describe('DiscoverDomainState download-to-import through the backend byte source
     expect(importFn).not.toHaveBeenCalled();
   });
 
-  it('a failed import reports the error and keeps the temp file', async () => {
+  it('a failed import reports the error and discards the leftover temp file', async () => {
     const book = fakeBook();
     const importFn = vi.fn(async () => ({
       bookId: book.id,
@@ -370,7 +370,9 @@ describe('DiscoverDomainState download-to-import through the backend byte source
 
     expect(state.downloadState).toBe('error');
     expect(state.downloadError).toBe('bad bytes');
-    expect(mocks.discardRemoteDownload).not.toHaveBeenCalled();
+    // F4: the failed import still cleans up, so retries cannot accumulate
+    // one 812 KB temp file per attempt.
+    expect(mocks.discardRemoteDownload).toHaveBeenCalledWith('/tmp/downloads/t1.epub');
   });
 
   it('a failing best-effort discard never changes the imported state', async () => {

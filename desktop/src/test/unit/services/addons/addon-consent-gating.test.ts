@@ -9,8 +9,12 @@
  * `search` / `getDetails` stay ungated (Android parity + the spec's "resolve
  * operation" phrasing): the existing `routeDetails` prefix routing and the
  * `NOT_FOUND` zero-I/O behaviour are preserved, covered by regression tests.
+ *
+ * Fully offline: the built-in providers that `defaultCatalogProviders` builds
+ * are served by an injected offline `fetch`, so no test in this file can reach
+ * the network.
  */
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import {
   AddonCatalogProvider,
@@ -29,6 +33,42 @@ import { CatalogError } from '$lib/shared/services/catalog/errors';
 import type { CatalogBook, CatalogSource } from '$lib/shared/services/catalog/CatalogProvider';
 import type { AddonManifest } from '@nextpage/manifest-validator';
 import type { AddonTransport, InstalledAddonRow } from '$lib/shared/services/addons/AddonRegistry';
+
+/**
+ * Offline built-in datasources.
+ *
+ * `defaultCatalogProviders` — which `createRebuildingCatalogProvider` always
+ * calls — constructs the REAL Gutendex and Open Library providers, and both
+ * datasources default to the ambient global `fetch` (`GutendexDataSource.ts:19`,
+ * `OpenLibraryDataSource.ts:28`). Unit tests must never touch the network, so
+ * this file injects a deterministic offline `fetch` into those built-ins: every
+ * URL is recorded and answered locally, never by gutendex.com/openlibrary.org.
+ * The addon transport under test stays the injected counting fake; only the
+ * built-in providers are stubbed.
+ */
+const builtInFetchCalls: string[] = [];
+
+function offlineBuiltInFetch(url: string): Promise<Response> {
+  builtInFetchCalls.push(url);
+  const payload = url.includes('openlibrary.org')
+    ? { numFound: 0, docs: [] }
+    : { results: [], count: 0 };
+  return Promise.resolve({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve(payload),
+  } as unknown as Response);
+}
+
+const ambientFetch = globalThis.fetch;
+
+beforeAll(() => {
+  globalThis.fetch = offlineBuiltInFetch as unknown as typeof fetch;
+});
+
+afterAll(() => {
+  globalThis.fetch = ambientFetch;
+});
 
 const ADDON_ID = 'a1b2c3d4e5f60718';
 
@@ -214,7 +254,13 @@ describe('search/getDetails stay ungated (regression)', () => {
     const addonSources = built.listSources().filter((s) => s.kind === 'addon');
     expect(addonSources.map((s) => s.sourceId)).toEqual([`addon:${ADDON_ID}`]);
     // Composite search fans out ungated (transport fires); resolve stays gated.
+    const builtInCallsBefore = builtInFetchCalls.length;
     await built.search('dune', 1);
     expect(transport.calls.length).toBeGreaterThan(0);
+    // The built-in providers went through the injected offline fetch, never the
+    // network: the fan-out is served locally and deterministically.
+    expect(builtInFetchCalls.length).toBeGreaterThan(builtInCallsBefore);
+    expect(builtInFetchCalls.some((url) => url.includes('gutendex.com'))).toBe(true);
+    expect(builtInFetchCalls.some((url) => url.includes('openlibrary.org'))).toBe(true);
   });
 });

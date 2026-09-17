@@ -36,4 +36,20 @@ describe('i18n es/en parity (REQ-X-Cross-2)', () => {
     expect(messagesEs['home.continue.prevBook']).toBe('Anterior');
     expect(messagesEn['home.continue.prevBook']).toBe('Previous');
   });
+
+  it('includes the addons route keys in both locales', () => {
+    const addonsKeys = ['sidebar.addons', 'discover.manageAddons'] as const;
+
+    for (const key of addonsKeys) {
+      expect(messagesEn[key]).toBeDefined();
+      expect(messagesEs[key]).toBeDefined();
+    }
+
+    // Exact copy: the sidebar label is identical in both locales,
+    // the Discover CTA uses the verbatim spec labels.
+    expect(messagesEn['sidebar.addons']).toBe('Addons');
+    expect(messagesEs['sidebar.addons']).toBe('Addons');
+    expect(messagesEn['discover.manageAddons']).toBe('Manage addons');
+    expect(messagesEs['discover.manageAddons']).toBe('Gestionar addons');
+  });
 });

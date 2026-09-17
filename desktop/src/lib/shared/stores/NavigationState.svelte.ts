@@ -17,6 +17,7 @@ export type NavCallbacks = {
   onNavigateSettings: () => void;
   onNavigateDictionary?: () => void;
   onNavigateDiscover?: () => void;
+  onNavigateAddons?: () => void;
   onNavigateStorage?: () => void;
   onNavigateSync?: () => void;
 };
@@ -37,6 +38,14 @@ export function getNavItems(callbacks: NavCallbacks): NavItem[] {
       messageKey: 'sidebar.discover',
       icon: 'search',
       action: callbacks.onNavigateDiscover,
+    });
+  }
+  if (callbacks.onNavigateAddons) {
+    items.push({
+      id: 'addons',
+      messageKey: 'sidebar.addons',
+      icon: 'grid',
+      action: callbacks.onNavigateAddons,
     });
   }
   items.push(

@@ -166,7 +166,16 @@
           {/each}
         </div>
       {:else if discoverState.status === 'empty'}
-        <p class="text-sm text-(--color-text-muted)">{t('discover.empty')}</p>
+        <div class="flex flex-col items-start gap-2">
+          <p class="m-0 text-sm text-(--color-text-muted)">{t('discover.empty')}</p>
+          <button
+            type="button"
+            class="rounded-md border border-(--color-primary)/25 bg-(--color-primary)/8 px-3 py-1.5 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/15"
+            onclick={() => navigationState.navigateToAddons()}
+          >
+            {t('discover.manageAddons')}
+          </button>
+        </div>
       {:else if discoverState.status === 'offline' || discoverState.status === 'error'}
         <div class="flex flex-col items-start gap-2">
           <p class="text-sm text-(--color-text-muted)">

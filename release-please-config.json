@@ -18,6 +18,14 @@
       "extra-files": [
         { "type": "generic", "path": "app/build.gradle.kts" }
       ]
+    },
+    "web": {
+      "component": "web",
+      "release-type": "simple",
+      "bump-minor-pre-major": true,
+      "extra-files": [
+        { "type": "json", "path": "package.json", "jsonpath": "$.version" }
+      ]
     }
   }
 }

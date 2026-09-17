@@ -33,6 +33,7 @@ on:
     paths:
       - 'desktop/**'
       - 'android/**'
+      - 'web/**'
       - '.github/workflows/release-notes.yml'
       - 'release-please-config.json'
       - '.release-please-manifest.json'

@@ -13,10 +13,10 @@ name: Sentry debug-files
 on:
   push:
     branches: [main]
-    # `v*` alone would miss the current release tags: release-please now names them
-    # per component (`desktop-v0.3.0`, `android-v0.3.0`), which do not start with `v`.
-    # Both patterns are kept so the historical bare tag still matches.
-    tags: ['v*', '*-v*']
+    # Only the desktop Rust build produces the debug files this uploads, so the pattern
+    # must not fire for every release tag: a bare `*-v*` would also match `android-v*`
+    # and `web-v*`. `v*` is kept so the historical bare tag still matches.
+    tags: ['v*', 'desktop-v*']
   workflow_dispatch:
 
 permissions:

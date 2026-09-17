@@ -102,11 +102,11 @@ interface CacheEntry {
 }
 
 /**
- * Featured sorts preloaded per active source. Featured rail reads are the only
- * ones whose keys are deterministic from the source set alone, so preload is
- * bounded to exactly these two keys per source.
+ * Featured sorts preloaded per featured-capable source. Featured rail reads are
+ * the only ones whose keys are deterministic from the source set alone, so
+ * preload is bounded to exactly these two keys per such source.
  */
-const PRELOAD_SORTS: readonly CatalogFeaturedSort[] = ['NEWEST', 'POPULAR'];
+export const FEATURED_SORTS: readonly CatalogFeaturedSort[] = ['NEWEST', 'POPULAR'];
 
 /**
  * In-memory TTL store with lazy expiry: reads past TTL return null and
@@ -192,7 +192,7 @@ export class PersistentDiscoverCache implements DiscoverCacheStore, PreloadableC
 
   async preload(sourceIds: readonly string[], extraKeys: readonly string[] = []): Promise<void> {
     const featured = sourceIds.flatMap((sourceId) =>
-      PRELOAD_SORTS.map((sort) => featuredCacheKey(sourceId, sort)),
+      FEATURED_SORTS.map((sort) => featuredCacheKey(sourceId, sort)),
     );
     // Deduped so a repeated extra key cannot multiply reads; still bounded.
     const keys = [...new Set([...featured, ...extraKeys])];

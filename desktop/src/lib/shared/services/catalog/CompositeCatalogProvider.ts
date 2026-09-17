@@ -18,6 +18,7 @@ import type {
 } from './CatalogProvider';
 import {
   DETAIL_TTL_S,
+  FEATURED_SORTS,
   FEATURED_TTL_S,
   PAGE_TTL_S,
   detailCacheKey,
@@ -168,10 +169,10 @@ function safePreloadPageKeys(provider?: () => readonly string[]): readonly strin
 
 /**
  * Seeds the durable cache mirror once per composite build, bounded to the
- * featured keys of the active sources plus the caller's explicit extra keys.
- * Absent or non-preloadable caches are a no-op, and a failed preload degrades
- * to an unseeded mirror (the first rail simply refetches) — never a build
- * failure.
+ * featured keys of the sources that actually support featured plus the
+ * caller's explicit extra keys. Absent or non-preloadable caches are a no-op,
+ * and a failed preload degrades to an unseeded mirror (the first rail simply
+ * refetches) — never a build failure.
  */
 async function preloadDiscoverCache(
   cache: DiscoverCacheStore | null,
@@ -180,10 +181,7 @@ async function preloadDiscoverCache(
 ): Promise<void> {
   if (!isPreloadable(cache)) return;
   try {
-    await cache.preload(
-      composite.listSources().map((source) => source.sourceId),
-      extraKeys,
-    );
+    await cache.preload(composite.featuredSourceIds(), extraKeys);
   } catch {
     // Best-effort: an unseeded mirror is an empty cache, not an error.
   }
@@ -272,6 +270,22 @@ export class CompositeCatalogProvider implements CatalogProvider {
    */
   supportsFeatured(sort: CatalogFeaturedSort): boolean {
     return this.searchableProviders().some((p) => p.supportsFeatured(sort));
+  }
+
+  /**
+   * Source ids whose owning provider opts into featured for at least one sort.
+   * Evaluated from the live provider list, never a hardcoded provider list, so
+   * an addon that declares featured support is included the moment it installs.
+   * Used to bound the durable preload: sources that can never have a featured
+   * row (the curated bundle, Open Library, Google Books) are skipped.
+   */
+  featuredSourceIds(): CatalogSource[] {
+    const ids: CatalogSource[] = [];
+    for (const provider of this.searchableProviders()) {
+      if (!FEATURED_SORTS.some((sort) => provider.supportsFeatured(sort))) continue;
+      for (const source of provider.listSources()) ids.push(source.sourceId);
+    }
+    return ids;
   }
 
   /**

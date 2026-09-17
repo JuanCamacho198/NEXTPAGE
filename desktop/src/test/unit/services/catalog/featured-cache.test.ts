@@ -53,6 +53,8 @@ function page(ids: string[]): PagedResult {
 class FakeFeaturedProvider implements CatalogProvider {
   featuredCalls = 0;
   searchCalls = 0;
+  /** Flip to simulate an addon that does (not) declare featured support. */
+  supports = true;
   readonly sources: CatalogSourceInfo[];
   page: PagedResult;
   featuredImpl: (() => Promise<PagedResult>) | null = null;
@@ -67,7 +69,7 @@ class FakeFeaturedProvider implements CatalogProvider {
   }
 
   supportsFeatured(_sort: CatalogFeaturedSort): boolean {
-    return true;
+    return this.supports;
   }
 
   async featured(_sort: CatalogFeaturedSort, _limit: number): Promise<PagedResult> {
@@ -143,16 +145,22 @@ describe('production composite wiring', () => {
     const composite = await supplier.current();
     const sourceIds = composite.listSources().map((source) => source.sourceId);
 
-    // Real built-in sources are present, and preload ran bounded to their
-    // featured keys (2 per source, nothing else).
+    // Real built-in sources are present, and preload ran bounded to the
+    // featured keys of the sources that actually support featured: with the
+    // default source set only Gutendex opts in, so Open Library and the curated
+    // bundle contribute zero durable reads (they can never have a featured row).
     expect(sourceIds).toContain('builtin:gutendex');
     expect(sourceIds).toContain('builtin:openlibrary');
-    expect(port.reads).toHaveLength(sourceIds.length * 2);
+    expect(composite.featuredSourceIds()).toEqual(['builtin:gutendex']);
+    expect(port.reads.sort()).toEqual(
+      [
+        featuredCacheKey('builtin:gutendex', 'NEWEST'),
+        featuredCacheKey('builtin:gutendex', 'POPULAR'),
+      ].sort(),
+    );
+    expect(port.reads).not.toContain(featuredCacheKey('builtin:openlibrary', 'NEWEST'));
+    expect(port.reads).not.toContain(featuredCacheKey('builtin:openlibrary', 'POPULAR'));
     expect(port.reads.every((key) => key.startsWith('f:v2:'))).toBe(true);
-    for (const sourceId of sourceIds) {
-      expect(port.reads).toContain(featuredCacheKey(sourceId, 'NEWEST'));
-      expect(port.reads).toContain(featuredCacheKey(sourceId, 'POPULAR'));
-    }
 
     // The cache is reachable from the composite's synchronous read path: a
     // seeded detail entry is served with ZERO provider I/O (a null cache would
@@ -181,13 +189,35 @@ describe('production composite wiring', () => {
     const sourceIds = composite.listSources().map((source) => source.sourceId);
 
     expect(port.reads).toContain(thematicKey);
-    expect(port.reads).toHaveLength(sourceIds.length * 2 + 1);
+    // Two featured keys (Gutendex only) plus the feature-owned thematic key.
+    expect(port.reads).toHaveLength(3);
+    expect(sourceIds).toContain('builtin:openlibrary');
+    expect(port.reads).not.toContain(featuredCacheKey('builtin:openlibrary', 'NEWEST'));
   });
 
   it('does not preload when the cache is absent', async () => {
     const supplier = createRebuildingCatalogProvider(async () => []);
     const composite = await supplier.current();
     expect(composite.listSources().length).toBeGreaterThan(0);
+  });
+});
+
+describe('CompositeCatalogProvider.featuredSourceIds', () => {
+  it('tracks the live supportsFeatured probe, not a hardcoded provider list', () => {
+    const gutendex = new FakeFeaturedProvider('builtin:gutendex' as CatalogSource, page([]));
+    const quiet = new FakeFeaturedProvider('builtin:quiet' as CatalogSource, page([]));
+    quiet.supports = false;
+    const composite = new CompositeCatalogProvider([gutendex, quiet], {});
+
+    expect(composite.featuredSourceIds()).toEqual(['builtin:gutendex']);
+
+    // An addon installed at runtime that opts into featured is picked up on the
+    // next preload without any provider-list edit.
+    quiet.supports = true;
+    expect([...composite.featuredSourceIds()].sort()).toEqual([
+      'builtin:gutendex',
+      'builtin:quiet',
+    ]);
   });
 });
 

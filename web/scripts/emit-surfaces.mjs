@@ -42,7 +42,10 @@ if (!Array.isArray(ADDONS) || ADDONS.length === 0) fail('src/data/addons.json mu
 // --- Route table (404 excluded; param URLs never emitted) --------------------
 const esIndex = ['/', '/catalogo', '/enviar', '/docs'];
 const enIndex = ['/en/', '/en/catalog', '/en/submit', '/en/docs'];
-const ids = ADDONS.map((a) => a.id);
+// `planned` entries keep their pages (routes still build) but are not advertised
+// on the machine-readable surfaces (sitemap, catalog, llms).
+const visibleAddons = ADDONS.filter((a) => a.availability !== 'planned');
+const ids = visibleAddons.map((a) => a.id);
 const esDetail = ids.map((id) => `/catalogo/${id}`);
 const enDetail = ids.map((id) => `/en/catalog/${id}`);
 
@@ -77,8 +80,8 @@ const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://w
 const catalog = {
   'generated-at': new Date().toISOString(),
   site: SITE,
-  count: ADDONS.length,
-  addons: [...ADDONS]
+  count: visibleAddons.length,
+  addons: [...visibleAddons]
     .sort((a, b) => a.id.localeCompare(b.id))
     .map((a) => ({
       id: a.id,
@@ -89,6 +92,7 @@ const catalog = {
       languages: a.languages,
       category: a.category,
       kind: a.kind,
+      availability: a.availability,
       updatedAt: a.updatedAt,
       description: a.description,
       catalogs: a.catalogs,
@@ -104,7 +108,7 @@ const catalogJson = `${JSON.stringify(catalog, null, 2)}\n`;
 // --- llms.txt ---------------------------------------------------------------------
 const esRoutes = [...esIndex, ...esDetail];
 const enRoutes = [...enIndex, ...enDetail];
-const addonBullets = [...ADDONS]
+const addonBullets = [...visibleAddons]
   .sort((a, b) => a.id.localeCompare(b.id))
   .map((a) => `- ${a.name} — ${a.description.en} — ${abs(`/catalogo/${a.id}`)}`);
 const llms = `# NextPage Addons

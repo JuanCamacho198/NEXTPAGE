@@ -1,6 +1,8 @@
 {
+  "include-component-in-tag": true,
   "packages": {
     "desktop": {
+      "component": "desktop",
       "release-type": "simple",
       "bump-minor-pre-major": true,
       "extra-files": [
@@ -10,6 +12,7 @@
       ]
     },
     "android": {
+      "component": "android",
       "release-type": "simple",
       "bump-minor-pre-major": true,
       "extra-files": [

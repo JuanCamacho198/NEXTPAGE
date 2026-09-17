@@ -1,0 +1,13 @@
+{
+  "expect": "pass",
+  "contentType": "application/json",
+  "manifest": {
+    "id": "example-books",
+    "name": "Example Books",
+    "version": "1.0.0",
+    "catalogs": [{ "type": "book-catalog", "id": "main", "name": "Example Catalog" }],
+    "resources": ["search", "book-details"],
+    "resolveUrl": "https://example.com/resolve?isbn={isbn}&title={title}",
+    "capabilities": ["resolve"]
+  }
+}

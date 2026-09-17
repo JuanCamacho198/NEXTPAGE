@@ -413,6 +413,78 @@ describe('DiscoverDomainState download-to-import through the backend byte source
     expect(state.downloadError).toBe('UNAVAILABLE_DOWNLOAD');
     expect(transfer.requests).toHaveLength(0);
   });
+
+  it('refreshes the library exactly once after a successful import', async () => {
+    const book = fakeBook();
+    const transfer = recordingTransfer(async (req) => ({
+      filePath: `/tmp/downloads/${req.transferId}.epub`,
+      bytes: 3,
+    }));
+    const refresh = vi.fn(async () => undefined);
+    const state = new DiscoverDomainState(fakeProvider(book), {
+      transfer,
+      importFn: importedStub(),
+    });
+    state.onLibraryRefreshNeeded = refresh;
+    await state.openDetail(book.id);
+
+    await state.startDownload();
+
+    expect(state.downloadState).toBe('imported');
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it('does not refresh the library after a failed import', async () => {
+    const book = fakeBook();
+    const importFn = vi.fn(async () => ({
+      bookId: book.id,
+      outcome: 'failed' as const,
+      error: {
+        code: 'UNAVAILABLE' as const,
+        message: 'bad bytes',
+        retryable: true,
+        correlationId: 'c1',
+        bookId: book.id,
+      },
+    }));
+    const transfer = recordingTransfer(async () => ({
+      filePath: '/tmp/downloads/t1.epub',
+      bytes: 3,
+    }));
+    const refresh = vi.fn(async () => undefined);
+    const state = new DiscoverDomainState(fakeProvider(book), { transfer, importFn });
+    state.onLibraryRefreshNeeded = refresh;
+    await state.openDetail(book.id);
+
+    await state.startDownload();
+
+    expect(state.downloadState).toBe('error');
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it('keeps the imported state when the library refresh rejects', async () => {
+    const book = fakeBook();
+    const transfer = recordingTransfer(async () => ({
+      filePath: '/tmp/downloads/t1.epub',
+      bytes: 3,
+    }));
+    const refresh = vi.fn(async () => {
+      throw new Error('library reload failed');
+    });
+    const state = new DiscoverDomainState(fakeProvider(book), {
+      transfer,
+      importFn: importedStub(),
+    });
+    state.onLibraryRefreshNeeded = refresh;
+    await state.openDetail(book.id);
+
+    await state.startDownload();
+
+    // A refresh that rejects is non-fatal: the download is still a success.
+    expect(refresh).toHaveBeenCalledOnce();
+    expect(state.downloadState).toBe('imported');
+    expect(state.downloadError).toBeNull();
+  });
 });
 
 describe('importDiscoverFile', () => {

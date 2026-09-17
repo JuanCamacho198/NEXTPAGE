@@ -6,6 +6,7 @@ import { libraryState } from '$lib/shared/stores/LibraryDomainState.svelte';
 import { readerState } from '$lib/shared/stores/ReaderDomainState.svelte';
 import { searchState } from '$lib/shared/stores/SearchDomainState.svelte';
 import { bulkImportState } from '$lib/shared/stores/BulkImportDomainState.svelte';
+import { discoverState } from '$lib/features/discover/DiscoverDomainState.svelte';
 import { statsState } from '$lib/shared/stores/StatsDomainState.svelte';
 import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
 import { authState } from '$lib/shared/stores/AuthState.svelte';
@@ -38,11 +39,15 @@ export class AppState {
   reader = readerState;
   search = searchState;
   bulkImport = bulkImportState;
+  discover = discoverState;
   settings = settingsState;
   statsDomain = statsState;
 
   constructor() {
     this.bulkImport.onLibraryRefreshNeeded = () => this.loadLibrary();
+    // The Discover download imports through the same pipeline as a file import;
+    // without this seam the library singleton stays on its boot-time snapshot.
+    this.discover.onLibraryRefreshNeeded = () => this.loadLibrary();
     this.reader.onStatsRefreshNeeded = async (bookId) => {
       await this.statsDomain.loadStats(bookId);
       await this.statsDomain.loadStreak(bookId, authState.userId ?? '');

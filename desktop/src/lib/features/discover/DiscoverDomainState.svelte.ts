@@ -68,6 +68,14 @@ class DiscoverDomainState {
   /** Static chip labels for client-side filtering over loaded rails. */
   trending = $state<string[]>([...TRENDING_CHIPS]);
 
+  /**
+   * Post-import refresh seam, mirroring `BulkImportDomainState`: the Discover
+   * download imports through the same pipeline as a file import, so the library
+   * mirror must reload or the shelf keeps serving its boot-time snapshot. Null
+   * until the composition root wires it; best-effort by contract.
+   */
+  onLibraryRefreshNeeded: (() => Promise<void>) | null = null;
+
   /** Rail orchestration (3-rail plan, per-rail machine, scoped browse). */
   readonly railsState: DiscoverRailsDomainState;
 
@@ -251,6 +259,10 @@ class DiscoverDomainState {
         this.downloadState = 'imported';
         this.downloadError = null;
         this.discardDownloadedFile(filePath);
+        // The import landed a library row, but the module singleton was seeded
+        // at boot. Refresh best-effort so the shelf reflects it immediately;
+        // a refresh failure must never turn a successful download into one.
+        await this.refreshLibraryAfterImport();
       } else {
         this.downloadState = 'error';
         this.downloadError = result.error;
@@ -360,6 +372,20 @@ class DiscoverDomainState {
   /** Best-effort removal of the backend's temp file; never affects the UI state. */
   private discardDownloadedFile(filePath: string): void {
     void discardRemoteDownload(filePath).catch(() => undefined);
+  }
+
+  /**
+   * Best-effort library refresh after a successful import. A rejecting hook is
+   * logged only: the transfer already reached persistence, so the machine stays
+   * `imported` and the UI keeps reporting success.
+   */
+  private async refreshLibraryAfterImport(): Promise<void> {
+    if (!this.onLibraryRefreshNeeded) return;
+    try {
+      await this.onLibraryRefreshNeeded();
+    } catch (err) {
+      console.error('[Discover] library refresh after import failed (non-fatal):', err);
+    }
   }
 
   /** Settle a transfer the user cancelled after the backend had finished it. */

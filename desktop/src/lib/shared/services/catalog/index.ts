@@ -16,7 +16,13 @@ export type {
   PagedResult,
   AddonAccessResolution,
 } from './CatalogProvider';
-export { CatalogError, catalogError, isCatalogError, mapHttpStatusToCode } from './errors';
+export {
+  CatalogError,
+  catalogError,
+  isCatalogError,
+  isRetryableCatalogCode,
+  mapHttpStatusToCode,
+} from './errors';
 export type { CatalogErrorCode } from './errors';
 export { GutendexDataSource, GUTENDEX_BASE_URL } from './GutendexDataSource';
 export {

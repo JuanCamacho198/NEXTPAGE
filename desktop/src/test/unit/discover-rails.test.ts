@@ -733,11 +733,15 @@ describe('discover rails — rail-scoped "Ver todo"', () => {
 });
 
 describe('discover rails — per-rail error presentation', () => {
-  it('exposes an inline rail error component reusing the shared copy', () => {
-    const source = readSource('DiscoverRailError.svelte');
-    expect(source).toContain("t('discover.offline')");
-    expect(source).toContain("t('discover.errorUpstream')");
-    expect(source).toContain("t('discover.retry')");
+  it('exposes an inline rail error component reusing the shared three-state copy', () => {
+    const component = readSource('DiscoverRailError.svelte');
+    expect(component).toContain('discoverErrorKey');
+    expect(component).toContain("t('discover.retry')");
+    // The three-state split lives in one place and now covers rate limiting.
+    const copy = readSource('discoverErrorCopy.ts');
+    expect(copy).toContain("'discover.offline'");
+    expect(copy).toContain("'discover.rateLimited'");
+    expect(copy).toContain("'discover.errorUpstream'");
   });
 
   it('renders Loading, Loaded and Error per rail with a "Ver todo" header control', () => {

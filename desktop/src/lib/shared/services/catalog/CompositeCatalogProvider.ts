@@ -263,8 +263,10 @@ export class CompositeCatalogProvider implements CatalogProvider {
    *
    * Sources that are not active at read time are never served (design A1).
    * A provider that does not opt in is never called, so its rail can only ever
-   * come back empty (fail-closed) and be hidden. Each provider stays isolated:
-   * a throw maps to an empty page, never failing the whole fan-out.
+   * come back empty (fail-closed) and be hidden. A provider failure PROPAGATES:
+   * the rail settles `Error` (consistent with the thematic rail) instead of
+   * silently degrading to `Hidden`. A genuinely empty successful response still
+   * merges to an empty page, which the rail renders as `Hidden`.
    */
   async featured(sort: CatalogFeaturedSort, limit: number): Promise<PagedResult> {
     if (!Number.isInteger(limit) || limit < 1) {
@@ -275,18 +277,14 @@ export class CompositeCatalogProvider implements CatalogProvider {
       this.searchableProviders()
         .filter((provider) => provider.supportsFeatured(sort))
         .map(async (provider) => {
-          try {
-            const hit = this.readFeaturedHit(provider, sort, active);
-            if (hit) {
-              if (hit.stale) this.startFeaturedRefresh(provider, sort, limit, active, hit.key);
-              return hit.page;
-            }
-            const result = await provider.featured(sort, limit);
-            this.cacheFeatured(provider, sort, result, active);
-            return result;
-          } catch {
-            return { results: [], nextPage: null, totalCount: 0 } satisfies PagedResult;
+          const hit = this.readFeaturedHit(provider, sort, active);
+          if (hit) {
+            if (hit.stale) this.startFeaturedRefresh(provider, sort, limit, active, hit.key);
+            return hit.page;
           }
+          const result = await provider.featured(sort, limit);
+          this.cacheFeatured(provider, sort, result, active);
+          return result;
         }),
     );
     return this.mergePaged(pages, 1);

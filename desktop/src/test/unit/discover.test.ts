@@ -202,11 +202,11 @@ describe('DiscoverDomainState (PR3 grid/detail state mapping)', () => {
     expect(state.errorCode).toBeNull();
   });
 
-  it('RATE_LIMITED maps to offline (retryable)', async () => {
+  it('RATE_LIMITED maps to error not offline (throttling is not a connectivity failure)', async () => {
     const { state } = stateWith(() => ({ status: 429, body: { error: 'slow down' } }));
     state.setQuery('pride');
     await state.searchFirstPage();
-    expect(state.status).toBe('offline');
+    expect(state.status).toBe('error');
     expect(state.errorCode).toBe('RATE_LIMITED');
   });
 
@@ -395,7 +395,7 @@ describe('desktop-descubrir Phase 3.1 — featured() sorts + liveComposite forwa
     });
   });
 
-  it('Composite featured() fans out over supportsFeatured providers and isolates throws', async () => {
+  it('Composite featured() fans out over supportsFeatured providers and propagates a failure', async () => {
     const healthy = fakeProvider({
       sources: [{ sourceId: 'builtin:gutendex' as CatalogSource, name: 'G', kind: 'builtin' }],
       featuredBySort: { POPULAR: [fakeBook('gutendex:1'), fakeBook('gutendex:2')] },
@@ -413,9 +413,23 @@ describe('desktop-descubrir Phase 3.1 — featured() sorts + liveComposite forwa
       debounceMs: 0,
     });
     expect(composite.supportsFeatured('POPULAR')).toBe(true);
-    const page = await composite.featured('POPULAR', 6);
-    expect(page.results.map((b) => b.id)).toEqual(['gutendex:1', 'gutendex:2']);
+    // A failing opted-in provider fails the rail (→ `Error`) instead of being
+    // swallowed into an empty page that would silently render `Hidden`.
+    await expect(composite.featured('POPULAR', 6)).rejects.toMatchObject({
+      code: 'UPSTREAM_ERROR',
+    });
     expect(optedOut.calls.featured).toBe(0);
+  });
+
+  it('Composite featured() keeps a genuinely empty successful response empty', async () => {
+    const empty = fakeProvider({
+      sources: [{ sourceId: 'builtin:gutendex' as CatalogSource, name: 'G', kind: 'builtin' }],
+      featuredBySort: { POPULAR: [] },
+    });
+    const composite = new CompositeCatalogProvider([empty], { debounceMs: 0 });
+    const page = await composite.featured('POPULAR', 6);
+    // Empty success still merges to an empty page (the rail renders `Hidden`).
+    expect(page).toEqual({ results: [], nextPage: null, totalCount: 0 });
   });
 
   it('Composite searchSource() routes the exact source and fails closed on unknown ids', async () => {

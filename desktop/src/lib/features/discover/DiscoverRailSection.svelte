@@ -51,7 +51,7 @@
 {:else if state.kind === 'Error'}
   <section aria-label={title} class="flex flex-col gap-3">
     <h2 class="m-0 text-lg font-semibold text-(--color-primary)">{title}</h2>
-    <DiscoverRailError offline={state.offline} {t} {onRetry} />
+    <DiscoverRailError code={state.code} {t} {onRetry} />
   </section>
 {:else if visible.length > 0}
   <section aria-label={title} class="flex flex-col gap-3">

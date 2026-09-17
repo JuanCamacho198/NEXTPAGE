@@ -46,9 +46,13 @@ export interface DiscoverRailsDeps {
   timeoutMs?: number;
 }
 
-/** Connectivity failures that must flip the hero pill to offline. */
+/**
+ * Connectivity failures that must flip the hero pill to offline. `RATE_LIMITED`
+ * is deliberately NOT here: a 429 means the catalog is throttling, not that the
+ * user is offline.
+ */
 export function isOfflineCatalogCode(code: CatalogErrorCode): boolean {
-  return code === 'NETWORK_ERROR' || code === 'RATE_LIMITED';
+  return code === 'NETWORK_ERROR';
 }
 
 /** Unknown throwables redact to UPSTREAM_ERROR; typed catalog errors keep their code. */

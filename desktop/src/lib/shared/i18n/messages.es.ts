@@ -387,6 +387,8 @@ export const messagesEs: Record<MessageKey, string> = {
   'discover.loading': 'Cargando…',
   'discover.loadingMore': 'Cargando más…',
   'discover.offline': 'Parece que estás sin conexión. Revisa tu red e inténtalo de nuevo.',
+  'discover.rateLimited':
+    'El catálogo está limitando las solicitudes. Inténtalo de nuevo en un momento.',
   'discover.errorUpstream': 'El catálogo no está disponible ahora. Inténtalo más tarde.',
   'discover.errorInvalidPage': 'Solicitud de página no válida.',
   'discover.errorNotFound': 'Sin resultados del catálogo para esta búsqueda.',

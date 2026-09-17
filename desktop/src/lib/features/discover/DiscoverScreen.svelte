@@ -1,5 +1,6 @@
 <script lang="ts">
   import { discoverState, filterBooksByChip } from './DiscoverDomainState.svelte';
+  import { discoverErrorKey } from './discoverErrorCopy';
   import { DISCOVER_RAIL_LIMIT, RAIL_SCOPE_LIMIT } from './railPlan';
   import type { DiscoverRailState } from './DiscoverRailsDomainState.svelte';
   import type { CatalogBook, CatalogErrorCode } from '$lib/shared/services/catalog';
@@ -181,8 +182,7 @@
           <p class="text-sm text-(--color-text-muted)">
             {#if discoverState.errorCode === 'INVALID_PAGE'}{t('discover.errorInvalidPage')}
             {:else if discoverState.errorCode === 'NOT_FOUND'}{t('discover.errorNotFound')}
-            {:else if discoverState.status === 'offline'}{t('discover.offline')}
-            {:else}{t('discover.errorUpstream')}{/if}
+            {:else}{t(discoverErrorKey(discoverState.errorCode))}{/if}
           </p>
           <button
             type="button"
@@ -223,9 +223,7 @@
       {#if scopeView.error}
         <div class="flex flex-col items-start gap-2">
           <p class="m-0 text-sm text-(--color-text-muted)">
-            {scopeView.error === 'NETWORK_ERROR'
-              ? t('discover.offline')
-              : t('discover.errorUpstream')}
+            {t(discoverErrorKey(scopeView.error))}
           </p>
           <button
             type="button"

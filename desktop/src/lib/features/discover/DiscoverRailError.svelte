@@ -1,18 +1,21 @@
 <script lang="ts">
   import type { MessageKey } from '$lib/shared/i18n/messages.en';
+  import type { CatalogErrorCode } from '$lib/shared/services/catalog';
+  import { discoverErrorKey } from './discoverErrorCopy';
 
   type Translate = (key: MessageKey, params?: Record<string, string | number>) => string;
 
   /**
    * Inline per-rail failure: a stable message plus a retry that re-resolves only
-   * its own rail. Copy is reused from the screen-level catalog error keys.
+   * its own rail. Copy is the shared three-state split (offline / rate-limited /
+   * upstream), so a 429 never reads as "sin conexión".
    */
   let {
-    offline,
+    code,
     t,
     onRetry,
   }: {
-    offline: boolean;
+    code: CatalogErrorCode;
     t: Translate;
     onRetry: () => void;
   } = $props();
@@ -20,7 +23,7 @@
 
 <div class="flex flex-col items-start gap-2">
   <p class="m-0 text-sm text-(--color-text-muted)">
-    {offline ? t('discover.offline') : t('discover.errorUpstream')}
+    {t(discoverErrorKey(code))}
   </p>
   <button
     type="button"

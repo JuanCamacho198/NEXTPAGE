@@ -33,6 +33,15 @@ export function isCatalogError(err: unknown): err is CatalogError {
   return err instanceof CatalogError;
 }
 
+/**
+ * Code-level view of the same retryable classification `catalogError` applies,
+ * for callers that kept only the code (e.g. the Discover rail machine). Derived
+ * from `catalogError` so there is a single source of truth, never a second list.
+ */
+export function isRetryableCatalogCode(code: CatalogErrorCode): boolean {
+  return catalogError(code).retryable;
+}
+
 /** Map an upstream HTTP status to a stable contract code. */
 export function mapHttpStatusToCode(status: number): CatalogErrorCode {
   if (status === 404) return 'NOT_FOUND';

@@ -1,0 +1,126 @@
+name: Addon submission
+description: Propose a community addon so it can be reviewed and listed in the NextPage catalog.
+title: "[Addon submission] "
+labels: ["addon-submission"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for proposing an addon. NextPage installs community addons by URL, so
+        everything starts from a **manifest**: a small JSON document served over HTTPS
+        by whoever hosts the catalog.
+
+        What gets checked automatically before a human looks at it:
+
+        - the manifest URL uses `https:`
+        - it returns JSON (not an HTML error page)
+        - it is no larger than 64 KB
+        - it declares `id`, `name`, `version`, `catalogs` and `resources`
+
+        **A manifest that is temporarily unreachable is not rejected for that alone** —
+        an addon host being down or blocking our runners is reported but does not fail
+        the submission. What does block is a manifest that cannot be read as a valid
+        manifest at all.
+
+        A maintainer then reviews the proposal and writes the catalog entry, filling in
+        the catalogue metadata that a manifest does not carry. Nothing is published
+        without that review.
+
+  - type: input
+    id: manifest-url
+    attributes:
+      label: Manifest URL
+      description: The HTTPS URL that serves the addon manifest.
+      placeholder: https://example.com/manifest.json
+    validations:
+      required: true
+
+  - type: input
+    id: addon-name
+    attributes:
+      label: Addon name
+      description: How the addon should appear in the catalog.
+      placeholder: Example Library
+    validations:
+      required: true
+
+  - type: input
+    id: addon-author
+    attributes:
+      label: Author or owner
+      description: The person or project the addon belongs to, shown as the addon's author.
+      placeholder: Example Project
+    validations:
+      required: true
+
+  - type: textarea
+    id: description-es
+    attributes:
+      label: Description (Spanish)
+      description: One or two sentences describing what the addon offers. This is shown to Spanish-speaking users.
+      placeholder: Catálogo de novelas de dominio público con búsqueda por título y autor.
+    validations:
+      required: true
+
+  - type: textarea
+    id: description-en
+    attributes:
+      label: Description (English)
+      description: The same description in English. Both languages are required — every catalog entry is bilingual.
+      placeholder: A public-domain novel catalog with search by title and author.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      description: The catalog group this addon belongs to.
+      options:
+        - Public domain
+        - Open libraries
+        - Audiobooks
+        - Wikis and sources
+        - Press
+        - Independent
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: languages
+    attributes:
+      label: Languages
+      description: Which languages the catalog actually serves content in.
+      options:
+        - label: Spanish
+        - label: English
+        - label: Multiple languages
+    validations:
+      required: true
+
+  - type: input
+    id: suggested-id
+    attributes:
+      label: Suggested id (optional)
+      description: A short lowercase slug. Leave empty and a maintainer will derive one.
+      placeholder: example-library
+    validations:
+      required: false
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else (optional)
+      description: Context that helps the review — for example what the catalog covers, or where the data comes from.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: responsibility
+    attributes:
+      label: Before you submit
+      options:
+        - label: I am the author of this addon, or I am submitting it with the author's knowledge, and I take responsibility for the content the manifest points to.
+          required: true
+        - label: I understand that a maintainer reviews this proposal, that listing is not automatic, and that a maintainer may decline it.
+          required: true

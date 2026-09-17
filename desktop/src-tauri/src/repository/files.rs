@@ -94,9 +94,20 @@ fn save_book_file_under(
         _ => sanitized,
     };
 
+    // `repaired` is the negation of the match guard above: true only when a
+    // stored path existed and differed from the sanitized target (a legacy
+    // unsanitized path). A brand-new row has no stored path and is already
+    // visible, and a healthy row stores exactly the target, so neither counts as
+    // a repair. Only a repair may clear a hidden flag: background sync writes a
+    // missing file through this same path and must not resurrect a hidden book.
+    let repaired =
+        existing_path.as_deref().is_some_and(|path| Path::new(path) != destination.as_path());
+
     write_book_file(&destination, data)?;
 
-    if let Err(err) = commit_book_file_row(repo, book_id, &destination, title, author, fmt) {
+    if let Err(err) =
+        commit_book_file_row(repo, book_id, &destination, repaired, title, author, fmt)
+    {
         if is_new_row {
             let _ = fs::remove_file(&destination);
         }
@@ -132,10 +143,16 @@ fn write_book_file(path: &Path, data: &[u8]) -> AppResult<()> {
 /// is the only place that repairs a legacy unsanitized `file_path`; it sets just
 /// `file_path`/`format`/`updated_at`/`version`, so an existing row's title,
 /// author and reading progress are never clobbered.
+///
+/// `repaired` is true only when this call rewrote a legacy unsanitized
+/// destination. The hidden-flag clear is conditional on it, so a write that was
+/// not user-initiated (background sync filling in a missing file) cannot un-hide
+/// a book the user hid.
 fn commit_book_file_row(
     repo: &LibraryRepository,
     book_id: &str,
     destination: &Path,
+    repaired: bool,
     title: Option<&str>,
     author: Option<&str>,
     fmt: &str,
@@ -148,15 +165,20 @@ fn commit_book_file_row(
              ON CONFLICT(id) DO UPDATE SET file_path = excluded.file_path, format = excluded.format, updated_at = excluded.updated_at, version = version + 1",
         params![book_id, title.unwrap_or(book_id), author.unwrap_or_default(), destination.to_string_lossy().to_string(), fmt, now],
     )?;
-    // A user pressing Download is asking for the book explicitly, so the same
-    // successful write clears a legacy hidden flag. It runs only after the file
-    // landed, inside this transaction, so a book can never be un-hidden on a
-    // path that did not write a file.
+    // A cleared flag is warranted only for a repair: a legacy row created before
+    // the sanitizer existed stores a colon `file_path`, and the library lists
+    // filter `hidden_at IS NULL`, so without the clear the path repair would be
+    // inert and the book would stay invisible. The clear runs only after the file
+    // landed, inside this transaction, so a book can never be un-hidden on a path
+    // that did not write a file, and never by a non-repair write.
     transaction.execute(
         "UPDATE books
-             SET sync_status = 'synced', hidden_at = NULL, updated_at = ?1, version = version + 1
+             SET sync_status = 'synced',
+                 hidden_at = CASE WHEN ?3 THEN NULL ELSE hidden_at END,
+                 updated_at = ?1,
+                 version = version + 1
              WHERE id = ?2",
-        params![now, book_id],
+        params![now, book_id, repaired],
     )?;
     transaction.commit()?;
     Ok(())
@@ -355,17 +377,75 @@ mod tests {
         assert_eq!(entries, vec!["gutendex2701.epub".to_string()], "{entries:?}");
     }
 
+    /// Regression guard: a healthy row already stores exactly the sanitized
+    /// destination, so a successful write is not a repair and must NOT clear a
+    /// user's hidden flag. Background sync writes a missing file through this
+    /// same path, so clearing here would resurrect a book the user hid/removed.
+    #[test]
+    fn save_book_file_keeps_a_hidden_flag_when_no_path_was_repaired() {
+        let repo = new_repository();
+        let dir = tempfile::tempdir().expect("tempdir");
+        let books_dir = dir.path().join("books");
+        seed_hidden_row_at_sanitized_path(&repo, &books_dir, "gutendex:2701");
+
+        save_book_file_under(
+            &repo,
+            &books_dir,
+            "gutendex:2701",
+            b"epub-bytes",
+            Some("Moby Dick"),
+            Some("Herman Melville"),
+            Some("epub"),
+        )
+        .expect("save");
+
+        let (file_path, sync_status, hidden_at): (String, String, Option<String>) = repo
+            .connection
+            .query_row(
+                "SELECT file_path, sync_status, hidden_at FROM books WHERE id = ?1",
+                params!["gutendex:2701"],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .expect("row");
+        assert!(file_path.ends_with("gutendex2701.epub"), "{file_path}");
+        assert_eq!(sync_status, "synced");
+        assert!(hidden_at.is_some(), "a non-repair write must not un-hide a book the user hid");
+        let written = PathBuf::from(&file_path);
+        assert!(written.exists(), "the file must exist at the stored path");
+        assert_eq!(fs::read(&written).expect("read"), b"epub-bytes");
+        assert!(!written.with_extension("part").exists());
+    }
+
     /// Seeds a row exactly as the pre-sanitizer app left it: the unsanitized
     /// colon `file_path` and a set `hidden_at`.
     fn seed_legacy_hidden_row(repo: &LibraryRepository, books_dir: &Path, book_id: &str) {
         let now = Utc::now().to_rfc3339();
         let legacy_path = books_dir.join(format!("{book_id}.epub")).to_string_lossy().to_string();
+        seed_hidden_row(repo, book_id, &legacy_path, &now);
+    }
+
+    /// Seeds a healthy hidden row whose stored `file_path` already equals the
+    /// sanitized destination, as a hide/remove followed by a background-sync
+    /// write would encounter.
+    fn seed_hidden_row_at_sanitized_path(
+        repo: &LibraryRepository,
+        books_dir: &Path,
+        book_id: &str,
+    ) {
+        let now = Utc::now().to_rfc3339();
+        let stem = sanitize_file_stem(book_id, MAX_BOOK_ID_CHARS, FALLBACK_BOOK_ID);
+        let ext = sanitize_extension(Some("epub"));
+        let sanitized_path = books_dir.join(format!("{stem}.{ext}")).to_string_lossy().to_string();
+        seed_hidden_row(repo, book_id, &sanitized_path, &now);
+    }
+
+    fn seed_hidden_row(repo: &LibraryRepository, book_id: &str, file_path: &str, now: &str) {
         repo.connection
             .execute(
                 "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version, hidden_at)
                  VALUES (?1, 'Moby Dick', 'Herman Melville', ?2, 'epub', 'local', 0, 0, ?3, ?3, 1, ?3)",
-                params![book_id, legacy_path, now],
+                params![book_id, file_path, now],
             )
-            .expect("seed legacy row");
+            .expect("seed hidden row");
     }
 }

@@ -48,8 +48,10 @@ pub fn save_book_file(
 /// BEFORE any row is committed, so a file-I/O failure can never leave a durable
 /// `books` row whose file does not exist. The `books` writes then run in one
 /// transaction; a DB failure after the file landed best-effort removes the file
-/// for a brand-new row so no orphan remains. Split out from the app-handle
-/// lookup so the ordering is unit-testable with a temp directory.
+/// for a brand-new row so no orphan remains. A legacy unsanitized stored path is
+/// never reused: the retry targets the sanitized destination and repairs the
+/// row's `file_path`. Split out from the app-handle lookup so the ordering is
+/// unit-testable with a temp directory.
 fn save_book_file_under(
     repo: &LibraryRepository,
     books_dir: &Path,
@@ -73,25 +75,28 @@ fn save_book_file_under(
 
     let fmt = format.unwrap_or("epub").trim_start_matches('.');
     let is_new_row = existing_path.is_none();
-    let destination = match existing_path {
-        Some(path) => PathBuf::from(path),
-        None => {
-            // Fresh install / app-data loss: create the book row under the
-            // app-data books dir so recovery import never hard-fails.
-            // The catalog id (`gutendex:2701`) is not a valid Windows path
-            // segment: `:` starts an NTFS ADS. Sanitize the stem and keep the
-            // persisted `format` untouched for the row below.
-            let stem = sanitize_file_stem(book_id, MAX_BOOK_ID_CHARS, FALLBACK_BOOK_ID);
-            let ext = sanitize_extension(Some(fmt));
-            books_dir.join(format!("{stem}.{ext}"))
-        }
+
+    // Always target the sanitized destination. A legacy row (created before the
+    // sanitizer existed) stores the unsanitized colon path, which on Windows is
+    // an NTFS alternate data stream and fails the rename with
+    // ERROR_INVALID_PARAMETER; reusing it verbatim would reproduce the failure
+    // forever. A healthy row already stores exactly this path, so the stored
+    // value is reused unchanged and no existing file is orphaned. Fresh install
+    // / app-data loss also lands here, so recovery import never hard-fails.
+    // The catalog id (`gutendex:2701`) is not a valid Windows path segment:
+    // `:` starts an NTFS ADS. Sanitize the stem and keep the persisted `format`
+    // untouched for the row below.
+    let stem = sanitize_file_stem(book_id, MAX_BOOK_ID_CHARS, FALLBACK_BOOK_ID);
+    let ext = sanitize_extension(Some(fmt));
+    let sanitized = books_dir.join(format!("{stem}.{ext}"));
+    let destination = match existing_path.as_deref() {
+        Some(path) if Path::new(path) == sanitized.as_path() => PathBuf::from(path),
+        _ => sanitized,
     };
 
     write_book_file(&destination, data)?;
 
-    if let Err(err) =
-        commit_book_file_row(repo, book_id, &destination, title, author, fmt, is_new_row)
-    {
+    if let Err(err) = commit_book_file_row(repo, book_id, &destination, title, author, fmt) {
         if is_new_row {
             let _ = fs::remove_file(&destination);
         }
@@ -119,8 +124,14 @@ fn write_book_file(path: &Path, data: &[u8]) -> AppResult<()> {
     Ok(())
 }
 
-/// One transaction for the row so `sync_status = 'synced'` cannot be half
-/// applied: either the row exists as synced, or nothing was committed.
+/// One transaction for the row so the file-path repair, `sync_status = 'synced'`
+/// and the hidden-flag clear cannot be half applied: either the row is repaired
+/// as synced, or nothing was committed.
+///
+/// The INSERT always runs. For an existing row its `ON CONFLICT(id) DO UPDATE`
+/// is the only place that repairs a legacy unsanitized `file_path`; it sets just
+/// `file_path`/`format`/`updated_at`/`version`, so an existing row's title,
+/// author and reading progress are never clobbered.
 fn commit_book_file_row(
     repo: &LibraryRepository,
     book_id: &str,
@@ -128,21 +139,22 @@ fn commit_book_file_row(
     title: Option<&str>,
     author: Option<&str>,
     fmt: &str,
-    is_new_row: bool,
 ) -> AppResult<()> {
     let now = Utc::now().to_rfc3339();
     let transaction = repo.connection.unchecked_transaction()?;
-    if is_new_row {
-        transaction.execute(
-            "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version)
+    transaction.execute(
+        "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version)
              VALUES (?1, ?2, ?3, ?4, ?5, 'local', 0, 0, ?6, ?6, 1)
              ON CONFLICT(id) DO UPDATE SET file_path = excluded.file_path, format = excluded.format, updated_at = excluded.updated_at, version = version + 1",
-            params![book_id, title.unwrap_or(book_id), author.unwrap_or_default(), destination.to_string_lossy().to_string(), fmt, now],
-        )?;
-    }
+        params![book_id, title.unwrap_or(book_id), author.unwrap_or_default(), destination.to_string_lossy().to_string(), fmt, now],
+    )?;
+    // A user pressing Download is asking for the book explicitly, so the same
+    // successful write clears a legacy hidden flag. It runs only after the file
+    // landed, inside this transaction, so a book can never be un-hidden on a
+    // path that did not write a file.
     transaction.execute(
         "UPDATE books
-             SET sync_status = 'synced', updated_at = ?1, version = version + 1
+             SET sync_status = 'synced', hidden_at = NULL, updated_at = ?1, version = version + 1
              WHERE id = ?2",
         params![now, book_id],
     )?;
@@ -263,5 +275,97 @@ mod tests {
             )
             .expect("count");
         assert_eq!(rows, 0, "a failed file write must not leave a committed row");
+    }
+
+    /// X1: a row created before the sanitizer stores the legacy colon path
+    /// (`books/gutendex:2701.epub`), which on Windows is an NTFS alternate data
+    /// stream and fails the rename with ERROR_INVALID_PARAMETER. The retry must
+    /// write the sanitized file, repair `file_path` and un-hide the row.
+    #[test]
+    fn save_book_file_repairs_a_legacy_colon_path() {
+        let repo = new_repository();
+        let dir = tempfile::tempdir().expect("tempdir");
+        let books_dir = dir.path().join("books");
+        seed_legacy_hidden_row(&repo, &books_dir, "gutendex:2701");
+
+        save_book_file_under(
+            &repo,
+            &books_dir,
+            "gutendex:2701",
+            b"epub-bytes",
+            Some("Moby Dick"),
+            Some("Herman Melville"),
+            Some("epub"),
+        )
+        .expect("repair");
+
+        let (file_path, sync_status, hidden_at): (String, String, Option<String>) = repo
+            .connection
+            .query_row(
+                "SELECT file_path, sync_status, hidden_at FROM books WHERE id = ?1",
+                params!["gutendex:2701"],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .expect("row");
+        assert!(file_path.ends_with("gutendex2701.epub"), "{file_path}");
+        assert_eq!(sync_status, "synced");
+        assert_eq!(hidden_at, None, "a repaired row must become visible again");
+        let written = PathBuf::from(&file_path);
+        assert!(written.exists(), "the file must exist at the repaired path");
+        assert_eq!(fs::read(&written).expect("read"), b"epub-bytes");
+        assert!(!written.with_extension("part").exists());
+    }
+
+    /// X1 idempotence: re-running the repair targets the same path, keeps exactly
+    /// one file and leaves no `.part` artifact behind.
+    #[test]
+    fn save_book_file_repair_is_idempotent() {
+        let repo = new_repository();
+        let dir = tempfile::tempdir().expect("tempdir");
+        let books_dir = dir.path().join("books");
+        seed_legacy_hidden_row(&repo, &books_dir, "gutendex:2701");
+
+        for _ in 0..2 {
+            save_book_file_under(
+                &repo,
+                &books_dir,
+                "gutendex:2701",
+                b"epub-bytes",
+                Some("Moby Dick"),
+                Some("Herman Melville"),
+                Some("epub"),
+            )
+            .expect("save");
+        }
+
+        let file_path: String = repo
+            .connection
+            .query_row(
+                "SELECT file_path FROM books WHERE id = ?1",
+                params!["gutendex:2701"],
+                |row| row.get(0),
+            )
+            .expect("row");
+        assert!(file_path.ends_with("gutendex2701.epub"), "{file_path}");
+        let mut entries: Vec<String> = fs::read_dir(&books_dir)
+            .expect("books dir")
+            .map(|entry| entry.expect("entry").file_name().to_string_lossy().to_string())
+            .collect();
+        entries.sort();
+        assert_eq!(entries, vec!["gutendex2701.epub".to_string()], "{entries:?}");
+    }
+
+    /// Seeds a row exactly as the pre-sanitizer app left it: the unsanitized
+    /// colon `file_path` and a set `hidden_at`.
+    fn seed_legacy_hidden_row(repo: &LibraryRepository, books_dir: &Path, book_id: &str) {
+        let now = Utc::now().to_rfc3339();
+        let legacy_path = books_dir.join(format!("{book_id}.epub")).to_string_lossy().to_string();
+        repo.connection
+            .execute(
+                "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version, hidden_at)
+                 VALUES (?1, 'Moby Dick', 'Herman Melville', ?2, 'epub', 'local', 0, 0, ?3, ?3, 1, ?3)",
+                params![book_id, legacy_path, now],
+            )
+            .expect("seed legacy row");
     }
 }

@@ -93,4 +93,26 @@ describe('i18n es/en parity (REQ-X-Cross-2)', () => {
     expect(messagesEn['addons.consent.deny']).toBe('Deny');
     expect(messagesEs['addons.consent.deny']).toBe('Denegar');
   });
+
+  it('includes the addon capability keys in both locales', () => {
+    const capabilityKeys = [
+      'addons.capabilities.title',
+      'addons.capabilities.detail',
+      'addons.capabilities.resolve',
+      'discover.accessOpen',
+    ] as const;
+
+    for (const key of capabilityKeys) {
+      expect(messagesEn[key]).toBeDefined();
+      expect(messagesEs[key]).toBeDefined();
+    }
+
+    // Exact copy: capability chrome + the external-open link label.
+    expect(messagesEn['addons.capabilities.title']).toBe('Capabilities');
+    expect(messagesEs['addons.capabilities.title']).toBe('Capacidades');
+    expect(messagesEn['addons.capabilities.resolve']).toBe('Resolve reading access');
+    expect(messagesEs['addons.capabilities.resolve']).toBe('Resolver acceso de lectura');
+    expect(messagesEn['discover.accessOpen']).toBe('Open');
+    expect(messagesEs['discover.accessOpen']).toBe('Abrir');
+  });
 });

@@ -325,6 +325,9 @@ export const messagesEn = {
     '{{name}} will be able to fetch catalog data from its own server. No access is granted until you allow it.',
   'addons.consent.allow': 'Allow',
   'addons.consent.deny': 'Deny',
+  'addons.capabilities.title': 'Capabilities',
+  'addons.capabilities.detail': 'What this addon is allowed to do.',
+  'addons.capabilities.resolve': 'Resolve reading access',
   'settings.data.exportHighlights': 'Export highlights',
   'settings.data.exportHighlightsDescription':
     'Download your annotations and highlights in JSON or Markdown',
@@ -404,6 +407,7 @@ export const messagesEn = {
   'discover.accessWebSearch': 'Search the web',
   'discover.accessBuy': 'Find places to buy',
   'discover.accessSubscribe': 'Find subscription options',
+  'discover.accessOpen': 'Open',
   'discover.heroTitle': 'Discover your next read',
   'discover.heroSubtitle': 'Browse fresh, popular, and curated picks from public catalogs.',
   'discover.onlineSources': 'Online · {{count}} sources',

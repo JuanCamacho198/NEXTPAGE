@@ -328,6 +328,9 @@ export const messagesEs: Record<MessageKey, string> = {
     '{{name}} podrá obtener datos del catálogo desde su propio servidor. No se concede ningún acceso hasta que lo permitas.',
   'addons.consent.allow': 'Permitir',
   'addons.consent.deny': 'Denegar',
+  'addons.capabilities.title': 'Capacidades',
+  'addons.capabilities.detail': 'Lo que este complemento puede hacer.',
+  'addons.capabilities.resolve': 'Resolver acceso de lectura',
   'settings.data.exportHighlights': 'Exportar resaltados',
   'settings.data.exportHighlightsDescription':
     'Descarga tus anotaciones y resaltaros en JSON o Markdown',
@@ -407,6 +410,7 @@ export const messagesEs: Record<MessageKey, string> = {
   'discover.accessWebSearch': 'Buscar en la web',
   'discover.accessBuy': 'Dónde comprar',
   'discover.accessSubscribe': 'Opciones de suscripción',
+  'discover.accessOpen': 'Abrir',
   'discover.heroTitle': 'Descubre tu próxima lectura',
   'discover.heroSubtitle': 'Explora novedades, populares y selección curada de catálogos públicos.',
   'discover.onlineSources': 'En línea · {{count}} fuentes',

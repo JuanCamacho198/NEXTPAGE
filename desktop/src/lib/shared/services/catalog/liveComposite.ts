@@ -18,6 +18,7 @@ import type {
   CatalogSourceInfo,
   PagedResult,
 } from './CatalogProvider';
+import type { AddonAccessResolution } from './CatalogProvider';
 import { googleBooksKeyFromEnv } from './BuiltInCatalogProviders';
 import { resolveDownloadUrl } from './mappers';
 import { AddonRegistry, getAddonRegistry } from '../addons/AddonRegistry';
@@ -74,6 +75,10 @@ class LiveCatalogProvider implements CatalogProvider {
 
   resolveDownloadUrl(formats: Record<string, string>, preferEpub: boolean): string {
     return resolveDownloadUrl(formats, preferEpub);
+  }
+
+  resolveAddonAccess(book: CatalogBook): Promise<AddonAccessResolution> {
+    return supplier.current().then((c) => c.resolveAddonAccess(book));
   }
 
   listSources(): CatalogSourceInfo[] {

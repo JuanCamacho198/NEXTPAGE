@@ -19,10 +19,17 @@ import type {
   CatalogSourceInfo,
   PagedResult,
 } from '../catalog/CatalogProvider';
+import type { AddonAccessResolution } from '../catalog/CatalogProvider';
+import type { AccessGroup, AccessOption } from '../catalog/accessResolver';
 import { addonSource } from '../catalog/CatalogProvider';
 import { computeNextPage, resolveDownloadUrl } from '../catalog/mappers';
-import { MAX_MANIFEST_BYTES, type AddonManifest } from '@nextpage/manifest-validator';
+import {
+  MAX_MANIFEST_BYTES,
+  declaredCapabilities,
+  type AddonManifest,
+} from '@nextpage/manifest-validator';
 import { defaultAddonTransport, type AddonTransport } from './AddonRegistry';
+import type { AddonFetchResult } from './AddonRegistry';
 
 const EMPTY_PAGE: PagedResult = { results: [], nextPage: null, totalCount: 0 };
 
@@ -112,19 +119,116 @@ const denyAllAddonConsent: AddonConsentGate = {
 };
 
 /**
- * Addon access resolution (slice 8 shell). Slice 9 fills the
- * `resolveUrl` / capabilities / access-item logic; this shell only enforces
- * the consent gate and the no-endpoint empty result, both with zero I/O.
+ * Addon access resolution (slice 9): the consent gate, the no-endpoint and
+ * no-capability empty results (all zero I/O), then the `resolveUrl` fetch
+ * with access-item parsing, the in-app download gate, and the external
+ * options. Re-exports the port types so resolution consumers import one
+ * module.
  */
-export interface AddonAccessOption {
-  label: string;
-  url: string;
+export type { AddonAccessResolution };
+export type { AccessOption };
+
+/** The only known v2 capability id: the addon may resolve reading access. */
+export const RESOLVE_CAPABILITY = 'resolve';
+
+/** Per-item `accessType` wire values (open set on the wire; unknown ⇒ null). */
+export type AddonAccessType = 'free' | 'buy' | 'subscribe';
+
+/**
+ * Parse a v2 per-item `accessType` wire value (Android
+ * `ManifestValidator.parseAccessType` parity: trimmed, case-insensitive).
+ * Unknown or missing values return null so resolve callers fail closed
+ * (never free).
+ */
+export function parseAccessType(raw: unknown): AddonAccessType | null {
+  if (typeof raw !== 'string') return null;
+  switch (raw.trim().toLowerCase()) {
+    case 'free':
+      return 'free';
+    case 'buy':
+      return 'buy';
+    case 'subscribe':
+      return 'subscribe';
+    default:
+      return null;
+  }
 }
 
-export interface AddonAccessResolution {
-  canDownloadInApp: boolean;
+/** License tokens cleared for the in-app download path (closed set, Android parity). */
+const LICENSE_CLEARED_TOKENS: ReadonlySet<string> = new Set([
+  'public-domain',
+  'public domain',
+  'cc0',
+  'cc0-1.0',
+  'pd',
+]);
+
+/** True only for license tokens in the closed cleared set (case-insensitive). */
+export function isLicenseCleared(license: string | null): boolean {
+  return license !== null && LICENSE_CLEARED_TOKENS.has(license.trim().toLowerCase());
+}
+
+/**
+ * One parsed resolve item. `readUrl`/`downloadUrl` are https-only (anything
+ * else parsed to null at the boundary); `accessType` is null for unknown
+ * wire values (fail closed for the download path at `mayDownloadInApp`).
+ */
+export interface AddonResolveItem {
+  accessType: AddonAccessType | null;
+  license: string | null;
+  readUrl: string | null;
   downloadUrl: string | null;
-  options: AddonAccessOption[];
+  /** Only `free` (or license-cleared) items with an https download may flow in-app. */
+  mayDownloadInApp: boolean;
+}
+
+function accessGroupOf(accessType: AddonAccessType | null): AccessGroup {
+  switch (accessType) {
+    case 'buy':
+      return 'BUY';
+    case 'subscribe':
+      return 'SUBSCRIBE';
+    default:
+      return 'FREE';
+  }
+}
+
+/** Identity params for a `resolveUrl` template (missing identity ⇒ empty). */
+function resolveParams(book: CatalogBook): Record<string, string> {
+  return {
+    isbn: encodeURIComponent(book.isbn13 ?? book.isbn10 ?? ''),
+    title: encodeURIComponent(book.title),
+    author: encodeURIComponent(book.authors[0] ?? ''),
+    openLibraryId: encodeURIComponent(book.openLibraryWorkId ?? ''),
+    googleBooksId: encodeURIComponent(book.googleBooksId ?? ''),
+  };
+}
+
+/**
+ * Parse a resolve payload (`{results: [...]}`) into access items
+ * (Android `parseResolvePayload` parity). `accessType`/`license`/`readUrl`/
+ * `downloadUrl` are all optional per item; non-https URLs are dropped per
+ * item (never fail the whole payload); unknown `accessType` parses to null.
+ */
+function parseResolvePayload(payload: unknown): AddonResolveItem[] {
+  if (!isPlainObject(payload) || !Array.isArray(payload.results)) {
+    malformed('resolve payload must be an object with a results array');
+  }
+  return payload.results.map((entry, i) => {
+    if (!isPlainObject(entry)) malformed(`resolve item ${i} must be an object`);
+    const accessType = parseAccessType(entry.accessType);
+    const license = typeof entry.license === 'string' ? entry.license : null;
+    const readUrl = httpsOrNull(entry.readUrl);
+    const downloadUrl = httpsOrNull(entry.downloadUrl);
+    return {
+      accessType,
+      license,
+      readUrl,
+      downloadUrl,
+      mayDownloadInApp:
+        (accessType === 'free' || isLicenseCleared(license)) && downloadUrl !== null,
+    } satisfies AddonResolveItem;
+  });
 }
 
 /** Empty resolution: no in-app download, no external options, zero I/O. */
@@ -213,17 +317,19 @@ export class AddonCatalogProvider implements CatalogProvider {
   }
 
   /**
-   * Consent-gated resolve (slice 8 shell). Consent gates RESOLVE ONLY:
+   * Consent-gated resolve (slice 9). Consent gates RESOLVE ONLY:
    * `search` / `getDetails` stay ungated (Android parity + the spec's
    * "resolve operation" phrasing).
    *
    * - No consent ⇒ rejects `CONSENT_REQUIRED` with ZERO transport calls.
    * - No `resolveUrl` (every v1 manifest) ⇒ empty resolution, zero I/O.
-   * - The `resolveUrl` / capabilities / access-item fetch logic lands in
-   *   slice 9; until then a granted resolve also returns the empty
-   *   resolution without touching the transport.
+   * - Declared `capabilities` without `resolve` ⇒ same empty result, zero
+   *   I/O. An UNDECLARED list leaves `resolveUrl` authoritative, preserving
+   *   v1-style manifests.
+   * - Otherwise the `resolveUrl` renders from the book identity and fetches
+   *   through the existing transport (retry + 64 KiB cap + JSON parse).
    */
-  async resolveAddonAccess(_book: CatalogBook): Promise<AddonAccessResolution> {
+  async resolveAddonAccess(book: CatalogBook): Promise<AddonAccessResolution> {
     await this.consent.ensureLoaded();
     if (!this.consent.hasConsent(this.addonId)) {
       throw catalogError(
@@ -231,14 +337,37 @@ export class AddonCatalogProvider implements CatalogProvider {
         `addon has no network consent: ${this.source.sourceId}`,
       );
     }
-    const resolveUrl = (this.manifest as { resolveUrl?: unknown }).resolveUrl;
+    const resolveUrl = this.manifest.resolveUrl;
     if (typeof resolveUrl !== 'string' || resolveUrl.length === 0) {
       return { ...EMPTY_ADDON_ACCESS, options: [] };
     }
-    // Slice-9 boundary: the endpoint/capability/access-item logic is not here
-    // yet, so a granted resolve with an endpoint still returns the empty
-    // resolution and performs zero I/O.
-    return { ...EMPTY_ADDON_ACCESS, options: [] };
+    if (
+      this.manifest.capabilities !== undefined &&
+      !declaredCapabilities(this.manifest).includes(RESOLVE_CAPABILITY)
+    ) {
+      return { ...EMPTY_ADDON_ACCESS, options: [] };
+    }
+    const items = parseResolvePayload(
+      await this.fetchJson(renderTemplate(resolveUrl, resolveParams(book))),
+    );
+    const candidate = items.find((item) => item.mayDownloadInApp)?.downloadUrl ?? null;
+    const canDownloadInApp = candidate !== null && book.isPublicDomain === true;
+    return {
+      canDownloadInApp,
+      downloadUrl: canDownloadInApp ? candidate : null,
+      options: items.flatMap((item) =>
+        item.readUrl === null
+          ? []
+          : [
+              {
+                group: accessGroupOf(item.accessType),
+                titleKey: 'discover.accessOpen',
+                url: item.readUrl,
+                opensInApp: false,
+              } satisfies AccessOption,
+            ],
+      ),
+    };
   }
 
   private async fetchJson(url: string): Promise<unknown> {
@@ -260,7 +389,7 @@ export class AddonCatalogProvider implements CatalogProvider {
     }
   }
 
-  private async callTransport(url: string) {
+  private async callTransport(url: string): Promise<AddonFetchResult> {
     try {
       return await this.transport(url);
     } catch {

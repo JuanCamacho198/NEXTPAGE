@@ -86,7 +86,8 @@ function isPreloadable(
 }
 
 import { CuratedCatalogProvider } from '../addons/CuratedCatalogProvider';
-import { AddonCatalogProvider } from '../addons/AddonCatalogProvider';
+import { AddonCatalogProvider, EMPTY_ADDON_ACCESS } from '../addons/AddonCatalogProvider';
+import type { AddonAccessResolution } from '../addons/AddonCatalogProvider';
 import type { AddonConsentGate } from '../addons/AddonConsent';
 import type { AddonTransport, InstalledAddonRow } from '../addons/AddonRegistry';
 
@@ -536,5 +537,24 @@ export class CompositeCatalogProvider implements CatalogProvider {
 
   resolveDownloadUrl(formats: Record<string, string>, preferEpub: boolean): string {
     return resolveDownloadUrl(formats, preferEpub);
+  }
+
+  /**
+   * Addon access resolve (slice 9): route by the existing
+   * `bookIdPrefixForSource` over the active source set (longest-prefix wins,
+   * same as `getDetails`) and delegate to the owning provider that implements
+   * `resolveAddonAccess`. No owner or no implementation ⇒ empty result.
+   * `getDetails` prefix routing and `NOT_FOUND` zero-I/O are unchanged.
+   */
+  async resolveAddonAccess(book: CatalogBook): Promise<AddonAccessResolution> {
+    const route = this.routeDetails(book.id);
+    if (!route) {
+      return { ...EMPTY_ADDON_ACCESS, options: [] };
+    }
+    const resolve = route.provider.resolveAddonAccess;
+    if (typeof resolve !== 'function') {
+      return { ...EMPTY_ADDON_ACCESS, options: [] };
+    }
+    return resolve.call(route.provider, book);
   }
 }

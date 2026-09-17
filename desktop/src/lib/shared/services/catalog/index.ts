@@ -14,6 +14,7 @@ export type {
   CatalogSourceInfo,
   CatalogSourceKind,
   PagedResult,
+  AddonAccessResolution,
 } from './CatalogProvider';
 export { CatalogError, catalogError, isCatalogError, mapHttpStatusToCode } from './errors';
 export type { CatalogErrorCode } from './errors';

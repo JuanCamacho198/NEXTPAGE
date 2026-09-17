@@ -1,10 +1,11 @@
 /**
- * Addon consent gating (slice 8, task 8.13): consent gates RESOLVE ONLY.
+ * Addon consent gating (slice 8, task 8.13; slice 9 fills the resolve shell):
+ * consent gates RESOLVE ONLY.
  *
  * With a COUNTING fake transport: no consent ⇒ `CONSENT_REQUIRED` with 0
- * transport calls; granted ⇒ resolution proceeds (slice-8 shell: the empty
- * resolution, still 0 calls — the resolveUrl/capabilities/access-item fetch
- * logic lands in slice 9); withdrawn ⇒ blocked again with 0 calls.
+ * transport calls; granted ⇒ resolution proceeds (slice 9: the resolveUrl is
+ * fetched — the fake answers zero items, so the resolution is empty);
+ * withdrawn ⇒ blocked again with 0 calls.
  * `search` / `getDetails` stay ungated (Android parity + the spec's "resolve
  * operation" phrasing): the existing `routeDetails` prefix routing and the
  * `NOT_FOUND` zero-I/O behaviour are preserved, covered by regression tests.
@@ -61,10 +62,13 @@ function countingTransport(): AddonTransport & { calls: string[] } {
   const calls: string[] = [];
   const transport = (async (url: string) => {
     calls.push(url);
-    // Search URLs answer a page payload; every other addon URL answers one book.
+    // Search URLs answer a page payload; resolve URLs answer a resolve
+    // payload; every other addon URL answers one book.
     const body = url.includes('/search?')
       ? { results: [{ id: 'book-1', title: 'Dune' }], totalCount: 1 }
-      : { id: 'book-1', title: 'Dune' };
+      : url.includes('/resolve?')
+        ? { results: [] }
+        : { id: 'book-1', title: 'Dune' };
     return {
       status: 200,
       contentType: 'application/json',
@@ -92,7 +96,7 @@ describe('consent gates resolve only (counting transport)', () => {
     expect(transport.calls).toHaveLength(0);
   });
 
-  it('granted consent ⇒ resolution proceeds (slice-8 shell: empty, still 0 calls)', async () => {
+  it('granted consent ⇒ resolution proceeds (slice 9: the resolveUrl is fetched)', async () => {
     const transport = countingTransport();
     const consent = new AddonConsentService(new InMemoryAddonConsentStore());
     await consent.grant(ADDON_ID);
@@ -100,9 +104,9 @@ describe('consent gates resolve only (counting transport)', () => {
 
     const resolution = await provider.resolveAddonAccess(BOOK);
     expect(resolution).toEqual({ ...EMPTY_ADDON_ACCESS, options: [] });
-    // Slice-9 boundary: the fetch logic is not here yet, so even a granted
-    // resolve with an endpoint performs zero I/O.
-    expect(transport.calls).toHaveLength(0);
+    // Slice-9 fills the shell: a granted resolve with an endpoint fetches it
+    // (the fake answers zero items, so the resolution is empty).
+    expect(transport.calls).toHaveLength(1);
   });
 
   it('a v1 manifest (no resolveUrl) resolves empty with 0 calls once granted', async () => {

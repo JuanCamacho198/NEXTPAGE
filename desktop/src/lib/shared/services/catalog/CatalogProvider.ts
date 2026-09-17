@@ -3,6 +3,7 @@
  * Gutendex is metadata/download authority; Open Library enriches + cover fallback.
  */
 import { catalogError, type CatalogErrorCode } from './errors';
+import type { AccessOption } from './accessResolver';
 
 /**
  * Strict catalog source ids: 'builtin:<name>' for first-party sources,
@@ -97,6 +98,18 @@ export interface PagedResult {
 }
 
 /**
+ * Addon access resolution (slice 9): the in-app download gate plus the
+ * external-open options. `downloadUrl` is non-null only when
+ * `canDownloadInApp` is true. `options` reuses the `AccessOption` shape with
+ * `titleKey: 'discover.accessOpen'` and `opensInApp: false`.
+ */
+export interface AddonAccessResolution {
+  canDownloadInApp: boolean;
+  downloadUrl: string | null;
+  options: AccessOption[];
+}
+
+/**
  * Closed domain of featured orderings: every entry maps to a verified
  * upstream literal, so no caller can ever pass a raw `sort` string through
  * to Gutendex. Mirrors Android `CatalogFeaturedSort`.
@@ -117,6 +130,14 @@ export interface CatalogProvider {
    * Throws UNAVAILABLE_DOWNLOAD when no usable URL exists.
    */
   resolveDownloadUrl(formats: Record<string, string>, preferEpub: boolean): string;
+
+  /**
+   * Addon-owned access resolve (slice 9, additive + optional): render the
+   * addon's `resolveUrl` from the book identity and resolve reading access.
+   * Absent ⇒ the book has no addon resolution (empty result, zero I/O).
+   * `resolveDownloadUrl` semantics are untouched.
+   */
+  resolveAddonAccess?(book: CatalogBook): Promise<AddonAccessResolution>;
 
   /** Pure function (no I/O): the sources this provider can serve, in order. */
   listSources(): CatalogSourceInfo[];

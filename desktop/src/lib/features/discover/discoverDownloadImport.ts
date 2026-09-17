@@ -72,10 +72,25 @@ export function buildDiscoverImportRow(book: CatalogBook, nowIso?: string): Supa
   };
 }
 
+/**
+ * Extract the EPUB cover right after the file landed, reusing the existing
+ * native extraction (the same routine `import_book` runs). It stays offline and
+ * consistent with locally imported books. A cover failure is non-fatal: it is
+ * logged and the book is kept, mirroring `import_book`'s recoverable handling.
+ */
+async function persistDiscoverCover(bookId: string, sourceFilePath: string): Promise<void> {
+  try {
+    await discoverLibraryPort.extractEpubCover(bookId, sourceFilePath);
+  } catch (err) {
+    console.error('[Discover] cover extraction failed (non-fatal):', err);
+  }
+}
+
 async function defaultPersist(
   bookId: string,
   bytes: Uint8Array,
   meta: { title: string; author: string; format: string },
+  sourceFilePath: string,
 ): Promise<void> {
   let { title, author } = meta;
   if (meta.format === 'epub' && isFallbackTitle(title, bookId)) {
@@ -92,6 +107,9 @@ async function defaultPersist(
     author,
     format: meta.format,
   });
+  if (meta.format === 'epub') {
+    await persistDiscoverCover(bookId, sourceFilePath);
+  }
 }
 
 export interface DiscoverImportResult {
@@ -116,7 +134,10 @@ export async function importDiscoverFile(
   const importFn = ports.importFn ?? importRecoveredBook;
   const result = await importFn(row, {
     download: async () => readFile(filePath),
-    persist: ports.persist ?? defaultPersist,
+    // Bind the downloaded file path so the default persist can extract the
+    // cover from it after the book file lands (the port signature stays
+    // `(bookId, bytes, meta)`).
+    persist: ports.persist ?? ((id, bytes, meta) => defaultPersist(id, bytes, meta, filePath)),
     markImported:
       ports.markImported ??
       (async (id, version) => {

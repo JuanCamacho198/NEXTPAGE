@@ -111,9 +111,10 @@ android {
         // versionCode is derived from versionName so a release never has to bump it by
         // hand (and can never forget to): major*10000 + minor*100 + patch stays monotonic
         // across every normal bump (0.2.0 -> 200, 0.3.0 -> 300, 0.3.1 -> 301, 1.0.0 -> 10000).
-        versionCode = appVersionName.split('.').let { (major, minor, patch) ->
-            major.toInt() * 10_000 + minor.toInt() * 100 + patch.toInt()
-        }
+        versionCode =
+            appVersionName.split('.').let { (major, minor, patch) ->
+                major.toInt() * 10_000 + minor.toInt() * 100 + patch.toInt()
+            }
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

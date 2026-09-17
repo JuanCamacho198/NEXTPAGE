@@ -334,6 +334,75 @@ describe('DiscoverDetail modal (WU2)', () => {
   });
 });
 
+describe('DiscoverDetail library state (WU-D)', () => {
+  it('idle + in library shows the library state and no download CTA', async () => {
+    const onOpenBook = vi.fn();
+    render(DiscoverDetail, {
+      props: {
+        detail: fakeBook(),
+        detailStatus: 'loaded',
+        t,
+        onDismiss: vi.fn(),
+        inLibrary: true,
+        onOpenBook,
+      },
+    });
+    expect(await screen.findByRole('status')).toHaveTextContent('discover.inLibrary');
+    expect(screen.queryByText('discover.download')).not.toBeInTheDocument();
+    const open = screen.getByRole('button', { name: 'discover.openBook' });
+    await fireEvent.click(open);
+    expect(onOpenBook).toHaveBeenCalledOnce();
+  });
+
+  it('idle + not in library keeps the download CTA', async () => {
+    render(DiscoverDetail, {
+      props: {
+        detail: fakeBook(),
+        detailStatus: 'loaded',
+        t,
+        onDismiss: vi.fn(),
+        inLibrary: false,
+      },
+    });
+    expect(await screen.findByText('discover.download')).toBeInTheDocument();
+    expect(screen.queryByText('discover.inLibrary')).not.toBeInTheDocument();
+  });
+
+  it('an in-flight download state wins over inLibrary', async () => {
+    render(DiscoverDetail, {
+      props: {
+        detail: fakeBook(),
+        detailStatus: 'loaded',
+        t,
+        onDismiss: vi.fn(),
+        inLibrary: true,
+        downloadState: 'downloading' as DiscoverDownloadState,
+        progressBytes: 1,
+        progressTotal: 2,
+      },
+    });
+    expect(await screen.findByText('discover.downloading')).toBeInTheDocument();
+    expect(screen.queryByText('discover.inLibrary')).not.toBeInTheDocument();
+    expect(screen.queryByText('discover.download')).not.toBeInTheDocument();
+  });
+
+  it('a terminal error state wins over inLibrary', async () => {
+    render(DiscoverDetail, {
+      props: {
+        detail: fakeBook(),
+        detailStatus: 'loaded',
+        t,
+        onDismiss: vi.fn(),
+        inLibrary: true,
+        downloadState: 'error' as DiscoverDownloadState,
+        downloadError: 'BOOK_DOWNLOAD_NETWORK',
+      },
+    });
+    expect(await screen.findByRole('alert')).toHaveTextContent('discover.downloadFailed');
+    expect(screen.queryByText('discover.inLibrary')).not.toBeInTheDocument();
+  });
+});
+
 describe('DiscoverDetail access section (WU3)', () => {
   it('renders the grouped access section with identity web options', async () => {
     render(DiscoverDetail, {

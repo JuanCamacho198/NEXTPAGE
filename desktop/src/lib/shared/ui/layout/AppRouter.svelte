@@ -239,7 +239,10 @@
             </div>
           {:else if navigationState.route === 'discover'}
             <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>
-              <DiscoverScreen t={appState.t} />
+              <DiscoverScreen
+                t={appState.t}
+                onOpenBook={(book) => void appState.startReading(book)}
+              />
             </div>
           {:else if navigationState.route === 'addons'}
             <div transition:fly={{ x: 0, y: 20, duration: 200, opacity: 0 }}>

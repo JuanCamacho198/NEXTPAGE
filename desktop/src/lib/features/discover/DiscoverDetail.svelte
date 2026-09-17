@@ -25,6 +25,8 @@
     onCancelDownload = () => {},
     onRetryDownload = () => {},
     onRetryDetail = () => {},
+    inLibrary = false,
+    onOpenBook = () => {},
   }: {
     detail: CatalogBook | null;
     detailStatus: DiscoverDetailStatus;
@@ -38,6 +40,10 @@
     onCancelDownload?: () => void;
     onRetryDownload?: () => void;
     onRetryDetail?: () => void;
+    /** True when the library already holds a book with this catalog id. */
+    inLibrary?: boolean;
+    /** Opens the library book in the reader (the in-library affordance). */
+    onOpenBook?: () => void;
   } = $props();
 
   /** Modal facade (mirrors ShelfDetailModal): `bind:open` + reset-on-close. */
@@ -196,13 +202,34 @@
       {#if showDownloadCta}
         <div class="mt-4">
           {#if downloadState === 'idle'}
-            <button
-              type="button"
-              class="inline-flex rounded-md border border-(--color-primary)/25 bg-(--color-primary)/8 px-3 py-1.5 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/15"
-              onclick={onDownload}
-            >
-              {t('discover.download')}
-            </button>
+            {#if inLibrary}
+              <!--
+                The catalog id is the library id for Discover imports, so an
+                exact match means the transfer is already done. Only the idle
+                state reaches this branch: an in-flight or terminal transfer
+                state keeps its own rendering below.
+              -->
+              <div class="flex flex-wrap items-center gap-3">
+                <p role="status" class="text-sm font-medium text-(--color-primary)">
+                  {t('discover.inLibrary')}
+                </p>
+                <button
+                  type="button"
+                  class="inline-flex rounded-md border border-(--color-primary)/25 bg-(--color-primary)/8 px-3 py-1.5 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/15"
+                  onclick={onOpenBook}
+                >
+                  {t('discover.openBook')}
+                </button>
+              </div>
+            {:else}
+              <button
+                type="button"
+                class="inline-flex rounded-md border border-(--color-primary)/25 bg-(--color-primary)/8 px-3 py-1.5 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/15"
+                onclick={onDownload}
+              >
+                {t('discover.download')}
+              </button>
+            {/if}
           {:else if downloadState === 'downloading'}
             <p role="status" class="text-sm text-(--color-text-muted)">
               {t('discover.downloading')}

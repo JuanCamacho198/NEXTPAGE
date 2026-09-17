@@ -6,6 +6,8 @@
   import type { CatalogBook, CatalogErrorCode } from '$lib/shared/services/catalog';
   import type { MessageKey } from '$lib/shared/i18n/messages.en';
   import { navigationState } from '$lib/shared/stores/NavigationDomainState.svelte';
+  import { libraryState } from '$lib/shared/stores/LibraryDomainState.svelte';
+  import type { ReaderBook } from '$lib/shared/types';
   import DiscoverCard from './DiscoverCard.svelte';
   import DiscoverDetail from './DiscoverDetail.svelte';
   import DiscoverHero from './DiscoverHero.svelte';
@@ -23,12 +25,26 @@
     error: CatalogErrorCode | null;
   };
 
-  let { t }: { t: Translate } = $props();
+  let { t, onOpenBook }: { t: Translate; onOpenBook?: (book: ReaderBook) => void } = $props();
 
   /** Live source count for the hero pill (`En línea · N fuentes`). */
   let sourceCount = $state(0);
   /** Selected trending chip; filters loaded rails client-side only (no catalog call). */
   let selectedChip = $state<string | null>(null);
+
+  /**
+   * Library row matching the open catalog detail, if any. Discover imports
+   * reuse the catalog id as the library id, so the match is exact. Reacts to
+   * both the open detail and `libraryState.books`, so the download CTA flips to
+   * the in-library state as soon as a post-import refresh lands.
+   */
+  const libraryBook = $derived(
+    discoverState.detail ? libraryState.getBookById(discoverState.detail.id) : null,
+  );
+
+  function openLibraryBook(): void {
+    if (libraryBook) onOpenBook?.(libraryBook);
+  }
 
   async function loadRails(): Promise<void> {
     await discoverState.ensureRailsLoaded();
@@ -150,6 +166,8 @@
       onCancelDownload={() => discoverState.cancelDownload()}
       onRetryDownload={() => void discoverState.retryDownload()}
       onRetryDetail={() => void discoverState.retryDetail()}
+      inLibrary={libraryBook !== null}
+      onOpenBook={openLibraryBook}
     />
   {/if}
 

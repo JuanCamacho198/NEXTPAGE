@@ -397,6 +397,8 @@ export const messagesEn = {
   'discover.imported': 'Added to your library',
   'discover.downloadCancelled': 'Download cancelled',
   'discover.downloadFailed': 'Download failed. Try again.',
+  'discover.inLibrary': 'Already in your library',
+  'discover.openBook': 'Open book',
   'discover.formats': 'Formats:',
   'discover.externalGutenberg': 'View on Gutenberg',
   'discover.externalOpenLibrary': 'View on Open Library',

@@ -29,6 +29,8 @@ describe('discover i18n EN+ES parity (PR4)', () => {
       'discover.imported',
       'discover.downloadCancelled',
       'discover.downloadFailed',
+      'discover.inLibrary',
+      'discover.openBook',
       'discover.formats',
       'discover.externalGutenberg',
       'discover.externalOpenLibrary',
@@ -79,5 +81,9 @@ describe('discover i18n EN+ES parity (PR4)', () => {
     expect(messagesEn['discover.railScope.back']).toBeTruthy();
     expect(messagesEs['discover.railScope.singlePage']).toContain('{{count}}');
     expect(messagesEn['discover.railScope.singlePage']).toContain('{{count}}');
+    expect(messagesEn['discover.inLibrary']).toBe('Already in your library');
+    expect(messagesEs['discover.inLibrary']).toBe('Ya está en tu biblioteca');
+    expect(messagesEn['discover.openBook']).toBe('Open book');
+    expect(messagesEs['discover.openBook']).toBe('Abrir libro');
   });
 });

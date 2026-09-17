@@ -2,7 +2,11 @@ name: Web CI
 
 on:
   pull_request:
-    branches: [main]
+    # No `branches` filter on purpose, same as `android-ci.yml`: chained PRs
+    # target intermediate branches, not `main`, and a `branches: [main]`
+    # filter silently skipped CI for every slice of a feature-branch-chain.
+    # Branch protection only requires this check on `main`, so running it on
+    # PRs to any base is safe.
     paths-ignore:
       - 'android/**'
       - 'desktop/**'

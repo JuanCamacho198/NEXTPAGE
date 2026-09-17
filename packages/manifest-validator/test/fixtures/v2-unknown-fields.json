@@ -1,0 +1,16 @@
+{
+  "expect": "pass",
+  "contentType": "application/json",
+  "manifest": {
+    "id": "example-books",
+    "name": "Example Books",
+    "version": "1.0.0",
+    "catalogs": [
+      { "type": "book-catalog", "id": "main", "name": "Example Catalog", "futureEntryField": 1 }
+    ],
+    "resources": ["search"],
+    "resolveUrl": "https://example.com/resolve?isbn={isbn}",
+    "capabilities": ["resolve", "future-capability"],
+    "futureTopLevelField": { "nested": true }
+  }
+}

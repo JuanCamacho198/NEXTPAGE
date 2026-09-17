@@ -36,4 +36,105 @@ describe('i18n es/en parity (REQ-X-Cross-2)', () => {
     expect(messagesEs['home.continue.prevBook']).toBe('Anterior');
     expect(messagesEn['home.continue.prevBook']).toBe('Previous');
   });
+
+  it('includes the addons route keys in both locales', () => {
+    const addonsKeys = ['sidebar.addons', 'discover.manageAddons'] as const;
+
+    for (const key of addonsKeys) {
+      expect(messagesEn[key]).toBeDefined();
+      expect(messagesEs[key]).toBeDefined();
+    }
+
+    // Exact copy: the sidebar label is identical in both locales,
+    // the Discover CTA uses the verbatim spec labels.
+    expect(messagesEn['sidebar.addons']).toBe('Addons');
+    expect(messagesEs['sidebar.addons']).toBe('Addons');
+    expect(messagesEn['discover.manageAddons']).toBe('Manage addons');
+    expect(messagesEs['discover.manageAddons']).toBe('Gestionar addons');
+  });
+
+  it('includes the addons screen keys in both locales', () => {
+    const screenKeys = [
+      'addons.title',
+      'addons.subtitle',
+      'addons.firstParty.title',
+      'addons.firstParty.builtinTitle',
+      'addons.firstParty.curatedTitle',
+      'addons.firstParty.readOnly',
+      'addons.firstParty.builtinBadge',
+      'addons.install.errorInline',
+      'addons.install.offline',
+      'addons.install.retry',
+      'addons.install.installing',
+      'addons.consent.label',
+      'addons.consent.granted',
+      'addons.consent.title',
+      'addons.consent.body',
+      'addons.consent.allow',
+      'addons.consent.deny',
+    ] as const;
+
+    for (const key of screenKeys) {
+      expect(messagesEn[key]).toBeDefined();
+      expect(messagesEs[key]).toBeDefined();
+    }
+
+    // Exact copy: screen title + badge + progress states + consent actions.
+    expect(messagesEn['addons.title']).toBe('Addons');
+    expect(messagesEs['addons.title']).toBe('Addons');
+    expect(messagesEn['addons.firstParty.builtinBadge']).toBe('Built-in');
+    expect(messagesEs['addons.firstParty.builtinBadge']).toBe('Integrada');
+    expect(messagesEn['addons.install.retry']).toBe('Retry');
+    expect(messagesEs['addons.install.retry']).toBe('Reintentar');
+    expect(messagesEn['addons.install.installing']).toBe('Installing…');
+    expect(messagesEs['addons.install.installing']).toBe('Instalando…');
+    expect(messagesEn['addons.consent.allow']).toBe('Allow');
+    expect(messagesEs['addons.consent.allow']).toBe('Permitir');
+    expect(messagesEn['addons.consent.deny']).toBe('Deny');
+    expect(messagesEs['addons.consent.deny']).toBe('Denegar');
+  });
+
+  it('includes the addon capability keys in both locales', () => {
+    const capabilityKeys = [
+      'addons.capabilities.title',
+      'addons.capabilities.detail',
+      'addons.capabilities.resolve',
+      'discover.accessOpen',
+    ] as const;
+
+    for (const key of capabilityKeys) {
+      expect(messagesEn[key]).toBeDefined();
+      expect(messagesEs[key]).toBeDefined();
+    }
+
+    // Exact copy: capability chrome + the external-open link label.
+    expect(messagesEn['addons.capabilities.title']).toBe('Capabilities');
+    expect(messagesEs['addons.capabilities.title']).toBe('Capacidades');
+    expect(messagesEn['addons.capabilities.resolve']).toBe('Resolve reading access');
+    expect(messagesEs['addons.capabilities.resolve']).toBe('Resolver acceso de lectura');
+    expect(messagesEn['discover.accessOpen']).toBe('Open');
+    expect(messagesEs['discover.accessOpen']).toBe('Abrir');
+  });
+
+  it('includes the addon read-sheet keys in both locales', () => {
+    const readSheetKeys = [
+      'addons.readSheet.resolving',
+      'addons.readSheet.downloading',
+      'addons.readSheet.error',
+      'addons.readSheet.legalNotice',
+      'addons.readSheet.empty.title',
+      'addons.readSheet.empty.body',
+    ] as const;
+
+    for (const key of readSheetKeys) {
+      expect(messagesEn[key]).toBeDefined();
+      expect(messagesEs[key]).toBeDefined();
+    }
+
+    // Exact copy: progress states + the empty state.
+    expect(messagesEn['addons.readSheet.downloading']).toBe('Downloading…');
+    expect(messagesEs['addons.readSheet.downloading']).toBe('Descargando…');
+    expect(messagesEn['addons.readSheet.empty.title']).toBe('No reading access');
+    expect(messagesEs['addons.readSheet.empty.title']).toBe('Sin acceso de lectura');
+  });
 });

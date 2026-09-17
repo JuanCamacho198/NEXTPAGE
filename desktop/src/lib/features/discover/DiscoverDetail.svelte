@@ -24,6 +24,11 @@
     onDownload = () => {},
     onCancelDownload = () => {},
     onRetryDownload = () => {},
+    onRetryDetail = () => {},
+    inLibrary = false,
+    onOpenBook = () => {},
+    measureOverflow = (element: HTMLElement): boolean =>
+      element.scrollHeight > element.clientHeight,
   }: {
     detail: CatalogBook | null;
     detailStatus: DiscoverDetailStatus;
@@ -36,7 +41,21 @@
     onDownload?: () => void;
     onCancelDownload?: () => void;
     onRetryDownload?: () => void;
+    onRetryDetail?: () => void;
+    /** True when the library already holds a book with this catalog id. */
+    inLibrary?: boolean;
+    /** Opens the library book in the reader (the in-library affordance). */
+    onOpenBook?: () => void;
+    /**
+     * Overflow probe for the description clamp. Injectable because jsdom does
+     * not lay out (a real `scrollHeight`/`clientHeight` reading is always 0
+     * there), so tests can drive both directions deterministically.
+     */
+    measureOverflow?: (element: HTMLElement) => boolean;
   } = $props();
+
+  /** Stable id linking the description region to its "show more" toggle. */
+  const DESCRIPTION_ID = 'discover-description';
 
   /** Modal facade (mirrors ShelfDetailModal): `bind:open` + reset-on-close. */
   // svelte-ignore state_referenced_locally
@@ -79,6 +98,30 @@
     detail !== null && detail.coverUrl !== null && detail.coverUrl !== undefined && !coverFailed,
   );
   const description = $derived(detail ? discoverDescription(detail) : undefined);
+
+  /** Rendered description paragraph; measured to decide whether to clamp. */
+  let descriptionEl = $state<HTMLParagraphElement | undefined>();
+  let descriptionExpanded = $state(false);
+  let descriptionOverflows = $state(false);
+
+  // A different book starts collapsed, and the collapsed paragraph is measured
+  // again from scratch.
+  $effect(() => {
+    void detail?.id;
+    descriptionExpanded = false;
+    descriptionOverflows = false;
+  });
+
+  // Measure only while collapsed: an expanded paragraph can never report
+  // overflow, so its last collapsed reading is kept on screen (the "show less"
+  // toggle stays available). Recomputed whenever the text or element changes.
+  $effect(() => {
+    const element = descriptionEl;
+    void description;
+    if (!element || descriptionExpanded) return;
+    descriptionOverflows = measureOverflow(element);
+  });
+
   const formatLabels = $derived(detail?.formats ? discoverFormatLabels(detail.formats) : []);
   const externalLink = $derived(detail ? discoverExternalLink(detail) : null);
   const externalLabel = $derived(
@@ -104,6 +147,15 @@
       <p class="text-sm text-(--color-text-muted)">{t('discover.loading')}</p>
     {:else if detailStatus === 'notFound'}
       <p class="text-sm text-(--color-text-muted)">{t('discover.detailNotFound')}</p>
+    {:else if detailStatus === 'offline'}
+      <p class="text-sm text-(--color-text-muted)">{t('discover.offline')}</p>
+      <button
+        type="button"
+        class="mt-2 rounded-md border border-(--color-primary)/25 bg-(--color-primary)/8 px-3 py-1.5 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/15"
+        onclick={onRetryDetail}
+      >
+        {t('discover.retry')}
+      </button>
     {:else if detailStatus === 'error' || detail === null}
       <p class="text-sm text-(--color-text-muted)">{t('discover.errorUpstream')}</p>
     {:else}
@@ -155,7 +207,28 @@
         </div>
       </div>
       {#if description !== undefined}
-        <p class="mt-3 text-sm text-(--color-text-muted)">{description}</p>
+        <p
+          id={DESCRIPTION_ID}
+          bind:this={descriptionEl}
+          class="mt-3 text-sm text-(--color-text-muted)"
+          class:max-h-20={!descriptionExpanded}
+          class:overflow-hidden={!descriptionExpanded}
+        >
+          {description}
+        </p>
+        {#if descriptionOverflows}
+          <button
+            type="button"
+            class="mt-1 text-sm font-medium text-(--color-primary) hover:underline"
+            aria-expanded={descriptionExpanded}
+            aria-controls={DESCRIPTION_ID}
+            onclick={() => (descriptionExpanded = !descriptionExpanded)}
+          >
+            {descriptionExpanded
+              ? t('discover.descriptionShowLess')
+              : t('discover.descriptionShowMore')}
+          </button>
+        {/if}
       {/if}
       {#if formatLabels.length > 0}
         <div class="mt-3 flex flex-wrap items-center gap-1.5">
@@ -185,13 +258,34 @@
       {#if showDownloadCta}
         <div class="mt-4">
           {#if downloadState === 'idle'}
-            <button
-              type="button"
-              class="inline-flex rounded-md border border-(--color-primary)/25 bg-(--color-primary)/8 px-3 py-1.5 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/15"
-              onclick={onDownload}
-            >
-              {t('discover.download')}
-            </button>
+            {#if inLibrary}
+              <!--
+                The catalog id is the library id for Discover imports, so an
+                exact match means the transfer is already done. Only the idle
+                state reaches this branch: an in-flight or terminal transfer
+                state keeps its own rendering below.
+              -->
+              <div class="flex flex-wrap items-center gap-3">
+                <p role="status" class="text-sm font-medium text-(--color-primary)">
+                  {t('discover.inLibrary')}
+                </p>
+                <button
+                  type="button"
+                  class="inline-flex rounded-md border border-(--color-primary)/25 bg-(--color-primary)/8 px-3 py-1.5 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/15"
+                  onclick={onOpenBook}
+                >
+                  {t('discover.openBook')}
+                </button>
+              </div>
+            {:else}
+              <button
+                type="button"
+                class="inline-flex rounded-md border border-(--color-primary)/25 bg-(--color-primary)/8 px-3 py-1.5 text-sm font-medium text-(--color-primary) transition-colors hover:bg-(--color-primary)/15"
+                onclick={onDownload}
+              >
+                {t('discover.download')}
+              </button>
+            {/if}
           {:else if downloadState === 'downloading'}
             <p role="status" class="text-sm text-(--color-text-muted)">
               {t('discover.downloading')}

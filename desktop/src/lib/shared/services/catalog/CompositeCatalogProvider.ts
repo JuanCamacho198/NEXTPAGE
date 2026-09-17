@@ -18,10 +18,14 @@ import type {
 } from './CatalogProvider';
 import {
   DETAIL_TTL_S,
+  FEATURED_SORTS,
+  FEATURED_TTL_S,
   PAGE_TTL_S,
   detailCacheKey,
+  featuredCacheKey,
   pageCacheKey,
   type DiscoverCacheStore,
+  type PreloadableCache,
 } from './DiscoverCache';
 import { GutendexCatalogProvider } from './BuiltInCatalogProviders';
 import { GoogleBooksCatalogProvider, googleBooksProviderOrNull } from './BuiltInCatalogProviders';
@@ -52,8 +56,40 @@ function singleSource(provider: CatalogProvider): CatalogSourceInfo | null {
   return sources.length === 1 ? sources[0] : null;
 }
 
+/**
+ * Resident payload read: uses the store's additive `read()` when present
+ * (fresh-or-stale, non-mutating) and falls back to the fresh-only `get()` for
+ * stores that only implement the original contract. A throwing or half-broken
+ * store is treated as a miss — a cache must never fail a fetch.
+ */
+function readCachedPayload(
+  store: DiscoverCacheStore,
+  key: string,
+  nowEpochSecs: number,
+): { payload: string; stale: boolean } | null {
+  const read = store.read;
+  try {
+    if (read) {
+      const hit = read.call(store, key, nowEpochSecs);
+      return hit ? { payload: hit.payload, stale: hit.stale } : null;
+    }
+    const fresh = store.get(key, nowEpochSecs);
+    return fresh === null ? null : { payload: fresh, stale: false };
+  } catch {
+    return null;
+  }
+}
+
+function isPreloadable(
+  cache: DiscoverCacheStore | null,
+): cache is DiscoverCacheStore & PreloadableCache {
+  return typeof (cache as Partial<PreloadableCache> | null)?.preload === 'function';
+}
+
 import { CuratedCatalogProvider } from '../addons/CuratedCatalogProvider';
-import { AddonCatalogProvider } from '../addons/AddonCatalogProvider';
+import { AddonCatalogProvider, EMPTY_ADDON_ACCESS } from '../addons/AddonCatalogProvider';
+import type { AddonAccessResolution } from '../addons/AddonCatalogProvider';
+import type { AddonConsentGate } from '../addons/AddonConsent';
 import type { AddonTransport, InstalledAddonRow } from '../addons/AddonRegistry';
 
 /**
@@ -65,15 +101,22 @@ import type { AddonTransport, InstalledAddonRow } from '../addons/AddonRegistry'
  * (fail-closed); the app composition root passes
  * `googleBooksKeyFromEnv()` so the ambient environment never leaks into
  * provider construction made by tests.
+ *
+ * `consent` is the per-addon network-consent gate handed to every addon
+ * provider (resolve-only gating; search/getDetails stay ungated). Omitted ⇒
+ * each provider denies every resolve (fail-closed default).
  */
 export function defaultCatalogProviders(
   installedAddons: InstalledAddonRow[] = [],
   addonTransport?: AddonTransport,
   googleBooksKey = '',
+  consent?: AddonConsentGate,
 ): CatalogProvider[] {
   const addonProviders = installedAddons
     .filter((row) => row.enabled)
-    .map((row) => new AddonCatalogProvider(row.manifest, row.id, addonTransport));
+    .map(
+      (row) => new AddonCatalogProvider(row.manifest, row.id, addonTransport, undefined, consent),
+    );
   const googleBooks: GoogleBooksCatalogProvider | null = googleBooksProviderOrNull(googleBooksKey);
   return [
     new GutendexCatalogProvider(),
@@ -98,22 +141,76 @@ export interface CatalogProviderSupplier {
   invalidate(): void;
 }
 
+/** Rebuild-time options: the Discover cache the composite reads and writes. */
+export interface RebuildingCatalogProviderOptions {
+  cache?: DiscoverCacheStore | null;
+  /** Per-addon network-consent gate forwarded to every addon provider. */
+  consent?: AddonConsentGate;
+  /**
+   * Extra deterministic preload keys owned by the feature layer (e.g. today's
+   * thematic rail page). Called once per composite build; the returned list
+   * MUST stay bounded. A throw degrades to no extra keys.
+   */
+  preloadPageKeys?: () => readonly string[];
+}
+
+/**
+ * Reads the feature-owned preload keys defensively: a throwing provider means
+ * an unseeded extra key, never a failed composite build.
+ */
+function safePreloadPageKeys(provider?: () => readonly string[]): readonly string[] {
+  if (!provider) return [];
+  try {
+    return provider();
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Seeds the durable cache mirror once per composite build, bounded to the
+ * featured keys of the sources that actually support featured plus the
+ * caller's explicit extra keys. Absent or non-preloadable caches are a no-op,
+ * and a failed preload degrades to an unseeded mirror (the first rail simply
+ * refetches) — never a build failure.
+ */
+async function preloadDiscoverCache(
+  cache: DiscoverCacheStore | null,
+  composite: CompositeCatalogProvider,
+  extraKeys: readonly string[],
+): Promise<void> {
+  if (!isPreloadable(cache)) return;
+  try {
+    await cache.preload(composite.featuredSourceIds(), extraKeys);
+  } catch {
+    // Best-effort: an unseeded mirror is an empty cache, not an error.
+  }
+}
+
 export function createRebuildingCatalogProvider(
   loadRows: () => Promise<InstalledAddonRow[]>,
   addonTransport?: AddonTransport,
   googleBooksKey = '',
+  options: RebuildingCatalogProviderOptions = {},
 ): CatalogProviderSupplier {
+  const cache = options.cache ?? null;
+  const consent = options.consent;
   let current: Promise<CompositeCatalogProvider> | null = null;
   let built: CompositeCatalogProvider | null = null;
   let generation = 0;
   return {
     current(): Promise<CompositeCatalogProvider> {
       const gen = generation;
-      return (current ??= loadRows().then((rows) => {
+      return (current ??= loadRows().then(async (rows) => {
         const composite = new CompositeCatalogProvider(
-          defaultCatalogProviders(rows, addonTransport, googleBooksKey),
+          defaultCatalogProviders(rows, addonTransport, googleBooksKey, consent),
+          { cache },
         );
         if (gen === generation) built = composite;
+        // The supplier's current() is already async, so the preload stays off
+        // the composite's synchronous read path. Every invalidate() rebuild
+        // re-preloads, so addon install/enable/disable/uninstall re-seed it.
+        await preloadDiscoverCache(cache, composite, safePreloadPageKeys(options.preloadPageKeys));
         return composite;
       }));
     },
@@ -137,6 +234,8 @@ export class CompositeCatalogProvider implements CatalogProvider {
   private readonly debounced: { search: (query: string, page: number) => Promise<PagedResult> };
   private readonly cache: DiscoverCacheStore | null;
   private readonly nowEpochSecs: () => number;
+  /** Featured cache keys with a stale-while-revalidate refresh already in flight. */
+  private readonly featuredRefreshes = new Set<string>();
 
   constructor(
     private readonly providers: CatalogProvider[] = defaultCatalogProviders(),
@@ -174,26 +273,56 @@ export class CompositeCatalogProvider implements CatalogProvider {
   }
 
   /**
+   * Source ids whose owning provider opts into featured for at least one sort.
+   * Evaluated from the live provider list, never a hardcoded provider list, so
+   * an addon that declares featured support is included the moment it installs.
+   * Used to bound the durable preload: sources that can never have a featured
+   * row (the curated bundle, Open Library, Google Books) are skipped.
+   */
+  featuredSourceIds(): CatalogSource[] {
+    const ids: CatalogSource[] = [];
+    for (const provider of this.searchableProviders()) {
+      if (!FEATURED_SORTS.some((sort) => provider.supportsFeatured(sort))) continue;
+      for (const source of provider.listSources()) ids.push(source.sourceId);
+    }
+    return ids;
+  }
+
+  /**
    * Featured rails fan out over the providers that opt in via
    * `supportsFeatured`, then merge with the same `mergePaged` left-fold used
-   * by search. A provider that does not opt in is never called, so its rail
-   * can only ever come back empty (fail-closed) and be hidden. Each opted-in
-   * provider is isolated: a throw maps to an empty page, never failing the
-   * whole fan-out. Mirrors Android.
+   * by search. Each opted-in provider reads through the Discover cache under
+   * its `f:v2:{sourceId}:{sort}` key with the 6h featured TTL:
+   *
+   * - a fresh entry is served with zero I/O;
+   * - a stale-but-resident entry is served immediately while a guarded
+   *   background refresh replaces it (stale-while-revalidate);
+   * - a miss fetches and caches.
+   *
+   * Sources that are not active at read time are never served (design A1).
+   * A provider that does not opt in is never called, so its rail can only ever
+   * come back empty (fail-closed) and be hidden. A provider failure PROPAGATES:
+   * the rail settles `Error` (consistent with the thematic rail) instead of
+   * silently degrading to `Hidden`. A genuinely empty successful response still
+   * merges to an empty page, which the rail renders as `Hidden`.
    */
   async featured(sort: CatalogFeaturedSort, limit: number): Promise<PagedResult> {
     if (!Number.isInteger(limit) || limit < 1) {
       throw catalogError('INVALID_PAGE', `limit must be >= 1, got ${limit}`);
     }
+    const active = this.activeSourceIds();
     const pages = await Promise.all(
       this.searchableProviders()
         .filter((provider) => provider.supportsFeatured(sort))
         .map(async (provider) => {
-          try {
-            return await provider.featured(sort, limit);
-          } catch {
-            return { results: [], nextPage: null, totalCount: 0 } satisfies PagedResult;
+          const hit = this.readFeaturedHit(provider, sort, active);
+          if (hit) {
+            if (hit.stale) this.startFeaturedRefresh(provider, sort, limit, active, hit.key);
+            return hit.page;
           }
+          const result = await provider.featured(sort, limit);
+          this.cacheFeatured(provider, sort, result, active);
+          return result;
         }),
     );
     return this.mergePaged(pages, 1);
@@ -201,9 +330,10 @@ export class CompositeCatalogProvider implements CatalogProvider {
 
   /**
    * Per-source search: exact match over the active source set, routed to the
-   * single provider that owns `sourceId`. An unknown or inactive source fails
-   * closed with an empty page — never a crash, never a silent composite
-   * search. Mirrors Android.
+   * single provider that owns `sourceId`, with the same page-cache read-through
+   * as `search` (the thematic rail resolves through here, so its page is cached
+   * too). An unknown or inactive source fails closed with an empty page — never
+   * a crash, never a silent composite search. Mirrors Android.
    */
   async searchSource(sourceId: CatalogSource, query: string, page: number): Promise<PagedResult> {
     if (!Number.isInteger(page) || page < 1) {
@@ -215,7 +345,12 @@ export class CompositeCatalogProvider implements CatalogProvider {
     if (!owner) {
       return { results: [], nextPage: null, totalCount: 0 };
     }
-    return owner.search(query, page);
+    const active = this.activeSourceIds();
+    const cached = this.readPageHit(owner, query, page, active);
+    if (cached !== null) return cached;
+    const result = await owner.search(query, page);
+    this.cachePage(owner, query, page, result, active);
+    return result;
   }
 
   /**
@@ -311,6 +446,73 @@ export class CompositeCatalogProvider implements CatalogProvider {
   }
 
   /**
+   * Featured read-through under `f:v2:{sourceId}:{sort}`. Returns the resident
+   * page plus whether it is stale; a corrupt payload is a miss (refetch), and
+   * an inactive or unroutable source is never served.
+   */
+  private readFeaturedHit(
+    provider: CatalogProvider,
+    sort: CatalogFeaturedSort,
+    active: Set<string>,
+  ): { key: string; page: PagedResult; stale: boolean } | null {
+    if (!this.cache) return null;
+    const source = singleSource(provider);
+    if (!source || !active.has(source.sourceId)) return null;
+    const key = featuredCacheKey(source.sourceId, sort);
+    const cached = readCachedPayload(this.cache, key, this.nowEpochSecs());
+    if (!cached) return null;
+    try {
+      return { key, page: JSON.parse(cached.payload) as PagedResult, stale: cached.stale };
+    } catch {
+      return null;
+    }
+  }
+
+  private cacheFeatured(
+    provider: CatalogProvider,
+    sort: CatalogFeaturedSort,
+    result: PagedResult,
+    active: Set<string>,
+  ): void {
+    if (!this.cache) return;
+    const source = singleSource(provider);
+    if (!source || !active.has(source.sourceId)) return;
+    this.cache.put(
+      featuredCacheKey(source.sourceId, sort),
+      JSON.stringify(result),
+      this.nowEpochSecs(),
+      FEATURED_TTL_S,
+    );
+  }
+
+  /**
+   * Stale-while-revalidate refresh: at most one in flight per cache key. A
+   * success replaces the resident entry; a failure is swallowed so the stale
+   * value already served stays the answer and the rail never depends on a
+   * refresh nobody awaited.
+   */
+  private startFeaturedRefresh(
+    provider: CatalogProvider,
+    sort: CatalogFeaturedSort,
+    limit: number,
+    active: Set<string>,
+    key: string,
+  ): void {
+    if (this.featuredRefreshes.has(key)) return;
+    this.featuredRefreshes.add(key);
+    void (async () => {
+      try {
+        const result = await provider.featured(sort, limit);
+        this.cacheFeatured(provider, sort, result, active);
+      } catch {
+        // Swallowed: the served stale page remains the best answer available.
+      } finally {
+        this.featuredRefreshes.delete(key);
+      }
+    })();
+  }
+
+  /**
    * Ordered merge: left-fold the provider pages — earlier providers win fields,
    * later ones fill cover gaps and append unmatched books (the [Gutendex,
    * OpenLibrary] fold reproduces the legacy hardcoded-pair merge exactly).
@@ -338,20 +540,49 @@ export class CompositeCatalogProvider implements CatalogProvider {
     }
     const { provider, source } = route;
     const active = this.activeSourceIds();
-    if (this.cache && active.has(source.sourceId)) {
-      const hit = this.cache.get(detailCacheKey(source.sourceId, id), this.nowEpochSecs());
-      if (hit) return JSON.parse(hit) as CatalogBook;
+    const cache = this.cache;
+    if (cache !== null && active.has(source.sourceId)) {
+      return this.readOrFetchDetail(cache, provider, source.sourceId, id);
     }
+    return provider.getDetails(id);
+  }
+
+  /**
+   * Detail read-through: the synchronous mirror first, then a single-key
+   * durable read (so a detail fetched in a previous session is reachable
+   * again, including offline), then the provider. Only a fresh durable row is
+   * served; a stale one is refetched and replaced under `DETAIL_TTL_S`.
+   */
+  private async readOrFetchDetail(
+    cache: DiscoverCacheStore,
+    provider: CatalogProvider,
+    sourceId: string,
+    id: string,
+  ): Promise<CatalogBook> {
+    const key = detailCacheKey(sourceId, id);
+    const hit = cache.get(key, this.nowEpochSecs());
+    if (hit) return JSON.parse(hit) as CatalogBook;
+    const durable = await this.readDurableDetail(cache, key);
+    if (durable !== null) return durable;
     const book = await provider.getDetails(id);
-    if (this.cache && active.has(source.sourceId)) {
-      this.cache.put(
-        detailCacheKey(source.sourceId, id),
-        JSON.stringify(book),
-        this.nowEpochSecs(),
-        DETAIL_TTL_S,
-      );
-    }
+    cache.put(key, JSON.stringify(book), this.nowEpochSecs(), DETAIL_TTL_S);
     return book;
+  }
+
+  /** Bounded one-row durable fallback; absent support or a failure is a miss. */
+  private async readDurableDetail(
+    cache: DiscoverCacheStore,
+    key: string,
+  ): Promise<CatalogBook | null> {
+    const readDurable = cache.readDurable;
+    if (typeof readDurable !== 'function') return null;
+    try {
+      const hit = await readDurable.call(cache, key, this.nowEpochSecs());
+      if (!hit || hit.stale) return null;
+      return JSON.parse(hit.payload) as CatalogBook;
+    } catch {
+      return null;
+    }
   }
 
   private routeDetails(id: string): RoutedDetails | null {
@@ -371,5 +602,24 @@ export class CompositeCatalogProvider implements CatalogProvider {
 
   resolveDownloadUrl(formats: Record<string, string>, preferEpub: boolean): string {
     return resolveDownloadUrl(formats, preferEpub);
+  }
+
+  /**
+   * Addon access resolve (slice 9): route by the existing
+   * `bookIdPrefixForSource` over the active source set (longest-prefix wins,
+   * same as `getDetails`) and delegate to the owning provider that implements
+   * `resolveAddonAccess`. No owner or no implementation ⇒ empty result.
+   * `getDetails` prefix routing and `NOT_FOUND` zero-I/O are unchanged.
+   */
+  async resolveAddonAccess(book: CatalogBook): Promise<AddonAccessResolution> {
+    const route = this.routeDetails(book.id);
+    if (!route) {
+      return { ...EMPTY_ADDON_ACCESS, options: [] };
+    }
+    const resolve = route.provider.resolveAddonAccess;
+    if (typeof resolve !== 'function') {
+      return { ...EMPTY_ADDON_ACCESS, options: [] };
+    }
+    return resolve.call(route.provider, book);
   }
 }

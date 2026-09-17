@@ -16,6 +16,7 @@ describe('discover i18n EN+ES parity (PR4)', () => {
       'discover.loading',
       'discover.loadingMore',
       'discover.offline',
+      'discover.rateLimited',
       'discover.errorUpstream',
       'discover.errorInvalidPage',
       'discover.errorNotFound',
@@ -28,6 +29,10 @@ describe('discover i18n EN+ES parity (PR4)', () => {
       'discover.imported',
       'discover.downloadCancelled',
       'discover.downloadFailed',
+      'discover.inLibrary',
+      'discover.openBook',
+      'discover.descriptionShowMore',
+      'discover.descriptionShowLess',
       'discover.formats',
       'discover.externalGutenberg',
       'discover.externalOpenLibrary',
@@ -46,6 +51,18 @@ describe('discover i18n EN+ES parity (PR4)', () => {
       'discover.accessWebSearch',
       'discover.accessBuy',
       'discover.accessSubscribe',
+      'discover.rail.newest',
+      'discover.rail.popular',
+      'discover.rail.thematic.fiction',
+      'discover.rail.thematic.classic',
+      'discover.rail.thematic.adventure',
+      'discover.rail.thematic.mystery',
+      'discover.rail.thematic.romance',
+      'discover.rail.thematic.science',
+      'discover.rail.thematic.history',
+      'discover.rail.viewAll',
+      'discover.railScope.back',
+      'discover.railScope.singlePage',
     ] as const;
 
     for (const key of discoverKeys) {
@@ -55,5 +72,24 @@ describe('discover i18n EN+ES parity (PR4)', () => {
 
     expect(messagesEs['discover.search']).toBe('Buscar');
     expect(messagesEs['sidebar.discover']).toBe('Descubrir');
+    expect(messagesEn['discover.rail.newest']).toBe('Recently added');
+    expect(messagesEn['discover.rail.popular']).toBe('Popular');
+    expect(messagesEs['discover.rail.newest']).toBe('Recién agregados');
+    expect(messagesEs['discover.rail.popular']).toBe('Populares');
+    expect(messagesEs['discover.rail.thematic.science']).toBe('Ciencia ficción');
+    expect(messagesEs['discover.rail.viewAll']).toBe('Ver todo');
+    expect(messagesEn['discover.rail.viewAll']).toBe('View all');
+    expect(messagesEs['discover.railScope.back']).toBeTruthy();
+    expect(messagesEn['discover.railScope.back']).toBeTruthy();
+    expect(messagesEs['discover.railScope.singlePage']).toContain('{{count}}');
+    expect(messagesEn['discover.railScope.singlePage']).toContain('{{count}}');
+    expect(messagesEn['discover.inLibrary']).toBe('Already in your library');
+    expect(messagesEs['discover.inLibrary']).toBe('Ya está en tu biblioteca');
+    expect(messagesEn['discover.openBook']).toBe('Open book');
+    expect(messagesEs['discover.openBook']).toBe('Abrir libro');
+    expect(messagesEn['discover.descriptionShowMore']).toBe('Show more');
+    expect(messagesEs['discover.descriptionShowMore']).toBe('Mostrar más');
+    expect(messagesEn['discover.descriptionShowLess']).toBe('Show less');
+    expect(messagesEs['discover.descriptionShowLess']).toBe('Mostrar menos');
   });
 });

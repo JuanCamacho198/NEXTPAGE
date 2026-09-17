@@ -202,11 +202,11 @@ describe('DiscoverDomainState (PR3 grid/detail state mapping)', () => {
     expect(state.errorCode).toBeNull();
   });
 
-  it('RATE_LIMITED maps to offline (retryable)', async () => {
+  it('RATE_LIMITED maps to error not offline (throttling is not a connectivity failure)', async () => {
     const { state } = stateWith(() => ({ status: 429, body: { error: 'slow down' } }));
     state.setQuery('pride');
     await state.searchFirstPage();
-    expect(state.status).toBe('offline');
+    expect(state.status).toBe('error');
     expect(state.errorCode).toBe('RATE_LIMITED');
   });
 
@@ -395,7 +395,7 @@ describe('desktop-descubrir Phase 3.1 — featured() sorts + liveComposite forwa
     });
   });
 
-  it('Composite featured() fans out over supportsFeatured providers and isolates throws', async () => {
+  it('Composite featured() fans out over supportsFeatured providers and propagates a failure', async () => {
     const healthy = fakeProvider({
       sources: [{ sourceId: 'builtin:gutendex' as CatalogSource, name: 'G', kind: 'builtin' }],
       featuredBySort: { POPULAR: [fakeBook('gutendex:1'), fakeBook('gutendex:2')] },
@@ -413,9 +413,53 @@ describe('desktop-descubrir Phase 3.1 — featured() sorts + liveComposite forwa
       debounceMs: 0,
     });
     expect(composite.supportsFeatured('POPULAR')).toBe(true);
-    const page = await composite.featured('POPULAR', 6);
-    expect(page.results.map((b) => b.id)).toEqual(['gutendex:1', 'gutendex:2']);
+    // A failing opted-in provider fails the rail (→ `Error`) instead of being
+    // swallowed into an empty page that would silently render `Hidden`.
+    await expect(composite.featured('POPULAR', 6)).rejects.toMatchObject({
+      code: 'UPSTREAM_ERROR',
+    });
     expect(optedOut.calls.featured).toBe(0);
+  });
+
+  it('Composite featured() keeps a genuinely empty successful response empty', async () => {
+    const empty = fakeProvider({
+      sources: [{ sourceId: 'builtin:gutendex' as CatalogSource, name: 'G', kind: 'builtin' }],
+      featuredBySort: { POPULAR: [] },
+    });
+    const composite = new CompositeCatalogProvider([empty], { debounceMs: 0 });
+    const page = await composite.featured('POPULAR', 6);
+    // Empty success still merges to an empty page (the rail renders `Hidden`).
+    expect(page).toEqual({ results: [], nextPage: null, totalCount: 0 });
+  });
+
+  it('Composite featured() merges the opted-in fan-out and leaves an empty rail Hidden', async () => {
+    const first = fakeProvider({
+      sources: [{ sourceId: 'builtin:gutendex' as CatalogSource, name: 'G', kind: 'builtin' }],
+      featuredBySort: { POPULAR: [fakeBook('gutendex:1'), fakeBook('gutendex:2')] },
+    });
+    const second = fakeProvider({
+      sources: [{ sourceId: 'builtin:openlibrary' as CatalogSource, name: 'O', kind: 'builtin' }],
+      featuredBySort: { POPULAR: [] },
+    });
+    const composite = new CompositeCatalogProvider([first, second], { debounceMs: 0 });
+    const page = await composite.featured('POPULAR', 6);
+    // The healthy provider's page flows through the fan-out untouched.
+    expect(page.results.map((b) => b.id)).toEqual(['gutendex:1', 'gutendex:2']);
+
+    // Rail level: an empty featured page renders `Hidden`, never `Error`.
+    const emptyComposite = new CompositeCatalogProvider(
+      [
+        fakeProvider({
+          sources: [{ sourceId: 'builtin:gutendex' as CatalogSource, name: 'G', kind: 'builtin' }],
+          featuredBySort: {},
+        }),
+      ],
+      { debounceMs: 0 },
+    );
+    const state = new DiscoverDomainState(emptyComposite, {}, { now: () => new Date(2026, 5, 10) });
+    await state.refreshRails();
+    expect(state.rails[0]).toEqual({ kind: 'Hidden' });
+    expect(state.isOnline).toBe(true);
   });
 
   it('Composite searchSource() routes the exact source and fails closed on unknown ids', async () => {
@@ -490,34 +534,34 @@ describe('desktop-descubrir Phase 3.2 — pill count, chip filter, fail-closed, 
     expect(TRENDING_CHIPS).toHaveLength(7);
   });
 
-  it('per-rail fail-closed: featured throw hides rails without affecting curated', async () => {
+  it('per-rail fail-closed: a featured throw fails only the featured rails', async () => {
     const provider = fakeProvider({
       featuredError: catalogError('UPSTREAM_ERROR', 'boom'),
       searchSourceBooks: [fakeBook('gutendex:9')],
     });
     const state = new DiscoverDomainState(provider);
     await state.refreshRails();
-    expect(state.rails[0]).toEqual({ kind: 'Hidden' });
-    expect(state.rails[1]).toEqual({ kind: 'Hidden' });
+    expect(state.rails).toHaveLength(3);
+    expect(state.rails[0]).toEqual({ kind: 'Error', code: 'UPSTREAM_ERROR', offline: false });
+    expect(state.rails[1]).toEqual({ kind: 'Error', code: 'UPSTREAM_ERROR', offline: false });
     expect(state.rails[2]?.kind).toBe('Loaded');
-    expect(state.rails[3]?.kind).toBe('Loaded');
     expect(state.isOnline).toBe(true);
   });
 
-  it('per-rail fail-closed: Gutenberg error hides only that rail', async () => {
+  it('per-rail fail-closed: a thematic term error fails only that rail', async () => {
     const provider = fakeProvider({
       featuredBySort: {
         NEWEST: [fakeBook('gutendex:1')],
         POPULAR: [fakeBook('gutendex:2')],
       },
-      searchSourceError: catalogError('UPSTREAM_ERROR', 'gutenberg down'),
+      searchSourceError: catalogError('UPSTREAM_ERROR', 'term search down'),
     });
     const state = new DiscoverDomainState(provider);
     await state.refreshRails();
+    expect(state.rails).toHaveLength(3);
     expect(state.rails[0]?.kind).toBe('Loaded');
     expect(state.rails[1]?.kind).toBe('Loaded');
-    expect(state.rails[2]?.kind).toBe('Loaded');
-    expect(state.rails[3]).toEqual({ kind: 'Hidden' });
+    expect(state.rails[2]).toEqual({ kind: 'Error', code: 'UPSTREAM_ERROR', offline: false });
   });
 
   it('short rails render as-is and long rails truncate to the rail limit', async () => {
@@ -573,17 +617,17 @@ describe('desktop-descubrir Phase 3.3 — skeleton, offline retry, discover rout
         if (failing) throw catalogError('NETWORK_ERROR', 'offline');
         return base.featured(sort, limit);
       },
-      searchSource: async () => {
+      searchSource: async (sourceId, query, page) => {
         if (failing) throw catalogError('NETWORK_ERROR', 'offline');
-        return paged([fakeBook('gutendex:3')]);
+        return base.searchSource(sourceId, query, page);
       },
     };
     const state = new DiscoverDomainState(flaky);
     await state.refreshRails();
     expect(state.isOnline).toBe(false);
-    expect(state.rails[0]).toEqual({ kind: 'Hidden' });
-    // Curated static rail survives the outage.
-    expect(state.rails[2]?.kind).toBe('Loaded');
+    expect(state.rails).toHaveLength(3);
+    expect(state.rails.map((rail) => rail.kind)).toEqual(['Error', 'Error', 'Error']);
+    expect(state.rails[0]).toEqual({ kind: 'Error', code: 'NETWORK_ERROR', offline: true });
     failing = false;
     await state.refreshRails();
     expect(state.isOnline).toBe(true);

@@ -14,6 +14,12 @@ export const OL_MIN_GAP_MS = 1000;
 /** Exactly one delayed retry on 429/5xx — never more without delay. */
 export const MAX_DELAYED_RETRIES = 1;
 export const RETRY_BASE_DELAY_MS = 800;
+/**
+ * Hard ceiling for a single catalog attempt (15s reference parity).
+ * Single externalized constant: the transport deadline below and the rail-level
+ * total bound (`DiscoverRailsDomainState`) both read it, never a duplicated literal.
+ */
+export const REQUEST_DEADLINE_MS = 15_000;
 
 export function buildUserAgent(platform: 'Desktop' | 'Android'): string {
   return `NextPage/${platform} (contact: TBD)`;
@@ -36,18 +42,65 @@ export function backoffDelayMs(attempt: number): number {
   return RETRY_BASE_DELAY_MS * 2 ** Math.max(0, attempt);
 }
 
+/** A caller-deadline composed signal plus the disposer that releases its timer. */
+export interface ComposedDeadline {
+  /** Aborts when either the caller signal aborts or the deadline elapses. */
+  signal: AbortSignal;
+  /** Clear the timer and detach the listener once the attempt settles. */
+  dispose: () => void;
+}
+
 /**
- * Fetch with exactly one delayed retry on 429/5xx.
- * Network failures surface as NETWORK_ERROR; HTTP failures as mapped codes.
+ * Compose a caller signal with a hard deadline so an attempt cannot hang forever.
+ * Deliberately a manual `AbortController` + `setTimeout` (not
+ * `AbortSignal.timeout`/`AbortSignal.any`) so jsdom + fake timers can drive it.
+ */
+export function composeDeadline(
+  signal: AbortSignal | null | undefined,
+  ms: number = REQUEST_DEADLINE_MS,
+): ComposedDeadline {
+  const controller = new AbortController();
+  const abortFromCaller = (): void => controller.abort(signal?.reason);
+  if (signal) {
+    if (signal.aborted) abortFromCaller();
+    else signal.addEventListener('abort', abortFromCaller, { once: true });
+  }
+  const handle = setTimeout(
+    () => controller.abort(new Error(`catalog deadline of ${ms}ms elapsed`)),
+    ms,
+  );
+  return {
+    signal: controller.signal,
+    dispose: () => {
+      clearTimeout(handle);
+      signal?.removeEventListener('abort', abortFromCaller);
+    },
+  };
+}
+
+/**
+ * Fetch with exactly one delayed retry on 429/5xx, each attempt bounded by
+ * `REQUEST_DEADLINE_MS` through `composeDeadline`.
+ * Network failures (including deadline expiry and caller aborts) surface as
+ * NETWORK_ERROR; HTTP failures as mapped codes.
  */
 export async function fetchWithRetry(
   url: string,
   init: RequestInit,
   fetchFn: typeof fetch = fetch,
 ): Promise<Response> {
+  const attempt = async (): Promise<Response> => {
+    const deadline = composeDeadline(init.signal, REQUEST_DEADLINE_MS);
+    try {
+      return await fetchFn(url, { ...init, signal: deadline.signal });
+    } finally {
+      deadline.dispose();
+    }
+  };
+
   let response: Response;
   try {
-    response = await fetchFn(url, init);
+    response = await attempt();
   } catch {
     throw catalogError('NETWORK_ERROR', 'catalog request failed');
   }
@@ -57,7 +110,7 @@ export async function fetchWithRetry(
   }
   await new Promise((resolve) => setTimeout(resolve, backoffDelayMs(0)));
   try {
-    response = await fetchFn(url, init);
+    response = await attempt();
   } catch {
     throw catalogError('NETWORK_ERROR', 'catalog retry failed');
   }

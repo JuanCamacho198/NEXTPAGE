@@ -1,179 +1,50 @@
 import {
-  BUILTIN_GUTENDEX,
-  isCatalogError,
   liveCatalogProvider,
+  type CatalogBook,
+  type CatalogErrorCode,
+  type CatalogProvider,
+  type CatalogSourceInfo,
 } from '$lib/shared/services/catalog';
-import type {
-  CatalogBook,
-  CatalogErrorCode,
-  CatalogFeaturedSort,
-  CatalogProvider,
-  CatalogSourceInfo,
-} from '$lib/shared/services/catalog';
+import { importDiscoverFile, type DiscoverDownloadPorts } from './discoverDownloadImport';
 import {
-  fetchBytesWithProgress,
-  importDiscoverBytes,
-  type DiscoverDownloadPorts,
-} from './discoverDownloadImport';
+  createTauriDownloadTransfer,
+  isDownloadCancelled,
+  type DownloadTransferPort,
+} from './downloadTransfer';
+import { discardRemoteDownload } from '$lib/shared/api/downloadApi';
+import { TRENDING_CHIPS } from './discoverChips';
+import {
+  catalogCodeOf,
+  DiscoverRailsDomainState,
+  isOfflineCatalogCode,
+  type DiscoverBrowseScope,
+  type DiscoverRailState,
+  type DiscoverRailsDeps,
+} from './DiscoverRailsDomainState.svelte';
 
 export type DiscoverStatus =
   'idle' | 'loading' | 'loadingMore' | 'loaded' | 'empty' | 'error' | 'offline';
 
-export type DiscoverDetailStatus = 'closed' | 'loading' | 'loaded' | 'notFound' | 'error';
+export type DiscoverDetailStatus =
+  'closed' | 'loading' | 'loaded' | 'notFound' | 'error' | 'offline';
 
 /** In-app download-to-import lifecycle for the open detail book. */
 export type DiscoverDownloadState =
   'idle' | 'downloading' | 'importing' | 'imported' | 'cancelled' | 'error';
 
-/** Rail visibility machine: unserved/error rails collapse to Hidden. */
-export type DiscoverRailState =
-  | { kind: 'Hidden' }
-  | { kind: 'Loading' }
-  | { kind: 'Loaded'; books: CatalogBook[]; totalCount: number };
+/** Chip taxonomy + chip filtering live in `discoverChips.ts`; re-exported for consumers. */
+export { CHIP_KEYWORDS, TRENDING_CHIPS, filterBooksByChip, matchesChip } from './discoverChips';
+/** The 3-rail plan lives in `railPlan.ts`; re-exported so existing imports keep working. */
+export { DISCOVER_RAIL_COUNT, DISCOVER_RAIL_LIMIT, type DiscoverRailSpec } from './railPlan';
+export type { DiscoverBrowseScope, DiscoverRailState } from './DiscoverRailsDomainState.svelte';
 
-export interface DiscoverRailSpec {
-  title: string;
-  sort: CatalogFeaturedSort;
-  limit: number;
-}
+/** Single production transfer port; the Rust command owns the actual transfer. */
+const defaultDownloadTransfer: DownloadTransferPort = createTauriDownloadTransfer();
 
-export const DISCOVER_RAIL_COUNT = 4;
-export const DISCOVER_RAIL_LIMIT = 6;
-
-/** Rail order: Recién agregados (NEWEST), Populares (POPULAR), Recomendados, Gutenberg. */
-export const DISCOVER_RAIL_SPECS: readonly DiscoverRailSpec[] = [
-  { title: 'Recién agregados', sort: 'NEWEST', limit: DISCOVER_RAIL_LIMIT },
-  { title: 'Populares', sort: 'POPULAR', limit: DISCOVER_RAIL_LIMIT },
-  { title: 'Recomendados', sort: 'POPULAR', limit: DISCOVER_RAIL_LIMIT },
-  { title: 'Gutenberg', sort: 'NEWEST', limit: DISCOVER_RAIL_LIMIT },
-];
-
-/** Seven static chips; selection filters loaded rails client-side only (no catalog call). */
-export const TRENDING_CHIPS: readonly string[] = [
-  'Ficción',
-  'Clásicos',
-  'Aventura',
-  'Misterio',
-  'Romance',
-  'Ciencia ficción',
-  'Historia',
-];
-
-/**
- * Spanish chip label → English subject keywords. Catalog subjects arrive in
- * English (Gutendex/Open Library), so a normalized substring check alone
- * would miss (`ficción` vs `fiction`); keywords bridge the locale gap.
- * Pure client-side filter — never triggers a catalog call.
- */
-const CHIP_KEYWORDS: Record<string, readonly string[]> = {
-  Ficción: ['fiction'],
-  Clásicos: ['classic'],
-  Aventura: ['adventure'],
-  Misterio: ['mystery', 'detective'],
-  Romance: ['romance', 'love'],
-  'Ciencia ficción': ['science'],
-  Historia: ['history'],
-};
-
-function normalizeHaystack(value: string): string {
-  return value.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-}
-
-/** True when a book matches a trending chip (label substring or keyword hit). */
-export function matchesChip(book: CatalogBook, chip: string): boolean {
-  const haystack = normalizeHaystack(
-    `${book.title} ${book.authors.join(' ')} ${book.subjects.join(' ')}`,
-  );
-  const needle = normalizeHaystack(chip);
-  if (needle !== '' && haystack.includes(needle)) return true;
-  const keywords = CHIP_KEYWORDS[chip] ?? [];
-  return keywords.some((keyword) => haystack.includes(keyword));
-}
-
-/** Client-side rail filter; `null` chip returns the slice untouched. */
-export function filterBooksByChip(books: CatalogBook[], chip: string | null): CatalogBook[] {
-  if (chip === null) return books;
-  return books.filter((book) => matchesChip(book, chip));
-}
-
-/**
- * Static curated first slice for the Recomendados rail: visual parity without
- * blocking on sort-literal verification. Swapped for live data after the
- * Gutendex `featured()` literals prove out.
- */
-const CURATED_FIRST_SLICE: readonly CatalogBook[] = [
-  {
-    id: 'curated:pride-and-prejudice',
-    provider: 'curated',
-    title: 'Pride and Prejudice',
-    authors: ['Jane Austen'],
-    coverUrl: null,
-    languages: ['en'],
-    subjects: ['Classic fiction'],
-    downloadUrl: null,
-  },
-  {
-    id: 'curated:moby-dick',
-    provider: 'curated',
-    title: 'Moby Dick; Or, The Whale',
-    authors: ['Herman Melville'],
-    coverUrl: null,
-    languages: ['en'],
-    subjects: ['Adventure fiction'],
-    downloadUrl: null,
-  },
-  {
-    id: 'curated:frankenstein',
-    provider: 'curated',
-    title: 'Frankenstein; Or, The Modern Prometheus',
-    authors: ['Mary Wollstonecraft Shelley'],
-    coverUrl: null,
-    languages: ['en'],
-    subjects: ['Gothic fiction'],
-    downloadUrl: null,
-  },
-  {
-    id: 'curated:sherlock-holmes',
-    provider: 'curated',
-    title: 'The Adventures of Sherlock Holmes',
-    authors: ['Arthur Conan Doyle'],
-    coverUrl: null,
-    languages: ['en'],
-    subjects: ['Mystery fiction'],
-    downloadUrl: null,
-  },
-  {
-    id: 'curated:dracula',
-    provider: 'curated',
-    title: 'Dracula',
-    authors: ['Bram Stoker'],
-    coverUrl: null,
-    languages: ['en'],
-    subjects: ['Gothic fiction'],
-    downloadUrl: null,
-  },
-  {
-    id: 'curated:jane-eyre',
-    provider: 'curated',
-    title: 'Jane Eyre: An Autobiography',
-    authors: ['Charlotte Brontë'],
-    coverUrl: null,
-    languages: ['en'],
-    subjects: ['Classic fiction'],
-    downloadUrl: null,
-  },
-];
-
-function statusForCode(code: CatalogErrorCode): DiscoverStatus {
-  return isOfflineCode(code) ? 'offline' : 'error';
-}
-
-function isOfflineCode(code: CatalogErrorCode): boolean {
-  return code === 'NETWORK_ERROR' || code === 'RATE_LIMITED';
-}
-
-function codeOf(err: unknown): CatalogErrorCode {
-  return isCatalogError(err) ? err.code : 'UPSTREAM_ERROR';
+function messageOf(err: unknown): string {
+  if (typeof err === 'string') return err;
+  if (err instanceof Error) return err.message;
+  return String(err);
 }
 
 class DiscoverDomainState {
@@ -194,26 +65,47 @@ class DiscoverDomainState {
   progressBytes = $state(0);
   /** Total bytes from `content-length`, or null when the host omits it. */
   progressTotal = $state<number | null>(null);
-
-  /** Four browse rails; Hidden rails render nothing (fail-closed). */
-  rails = $state<DiscoverRailState[]>([
-    { kind: 'Hidden' },
-    { kind: 'Hidden' },
-    { kind: 'Hidden' },
-    { kind: 'Hidden' },
-  ]);
   /** Static chip labels for client-side filtering over loaded rails. */
   trending = $state<string[]>([...TRENDING_CHIPS]);
-  /** False once any rail observes a connectivity failure. */
-  isOnline = $state(true);
+
+  /**
+   * Post-import refresh seam, mirroring `BulkImportDomainState`: the Discover
+   * download imports through the same pipeline as a file import, so the library
+   * mirror must reload or the shelf keeps serving its boot-time snapshot. Null
+   * until the composition root wires it; best-effort by contract.
+   */
+  onLibraryRefreshNeeded: (() => Promise<void>) | null = null;
+
+  /** Rail orchestration (3-rail plan, per-rail machine, scoped browse). */
+  readonly railsState: DiscoverRailsDomainState;
 
   private lastAttemptedPage = 0;
-  private downloadController: AbortController | null = null;
+  /** Id of the last requested detail, so a failed load can be retried. */
+  private lastDetailId: string | null = null;
+  /** Transfer id of the in-flight backend download, or null. */
+  private activeTransferId: string | null = null;
+  /** Set by `cancelDownload` so a late settle becomes `cancelled`, never `imported`. */
+  private cancelRequested = false;
+  /** Bumped by `resetDownload` so a superseded transfer cannot touch the machine. */
+  private transferGeneration = 0;
 
   constructor(
     private readonly provider: CatalogProvider = liveCatalogProvider,
     private readonly downloadPorts: DiscoverDownloadPorts = {},
-  ) {}
+    rails: Pick<DiscoverRailsDeps, 'now'> = {},
+  ) {
+    this.railsState = new DiscoverRailsDomainState({ provider: this.provider, now: rails.now });
+  }
+
+  /** Browse rails in stable index order; `Hidden` rails render nothing. */
+  get rails(): DiscoverRailState[] {
+    return this.railsState.rails;
+  }
+
+  /** False once any rail observed a connectivity failure. */
+  get isOnline(): boolean {
+    return this.railsState.isOnline;
+  }
 
   setQuery(query: string): void {
     this.query = query;
@@ -238,7 +130,7 @@ class DiscoverDomainState {
       this.activePage = 1;
       this.status = page.results.length === 0 ? 'empty' : 'loaded';
     } catch (err) {
-      const code = codeOf(err);
+      const code = catalogCodeOf(err);
       this.errorCode = code;
       this.status = statusForCode(code);
     }
@@ -266,7 +158,7 @@ class DiscoverDomainState {
       this.errorCode = null;
       this.status = 'loaded';
     } catch (err) {
-      const code = codeOf(err);
+      const code = catalogCodeOf(err);
       this.errorCode = code;
       this.status = statusForCode(code);
     }
@@ -274,88 +166,135 @@ class DiscoverDomainState {
 
   async openDetail(id: string): Promise<void> {
     // Opening a book supersedes any transfer in flight for the previous one.
-    this.downloadController?.abort();
-    this.downloadController = null;
+    this.cancelDownload();
     this.resetDownload();
+    this.lastDetailId = id;
     this.detailStatus = 'loading';
     this.detail = null;
     try {
       this.detail = await this.provider.getDetails(id);
       this.detailStatus = 'loaded';
     } catch (err) {
-      const code = codeOf(err);
-      this.detailStatus = code === 'NOT_FOUND' ? 'notFound' : 'error';
+      const code = catalogCodeOf(err);
+      // Offline is its own state: the detail sheet shows connectivity copy plus
+      // a retry, not the generic "catalog unavailable" message.
+      this.detailStatus =
+        code === 'NOT_FOUND' ? 'notFound' : isOfflineCatalogCode(code) ? 'offline' : 'error';
     }
   }
 
+  /** Re-open the last requested detail (the offline/error retry affordance). */
+  async retryDetail(): Promise<void> {
+    const id = this.lastDetailId;
+    if (id === null) return;
+    await this.openDetail(id);
+  }
+
   dismissDetail(): void {
-    this.downloadController?.abort();
-    this.downloadController = null;
+    this.cancelDownload();
     this.detail = null;
     this.detailStatus = 'closed';
     this.resetDownload();
   }
 
   /**
-   * Fetch the open book's catalog URL, then import the bytes into the
-   * library. Progress reports received bytes; cancel aborts the fetch so a
-   * halted transfer never reaches persistence.
+   * Transfer the open detail book through the backend port, then import the
+   * resulting local file into the library. Progress reports received bytes;
+   * cancel aborts the backend transfer so a halted transfer never reaches
+   * persistence.
    */
   async startDownload(): Promise<void> {
     if (this.downloadState === 'downloading' || this.downloadState === 'importing') return;
     const book = this.detail;
-    const url = book?.downloadUrl;
+    const url = book?.downloadUrl ?? null;
     if (!book || !url || url.trim() === '') {
       this.downloadState = 'error';
       this.downloadError = 'UNAVAILABLE_DOWNLOAD';
       return;
     }
-    const controller = new AbortController();
-    this.downloadController = controller;
+    await this.startDownloadUrl(book, url);
+  }
+
+  /**
+   * Start a transfer of `url` for `book` on the single download machine.
+   * `downloading` → `importing` → `imported`, plus `error` and `cancelled`;
+   * the backend byte source replaces the previous webview fetch. The backend's
+   * temp file is discarded best-effort on success and on a failed import, so
+   * retries never accumulate leftovers.
+   */
+  async startDownloadUrl(book: CatalogBook, url: string): Promise<void> {
+    if (this.downloadState === 'downloading' || this.downloadState === 'importing') return;
+    const trimmed = typeof url === 'string' ? url.trim() : '';
+    if (!book || trimmed === '') {
+      this.downloadState = 'error';
+      this.downloadError = 'UNAVAILABLE_DOWNLOAD';
+      return;
+    }
+    const transferId = crypto.randomUUID();
+    const generation = this.transferGeneration;
+    const transfer = this.downloadPorts.transfer ?? defaultDownloadTransfer;
+    this.activeTransferId = transferId;
+    this.cancelRequested = false;
     this.downloadState = 'downloading';
     this.downloadError = null;
     this.progressBytes = 0;
     this.progressTotal = null;
     try {
-      const bytes = await fetchBytesWithProgress(
-        url,
-        controller.signal,
+      const { filePath } = await transfer.download(
+        { transferId, url: trimmed, format: 'epub' },
         (done, total) => {
           this.progressBytes = done;
           this.progressTotal = total;
         },
-        this.downloadPorts.fetchFn,
       );
-      if (controller.signal.aborted) {
-        this.downloadState = 'cancelled';
+      if (this.transferGeneration !== generation) return;
+      if (this.cancelRequested) {
+        this.settleCancelled(filePath);
         return;
       }
       this.downloadState = 'importing';
-      const result = await importDiscoverBytes(book, bytes, this.downloadPorts);
+      const result = await importDiscoverFile(book, filePath, this.downloadPorts);
+      if (this.transferGeneration !== generation) return;
       if (result.ok) {
         this.downloadState = 'imported';
         this.downloadError = null;
+        this.discardDownloadedFile(filePath);
+        // The import landed a library row, but the module singleton was seeded
+        // at boot. Refresh best-effort so the shelf reflects it immediately;
+        // a refresh failure must never turn a successful download into one.
+        await this.refreshLibraryAfterImport();
       } else {
         this.downloadState = 'error';
         this.downloadError = result.error;
+        // A failed import must not strand the transfer file: each retry mints a
+        // fresh id, so keeping it would accumulate one download per attempt.
+        this.discardDownloadedFile(filePath);
       }
     } catch (err) {
-      if (controller.signal.aborted || (err instanceof Error && err.name === 'AbortError')) {
+      if (this.transferGeneration !== generation) return;
+      if (this.cancelRequested || isDownloadCancelled(err)) {
         this.downloadState = 'cancelled';
         this.downloadError = null;
       } else {
         this.downloadState = 'error';
-        this.downloadError = err instanceof Error ? err.message : 'DOWNLOAD_FAILED';
+        this.downloadError = messageOf(err);
       }
     } finally {
-      if (this.downloadController === controller) this.downloadController = null;
+      if (this.transferGeneration === generation) this.activeTransferId = null;
     }
   }
 
-  /** Abort an in-flight fetch; the halted transfer is never persisted. */
+  /**
+   * Cancel the in-flight backend transfer (the single cancel path). The halted
+   * transfer settles as `cancelled` and is never imported.
+   */
   cancelDownload(): void {
     if (this.downloadState !== 'downloading') return;
-    this.downloadController?.abort();
+    const transferId = this.activeTransferId;
+    if (transferId === null) return;
+    this.cancelRequested = true;
+    const transfer = this.downloadPorts.transfer ?? defaultDownloadTransfer;
+    void transfer.cancel(transferId).catch(() => undefined);
   }
 
   /** Re-run the last failed or halted transfer for the same open book. */
@@ -381,69 +320,43 @@ class DiscoverDomainState {
     return this.provider.listSources();
   }
 
-  /**
-   * Load all four rails. Each rail is isolated: success maps to Loaded
-   * (truncated to the rail limit, short rails render as-is, empty rails
-   * collapse to Hidden) and any throw maps to Hidden without affecting the
-   * other rails. Connectivity throws flip `isOnline` to false.
-   */
+  /** Load the rail set once per session; a settled set is reused on remount. */
+  async ensureRailsLoaded(): Promise<void> {
+    await this.railsState.ensureLoaded();
+  }
+
+  /** Re-resolve every rail of the index-stable 3-rail plan. */
   async refreshRails(): Promise<void> {
-    this.rails = DISCOVER_RAIL_SPECS.map(() => ({ kind: 'Loading' }) as DiscoverRailState);
-    this.isOnline = true;
-    let offlineSeen = false;
-    const settled = await Promise.all([
-      this.loadFeaturedRail('NEWEST', DISCOVER_RAIL_LIMIT),
-      this.loadFeaturedRail('POPULAR', DISCOVER_RAIL_LIMIT),
-      this.loadCuratedRail(),
-      this.loadGutenbergRail(),
-    ]);
-    for (const rail of settled) {
-      if (rail.kind === 'Hidden' && rail.offline) offlineSeen = true;
-    }
-    this.rails = settled.map((rail) => (rail.kind === 'Hidden' ? { kind: 'Hidden' } : rail.state));
-    if (offlineSeen) this.isOnline = false;
+    await this.railsState.refreshRails();
   }
 
-  private async loadFeaturedRail(
-    sort: CatalogFeaturedSort,
-    limit: number,
-  ): Promise<{ kind: 'Hidden'; offline: boolean } | { kind: 'Loaded'; state: DiscoverRailState }> {
-    try {
-      const page = await this.provider.featured(sort, limit);
-      const books = page.results.slice(0, limit);
-      if (books.length === 0) return { kind: 'Hidden', offline: false };
-      return {
-        kind: 'Loaded',
-        state: { kind: 'Loaded', books, totalCount: page.totalCount },
-      };
-    } catch (err) {
-      return { kind: 'Hidden', offline: isOfflineCode(codeOf(err)) };
-    }
+  /** Re-resolve only the rail at `index`; other rails keep their content. */
+  async retryRail(index: number): Promise<void> {
+    await this.railsState.retryRail(index);
   }
 
-  /** Static first slice: no I/O, always Loaded. */
-  private loadCuratedRail(): { kind: 'Loaded'; state: DiscoverRailState } {
-    const books = CURATED_FIRST_SLICE.slice(0, DISCOVER_RAIL_LIMIT);
-    return {
-      kind: 'Loaded',
-      state: { kind: 'Loaded', books: [...books], totalCount: books.length },
-    };
+  /** Open the rail-scoped browse view for a rail header ("Ver todo"). */
+  async openRailScope(scope: DiscoverBrowseScope): Promise<void> {
+    await this.railsState.openScope(scope);
   }
 
-  private async loadGutenbergRail(): Promise<
-    { kind: 'Hidden'; offline: boolean } | { kind: 'Loaded'; state: DiscoverRailState }
-  > {
-    try {
-      const page = await this.provider.searchSource(BUILTIN_GUTENDEX, '', 1);
-      const books = page.results.slice(0, DISCOVER_RAIL_LIMIT);
-      if (books.length === 0) return { kind: 'Hidden', offline: false };
-      return {
-        kind: 'Loaded',
-        state: { kind: 'Loaded', books, totalCount: page.totalCount },
-      };
-    } catch (err) {
-      return { kind: 'Hidden', offline: isOfflineCode(codeOf(err)) };
-    }
+  /** Append the next page of the open rail scope. */
+  async loadRailScopeNextPage(): Promise<void> {
+    await this.railsState.loadScopeNextPage();
+  }
+
+  /** Leave the rail-scoped browse view. */
+  closeRailScope(): void {
+    this.railsState.closeScope();
+  }
+
+  /**
+   * Release rail retry timers and the connectivity listener. The screen shares
+   * one app-lifetime state, so production never disposes; teardown paths and
+   * tests do, so a discarded instance leaves no orphan timer or listener.
+   */
+  dispose(): void {
+    this.railsState.dispose();
   }
 
   private resetToIdle(): void {
@@ -456,12 +369,45 @@ class DiscoverDomainState {
     this.lastAttemptedPage = 0;
   }
 
+  /** Best-effort removal of the backend's temp file; never affects the UI state. */
+  private discardDownloadedFile(filePath: string): void {
+    void discardRemoteDownload(filePath).catch(() => undefined);
+  }
+
+  /**
+   * Best-effort library refresh after a successful import. A rejecting hook is
+   * logged only: the transfer already reached persistence, so the machine stays
+   * `imported` and the UI keeps reporting success.
+   */
+  private async refreshLibraryAfterImport(): Promise<void> {
+    if (!this.onLibraryRefreshNeeded) return;
+    try {
+      await this.onLibraryRefreshNeeded();
+    } catch (err) {
+      console.error('[Discover] library refresh after import failed (non-fatal):', err);
+    }
+  }
+
+  /** Settle a transfer the user cancelled after the backend had finished it. */
+  private settleCancelled(filePath: string): void {
+    this.downloadState = 'cancelled';
+    this.downloadError = null;
+    this.discardDownloadedFile(filePath);
+  }
+
   private resetDownload(): void {
+    this.transferGeneration += 1;
+    this.activeTransferId = null;
+    this.cancelRequested = false;
     this.downloadState = 'idle';
     this.downloadError = null;
     this.progressBytes = 0;
     this.progressTotal = null;
   }
+}
+
+function statusForCode(code: CatalogErrorCode): DiscoverStatus {
+  return isOfflineCatalogCode(code) ? 'offline' : 'error';
 }
 
 export const discoverState = new DiscoverDomainState();

@@ -14,8 +14,15 @@ export type {
   CatalogSourceInfo,
   CatalogSourceKind,
   PagedResult,
+  AddonAccessResolution,
 } from './CatalogProvider';
-export { CatalogError, catalogError, isCatalogError, mapHttpStatusToCode } from './errors';
+export {
+  CatalogError,
+  catalogError,
+  isCatalogError,
+  isRetryableCatalogCode,
+  mapHttpStatusToCode,
+} from './errors';
 export type { CatalogErrorCode } from './errors';
 export { GutendexDataSource, GUTENDEX_BASE_URL } from './GutendexDataSource';
 export {
@@ -50,6 +57,7 @@ export type { DiscoverCacheStore } from './DiscoverCache';
 export {
   backoffDelayMs,
   clampPageSize,
+  composeDeadline,
   createRateLimiter,
   createSearchDebouncer,
   fetchWithRetry,
@@ -63,8 +71,10 @@ export {
   MAX_PAGE_SIZE,
   MIN_PAGE_SIZE,
   OL_MIN_GAP_MS,
+  REQUEST_DEADLINE_MS,
   RETRY_BASE_DELAY_MS,
 } from './policy';
+export type { ComposedDeadline } from './policy';
 export {
   computeNextPage,
   firstIsbn10,

@@ -2,10 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { CompositeCatalogProvider } from '$lib/shared/services/catalog/CompositeCatalogProvider';
 import {
   DETAIL_TTL_S,
+  FEATURED_TTL_S,
   InMemoryDiscoverCache,
   PAGE_TTL_S,
+  PersistentDiscoverCache,
   detailCacheKey,
+  featuredCacheKey,
   pageCacheKey,
+  type DurableDiscoverCachePort,
 } from '$lib/shared/services/catalog/DiscoverCache';
 import {
   GutendexCatalogProvider,
@@ -171,5 +175,168 @@ describe('CompositeCatalogProvider cache read-through', () => {
       'https://www.gutenberg.org/cache/epub/1342/pg1342.cover.medium.jpg',
     );
     expect(prideHit).toEqual(prideMiss);
+  });
+});
+
+/** Recording durable port: proves the key scheme and preload bounds. */
+class FakeDurablePort implements DurableDiscoverCachePort {
+  readonly reads: string[] = [];
+  readonly writes: { key: string; payload: string; fetchedAt: number; ttlS: number }[] = [];
+  readonly rows = new Map<string, { payload: string; fetchedAt: number; ttlS: number }>();
+  failReads = false;
+  failWrites = false;
+
+  async read(key: string): Promise<{ payload: string; fetchedAt: number; ttlS: number } | null> {
+    this.reads.push(key);
+    if (this.failReads) throw new Error('durable read unavailable');
+    return this.rows.get(key) ?? null;
+  }
+
+  async write(key: string, payload: string, fetchedAt: number, ttlS: number): Promise<void> {
+    if (this.failWrites) throw new Error('durable write unavailable');
+    this.writes.push({ key, payload, fetchedAt, ttlS });
+    this.rows.set(key, { payload, fetchedAt, ttlS });
+  }
+}
+
+async function flushAsync(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+describe('DiscoverCache featured keys and 6h TTL', () => {
+  it('uses f:v2:{sourceId}:{sort} featured keys with FEATURED_TTL_S = 21600', () => {
+    expect(featuredCacheKey('builtin:gutendex', 'NEWEST')).toBe('f:v2:builtin:gutendex:NEWEST');
+    expect(featuredCacheKey('builtin:openlibrary', 'POPULAR')).toBe(
+      'f:v2:builtin:openlibrary:POPULAR',
+    );
+    expect(FEATURED_TTL_S).toBe(21_600);
+    expect(FEATURED_TTL_S).toBe(6 * 60 * 60);
+  });
+
+  it('read() returns fresh then stale while get() keeps fresh-only eviction', () => {
+    const cache = new InMemoryDiscoverCache();
+    const key = featuredCacheKey('builtin:gutendex', 'NEWEST');
+    cache.put(key, '{"n":1}', 1_000, FEATURED_TTL_S);
+
+    const fresh = cache.read(key, 1_000 + 3_600);
+    expect(fresh).toEqual({
+      payload: '{"n":1}',
+      fetchedAt: 1_000,
+      ttlS: FEATURED_TTL_S,
+      stale: false,
+    });
+    expect(cache.get(key, 1_000 + 3_600)).toBe('{"n":1}');
+
+    // Seven hours on: stale through read(), but still resident (read never evicts).
+    const stale = cache.read(key, 1_000 + 7 * 3_600);
+    expect(stale?.stale).toBe(true);
+    expect(stale?.payload).toBe('{"n":1}');
+    expect(cache.size()).toBe(1);
+
+    // get() keeps its eager eviction: miss AND the row is gone.
+    expect(cache.get(key, 1_000 + FEATURED_TTL_S + 1)).toBeNull();
+    expect(cache.size()).toBe(0);
+  });
+
+  it('read() misses unknown keys without writes', () => {
+    const cache = new InMemoryDiscoverCache();
+    expect(cache.read('f:v2:missing:NEWEST', 1_000)).toBeNull();
+    expect(cache.size()).toBe(0);
+  });
+});
+
+describe('PersistentDiscoverCache durable port', () => {
+  it('mirror is authoritative within a session and put writes it synchronously', () => {
+    const port = new FakeDurablePort();
+    const cache = new PersistentDiscoverCache(port);
+    const key = featuredCacheKey('builtin:gutendex', 'NEWEST');
+
+    cache.put(key, '{"n":1}', 1_000, FEATURED_TTL_S);
+    // No await: the mirror read path is synchronous.
+    expect(cache.get(key, 1_000)).toBe('{"n":1}');
+    expect(cache.read(key, 1_000)?.payload).toBe('{"n":1}');
+    expect(cache.size()).toBe(1);
+  });
+
+  it('write-through uses the same featured key scheme asynchronously', async () => {
+    const port = new FakeDurablePort();
+    const cache = new PersistentDiscoverCache(port);
+    const key = featuredCacheKey('builtin:openlibrary', 'POPULAR');
+
+    cache.put(key, '{"n":9}', 5_000, FEATURED_TTL_S);
+    await flushAsync();
+
+    expect(port.writes).toEqual([
+      {
+        key: 'f:v2:builtin:openlibrary:POPULAR',
+        payload: '{"n":9}',
+        fetchedAt: 5_000,
+        ttlS: 21_600,
+      },
+    ]);
+    expect(port.rows.get(key)?.payload).toBe('{"n":9}');
+  });
+
+  it('swallows a failing durable write so caching never fails a rail', async () => {
+    const port = new FakeDurablePort();
+    port.failWrites = true;
+    const cache = new PersistentDiscoverCache(port);
+    const key = featuredCacheKey('builtin:gutendex', 'POPULAR');
+
+    expect(() => cache.put(key, '{"n":1}', 1_000, FEATURED_TTL_S)).not.toThrow();
+    await flushAsync();
+    expect(cache.get(key, 1_000)).toBe('{"n":1}');
+  });
+
+  it('preload seeds the mirror from the durable table, bounded to featured keys', async () => {
+    const port = new FakeDurablePort();
+    const key = featuredCacheKey('builtin:gutendex', 'NEWEST');
+    port.rows.set(key, { payload: '{"n":1}', fetchedAt: 1_000, ttlS: FEATURED_TTL_S });
+    const cache = new PersistentDiscoverCache(port);
+
+    await cache.preload(['builtin:gutendex']);
+
+    // Exactly one featured read per known sort, nothing else.
+    expect(port.reads.sort()).toEqual([
+      'f:v2:builtin:gutendex:NEWEST',
+      'f:v2:builtin:gutendex:POPULAR',
+    ]);
+    expect(cache.read(key, 1_000)?.payload).toBe('{"n":1}');
+
+    // Two sources → four bounded reads, still no page/detail keys.
+    port.reads.length = 0;
+    await cache.preload(['builtin:gutendex', 'builtin:openlibrary']);
+    expect(port.reads).toHaveLength(4);
+    expect(port.reads.every((read) => read.startsWith('f:v2:'))).toBe(true);
+    expect(port.reads.some((read) => read.startsWith('p:') || read.startsWith('d:'))).toBe(false);
+  });
+
+  it('preloads explicit bounded extra keys alongside the featured keys', async () => {
+    const port = new FakeDurablePort();
+    const thematicKey = pageCacheKey('builtin:gutendex', 'fiction', 1);
+    port.rows.set(thematicKey, { payload: '{"n":7}', fetchedAt: 1_000, ttlS: PAGE_TTL_S });
+    const cache = new PersistentDiscoverCache(port);
+
+    await cache.preload(['builtin:gutendex'], [thematicKey]);
+
+    expect(port.reads.sort()).toEqual(
+      ['f:v2:builtin:gutendex:NEWEST', 'f:v2:builtin:gutendex:POPULAR', thematicKey].sort(),
+    );
+    // Exactly the requested extra key: no arbitrary page keys get enumerated.
+    expect(port.reads).toHaveLength(3);
+    expect(cache.get(thematicKey, 1_000)).toBe('{"n":7}');
+
+    // Duplicate extra keys collapse back into one read (bounded).
+    port.reads.length = 0;
+    await cache.preload(['builtin:gutendex'], [thematicKey, thematicKey]);
+    expect(port.reads).toHaveLength(3);
+  });
+
+  it('a failing preload read degrades to an empty mirror, never an error', async () => {
+    const port = new FakeDurablePort();
+    port.failReads = true;
+    const cache = new PersistentDiscoverCache(port);
+    await expect(cache.preload(['builtin:gutendex'])).resolves.toBeUndefined();
+    expect(cache.size()).toBe(0);
   });
 });

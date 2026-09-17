@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { describe, expect, it, vi } from 'vitest';
 import DiscoverDetail from '$lib/features/discover/DiscoverDetail.svelte';
+import { openableLibraryBook } from '$lib/features/discover/discoverLibraryMatch';
 import {
   DiscoverDomainState,
   type DiscoverDownloadState,
@@ -15,6 +16,8 @@ import type { MessageKey } from '$lib/shared/i18n/messages.en';
 import type { CatalogBook, CatalogProvider } from '$lib/shared/services/catalog/CatalogProvider';
 import { catalogError } from '$lib/shared/services/catalog/errors';
 import { importRecoveredBook } from '$lib/shared/recovery/desktopRecoveryImport';
+import type { DownloadTransferRequest } from '$lib/features/discover/downloadTransfer';
+import type { ReaderBook } from '$lib/shared/types';
 
 const t = (key: MessageKey): string => key;
 
@@ -68,30 +71,27 @@ function fakeProvider(books: Record<string, CatalogBook>): CatalogProvider {
   };
 }
 
-function okFetch(bytes: number[] = [1, 2, 3]): typeof fetch {
-  return (async () =>
-    new Response(new Uint8Array(bytes), {
-      status: 200,
-      headers: { 'content-length': String(bytes.length) },
-    })) as typeof fetch;
-}
-
-function hangingFetch(): typeof fetch {
-  return ((_: unknown, init?: RequestInit) => {
-    if (init?.signal?.aborted) return Promise.reject(new DOMException('Aborted', 'AbortError'));
-    return new Promise<Response>((_, reject) => {
-      init?.signal?.addEventListener('abort', () => {
-        reject(new DOMException('Aborted', 'AbortError'));
-      });
-    });
-  }) as typeof fetch;
-}
-
 function importedStub(): typeof importRecoveredBook {
   return (async () => ({
     bookId: 'gutendex:1342',
     outcome: 'imported' as const,
   })) as typeof importRecoveredBook;
+}
+
+/** Command-backed byte source: the Rust transfer settles the local file. */
+function fakeTransfer() {
+  const transferId = 'transfer-1';
+  const download = vi.fn(
+    async (
+      _req: DownloadTransferRequest,
+      onProgress: (done: number, total: number | null) => void,
+    ) => {
+      onProgress(3, 3);
+      return { filePath: `/tmp/downloads/${transferId}.epub`, bytes: 3 };
+    },
+  );
+  const cancel = vi.fn(async (_transferId: string) => undefined);
+  return { download, cancel };
 }
 
 describe('discoverDetailFormat pure helpers', () => {
@@ -151,12 +151,22 @@ describe('discoverDetailFormat pure helpers', () => {
 describe('DiscoverDomainState download-to-import (WU2)', () => {
   it('successful download imports and reports progress', async () => {
     const book = fakeBook();
-    const fetchFn = vi.fn(okFetch());
+    const { download, cancel } = fakeTransfer();
     const importFn = vi.fn(importedStub());
-    const state = new DiscoverDomainState(fakeProvider({ [book.id]: book }), { fetchFn, importFn });
+    const state = new DiscoverDomainState(fakeProvider({ [book.id]: book }), {
+      transfer: { download, cancel },
+      importFn,
+    });
     await state.openDetail(book.id);
     await state.startDownload();
-    expect(fetchFn).toHaveBeenCalledWith(book.downloadUrl, expect.anything());
+    expect(download).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: book.downloadUrl,
+        format: 'epub',
+        transferId: expect.any(String),
+      }),
+      expect.any(Function),
+    );
     expect(state.downloadState).toBe('imported');
     expect(state.downloadError).toBeNull();
     expect(state.progressBytes).toBe(3);
@@ -164,11 +174,25 @@ describe('DiscoverDomainState download-to-import (WU2)', () => {
     expect(importFn).toHaveBeenCalledOnce();
   });
 
-  it('cancel aborts the fetch and never reaches persistence', async () => {
+  it('cancel stops the backend transfer and never reaches persistence', async () => {
     const book = fakeBook();
     const importFn = vi.fn(importedStub());
+    let requestedTransferId = '';
+    let rejectDownload: ((err: unknown) => void) | null = null;
+    const download = vi.fn(
+      (req: DownloadTransferRequest): Promise<{ filePath: string; bytes: number }> => {
+        requestedTransferId = req.transferId;
+        return new Promise((_, reject) => {
+          rejectDownload = reject;
+        });
+      },
+    );
+    const cancel = vi.fn(async (transferId: string) => {
+      expect(transferId).toBe(requestedTransferId);
+      rejectDownload?.('BOOK_DOWNLOAD_CANCELLED');
+    });
     const state = new DiscoverDomainState(fakeProvider({ [book.id]: book }), {
-      fetchFn: hangingFetch(),
+      transfer: { download, cancel },
       importFn,
     });
     await state.openDetail(book.id);
@@ -178,6 +202,7 @@ describe('DiscoverDomainState download-to-import (WU2)', () => {
     expect(state.downloadState).toBe('downloading');
     state.cancelDownload();
     await pending;
+    expect(cancel).toHaveBeenCalledOnce();
     expect(state.downloadState).toBe('cancelled');
     expect(importFn).not.toHaveBeenCalled();
   });
@@ -185,15 +210,12 @@ describe('DiscoverDomainState download-to-import (WU2)', () => {
   it('failed download offers retry that recovers', async () => {
     const book = fakeBook();
     let failing = true;
-    const fetchFn = vi.fn((async () => {
+    const download = vi.fn(async (req: DownloadTransferRequest) => {
       if (failing) throw new Error('boom');
-      return new Response(new Uint8Array([1, 2, 3]), {
-        status: 200,
-        headers: { 'content-length': '3' },
-      });
-    }) as typeof fetch);
+      return { filePath: `/tmp/downloads/${req.transferId}.epub`, bytes: 3 };
+    });
     const state = new DiscoverDomainState(fakeProvider({ [book.id]: book }), {
-      fetchFn,
+      transfer: { download, cancel: vi.fn(async () => undefined) },
       importFn: importedStub(),
     });
     await state.openDetail(book.id);
@@ -207,16 +229,16 @@ describe('DiscoverDomainState download-to-import (WU2)', () => {
 
   it('missing download URL fails closed without I/O', async () => {
     const book = fakeBook({ downloadUrl: null });
-    const fetchFn = vi.fn(okFetch());
+    const { download, cancel } = fakeTransfer();
     const state = new DiscoverDomainState(fakeProvider({ [book.id]: book }), {
-      fetchFn,
+      transfer: { download, cancel },
       importFn: importedStub(),
     });
     await state.openDetail(book.id);
     await state.startDownload();
     expect(state.downloadState).toBe('error');
     expect(state.downloadError).toBe('UNAVAILABLE_DOWNLOAD');
-    expect(fetchFn).not.toHaveBeenCalled();
+    expect(download).not.toHaveBeenCalled();
   });
 
   it('openDetail and dismissDetail reset the transfer state', async () => {
@@ -224,7 +246,7 @@ describe('DiscoverDomainState download-to-import (WU2)', () => {
     const second = fakeBook({ id: 'gutendex:11', title: 'Second' });
     const state = new DiscoverDomainState(
       fakeProvider({ [first.id]: first, [second.id]: second }),
-      { fetchFn: okFetch(), importFn: importedStub() },
+      { transfer: fakeTransfer(), importFn: importedStub() },
     );
     await state.openDetail(first.id);
     await state.startDownload();
@@ -311,6 +333,189 @@ describe('DiscoverDetail modal (WU2)', () => {
     await fireEvent.keyDown(window, { key: 'Escape' });
     await tick();
     expect(onDismiss).toHaveBeenCalled();
+  });
+});
+
+describe('DiscoverDetail description clamp (WU-A)', () => {
+  it('hides the toggle when the description does not overflow', async () => {
+    render(DiscoverDetail, {
+      props: { detail: fakeBook(), detailStatus: 'loaded', t, onDismiss: vi.fn() },
+    });
+    expect(await screen.findByText('A classic novel.')).toBeInTheDocument();
+    expect(screen.queryByText('discover.descriptionShowMore')).not.toBeInTheDocument();
+  });
+
+  it('shows the toggle when the measurement reports overflow', async () => {
+    render(DiscoverDetail, {
+      props: {
+        detail: fakeBook({ description: 'A very long description. '.repeat(50) }),
+        detailStatus: 'loaded',
+        t,
+        onDismiss: vi.fn(),
+        measureOverflow: () => true,
+      },
+    });
+    expect(await screen.findByText('discover.descriptionShowMore')).toBeInTheDocument();
+  });
+
+  it('clamps, then expands on click with aria-expanded and aria-controls', async () => {
+    render(DiscoverDetail, {
+      props: {
+        detail: fakeBook({ description: 'A very long description. '.repeat(50) }),
+        detailStatus: 'loaded',
+        t,
+        onDismiss: vi.fn(),
+        measureOverflow: () => true,
+      },
+    });
+    const toggle = await screen.findByText('discover.descriptionShowMore');
+    const description = document.getElementById('discover-description');
+    expect(description).toHaveClass('max-h-20');
+    expect(description).toHaveClass('overflow-hidden');
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveAttribute('aria-controls', 'discover-description');
+
+    await fireEvent.click(toggle);
+
+    expect(screen.getByText('discover.descriptionShowLess')).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    // Expanded removes the clamp.
+    expect(description).not.toHaveClass('max-h-20');
+    expect(description).not.toHaveClass('overflow-hidden');
+  });
+});
+
+describe('DiscoverDetail library state (WU-D)', () => {
+  it('idle + in library shows the library state and no download CTA', async () => {
+    const onOpenBook = vi.fn();
+    render(DiscoverDetail, {
+      props: {
+        detail: fakeBook(),
+        detailStatus: 'loaded',
+        t,
+        onDismiss: vi.fn(),
+        inLibrary: true,
+        onOpenBook,
+      },
+    });
+    expect(await screen.findByRole('status')).toHaveTextContent('discover.inLibrary');
+    expect(screen.queryByText('discover.download')).not.toBeInTheDocument();
+    const open = screen.getByRole('button', { name: 'discover.openBook' });
+    await fireEvent.click(open);
+    expect(onOpenBook).toHaveBeenCalledOnce();
+  });
+
+  it('idle + not in library keeps the download CTA', async () => {
+    render(DiscoverDetail, {
+      props: {
+        detail: fakeBook(),
+        detailStatus: 'loaded',
+        t,
+        onDismiss: vi.fn(),
+        inLibrary: false,
+      },
+    });
+    expect(await screen.findByText('discover.download')).toBeInTheDocument();
+    expect(screen.queryByText('discover.inLibrary')).not.toBeInTheDocument();
+  });
+
+  it('an in-flight download state wins over inLibrary', async () => {
+    render(DiscoverDetail, {
+      props: {
+        detail: fakeBook(),
+        detailStatus: 'loaded',
+        t,
+        onDismiss: vi.fn(),
+        inLibrary: true,
+        downloadState: 'downloading' as DiscoverDownloadState,
+        progressBytes: 1,
+        progressTotal: 2,
+      },
+    });
+    expect(await screen.findByText('discover.downloading')).toBeInTheDocument();
+    expect(screen.queryByText('discover.inLibrary')).not.toBeInTheDocument();
+    expect(screen.queryByText('discover.download')).not.toBeInTheDocument();
+  });
+
+  it('a terminal error state wins over inLibrary', async () => {
+    render(DiscoverDetail, {
+      props: {
+        detail: fakeBook(),
+        detailStatus: 'loaded',
+        t,
+        onDismiss: vi.fn(),
+        inLibrary: true,
+        downloadState: 'error' as DiscoverDownloadState,
+        downloadError: 'BOOK_DOWNLOAD_NETWORK',
+      },
+    });
+    expect(await screen.findByRole('alert')).toHaveTextContent('discover.downloadFailed');
+    expect(screen.queryByText('discover.inLibrary')).not.toBeInTheDocument();
+  });
+});
+
+function fakeLibraryBook(overrides: Partial<ReaderBook> = {}): ReaderBook {
+  return {
+    id: 'gutendex:1342',
+    title: 'Pride and Prejudice',
+    author: 'Jane Austen',
+    format: 'epub',
+    currentPage: 0,
+    totalPages: 100,
+    progressPercentage: 0,
+    coverPath: null,
+    minutesRead: 0,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    filePath: '/books/gutendex1342.epub',
+    ...overrides,
+  };
+}
+
+describe('discover in-library derivation (X2)', () => {
+  it('a library row without a usable file path does not produce the in-library state', async () => {
+    const orphan = fakeLibraryBook({ filePath: '' });
+    expect(openableLibraryBook(orphan)).toBeNull();
+
+    render(DiscoverDetail, {
+      props: {
+        detail: fakeBook(),
+        detailStatus: 'loaded',
+        t,
+        onDismiss: vi.fn(),
+        inLibrary: openableLibraryBook(orphan) !== null,
+      },
+    });
+    // The Download CTA must stay available; an "Open book" action would point at
+    // a file that does not exist.
+    expect(await screen.findByText('discover.download')).toBeInTheDocument();
+    expect(screen.queryByText('discover.inLibrary')).not.toBeInTheDocument();
+  });
+
+  it('a library row with a usable file path still produces the in-library state', async () => {
+    const present = fakeLibraryBook();
+    expect(openableLibraryBook(present)).toBe(present);
+
+    render(DiscoverDetail, {
+      props: {
+        detail: fakeBook(),
+        detailStatus: 'loaded',
+        t,
+        onDismiss: vi.fn(),
+        inLibrary: openableLibraryBook(present) !== null,
+        onOpenBook: vi.fn(),
+      },
+    });
+    expect(await screen.findByRole('status')).toHaveTextContent('discover.inLibrary');
+    expect(screen.queryByText('discover.download')).not.toBeInTheDocument();
+  });
+
+  it('treats a whitespace-only or missing row as not in-library', () => {
+    expect(openableLibraryBook(fakeLibraryBook({ filePath: '   ' }))).toBeNull();
+    expect(openableLibraryBook(null)).toBeNull();
+    expect(openableLibraryBook(undefined)).toBeNull();
   });
 });
 
@@ -402,5 +607,67 @@ describe('DiscoverDetail access section (WU3)', () => {
       true,
     );
     expect(screen.queryByText('discover.accessDownload')).not.toBeInTheDocument();
+  });
+});
+
+describe('DiscoverDomainState detail offline handling (G4)', () => {
+  it('maps a connectivity detail failure to offline and recovers on retry', async () => {
+    const book = fakeBook();
+    let failing = true;
+    const base = fakeProvider({ [book.id]: book });
+    const provider: CatalogProvider = {
+      ...base,
+      async getDetails(id: string) {
+        if (failing) throw catalogError('NETWORK_ERROR', 'offline');
+        return base.getDetails(id);
+      },
+    };
+    const state = new DiscoverDomainState(provider);
+
+    await state.openDetail(book.id);
+    expect(state.detailStatus).toBe('offline');
+    expect(state.detail).toBeNull();
+
+    failing = false;
+    await state.retryDetail();
+    expect(state.detailStatus).toBe('loaded');
+    expect(state.detail?.id).toBe(book.id);
+  });
+
+  it('keeps a rate-limited detail failure as a generic error, not offline', async () => {
+    const book = fakeBook();
+    const provider: CatalogProvider = {
+      ...fakeProvider({ [book.id]: book }),
+      async getDetails() {
+        throw catalogError('RATE_LIMITED', 'slow down');
+      },
+    };
+    const state = new DiscoverDomainState(provider);
+
+    await state.openDetail(book.id);
+    expect(state.detailStatus).toBe('error');
+  });
+});
+
+describe('DiscoverDetail offline retry (G4)', () => {
+  it('renders offline copy with a retry action instead of the upstream message', async () => {
+    const onRetryDetail = vi.fn();
+    render(DiscoverDetail, {
+      props: { detail: null, detailStatus: 'offline', t, onDismiss: vi.fn(), onRetryDetail },
+    });
+
+    expect(await screen.findByText('discover.offline')).toBeInTheDocument();
+    expect(screen.queryByText('discover.errorUpstream')).not.toBeInTheDocument();
+    await fireEvent.click(screen.getByText('discover.retry'));
+    expect(onRetryDetail).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the upstream copy for a generic error', async () => {
+    render(DiscoverDetail, {
+      props: { detail: null, detailStatus: 'error', t, onDismiss: vi.fn() },
+    });
+
+    expect(await screen.findByText('discover.errorUpstream')).toBeInTheDocument();
+    expect(screen.queryByText('discover.offline')).not.toBeInTheDocument();
   });
 });

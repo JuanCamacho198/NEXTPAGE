@@ -52,4 +52,35 @@ describe('i18n es/en parity (REQ-X-Cross-2)', () => {
     expect(messagesEn['discover.manageAddons']).toBe('Manage addons');
     expect(messagesEs['discover.manageAddons']).toBe('Gestionar addons');
   });
+
+  it('includes the addons screen keys in both locales', () => {
+    const screenKeys = [
+      'addons.title',
+      'addons.subtitle',
+      'addons.firstParty.title',
+      'addons.firstParty.builtinTitle',
+      'addons.firstParty.curatedTitle',
+      'addons.firstParty.readOnly',
+      'addons.firstParty.builtinBadge',
+      'addons.install.errorInline',
+      'addons.install.offline',
+      'addons.install.retry',
+      'addons.install.installing',
+    ] as const;
+
+    for (const key of screenKeys) {
+      expect(messagesEn[key]).toBeDefined();
+      expect(messagesEs[key]).toBeDefined();
+    }
+
+    // Exact copy: screen title + badge + progress states.
+    expect(messagesEn['addons.title']).toBe('Addons');
+    expect(messagesEs['addons.title']).toBe('Addons');
+    expect(messagesEn['addons.firstParty.builtinBadge']).toBe('Built-in');
+    expect(messagesEs['addons.firstParty.builtinBadge']).toBe('Integrada');
+    expect(messagesEn['addons.install.retry']).toBe('Retry');
+    expect(messagesEs['addons.install.retry']).toBe('Reintentar');
+    expect(messagesEn['addons.install.installing']).toBe('Installing…');
+    expect(messagesEs['addons.install.installing']).toBe('Instalando…');
+  });
 });

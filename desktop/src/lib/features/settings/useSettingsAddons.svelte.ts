@@ -1,4 +1,5 @@
 import { pushToast as defaultPushToast } from '$lib/shared/stores/ToastQueue.svelte';
+import type { MessageKey } from '$lib/shared/i18n';
 import {
   AddonRegistry as DefaultAddonRegistry,
   type InstalledAddonRow,
@@ -17,7 +18,7 @@ export type AddonsDeps = {
   /** Called when the registry mutates so the live Discover composite rebuilds. */
   onAddonsChanged?: () => void;
   pushToast?: typeof defaultPushToast;
-  t?: (key: string, params?: Record<string, string | number>) => string;
+  t?: (key: MessageKey, params?: Record<string, string | number>) => string;
 };
 
 /** Inline install state for the Addons screen (Settings keeps its toast). */
@@ -41,8 +42,8 @@ export function createSettingsAddons(deps: AddonsDeps = {}): {
   // t/pushToast resolve PER CALL (not once at construction) so the app-wide
   // singleton (created at module load) still uses the mounted surface's
   // translator and toast host.
-  const translate = (key: string, params?: Record<string, string | number>): string =>
-    (deps.t ?? ((k: string) => k))(key, params);
+  const translate = (key: MessageKey, params?: Record<string, string | number>): string =>
+    (deps.t ?? ((k: MessageKey) => k))(key, params);
   const notify = (kind: 'success' | 'error', message: string): void =>
     (deps.pushToast ?? defaultPushToast)(kind, message);
   registry.onChanged?.(() => deps.onAddonsChanged?.());

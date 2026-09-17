@@ -87,6 +87,7 @@ function isPreloadable(
 
 import { CuratedCatalogProvider } from '../addons/CuratedCatalogProvider';
 import { AddonCatalogProvider } from '../addons/AddonCatalogProvider';
+import type { AddonConsentGate } from '../addons/AddonConsent';
 import type { AddonTransport, InstalledAddonRow } from '../addons/AddonRegistry';
 
 /**
@@ -98,15 +99,22 @@ import type { AddonTransport, InstalledAddonRow } from '../addons/AddonRegistry'
  * (fail-closed); the app composition root passes
  * `googleBooksKeyFromEnv()` so the ambient environment never leaks into
  * provider construction made by tests.
+ *
+ * `consent` is the per-addon network-consent gate handed to every addon
+ * provider (resolve-only gating; search/getDetails stay ungated). Omitted ⇒
+ * each provider denies every resolve (fail-closed default).
  */
 export function defaultCatalogProviders(
   installedAddons: InstalledAddonRow[] = [],
   addonTransport?: AddonTransport,
   googleBooksKey = '',
+  consent?: AddonConsentGate,
 ): CatalogProvider[] {
   const addonProviders = installedAddons
     .filter((row) => row.enabled)
-    .map((row) => new AddonCatalogProvider(row.manifest, row.id, addonTransport));
+    .map(
+      (row) => new AddonCatalogProvider(row.manifest, row.id, addonTransport, undefined, consent),
+    );
   const googleBooks: GoogleBooksCatalogProvider | null = googleBooksProviderOrNull(googleBooksKey);
   return [
     new GutendexCatalogProvider(),
@@ -134,6 +142,8 @@ export interface CatalogProviderSupplier {
 /** Rebuild-time options: the Discover cache the composite reads and writes. */
 export interface RebuildingCatalogProviderOptions {
   cache?: DiscoverCacheStore | null;
+  /** Per-addon network-consent gate forwarded to every addon provider. */
+  consent?: AddonConsentGate;
 }
 
 /**
@@ -161,6 +171,7 @@ export function createRebuildingCatalogProvider(
   options: RebuildingCatalogProviderOptions = {},
 ): CatalogProviderSupplier {
   const cache = options.cache ?? null;
+  const consent = options.consent;
   let current: Promise<CompositeCatalogProvider> | null = null;
   let built: CompositeCatalogProvider | null = null;
   let generation = 0;
@@ -169,7 +180,7 @@ export function createRebuildingCatalogProvider(
       const gen = generation;
       return (current ??= loadRows().then(async (rows) => {
         const composite = new CompositeCatalogProvider(
-          defaultCatalogProviders(rows, addonTransport, googleBooksKey),
+          defaultCatalogProviders(rows, addonTransport, googleBooksKey, consent),
           { cache },
         );
         if (gen === generation) built = composite;

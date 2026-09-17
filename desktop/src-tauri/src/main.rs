@@ -211,6 +211,8 @@ fn main() {
             commands::upsertInstalledAddon,
             commands::setAddonEnabled,
             commands::deleteInstalledAddon,
+            commands::listAddonConsents,
+            commands::setAddonConsent,
             commands::discoverCacheRead,
             commands::discoverCachePut,
             commands::downloadRemoteBook,

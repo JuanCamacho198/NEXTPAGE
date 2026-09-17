@@ -318,6 +318,13 @@ export const messagesEn = {
   'addons.install.offline': 'You are offline. Reconnect and try again.',
   'addons.install.retry': 'Retry',
   'addons.install.installing': 'Installing…',
+  'addons.consent.label': 'Allow network access for {{name}}',
+  'addons.consent.granted': 'Network access allowed',
+  'addons.consent.title': 'Allow this addon to access the network?',
+  'addons.consent.body':
+    '{{name}} will be able to fetch catalog data from its own server. No access is granted until you allow it.',
+  'addons.consent.allow': 'Allow',
+  'addons.consent.deny': 'Deny',
   'settings.data.exportHighlights': 'Export highlights',
   'settings.data.exportHighlightsDescription':
     'Download your annotations and highlights in JSON or Markdown',

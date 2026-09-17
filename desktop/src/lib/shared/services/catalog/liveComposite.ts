@@ -21,6 +21,7 @@ import type {
 import { googleBooksKeyFromEnv } from './BuiltInCatalogProviders';
 import { resolveDownloadUrl } from './mappers';
 import { AddonRegistry, getAddonRegistry } from '../addons/AddonRegistry';
+import { addonConsent } from '../addons/AddonConsent';
 
 // Slice 7 single-state-source: the live composite listens on the SHARED
 // registry instance (the same one the addons singleton mutates), so screen
@@ -38,11 +39,13 @@ export const discoverCache = new PersistentDiscoverCache(new TauriDiscoverCacheP
 // Google Books is registered only when `VITE_GOOGLE_BOOKS_KEY` is non-blank;
 // a blank key omits the provider and the app keeps working on Gutendex + OL.
 // Every rebuild re-runs the cache preload, so addon changes re-seed the mirror.
+// The shared consent singleton gates every addon provider's resolve (slice 8);
+// search/getDetails stay ungated.
 const supplier: CatalogProviderSupplier = createRebuildingCatalogProvider(
   () => registry.listInstalled(),
   undefined,
   googleBooksKeyFromEnv(),
-  { cache: discoverCache },
+  { cache: discoverCache, consent: addonConsent },
 );
 registry.onChanged(() => supplier.invalidate());
 

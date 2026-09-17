@@ -6,6 +6,7 @@
 // re-exports them so `commands::<name>` keeps resolving for main.rs, and keeps
 // the two helpers that are not commands.
 
+pub mod addon_consent;
 pub mod addon_fetch;
 pub mod addon_registry;
 pub mod bookmarks;
@@ -26,6 +27,8 @@ pub mod search;
 pub mod settings;
 pub mod storage;
 
+#[allow(unused_imports)]
+pub use addon_consent::*;
 #[allow(unused_imports)]
 pub use addon_fetch::*;
 #[allow(unused_imports)]

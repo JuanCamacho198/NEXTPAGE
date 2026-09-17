@@ -66,6 +66,12 @@ describe('i18n es/en parity (REQ-X-Cross-2)', () => {
       'addons.install.offline',
       'addons.install.retry',
       'addons.install.installing',
+      'addons.consent.label',
+      'addons.consent.granted',
+      'addons.consent.title',
+      'addons.consent.body',
+      'addons.consent.allow',
+      'addons.consent.deny',
     ] as const;
 
     for (const key of screenKeys) {
@@ -73,7 +79,7 @@ describe('i18n es/en parity (REQ-X-Cross-2)', () => {
       expect(messagesEs[key]).toBeDefined();
     }
 
-    // Exact copy: screen title + badge + progress states.
+    // Exact copy: screen title + badge + progress states + consent actions.
     expect(messagesEn['addons.title']).toBe('Addons');
     expect(messagesEs['addons.title']).toBe('Addons');
     expect(messagesEn['addons.firstParty.builtinBadge']).toBe('Built-in');
@@ -82,5 +88,9 @@ describe('i18n es/en parity (REQ-X-Cross-2)', () => {
     expect(messagesEs['addons.install.retry']).toBe('Reintentar');
     expect(messagesEn['addons.install.installing']).toBe('Installing…');
     expect(messagesEs['addons.install.installing']).toBe('Instalando…');
+    expect(messagesEn['addons.consent.allow']).toBe('Allow');
+    expect(messagesEs['addons.consent.allow']).toBe('Permitir');
+    expect(messagesEn['addons.consent.deny']).toBe('Deny');
+    expect(messagesEs['addons.consent.deny']).toBe('Denegar');
   });
 });

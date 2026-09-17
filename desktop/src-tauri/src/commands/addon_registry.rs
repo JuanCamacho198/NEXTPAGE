@@ -79,6 +79,9 @@ pub fn set_addon_enabled(
 
 pub fn delete_installed_addon(conn: &rusqlite::Connection, id: &str) -> rusqlite::Result<bool> {
     let changed = conn.execute("DELETE FROM installed_addons WHERE id = ?1", [&id])?;
+    // Uninstall revokes consent on the SAME connection (atomic): a reinstall
+    // starts denied and can never inherit the previous grant (0018).
+    super::addon_consent::delete_addon_consent(conn, id)?;
     Ok(changed > 0)
 }
 
@@ -132,6 +135,9 @@ mod addon_registry_tests {
         conn.execute_batch(include_str!("../../migrations/0001_init.sql")).unwrap();
         conn.execute_batch(include_str!("../../migrations/0002_books.sql")).unwrap();
         conn.execute_batch(include_str!("../../migrations/0017_addon_registry.sql")).unwrap();
+        // delete_installed_addon also revokes the 0018 consent row on the same
+        // connection, so the fixture must carry the consent table.
+        conn.execute_batch(include_str!("../../migrations/0018_addon_consent.sql")).unwrap();
         conn
     }
 

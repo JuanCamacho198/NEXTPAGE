@@ -8,7 +8,8 @@ export type CatalogErrorCode =
   | 'NOT_FOUND'
   | 'RATE_LIMITED'
   | 'UPSTREAM_ERROR'
-  | 'NETWORK_ERROR';
+  | 'NETWORK_ERROR'
+  | 'CONSENT_REQUIRED';
 
 export class CatalogError extends Error {
   readonly code: CatalogErrorCode;

@@ -321,6 +321,13 @@ export const messagesEs: Record<MessageKey, string> = {
   'addons.install.offline': 'No tienes conexión. Reconéctate e inténtalo de nuevo.',
   'addons.install.retry': 'Reintentar',
   'addons.install.installing': 'Instalando…',
+  'addons.consent.label': 'Permitir el acceso a la red para {{name}}',
+  'addons.consent.granted': 'Acceso a la red permitido',
+  'addons.consent.title': '¿Permitir que este complemento acceda a la red?',
+  'addons.consent.body':
+    '{{name}} podrá obtener datos del catálogo desde su propio servidor. No se concede ningún acceso hasta que lo permitas.',
+  'addons.consent.allow': 'Permitir',
+  'addons.consent.deny': 'Denegar',
   'settings.data.exportHighlights': 'Exportar resaltados',
   'settings.data.exportHighlightsDescription':
     'Descarga tus anotaciones y resaltaros en JSON o Markdown',

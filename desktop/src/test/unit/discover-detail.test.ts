@@ -334,6 +334,57 @@ describe('DiscoverDetail modal (WU2)', () => {
   });
 });
 
+describe('DiscoverDetail description clamp (WU-A)', () => {
+  it('hides the toggle when the description does not overflow', async () => {
+    render(DiscoverDetail, {
+      props: { detail: fakeBook(), detailStatus: 'loaded', t, onDismiss: vi.fn() },
+    });
+    expect(await screen.findByText('A classic novel.')).toBeInTheDocument();
+    expect(screen.queryByText('discover.descriptionShowMore')).not.toBeInTheDocument();
+  });
+
+  it('shows the toggle when the measurement reports overflow', async () => {
+    render(DiscoverDetail, {
+      props: {
+        detail: fakeBook({ description: 'A very long description. '.repeat(50) }),
+        detailStatus: 'loaded',
+        t,
+        onDismiss: vi.fn(),
+        measureOverflow: () => true,
+      },
+    });
+    expect(await screen.findByText('discover.descriptionShowMore')).toBeInTheDocument();
+  });
+
+  it('clamps, then expands on click with aria-expanded and aria-controls', async () => {
+    render(DiscoverDetail, {
+      props: {
+        detail: fakeBook({ description: 'A very long description. '.repeat(50) }),
+        detailStatus: 'loaded',
+        t,
+        onDismiss: vi.fn(),
+        measureOverflow: () => true,
+      },
+    });
+    const toggle = await screen.findByText('discover.descriptionShowMore');
+    const description = document.getElementById('discover-description');
+    expect(description).toHaveClass('max-h-20');
+    expect(description).toHaveClass('overflow-hidden');
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveAttribute('aria-controls', 'discover-description');
+
+    await fireEvent.click(toggle);
+
+    expect(screen.getByText('discover.descriptionShowLess')).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    // Expanded removes the clamp.
+    expect(description).not.toHaveClass('max-h-20');
+    expect(description).not.toHaveClass('overflow-hidden');
+  });
+});
+
 describe('DiscoverDetail library state (WU-D)', () => {
   it('idle + in library shows the library state and no download CTA', async () => {
     const onOpenBook = vi.fn();

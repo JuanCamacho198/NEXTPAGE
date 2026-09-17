@@ -27,6 +27,8 @@
     onRetryDetail = () => {},
     inLibrary = false,
     onOpenBook = () => {},
+    measureOverflow = (element: HTMLElement): boolean =>
+      element.scrollHeight > element.clientHeight,
   }: {
     detail: CatalogBook | null;
     detailStatus: DiscoverDetailStatus;
@@ -44,7 +46,16 @@
     inLibrary?: boolean;
     /** Opens the library book in the reader (the in-library affordance). */
     onOpenBook?: () => void;
+    /**
+     * Overflow probe for the description clamp. Injectable because jsdom does
+     * not lay out (a real `scrollHeight`/`clientHeight` reading is always 0
+     * there), so tests can drive both directions deterministically.
+     */
+    measureOverflow?: (element: HTMLElement) => boolean;
   } = $props();
+
+  /** Stable id linking the description region to its "show more" toggle. */
+  const DESCRIPTION_ID = 'discover-description';
 
   /** Modal facade (mirrors ShelfDetailModal): `bind:open` + reset-on-close. */
   // svelte-ignore state_referenced_locally
@@ -87,6 +98,30 @@
     detail !== null && detail.coverUrl !== null && detail.coverUrl !== undefined && !coverFailed,
   );
   const description = $derived(detail ? discoverDescription(detail) : undefined);
+
+  /** Rendered description paragraph; measured to decide whether to clamp. */
+  let descriptionEl = $state<HTMLParagraphElement | undefined>();
+  let descriptionExpanded = $state(false);
+  let descriptionOverflows = $state(false);
+
+  // A different book starts collapsed, and the collapsed paragraph is measured
+  // again from scratch.
+  $effect(() => {
+    void detail?.id;
+    descriptionExpanded = false;
+    descriptionOverflows = false;
+  });
+
+  // Measure only while collapsed: an expanded paragraph can never report
+  // overflow, so its last collapsed reading is kept on screen (the "show less"
+  // toggle stays available). Recomputed whenever the text or element changes.
+  $effect(() => {
+    const element = descriptionEl;
+    void description;
+    if (!element || descriptionExpanded) return;
+    descriptionOverflows = measureOverflow(element);
+  });
+
   const formatLabels = $derived(detail?.formats ? discoverFormatLabels(detail.formats) : []);
   const externalLink = $derived(detail ? discoverExternalLink(detail) : null);
   const externalLabel = $derived(
@@ -172,7 +207,28 @@
         </div>
       </div>
       {#if description !== undefined}
-        <p class="mt-3 text-sm text-(--color-text-muted)">{description}</p>
+        <p
+          id={DESCRIPTION_ID}
+          bind:this={descriptionEl}
+          class="mt-3 text-sm text-(--color-text-muted)"
+          class:max-h-20={!descriptionExpanded}
+          class:overflow-hidden={!descriptionExpanded}
+        >
+          {description}
+        </p>
+        {#if descriptionOverflows}
+          <button
+            type="button"
+            class="mt-1 text-sm font-medium text-(--color-primary) hover:underline"
+            aria-expanded={descriptionExpanded}
+            aria-controls={DESCRIPTION_ID}
+            onclick={() => (descriptionExpanded = !descriptionExpanded)}
+          >
+            {descriptionExpanded
+              ? t('discover.descriptionShowLess')
+              : t('discover.descriptionShowMore')}
+          </button>
+        {/if}
       {/if}
       {#if formatLabels.length > 0}
         <div class="mt-3 flex flex-wrap items-center gap-1.5">

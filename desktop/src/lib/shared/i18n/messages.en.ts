@@ -399,6 +399,8 @@ export const messagesEn = {
   'discover.downloadFailed': 'Download failed. Try again.',
   'discover.inLibrary': 'Already in your library',
   'discover.openBook': 'Open book',
+  'discover.descriptionShowMore': 'Show more',
+  'discover.descriptionShowLess': 'Show less',
   'discover.formats': 'Formats:',
   'discover.externalGutenberg': 'View on Gutenberg',
   'discover.externalOpenLibrary': 'View on Open Library',

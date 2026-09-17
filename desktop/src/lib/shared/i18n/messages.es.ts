@@ -403,6 +403,8 @@ export const messagesEs: Record<MessageKey, string> = {
   'discover.downloadFailed': 'Descarga fallida. Inténtalo de nuevo.',
   'discover.inLibrary': 'Ya está en tu biblioteca',
   'discover.openBook': 'Abrir libro',
+  'discover.descriptionShowMore': 'Mostrar más',
+  'discover.descriptionShowLess': 'Mostrar menos',
   'discover.formats': 'Formatos:',
   'discover.externalGutenberg': 'Ver en Gutenberg',
   'discover.externalOpenLibrary': 'Ver en Open Library',

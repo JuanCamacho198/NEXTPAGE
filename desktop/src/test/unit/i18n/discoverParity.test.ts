@@ -31,6 +31,8 @@ describe('discover i18n EN+ES parity (PR4)', () => {
       'discover.downloadFailed',
       'discover.inLibrary',
       'discover.openBook',
+      'discover.descriptionShowMore',
+      'discover.descriptionShowLess',
       'discover.formats',
       'discover.externalGutenberg',
       'discover.externalOpenLibrary',
@@ -85,5 +87,9 @@ describe('discover i18n EN+ES parity (PR4)', () => {
     expect(messagesEs['discover.inLibrary']).toBe('Ya está en tu biblioteca');
     expect(messagesEn['discover.openBook']).toBe('Open book');
     expect(messagesEs['discover.openBook']).toBe('Abrir libro');
+    expect(messagesEn['discover.descriptionShowMore']).toBe('Show more');
+    expect(messagesEs['discover.descriptionShowMore']).toBe('Mostrar más');
+    expect(messagesEn['discover.descriptionShowLess']).toBe('Show less');
+    expect(messagesEs['discover.descriptionShowLess']).toBe('Mostrar menos');
   });
 });

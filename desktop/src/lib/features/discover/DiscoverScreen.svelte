@@ -8,6 +8,7 @@
   import { navigationState } from '$lib/shared/stores/NavigationDomainState.svelte';
   import { libraryState } from '$lib/shared/stores/LibraryDomainState.svelte';
   import type { ReaderBook } from '$lib/shared/types';
+  import { openableLibraryBook } from './discoverLibraryMatch';
   import DiscoverCard from './DiscoverCard.svelte';
   import DiscoverDetail from './DiscoverDetail.svelte';
   import DiscoverHero from './DiscoverHero.svelte';
@@ -34,12 +35,16 @@
 
   /**
    * Library row matching the open catalog detail, if any. Discover imports
-   * reuse the catalog id as the library id, so the match is exact. Reacts to
-   * both the open detail and `libraryState.books`, so the download CTA flips to
-   * the in-library state as soon as a post-import refresh lands.
+   * reuse the catalog id as the library id, so the match is exact. A row with
+   * no usable file path (the file vanished) does not count, so the Download CTA
+   * stays available instead of offering "Open book" on a missing file. Reacts to
+   * both the open detail and `libraryState.books`, so the CTA flips to the
+   * in-library state as soon as a post-import refresh lands.
    */
   const libraryBook = $derived(
-    discoverState.detail ? libraryState.getBookById(discoverState.detail.id) : null,
+    discoverState.detail
+      ? openableLibraryBook(libraryState.getBookById(discoverState.detail.id))
+      : null,
   );
 
   function openLibraryBook(): void {

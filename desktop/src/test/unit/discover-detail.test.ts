@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { describe, expect, it, vi } from 'vitest';
 import DiscoverDetail from '$lib/features/discover/DiscoverDetail.svelte';
+import { openableLibraryBook } from '$lib/features/discover/discoverLibraryMatch';
 import {
   DiscoverDomainState,
   type DiscoverDownloadState,
@@ -16,6 +17,7 @@ import type { CatalogBook, CatalogProvider } from '$lib/shared/services/catalog/
 import { catalogError } from '$lib/shared/services/catalog/errors';
 import { importRecoveredBook } from '$lib/shared/recovery/desktopRecoveryImport';
 import type { DownloadTransferRequest } from '$lib/features/discover/downloadTransfer';
+import type { ReaderBook } from '$lib/shared/types';
 
 const t = (key: MessageKey): string => key;
 
@@ -451,6 +453,69 @@ describe('DiscoverDetail library state (WU-D)', () => {
     });
     expect(await screen.findByRole('alert')).toHaveTextContent('discover.downloadFailed');
     expect(screen.queryByText('discover.inLibrary')).not.toBeInTheDocument();
+  });
+});
+
+function fakeLibraryBook(overrides: Partial<ReaderBook> = {}): ReaderBook {
+  return {
+    id: 'gutendex:1342',
+    title: 'Pride and Prejudice',
+    author: 'Jane Austen',
+    format: 'epub',
+    currentPage: 0,
+    totalPages: 100,
+    progressPercentage: 0,
+    coverPath: null,
+    minutesRead: 0,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    filePath: '/books/gutendex1342.epub',
+    ...overrides,
+  };
+}
+
+describe('discover in-library derivation (X2)', () => {
+  it('a library row without a usable file path does not produce the in-library state', async () => {
+    const orphan = fakeLibraryBook({ filePath: '' });
+    expect(openableLibraryBook(orphan)).toBeNull();
+
+    render(DiscoverDetail, {
+      props: {
+        detail: fakeBook(),
+        detailStatus: 'loaded',
+        t,
+        onDismiss: vi.fn(),
+        inLibrary: openableLibraryBook(orphan) !== null,
+      },
+    });
+    // The Download CTA must stay available; an "Open book" action would point at
+    // a file that does not exist.
+    expect(await screen.findByText('discover.download')).toBeInTheDocument();
+    expect(screen.queryByText('discover.inLibrary')).not.toBeInTheDocument();
+  });
+
+  it('a library row with a usable file path still produces the in-library state', async () => {
+    const present = fakeLibraryBook();
+    expect(openableLibraryBook(present)).toBe(present);
+
+    render(DiscoverDetail, {
+      props: {
+        detail: fakeBook(),
+        detailStatus: 'loaded',
+        t,
+        onDismiss: vi.fn(),
+        inLibrary: openableLibraryBook(present) !== null,
+        onOpenBook: vi.fn(),
+      },
+    });
+    expect(await screen.findByRole('status')).toHaveTextContent('discover.inLibrary');
+    expect(screen.queryByText('discover.download')).not.toBeInTheDocument();
+  });
+
+  it('treats a whitespace-only or missing row as not in-library', () => {
+    expect(openableLibraryBook(fakeLibraryBook({ filePath: '   ' }))).toBeNull();
+    expect(openableLibraryBook(null)).toBeNull();
+    expect(openableLibraryBook(undefined)).toBeNull();
   });
 });
 

@@ -9,20 +9,22 @@ import {
   createRebuildingCatalogProvider,
   type CatalogProviderSupplier,
 } from './CompositeCatalogProvider';
-import { PersistentDiscoverCache, TauriDiscoverCachePort } from './DiscoverCache';
-import type {
-  CatalogBook,
-  CatalogFeaturedSort,
-  CatalogProvider,
-  CatalogSource,
-  CatalogSourceInfo,
-  PagedResult,
+import { PersistentDiscoverCache, TauriDiscoverCachePort, pageCacheKey } from './DiscoverCache';
+import {
+  BUILTIN_GUTENDEX,
+  type CatalogBook,
+  type CatalogFeaturedSort,
+  type CatalogProvider,
+  type CatalogSource,
+  type CatalogSourceInfo,
+  type PagedResult,
 } from './CatalogProvider';
 import type { AddonAccessResolution } from './CatalogProvider';
 import { googleBooksKeyFromEnv } from './BuiltInCatalogProviders';
 import { resolveDownloadUrl } from './mappers';
 import { AddonRegistry, getAddonRegistry } from '../addons/AddonRegistry';
 import { addonConsent } from '../addons/AddonConsent';
+import { thematicEntryFor } from '$lib/features/discover/railRotation';
 
 // Slice 7 single-state-source: the live composite listens on the SHARED
 // registry instance (the same one the addons singleton mutates), so screen
@@ -37,6 +39,16 @@ const registry: AddonRegistry = getAddonRegistry();
  */
 export const discoverCache = new PersistentDiscoverCache(new TauriDiscoverCachePort());
 
+/**
+ * Deterministic startup preload for the thematic rail: exactly the current
+ * day's page-1 key. The rotation term is the only enumerable non-featured rail
+ * query, so this stays one key and disk growth remains bounded. Reads stay
+ * fresh-only — preloading only makes an already-valid page reachable sooner.
+ */
+export function discoverPreloadPageKeys(now: Date = new Date()): readonly string[] {
+  return [pageCacheKey(BUILTIN_GUTENDEX, thematicEntryFor(now).term, 1)];
+}
+
 // Google Books is registered only when `VITE_GOOGLE_BOOKS_KEY` is non-blank;
 // a blank key omits the provider and the app keeps working on Gutendex + OL.
 // Every rebuild re-runs the cache preload, so addon changes re-seed the mirror.
@@ -46,7 +58,11 @@ const supplier: CatalogProviderSupplier = createRebuildingCatalogProvider(
   () => registry.listInstalled(),
   undefined,
   googleBooksKeyFromEnv(),
-  { cache: discoverCache, consent: addonConsent },
+  {
+    cache: discoverCache,
+    consent: addonConsent,
+    preloadPageKeys: discoverPreloadPageKeys,
+  },
 );
 registry.onChanged(() => supplier.invalidate());
 

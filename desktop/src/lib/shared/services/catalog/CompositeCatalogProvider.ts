@@ -145,21 +145,45 @@ export interface RebuildingCatalogProviderOptions {
   cache?: DiscoverCacheStore | null;
   /** Per-addon network-consent gate forwarded to every addon provider. */
   consent?: AddonConsentGate;
+  /**
+   * Extra deterministic preload keys owned by the feature layer (e.g. today's
+   * thematic rail page). Called once per composite build; the returned list
+   * MUST stay bounded. A throw degrades to no extra keys.
+   */
+  preloadPageKeys?: () => readonly string[];
+}
+
+/**
+ * Reads the feature-owned preload keys defensively: a throwing provider means
+ * an unseeded extra key, never a failed composite build.
+ */
+function safePreloadPageKeys(provider?: () => readonly string[]): readonly string[] {
+  if (!provider) return [];
+  try {
+    return provider();
+  } catch {
+    return [];
+  }
 }
 
 /**
  * Seeds the durable cache mirror once per composite build, bounded to the
- * featured keys of the active sources. Absent or non-preloadable caches are a
- * no-op, and a failed preload degrades to an unseeded mirror (the first rail
- * simply refetches) — never a build failure.
+ * featured keys of the active sources plus the caller's explicit extra keys.
+ * Absent or non-preloadable caches are a no-op, and a failed preload degrades
+ * to an unseeded mirror (the first rail simply refetches) — never a build
+ * failure.
  */
 async function preloadDiscoverCache(
   cache: DiscoverCacheStore | null,
   composite: CompositeCatalogProvider,
+  extraKeys: readonly string[],
 ): Promise<void> {
   if (!isPreloadable(cache)) return;
   try {
-    await cache.preload(composite.listSources().map((source) => source.sourceId));
+    await cache.preload(
+      composite.listSources().map((source) => source.sourceId),
+      extraKeys,
+    );
   } catch {
     // Best-effort: an unseeded mirror is an empty cache, not an error.
   }
@@ -188,7 +212,7 @@ export function createRebuildingCatalogProvider(
         // The supplier's current() is already async, so the preload stays off
         // the composite's synchronous read path. Every invalidate() rebuild
         // re-preloads, so addon install/enable/disable/uninstall re-seed it.
-        await preloadDiscoverCache(cache, composite);
+        await preloadDiscoverCache(cache, composite, safePreloadPageKeys(options.preloadPageKeys));
         return composite;
       }));
     },

@@ -311,6 +311,27 @@ describe('PersistentDiscoverCache durable port', () => {
     expect(port.reads.some((read) => read.startsWith('p:') || read.startsWith('d:'))).toBe(false);
   });
 
+  it('preloads explicit bounded extra keys alongside the featured keys', async () => {
+    const port = new FakeDurablePort();
+    const thematicKey = pageCacheKey('builtin:gutendex', 'fiction', 1);
+    port.rows.set(thematicKey, { payload: '{"n":7}', fetchedAt: 1_000, ttlS: PAGE_TTL_S });
+    const cache = new PersistentDiscoverCache(port);
+
+    await cache.preload(['builtin:gutendex'], [thematicKey]);
+
+    expect(port.reads.sort()).toEqual(
+      ['f:v2:builtin:gutendex:NEWEST', 'f:v2:builtin:gutendex:POPULAR', thematicKey].sort(),
+    );
+    // Exactly the requested extra key: no arbitrary page keys get enumerated.
+    expect(port.reads).toHaveLength(3);
+    expect(cache.get(thematicKey, 1_000)).toBe('{"n":7}');
+
+    // Duplicate extra keys collapse back into one read (bounded).
+    port.reads.length = 0;
+    await cache.preload(['builtin:gutendex'], [thematicKey, thematicKey]);
+    expect(port.reads).toHaveLength(3);
+  });
+
   it('a failing preload read degrades to an empty mirror, never an error', async () => {
     const port = new FakeDurablePort();
     port.failReads = true;

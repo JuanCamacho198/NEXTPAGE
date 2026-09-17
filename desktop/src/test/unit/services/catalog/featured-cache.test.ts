@@ -168,6 +168,22 @@ describe('production composite wiring', () => {
     expect(details.id).toBe('gutendex:1342');
   });
 
+  it('preloads the feature-owned page keys supplied by the composition root', async () => {
+    const port = new RecordingDurablePort();
+    const cache = new PersistentDiscoverCache(port);
+    const thematicKey = pageCacheKey('builtin:gutendex', 'fiction', 1);
+    const supplier = createRebuildingCatalogProvider(async () => [], undefined, '', {
+      cache,
+      preloadPageKeys: () => [thematicKey],
+    });
+
+    const composite = await supplier.current();
+    const sourceIds = composite.listSources().map((source) => source.sourceId);
+
+    expect(port.reads).toContain(thematicKey);
+    expect(port.reads).toHaveLength(sourceIds.length * 2 + 1);
+  });
+
   it('does not preload when the cache is absent', async () => {
     const supplier = createRebuildingCatalogProvider(async () => []);
     const composite = await supplier.current();

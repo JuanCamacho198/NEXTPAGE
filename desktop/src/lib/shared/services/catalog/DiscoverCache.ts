@@ -86,7 +86,13 @@ export interface DurableDiscoverCachePort {
 
 /** A cache that can seed itself from durable storage before its first read. */
 export interface PreloadableCache {
-  preload(sourceIds: readonly string[]): Promise<void>;
+  /**
+   * Seed the mirror from durable storage. `sourceIds` bounds the featured keys
+   * (two per source); `extraKeys` carries explicit deterministic keys the
+   * feature layer owns (e.g. today's thematic rail page). `extraKeys` MUST stay
+   * bounded — preload must never enumerate arbitrary page keys.
+   */
+  preload(sourceIds: readonly string[], extraKeys?: readonly string[]): Promise<void>;
 }
 
 interface CacheEntry {
@@ -184,10 +190,12 @@ export class PersistentDiscoverCache implements DiscoverCacheStore, PreloadableC
     void this.port.write(key, payload, fetchedAtEpochSecs, ttlS).catch(() => {});
   }
 
-  async preload(sourceIds: readonly string[]): Promise<void> {
-    const keys = sourceIds.flatMap((sourceId) =>
+  async preload(sourceIds: readonly string[], extraKeys: readonly string[] = []): Promise<void> {
+    const featured = sourceIds.flatMap((sourceId) =>
       PRELOAD_SORTS.map((sort) => featuredCacheKey(sourceId, sort)),
     );
+    // Deduped so a repeated extra key cannot multiply reads; still bounded.
+    const keys = [...new Set([...featured, ...extraKeys])];
     await Promise.all(
       keys.map(async (key) => {
         try {

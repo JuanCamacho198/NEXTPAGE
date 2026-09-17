@@ -25,7 +25,8 @@ import {
 export type DiscoverStatus =
   'idle' | 'loading' | 'loadingMore' | 'loaded' | 'empty' | 'error' | 'offline';
 
-export type DiscoverDetailStatus = 'closed' | 'loading' | 'loaded' | 'notFound' | 'error' | 'offline';
+export type DiscoverDetailStatus =
+  'closed' | 'loading' | 'loaded' | 'notFound' | 'error' | 'offline';
 
 /** In-app download-to-import lifecycle for the open detail book. */
 export type DiscoverDownloadState =

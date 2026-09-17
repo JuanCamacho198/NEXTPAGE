@@ -10,6 +10,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.nextpage.presentation.feature.home.HomeScreen
 import com.nextpage.presentation.navigation.NextPageDestination
+import com.nextpage.presentation.navigation.ReaderRoute
 import com.nextpage.presentation.navigation.rememberImportLauncher
 import com.nextpage.presentation.screen.library.RemoveBookDialog
 import com.nextpage.presentation.viewmodel.HomeViewModel
@@ -69,8 +70,8 @@ fun NavGraphBuilder.homeGraph(
             },
             onContinueReading = { bookId, filePath, format ->
                 onSelectBook(bookId, filePath, format)
-                navController.navigate(NextPageDestination.Reader.routeFor(bookId, filePath, format)) {
-                    popUpTo(NextPageDestination.Reader.route) { inclusive = true }
+                navController.navigate(ReaderRoute(bookId, filePath, format)) {
+                    popUpTo<ReaderRoute> { inclusive = true }
                 }
             },
             onImportBook = {

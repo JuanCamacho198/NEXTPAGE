@@ -2,7 +2,16 @@ name: Android CI
 
 on:
   # Allow maintainers to re-run the full gate manually from the Actions tab.
+  # The optional input additionally runs the macrobenchmark regression gate in
+  # the `android-benchmark` job. It defaults to false because
+  # `baseline/metrics-baseline.json` is still an S9 placeholder: the gate fails
+  # by design until a device run establishes real numbers (see that job).
   workflow_dispatch:
+    inputs:
+      benchmark_regression_gate:
+        description: 'Also run :benchmark:verifyBenchmarkRegression against baseline/metrics-baseline.json'
+        type: boolean
+        default: false
   # No `branches` filter on purpose: chained PRs target intermediate branches,
   # not `main`, and a `branches: [main]` filter silently skipped CI for every
   # slice of a feature-branch-chain. Branch protection only requires this check
@@ -28,6 +37,16 @@ permissions:
 concurrency:
   group: android-ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+# Single source of truth for the CI emulator used by the device jobs below.
+# Editing any of these must invalidate the AVD cache key on purpose: a cached
+# AVD + snapshot is only valid for the system image it was created from.
+env:
+  EMULATOR_API_LEVEL: '34'
+  EMULATOR_TARGET: google_apis
+  EMULATOR_ARCH: x86_64
+  EMULATOR_PROFILE: pixel_6
+  EMULATOR_AVD_NAME: ci-emulator
 
 jobs:
   android-checks:
@@ -127,12 +146,17 @@ jobs:
       - name: Upload Kover coverage reports
         # Report-only: coverage is published as an artifact and never gates the
         # test result (Kover's `verify` block is deliberately absent; a coverage
-        # bound is deferred). A MISSING report, however, is a real failure —
-        # `if-no-files-found: error` turns a silently skipped report into a red
-        # step. `if: always()` keeps the report available even when an earlier
-        # gate failed, since the tests that produce it already ran.
-        # The relevance guard matters: on a no-op PR no report exists, and
-        # `if-no-files-found: error` would turn that into a false failure.
+        # bound is deferred).
+        #
+        # `if-no-files-found: warn`, not `error`. The generation task runs in the
+        # gate step above, so a genuinely missing report already fails THERE; if
+        # the report is absent at upload time it is because an earlier gate
+        # failed, and turning that into a second red step only buries the real
+        # error under a confusing "No files were found" message.
+        # The relevance guard matters: on a no-op PR no report exists at all, so
+        # the upload is skipped instead of reporting a misleading result.
+        # `if: always()` keeps the report available whenever it does exist, even
+        # when an earlier gate failed.
         if: always() && steps.changes.outputs.relevant == 'true'
         uses: actions/upload-artifact@v5
         with:
@@ -140,7 +164,7 @@ jobs:
           path: |
             android/app/build/reports/kover/reportDebug.xml
             android/app/build/reports/kover/htmlDebug/
-          if-no-files-found: error
+          if-no-files-found: warn
 
       - name: Print failed test reports
         if: failure() && steps.changes.outputs.relevant == 'true'
@@ -152,3 +176,343 @@ jobs:
             echo "===== $f ====="
             grep -A5 '<failure\|<error' "$f" | head -40
           done
+
+  # ── S10 (android-stack-modernization): instrumented tests on an emulator ────
+  # Closes the device workstream deferred since S5: the instrumented suites
+  # (BookContextMenuTriggerTest, LibraryScreenCoverImageTest, the Room migration
+  # and nav-stack tests, …) had never been executed because no emulator job
+  # existed. They run here unmodified — this job executes them, it does not
+  # author them.
+  #
+  # Additive by design: this job does NOT produce the required `Android checks`
+  # context. That context stays owned by the unchanged `android-checks` job
+  # above, so branch protection on `main` is untouched.
+  #
+  # Cadence: manual dispatch, OR a pull request TARGETING `main`. Not every PR.
+  #
+  # Rationale (maintainer decision, 2026-09-15): a feature-branch-chain opens
+  # one PR per slice, and running this job on each of them boots the emulator
+  # 14+ times for the same linear content — wasted queue time, 14 extra
+  # chances of emulator flake, and real energy. The chain's tip carries the
+  # accumulated tree, so instrumenting the PR that actually targets `main`
+  # covers the same code with ONE run.
+  #
+  # The single condition also covers the push-to-`main` case: `github.base_ref`
+  # is only populated for `pull_request` events, so on a `push` this evaluates
+  # false and the merge commit does not re-boot the emulator the PR just ran.
+  #
+  # The macrobenchmark journeys are NOT here: four classes x five iterations,
+  # each restarting the app, is far too slow for every PR. They live in
+  # `android-benchmark`, which runs on dispatch only.
+  android-emulator:
+    name: Android instrumentation (emulator)
+    if: github.event_name == 'workflow_dispatch' || github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    # Dedicated budget — never the 30m `Android checks` timeout, so a long
+    # device run cannot eat the gate job's allowance (they are separate jobs
+    # with separate budgets). Cold path: system-image install ~3–6m (the AVD
+    # cache covers the AVD, not the ~1.5 GB system image) + AVD create /
+    # snapshot / boot ~2–5m + Gradle debug + androidTest APK build ~6–10m +
+    # install and 7 instrumented classes incl. Room migration tests ~4–8m
+    # ≈ 16–31m worst case. 45m is ~1.5x that worst cold estimate and ~3x a warm
+    # snapshot-cache run.
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        # Default shallow history: `fetch-depth: 0` is only needed by the
+        # release-mapping / version checks in `android-checks`. This job needs
+        # the current tree and nothing else.
+        uses: actions/checkout@v7
+
+      - name: Setup Java (Temurin 17)
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: false
+          add-job-summary: 'on-failure'
+
+      - name: Make gradlew executable
+        working-directory: android
+        run: chmod +x ./gradlew || true
+
+      - name: Enable KVM group perms
+        # GitHub-hosted Ubuntu runners expose /dev/kvm, but the default
+        # permissions do not let the runner user open it. Without KVM the
+        # x86_64 emulator falls back to full emulation and the job is unusable.
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: AVD cache
+        # A booted-once AVD snapshot turns a ~2–5m cold boot into ~30–90s. The
+        # key encodes every emulator shape input, so changing any of them (or
+        # the API level) builds a fresh snapshot instead of reusing one from a
+        # different system image.
+        uses: actions/cache@v6
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-${{ runner.os }}-api${{ env.EMULATOR_API_LEVEL }}-${{ env.EMULATOR_TARGET }}-${{ env.EMULATOR_ARCH }}-${{ env.EMULATOR_PROFILE }}
+
+      - name: Create AVD and generate a snapshot for caching
+        # Cache miss only: boot the AVD once and persist a clean snapshot. No
+        # `-no-snapshot` here on purpose — that is what lets the snapshot be
+        # written. Animations stay enabled for this throwaway boot; they are
+        # disabled for the test run below, not for the snapshot that seeds it.
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ env.EMULATOR_API_LEVEL }}
+          target: ${{ env.EMULATOR_TARGET }}
+          arch: ${{ env.EMULATOR_ARCH }}
+          profile: ${{ env.EMULATOR_PROFILE }}
+          avd-name: ${{ env.EMULATOR_AVD_NAME }}
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          script: echo "Generated AVD snapshot for caching."
+
+      - name: Run instrumented tests on the emulator
+        # `-no-snapshot-save` loads the cached snapshot read-only: a test run
+        # must never mutate the artifact the next run boots from.
+        # `disable-animations: true` is required for the Compose UI assertions
+        # (the app sets no `testOptions.animationsDisabled`).
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ env.EMULATOR_API_LEVEL }}
+          target: ${{ env.EMULATOR_TARGET }}
+          arch: ${{ env.EMULATOR_ARCH }}
+          profile: ${{ env.EMULATOR_PROFILE }}
+          avd-name: ${{ env.EMULATOR_AVD_NAME }}
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          working-directory: android
+          # The action hands `script` to `sh -c`, so line continuations with a
+          # trailing backslash are NOT interpreted: the `\` was passed to
+          # Gradle as a task name and the job died with `Task '\' not found`
+          # in ~54s without ever running a test. Keep this on ONE line.
+          #
+          # `--configuration-cache` is deliberately omitted here: connected
+          # device tasks are not reliably config-cache compatible, and a cache
+          # failure would masquerade as a test failure.
+          script: ./gradlew --build-cache -Dorg.gradle.vfs.watch=false :app:connectedDebugAndroidTest
+
+      - name: Print failed instrumentation reports
+        if: failure()
+        working-directory: android
+        # Same rationale as the gate job: the XML carries the expected/actual
+        # message, which the Gradle console does not print.
+        run: |
+          find app/build/outputs/androidTest-results -name '*.xml' -print0 2>/dev/null \
+            | xargs -0 -r grep -l '<failure\|<error' 2>/dev/null \
+            | while read -r f; do
+                echo "===== $f ====="
+                grep -A8 '<failure\|<error' "$f" | head -60
+              done
+
+      - name: Upload instrumentation test reports
+        # Diagnostic, not a gate: a boot failure means there are no reports at
+        # all, and a second red step would only obscure the real failure.
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: android-instrumentation-reports
+          path: |
+            android/app/build/reports/androidTests/
+            android/app/build/outputs/androidTest-results/
+          if-no-files-found: warn
+
+  # ── S10: macrobenchmark journeys (workflow_dispatch only) ──────────────────
+  # Four journey classes x five measured iterations, each restarting the app
+  # under a fresh compilation mode — far too slow to wire into every PR, so it
+  # is manually dispatched:
+  #   * S11 generates the baseline profile from a SEPARATE dispatch-only job
+  #     (`android-baseline-profile` below) so a profile run and a metrics run
+  #     stay separately attributable; this job owns only the metrics artifact.
+  #   * The checked-in regression baseline (`baseline/metrics-baseline.json`) is
+  #     established FROM a run of this job: S9 shipped a PLACEHOLDER, and
+  #     `:benchmark:verifyBenchmarkRegression` fails loudly while it is one (a
+  #     green result against fabricated numbers would be a lie). The gate is
+  #     therefore opt-in via the `benchmark_regression_gate` dispatch input
+  #     rather than a step that is guaranteed red on every dispatch.
+  android-benchmark:
+    name: Android macrobenchmarks (dispatch only)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    # Cold emulator boot (no snapshot, see below) + a full `:app:benchmark`
+    # variant build + the benchmark test APK + the journeys: 4 classes x 5
+    # iterations, cold/warm starts with navigation each iteration ≈ 20–28m cold.
+    # 60m leaves >2x headroom and, like the emulator job, never touches the
+    # 30m `Android checks` budget.
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Java (Temurin 17)
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: false
+          add-job-summary: 'on-failure'
+
+      - name: Make gradlew executable
+        working-directory: android
+        run: chmod +x ./gradlew || true
+
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run macrobenchmark journeys on the emulator
+        # Deliberately NO AVD snapshot cache here: a restored snapshot carries
+        # process/disk state from a previous run, which would skew cold-start
+        # and frame timings. Benchmark measurements need a boot that is the same
+        # every time, so this job always cold-boots (`-no-snapshot`) and pays for
+        # it — it is a dispatch-only job, not a per-PR one.
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ env.EMULATOR_API_LEVEL }}
+          target: ${{ env.EMULATOR_TARGET }}
+          arch: ${{ env.EMULATOR_ARCH }}
+          profile: ${{ env.EMULATOR_PROFILE }}
+          avd-name: ${{ env.EMULATOR_AVD_NAME }}
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          working-directory: android
+          # ONE line for the same reason as the emulator job: the action hands
+          # this to `sh -c`, so a trailing-backslash continuation becomes a
+          # task named `\` and the run dies before executing anything.
+          script: ./gradlew --build-cache -Dorg.gradle.vfs.watch=false :benchmark:connectedBenchmarkAndroidTest
+
+      - name: Verify benchmark regression against the checked-in baseline
+        # Opt-in: only meaningful once a run has turned
+        # `baseline/metrics-baseline.json` from a placeholder into real numbers.
+        if: ${{ inputs.benchmark_regression_gate }}
+        working-directory: android
+        run: |
+          ./gradlew \
+            --configuration-cache \
+            --build-cache \
+            -Dorg.gradle.vfs.watch=false \
+            :benchmark:verifyBenchmarkRegression
+
+      - name: Upload benchmark metrics
+        # The emitted `metrics-current.json` IS this job's deliverable: it is
+        # what S11 (and the baseline) consume, so a silently missing document is
+        # a red step, not a warning.
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: benchmark-metrics
+          path: |
+            android/benchmark/build/outputs/benchmarkMetrics/
+            android/benchmark/build/outputs/connected_android_test_additional_output/
+          if-no-files-found: error
+
+  # ── S11: baseline profile generation (workflow_dispatch only) ──────────────
+  # The ONLY route that produces a real generated profile. `:app` applies the
+  # `androidx.baselineprofile` consumer plugin with
+  # `automaticGenerationDuringBuild = false`, so this job is the sole caller of
+  # `:app:generateReleaseBaselineProfile`; it drives the :benchmark module's
+  # BaselineProfileGenerator (cold start, Library scroll, Discover fling, Reader
+  # open) and merges the collected rules back into :app.
+  #
+  # Dispatch-only, never on the PR path: collection needs a booted, unprofiled
+  # device and re-installs the app under test many times. The per-PR
+  # `android-checks` and `android-emulator` jobs are untouched.
+  #
+  # Deliberately a SEPARATE job from `android-benchmark` rather than an extra step
+  # in it: this job's deliverable is the profile, that job's is the metrics JSON,
+  # and one red step should name one broken thing.
+  android-baseline-profile:
+    name: Android baseline profile (dispatch only)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    # Cold emulator boot (no snapshot — see below) + the `:app` profile-generation
+    # variant + the producer test APK + 4 collection journeys (each iterating until
+    # the profile stabilizes, capped by the library default). Measured macrobenchmark
+    # journeys on the same emulator shape run 20–28m, so 60m keeps >2x headroom and,
+    # like the other device jobs, never touches the 30m `Android checks` budget.
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Java (Temurin 17)
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: false
+          add-job-summary: 'on-failure'
+
+      - name: Make gradlew executable
+        working-directory: android
+        run: chmod +x ./gradlew || true
+
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Generate the baseline profile on the emulator
+        # NO AVD snapshot cache: a restored snapshot ships a dirty, partly-warmed
+        # profile on disk, and this task's entire output IS the profile. A cold boot
+        # is the only state where "collected from a fresh install" is true.
+        #
+        # NOTE: the generation run must NOT pass `-PreleaseMinify=false`. The
+        # profile is collected from the app variant the plugin pairs with the
+        # shipped one; collecting from a non-minified build would yield rules the
+        # shipped (minified) release cannot match.
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ env.EMULATOR_API_LEVEL }}
+          target: ${{ env.EMULATOR_TARGET }}
+          arch: ${{ env.EMULATOR_ARCH }}
+          profile: ${{ env.EMULATOR_PROFILE }}
+          avd-name: ${{ env.EMULATOR_AVD_NAME }}
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          working-directory: android
+          # ONE line: the action hands this to `sh -c`, so backslash line
+          # continuations are not interpreted and become a task named `\`.
+          # `--configuration-cache` is omitted for the same reason as the other
+          # device jobs — the generation task drives connected instrumentation.
+          script: ./gradlew --build-cache -Dorg.gradle.vfs.watch=false :app:generateReleaseBaselineProfile
+
+      - name: Upload the generated baseline profile
+        # THE deliverable: a maintainer commits the uploaded
+        # `baseline-prof.txt` over `android/app/src/main/baseline-prof.txt` (the S8
+        # AGP-consumed path). The glob is intentionally broad — the exact output
+        # directory is chosen by the plugin (`saveInSrc`, `mergeIntoMain`), and a
+        # silently missing profile is a red step, not a warning.
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: baseline-profile
+          path: |
+            android/app/src/**/generated/baselineProfiles/**
+            android/app/build/**/baselineProfiles/**
+          if-no-files-found: error

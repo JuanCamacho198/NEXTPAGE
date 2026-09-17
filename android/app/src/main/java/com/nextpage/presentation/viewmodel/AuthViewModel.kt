@@ -11,6 +11,7 @@ import com.nextpage.domain.error.AppError
 import com.nextpage.domain.error.ErrorCategory
 import com.nextpage.domain.model.AuthSession
 import com.nextpage.domain.repository.AuthRepository
+import com.nextpage.domain.sync.OutboxDrainScheduler
 import com.nextpage.presentation.UiEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -96,6 +97,11 @@ class AuthViewModel
         private val syncOrchestrator: SyncOrchestrator,
         @Named("isAuthConfigured") private val isAuthConfigured: Boolean,
         @Named("hasAuthWiringIssue") private val hasAuthWiringIssue: Boolean,
+        /**
+         * S6: schedules an outbox drain at app start for a restored session.
+         * Defaults to a no-op so direct VM tests stay free of WorkManager.
+         */
+        private val outboxDrainScheduler: OutboxDrainScheduler = OutboxDrainScheduler.NoOp,
     ) : ViewModel() {
         companion object {
             private const val AUTH_VM_TAG = "AuthViewModel"
@@ -537,6 +543,12 @@ class AuthViewModel
             val stepStart = System.currentTimeMillis()
             runCatching { syncOrchestrator.start(session.userId) }
             logDebug("triggerSync: orchestrator.start took ${System.currentTimeMillis() - stepStart}ms")
+
+            // S6: app-start drain — schedule one outbox drain for this session.
+            // This is scheduler-only; the drain itself stays in-process.
+            val drainStart = System.currentTimeMillis()
+            runCatching { outboxDrainScheduler.scheduleDrain() }
+            logDebug("triggerSync: scheduleDrain took ${System.currentTimeMillis() - drainStart}ms")
         }
 
         /**
@@ -550,6 +562,7 @@ class AuthViewModel
             private val syncOrchestrator: SyncOrchestrator,
             private val isAuthConfigured: Boolean,
             private val hasAuthWiringIssue: Boolean,
+            private val outboxDrainScheduler: OutboxDrainScheduler = OutboxDrainScheduler.NoOp,
         ) : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T =
@@ -558,6 +571,7 @@ class AuthViewModel
                     syncOrchestrator = syncOrchestrator,
                     isAuthConfigured = isAuthConfigured,
                     hasAuthWiringIssue = hasAuthWiringIssue,
+                    outboxDrainScheduler = outboxDrainScheduler,
                 ) as T
         }
     }

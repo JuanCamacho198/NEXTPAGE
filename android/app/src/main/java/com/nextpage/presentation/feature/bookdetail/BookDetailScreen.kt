@@ -37,11 +37,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nextpage.R
 import com.nextpage.domain.model.Book
 import com.nextpage.domain.model.ReadingProgress
-import com.nextpage.domain.repository.LibraryRepository
 import com.nextpage.presentation.theme.NextPageTheme
 import com.nextpage.presentation.viewmodel.BookDetailViewModel
 import com.nextpage.presentation.viewmodel.parseChipList
@@ -56,16 +54,11 @@ import java.io.File
 @Composable
 fun BookDetailScreen(
     contentPadding: PaddingValues,
-    bookId: String,
-    libraryRepository: LibraryRepository,
+    viewModel: BookDetailViewModel,
     onNavigateBack: () -> Unit,
     onEditBook: () -> Unit,
     onContinueReading: (String, String?, String) -> Unit,
 ) {
-    val viewModel: BookDetailViewModel =
-        viewModel(
-            factory = BookDetailViewModel.Factory(bookId, libraryRepository),
-        )
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 

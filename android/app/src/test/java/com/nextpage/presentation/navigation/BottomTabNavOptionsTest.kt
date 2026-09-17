@@ -57,6 +57,7 @@ class BottomTabNavOptionsTest {
             listOf(
                 NextPageDestination.Home,
                 NextPageDestination.Library,
+                NextPageDestination.Discover,
                 NextPageDestination.Highlights,
                 NextPageDestination.Settings,
             )
@@ -72,5 +73,27 @@ class BottomTabNavOptionsTest {
             assertEquals(isHome, !options.restoreState)
             assertEquals(isHome, !options.saveState)
         }
+    }
+
+    // ── Route whitelist (S12: typed Reader/DiscoverSection must not enter it) ──
+
+    @Test
+    fun `bottom nav whitelist stays the five verbatim tab routes`() {
+        // The bottom nav is built from `bottomNavDestinations.map { it.route }`.
+        // Only Reader and DiscoverSection moved to typed routes, so these five
+        // string routes must stay byte-identical (the bar must not change).
+        val bottomNavDestinations =
+            listOf(
+                NextPageDestination.Home,
+                NextPageDestination.Library,
+                NextPageDestination.Discover,
+                NextPageDestination.Highlights,
+                NextPageDestination.Settings,
+            )
+
+        assertEquals(
+            listOf("home", "library", "discover", "highlights", "settings"),
+            bottomNavDestinations.map { it.route },
+        )
     }
 }

@@ -1,9 +1,12 @@
 package com.nextpage.presentation.theme
 
 import android.content.Context
-import coil.ImageLoader
-import coil.disk.DiskCache
-import coil.memory.MemoryCache
+import coil3.ImageLoader
+import coil3.disk.DiskCache
+import coil3.disk.directory
+import coil3.memory.MemoryCache
+import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+import coil3.request.crossfade
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
@@ -24,11 +27,16 @@ object CoilModule {
 
         return ImageLoader
             .Builder(context)
-            .okHttpClient { okHttpClient }
-            .memoryCache {
+            // Coil 3 removed `ImageLoader.Builder.okHttpClient {}` and unbundled
+            // networking from `coil-core`; the OkHttp engine is registered
+            // explicitly through the component registry (mandatory — without it
+            // every remote cover blanks).
+            .components {
+                add(OkHttpNetworkFetcherFactory(callFactory = { okHttpClient }))
+            }.memoryCache {
                 MemoryCache
-                    .Builder(context)
-                    .maxSizePercent(MEMORY_CACHE_SIZE_PERCENT)
+                    .Builder()
+                    .maxSizePercent(context, MEMORY_CACHE_SIZE_PERCENT)
                     .build()
             }.diskCache {
                 DiskCache

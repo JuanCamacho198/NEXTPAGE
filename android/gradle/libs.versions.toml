@@ -9,7 +9,14 @@ ksp = "2.2.21-2.0.5"
 detekt = "1.23.7"
 sentryPlugin = "6.21.0"
 composeBom = "2026.05.01"
-coil = "2.7.0"
+# Coil 3 renames the Maven coordinates (io.coil-kt -> io.coil-kt.coil3) and the
+# Kotlin package (coil.* -> coil3.*). Networking is no longer bundled: the
+# `coil-network-okhttp` engine is mandatory or every remote cover blanks.
+# Pinned to 3.3.0 (NOT latest 3.6.2): 3.6.x pulls Compose Multiplatform 1.12.0
+# and 3.4.0+ pulls kotlin-stdlib 2.3+/2.4, both incompatible with this module's
+# toolchain (AGP 8.11.1 / Kotlin 2.2.21 / Compose BOM 1.11.2). 3.3.0 declares
+# kotlin-stdlib 2.2.0 and Compose Multiplatform 1.8.2 — both resolve cleanly.
+coil = "3.3.0"
 coreKtx = "1.13.1"
 splash = "1.0.1"
 appcompat = "1.7.0"
@@ -37,6 +44,8 @@ sentry = "8.54.0"
 desugar = "2.1.5"
 junit4 = "4.13.2"
 mockk = "1.13.12"
+turbine = "1.2.1"
+konsist = "0.17.3"
 json = "20231013"
 androidxTestCore = "1.6.1"
 robolectric = "4.13"
@@ -46,8 +55,42 @@ lottie = "6.6.6"
 webkit = "1.12.1"
 hilt = "2.57.1"
 hiltNavigationCompose = "1.2.0"
+# WorkManager (scheduler-only drain). Pinned to 2.10.5, NOT the latest stable
+# 2.11.2: 2.11.x declares kotlinx-coroutines-android 1.9.0, which would force a
+# coroutines upgrade over this module's frozen 1.8.1; 2.10.5 declares 1.7.3 so
+# the existing 1.8.1 pin wins with zero transitive drift (Room 2.8.4 also wins
+# over its 2.6.1 floor). No periodic worker is used — see OutboxDrainScheduler.
+work = "2.10.5"
+# androidx.hilt extensions (hilt-work + its KSP hilt-compiler). Pinned to 1.3.0,
+# NOT the latest 1.4.0: 1.4.0 depends on hilt-android 2.59 (this module is on
+# 2.57.1 — Hilt >= 2.59 requires AGP 9), while 1.3.0 depends on hilt-android
+# 2.54 so the 2.57.1 pin wins. 1.3.0's compiler targets the KSP 1.0.24 API
+# (still supported by KSP 2.0.5) and room-compiler-processing 2.6.0 (the
+# module's 2.8.4 wins). This is a DIFFERENT coordinate from
+# com.google.dagger:hilt-compiler below despite the shared artifact name.
+androidxHilt = "1.3.0"
 kover = "0.9.3"
 spotless = "7.2.1"
+# Macrobenchmark (SDD android-stack-modernization S9). 1.5.0 is the current
+# stable `androidx.benchmark:benchmark-macro-junit4`; its POM resolves
+# kotlin-stdlib 2.1.20 (readable by this module's Kotlin 2.2.21),
+# androidx.test:runner 1.5.2 / rules 1.5.0, and androidx.test.uiautomator 2.3.0.
+# The benchmark APK is a SEPARATE artifact (com.android.test), so its androidx.test
+# graph cannot drift `:app`'s debug/release classpaths.
+benchmark = "1.5.0"
+# UIAutomator, declared explicitly because the journeys import its types directly
+# (relying on a transitive would be bad practice). 2.4.0 is the version
+# benchmark-macro:1.5.0 itself resolves to (its Gradle metadata, not the POM,
+# declares 2.4.0) — pinning the same version keeps the benchmark APK's
+# androidx.test graph consistent and avoids a misleading downgrade request.
+uiautomator = "2.4.0"
+# Baseline Profile Gradle plugin (SDD android-stack-modernization S11). The plugin
+# MARKER (androidx.baselineprofile:androidx.baselineprofile.gradle.plugin) publishes
+# the same version as the `androidx.benchmark` libraries and depends on
+# androidx.benchmark:benchmark-baseline-profile-gradle-plugin of that version, so this
+# MUST move together with `benchmark` above. 1.5.0 is the current stable; its AGP
+# support range is [8.0.0, 10.0.0-alpha1), which AGP 8.11.1 is inside.
+baselineProfile = "1.5.0"
 
 [libraries]
 # androidx group
@@ -69,6 +112,12 @@ androidx-credentials-play-services = { group = "androidx.credentials", name = "c
 androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidxTestCore" }
 androidx-test-junit-ext = { group = "androidx.test.ext", name = "junit", version.ref = "junitExt" }
 androidx-test-espresso = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso" }
+# Macrobenchmark journeys + UIAutomator node lookup (benchmark module ONLY —
+# never on the app classpath).
+androidx-benchmark-macro-junit4 = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "benchmark" }
+androidx-test-uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "uiautomator" }
+# WorkManager — scheduler-only (one-shot unique drain work on write + app start).
+androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
 
 # compose group
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
@@ -80,8 +129,9 @@ compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4
 compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 lottie-compose = { group = "com.airbnb.android", name = "lottie-compose", version.ref = "lottie" }
-coil = { group = "io.coil-kt", name = "coil", version.ref = "coil" }
-coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+coil = { group = "io.coil-kt.coil3", name = "coil", version.ref = "coil" }
+coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
 
 # room group
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
@@ -135,10 +185,19 @@ hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
 hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 hilt-testing = { group = "com.google.dagger", name = "hilt-android-testing", version.ref = "hilt" }
+# androidx.hilt extensions: hilt-work supplies @HiltWorker/HiltWorkerFactory;
+# androidx-hilt-compiler is the KSP processor that generates the worker factory
+# bindings (distinct from com.google.dagger:hilt-compiler above).
+androidx-hilt-work = { group = "androidx.hilt", name = "hilt-work", version.ref = "androidxHilt" }
+androidx-hilt-compiler = { group = "androidx.hilt", name = "hilt-compiler", version.ref = "androidxHilt" }
 
 # testing group
 testing-junit4 = { group = "junit", name = "junit", version.ref = "junit4" }
 testing-mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
+testing-turbine = { group = "app.cash.turbine", name = "turbine", version.ref = "turbine" }
+# Konsist — executable architecture rules (JUnit-run, test-only). Never on a
+# production classpath; the rules execute inside :app:testDebugUnitTest.
+testing-konsist = { group = "com.lemonappdev", name = "konsist", version.ref = "konsist" }
 testing-json = { group = "org.json", name = "json", version.ref = "json" }
 testing-robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 
@@ -151,6 +210,12 @@ testing = ["testing-junit4", "testing-mockk", "testing-robolectric"]
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+# `com.android.test` — the self-instrumenting macrobenchmark module (S9).
+android-test = { id = "com.android.test", version.ref = "agp" }
+# `androidx.baselineprofile` — applied as a CONSUMER on :app (generation + consumption
+# wiring) and as a PRODUCER on :benchmark (the device-side generator) in S11. One id,
+# two roles: the plugin decides from the module's own AGP plugin which one applies.
+androidx-baselineprofile = { id = "androidx.baselineprofile", version.ref = "baselineProfile" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

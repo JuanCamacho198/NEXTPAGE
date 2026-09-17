@@ -3,7 +3,6 @@
     <string name="app_name">NextPage</string>
     <string name="app_logo_initials">NP</string>
     <string name="tab_auth">Auth</string>
-    <string name="tab_reader">Reader</string>
     <string name="tab_highlights">Highlights</string>
     <string name="tab_settings">Settings</string>
     <string name="tab_statistics">Statistics</string>

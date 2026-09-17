@@ -3,11 +3,6 @@ package com.nextpage.data.repository
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
-import androidx.paging.ExperimentalPagingApi
-import androidx.paging.Pager
-import androidx.paging.PagingConfig
-import androidx.paging.PagingData
-import androidx.paging.map
 import com.nextpage.data.epub.EpubParserService
 import com.nextpage.data.local.dao.BookDao
 import com.nextpage.data.local.dao.ReadingProgressDao
@@ -25,6 +20,7 @@ import com.nextpage.domain.model.BookImportRequest
 import com.nextpage.domain.model.DuplicateBookException
 import com.nextpage.domain.model.ReadingProgress
 import com.nextpage.domain.repository.LibraryRepository
+import com.nextpage.domain.sync.OutboxDrainScheduler
 import com.nextpage.domain.sync.SyncSettleGate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -61,6 +57,12 @@ class LibraryRepositoryImpl(
      * behavior; production wires the orchestrator-backed gate.
      */
     private val settleGate: SyncSettleGate = SyncSettleGate { true },
+    /**
+     * S6 scheduler seam. Nullable so tests keep the previous local-only
+     * behavior; production injects the WorkManager-backed scheduler and a drain
+     * is requested after a successful book outbox enqueue.
+     */
+    private val drainScheduler: OutboxDrainScheduler? = null,
 ) : LibraryRepository {
     override fun observeLibrary(): Flow<List<Book>> =
         combine(bookDao.observeAllBooks(), readingProgressDao.observeAll()) { books, progresses ->
@@ -69,15 +71,6 @@ class LibraryRepositoryImpl(
                 val canonical = progressById[entity.id]
                 if (canonical != null) entity.toDomainWithCanonical(canonical) else entity.toDomain()
             }
-        }
-
-    @OptIn(ExperimentalPagingApi::class)
-    override fun observeLibraryPaged(): Flow<PagingData<Book>> =
-        Pager(
-            config = PagingConfig(pageSize = 20),
-            pagingSourceFactory = { bookDao.observeAllBooksPaged() },
-        ).flow.map { pagingData ->
-            pagingData.map { it.toDomain() }
         }
 
     override fun observeBookById(bookId: String): Flow<Book?> = bookDao.observeBookById(bookId).map { it?.toDomain() }
@@ -501,20 +494,26 @@ class LibraryRepositoryImpl(
         bookId: String,
         operation: SyncOperation = SyncOperation.CREATE,
     ) {
-        try {
-            outboxDao.insert(
-                SyncOutboxEntity(
-                    id = UUID.randomUUID().toString(),
-                    entityType = SyncEntityType.BOOK.name,
-                    entityId = bookId,
-                    operation = operation.name,
-                    payloadJson = """{}""",
-                    createdAtEpochMillis = System.currentTimeMillis(),
-                ),
-            )
-        } catch (_: Exception) {
-            // Non-blocking — reconciliation in SupabaseBookCatalogSync covers gaps
-        }
+        val enqueued =
+            try {
+                outboxDao.insert(
+                    SyncOutboxEntity(
+                        id = UUID.randomUUID().toString(),
+                        entityType = SyncEntityType.BOOK.name,
+                        entityId = bookId,
+                        operation = operation.name,
+                        payloadJson = """{}""",
+                        createdAtEpochMillis = System.currentTimeMillis(),
+                    ),
+                )
+                true
+            } catch (_: Exception) {
+                // Non-blocking — reconciliation in SupabaseBookCatalogSync covers gaps
+                false
+            }
+        // S6: request a drain after a successful enqueue (a failed insert is
+        // covered by the catalog reconciliation pass).
+        if (enqueued) drainScheduler?.scheduleDrain()
     }
 
     private companion object {

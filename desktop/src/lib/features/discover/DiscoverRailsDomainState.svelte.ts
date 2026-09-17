@@ -284,23 +284,33 @@ export class DiscoverRailsDomainState {
   }
 
   /**
-   * Post-publish bookkeeping: connectivity recovery/decay (G2), the auto-retry
-   * budget reset on success, and the bounded auto-retry schedule for retryable
+   * Post-publish bookkeeping: connectivity projection, the auto-retry budget
+   * reset on success, and the bounded auto-retry schedule for retryable
    * failures. Non-retryable failures stop permanently for that rail.
    */
   private afterSettle(index: number, settled: DiscoverRailState): void {
     if (this.disposed) return;
+    // The pill is a projection of the whole rail set, not of whichever rail
+    // settled last: recompute it on EVERY settle (the array already carries
+    // `settled`), so an offline rail cannot be masked by a later Loaded rail
+    // and a retry that decays to a non-offline error can clear it again.
+    this.recomputeConnectivity();
     if (settled.kind === 'Loaded') {
-      // A rail that actually loaded proves connectivity is back.
-      this.isOnline = true;
       this.retryAttempts[index] = 0;
       this.clearAutoRetry(index);
       return;
     }
-    if (settled.kind === 'Error') {
-      if (settled.offline) this.isOnline = false;
-      if (isRetryableCatalogCode(settled.code)) this.scheduleAutoRetry(index);
+    if (settled.kind === 'Error' && isRetryableCatalogCode(settled.code)) {
+      this.scheduleAutoRetry(index);
     }
+  }
+
+  /**
+   * Offline iff at least one rail is currently `Error` with `offline === true`.
+   * Order-independent, so the pill always matches the rails the user sees.
+   */
+  private recomputeConnectivity(): void {
+    this.isOnline = !this.rails.some((rail) => rail.kind === 'Error' && rail.offline);
   }
 
   /** Schedule the next bounded automatic retry, or stop once the budget is spent. */
@@ -309,6 +319,9 @@ export class DiscoverRailsDomainState {
     const attempt = this.retryAttempts[index] ?? 0;
     const delay = AUTO_RETRY_DELAYS_MS[attempt];
     if (delay === undefined) return;
+    // A rail owns at most one pending timer: drop any previous handle before
+    // installing the new one so the map can never orphan a live timer.
+    this.clearAutoRetry(index);
     this.retryAttempts[index] = attempt + 1;
     const handle = setTimeout(() => {
       this.retryTimers.delete(index);

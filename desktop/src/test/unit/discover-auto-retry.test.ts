@@ -288,7 +288,7 @@ describe('discover rails — connectivity recovery and the online event (G1+G2)'
     state.dispose();
   });
 
-  it('clears the pill after a successful per-rail retry without a full refresh', async () => {
+  it('keeps the pill offline while any rail is still offline after a per-rail retry', async () => {
     let failing = true;
     const offline = catalogError('NETWORK_ERROR', 'offline');
     const { provider } = recordingProvider({
@@ -299,9 +299,68 @@ describe('discover rails — connectivity recovery and the online event (G1+G2)'
     await state.refreshRails();
     expect(state.isOnline).toBe(false);
 
+    // Only rail 0 recovers: rails 1 and 2 are still offline, so the pill stays
+    // offline instead of being cleared by the rail that settled last.
     failing = false;
     await state.retryRail(0);
     expect(state.rails[0]?.kind).toBe('Loaded');
+    expect(state.isOnline).toBe(false);
+
+    // Every rail recovered ⇒ the pill clears.
+    await state.retryRail(1);
+    await state.retryRail(2);
+    expect(state.isOnline).toBe(true);
+    state.dispose();
+  });
+
+  it('stays offline when an offline Error rail settles before a Loaded rail', async () => {
+    let releasePopular!: (books: CatalogBook[]) => void;
+    const gated = new Promise<CatalogBook[]>((resolve) => {
+      releasePopular = resolve;
+    });
+    const offline = catalogError('NETWORK_ERROR', 'offline');
+    const { provider } = recordingProvider({
+      featured: (sort) => (sort === 'POPULAR' ? gated : offline),
+      searchSource: () => [book('gutendex:term')],
+    });
+    const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
+    const pending = state.refreshRails();
+    await flushMicrotasks();
+
+    // Rail 0 (offline) already settled while rail 1 is still Loading.
+    expect(state.rails[0]).toEqual({ kind: 'Error', code: 'NETWORK_ERROR', offline: true });
+    expect(state.isOnline).toBe(false);
+
+    // A later Loaded settle must not clear the pill while rail 0 is offline.
+    releasePopular([book('gutendex:popular')]);
+    await pending;
+    expect(state.rails[1]?.kind).toBe('Loaded');
+    expect(state.rails[2]?.kind).toBe('Loaded');
+    expect(state.isOnline).toBe(false);
+    state.dispose();
+  });
+
+  it('clears the pill when a retry decays an offline error to a non-offline one', async () => {
+    let firstAttempt = true;
+    const offline = catalogError('NETWORK_ERROR', 'offline');
+    const upstream = catalogError('UPSTREAM_ERROR', 'boom');
+    const { provider } = recordingProvider({
+      featured: (sort) => {
+        if (sort !== 'POPULAR') return [book(`gutendex:${sort}`)];
+        return firstAttempt ? offline : upstream;
+      },
+      searchSource: () => [book('gutendex:term')],
+    });
+    const state = new DiscoverRailsDomainState({ provider, now: pinnedNow });
+    await state.refreshRails();
+    expect(state.rails[1]).toEqual({ kind: 'Error', code: 'NETWORK_ERROR', offline: true });
+    expect(state.isOnline).toBe(false);
+
+    firstAttempt = false;
+    await state.retryRail(1);
+
+    // No rail is offline any more: NETWORK_ERROR decayed to UPSTREAM_ERROR.
+    expect(state.rails[1]).toEqual({ kind: 'Error', code: 'UPSTREAM_ERROR', offline: false });
     expect(state.isOnline).toBe(true);
     state.dispose();
   });

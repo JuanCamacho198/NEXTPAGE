@@ -3,10 +3,11 @@
 // reads the JSON directly with JSON.parse.
 //
 // JSON strings do not narrow to the literal unions below, so the import is
-// asserted. Nothing validates this file against `AddonSeed` today: `astro check`
-// cannot see through the cast, and the emitter only requires a non-empty array.
-// Schema validation of this file is added in task A6. The value is not silently
-// widened: consumers still see `AddonSeed[]`.
+// asserted. The cast erases compile-time checking: `astro check` cannot see
+// through it, and the emitter only requires a non-empty array. Runtime schema
+// validation of this file lives in ./addons.spec.ts and is enforced in CI by
+// `bun run --cwd web test`. The value is not silently widened: consumers still
+// see `AddonSeed[]`.
 import addonsData from './addons.json';
 
 export type AddonKind = 'builtin';

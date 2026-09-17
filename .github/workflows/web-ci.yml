@@ -62,8 +62,37 @@ jobs:
       - name: Astro check
         run: bun run --cwd web check
 
+      - name: Web tests
+        # Enforces the addons.json seed contract (src/data/addons.spec.ts) and
+        # the ES/EN dictionary parity spec. `astro check` cannot see through the
+        # `as unknown as AddonSeed[]` cast in addons.ts, so without this step a
+        # malformed seed sails through CI.
+        run: bun run --cwd web test
+
       - name: Astro build
+        # `build` runs the `prebuild` emitter (scripts/emit-surfaces.mjs), so the
+        # worktree ends up holding freshly generated machine surfaces.
         run: bun run --cwd web build
+
+      - name: Check committed machine surfaces are current
+        # web/public/{catalog.json,llms.txt,sitemap.xml,robots.txt} are generated
+        # by the emitter and committed. A seed change that is not re-emitted
+        # would publish a stale, lying surface, so this gate fails on real drift.
+        #
+        # It runs after `Astro build` (which re-ran the emitter), so the worktree
+        # holds the freshly generated surfaces and the index holds the committed
+        # ones; `git diff` compares the two.
+        #
+        # catalog.json embeds `generated-at: new Date().toISOString()`, so a bare
+        # `git diff --exit-code` would fail on every run. `-I` drops a hunk only
+        # when EVERY changed line matches the regex: the volatile timestamp line
+        # is ignored, while a hunk that also carries a real change still fails.
+        run: |
+          git diff --exit-code --ignore-matching-lines='"generated-at"' -- \
+            web/public/catalog.json \
+            web/public/llms.txt \
+            web/public/sitemap.xml \
+            web/public/robots.txt
 
       - name: Validate manifests
         run: bun run --cwd packages/manifest-validator test

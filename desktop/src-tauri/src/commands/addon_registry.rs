@@ -78,10 +78,16 @@ pub fn set_addon_enabled(
 }
 
 pub fn delete_installed_addon(conn: &rusqlite::Connection, id: &str) -> rusqlite::Result<bool> {
-    let changed = conn.execute("DELETE FROM installed_addons WHERE id = ?1", [&id])?;
-    // Uninstall revokes consent on the SAME connection (atomic): a reinstall
-    // starts denied and can never inherit the previous grant (0018).
-    super::addon_consent::delete_addon_consent(conn, id)?;
+    // Uninstall revokes consent in the SAME transaction (unchecked_transaction
+    // works on the shared `&Connection`, same pattern as commands/outbox.rs):
+    // either both rows go or neither does, so a crash or a failing consent
+    // revoke can never leave an orphaned grant behind. A reinstall therefore
+    // always starts denied (0018, fail-closed). Any error rolls back and
+    // propagates; the happy path is unchanged.
+    let tx = conn.unchecked_transaction()?;
+    let changed = tx.execute("DELETE FROM installed_addons WHERE id = ?1", [&id])?;
+    super::addon_consent::delete_addon_consent(&tx, id)?;
+    tx.commit()?;
     Ok(changed > 0)
 }
 
@@ -206,6 +212,27 @@ mod addon_registry_tests {
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0].id, "y");
         assert!(!delete_installed_addon(&conn, "x").unwrap(), "double delete reports false");
+    }
+
+    /// Uninstall revokes consent in the SAME transaction: when the consent
+    /// revoke fails, the uninstall must fail AND the addon row must survive
+    /// (rollback — nothing partially deleted, no orphaned consent either).
+    #[test]
+    fn uninstall_rolls_back_when_consent_revoke_fails() {
+        let conn = registry_connection();
+        upsert_installed_addon(&conn, &row("x", "https://x.example/m.json", "{}", true, 1))
+            .unwrap();
+        crate::commands::addon_consent::set_addon_consent(&conn, "x", true, 1_000).unwrap();
+        // Break the consent revoke: with no addon_consent table the second
+        // DELETE fails, so the uninstall must fail atomically.
+        conn.execute_batch("DROP TABLE addon_consent;").unwrap();
+
+        let result = delete_installed_addon(&conn, "x");
+        assert!(result.is_err(), "uninstall must surface the consent-revoke failure");
+
+        let rows = list_installed_addons(&conn).unwrap();
+        assert_eq!(rows.len(), 1, "failed uninstall must roll back the addon-row delete");
+        assert_eq!(rows[0].id, "x");
     }
 
     /// Scope isolation: registry writes never touch user_books or sync_outbox.

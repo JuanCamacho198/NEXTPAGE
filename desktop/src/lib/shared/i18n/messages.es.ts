@@ -307,6 +307,20 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.addons.enable': 'Activar',
   'settings.addons.disable': 'Desactivar',
   'settings.addons.uninstall': 'Desinstalar',
+
+  // Addons screen (new surfaces only; settings.addons.* copy is reused)
+  'addons.title': 'Addons',
+  'addons.subtitle': 'Gestiona los catálogos instalados y explora las fuentes propias',
+  'addons.firstParty.title': 'Fuentes propias',
+  'addons.firstParty.builtinTitle': 'Integradas',
+  'addons.firstParty.curatedTitle': 'Curadas',
+  'addons.firstParty.readOnly': 'Solo lectura: siempre disponibles, nunca se instalan.',
+  'addons.firstParty.builtinBadge': 'Integrada',
+  'addons.install.errorInline':
+    'No se pudo instalar el complemento. Revisa la URL e inténtalo de nuevo.',
+  'addons.install.offline': 'No tienes conexión. Reconéctate e inténtalo de nuevo.',
+  'addons.install.retry': 'Reintentar',
+  'addons.install.installing': 'Instalando…',
   'settings.data.exportHighlights': 'Exportar resaltados',
   'settings.data.exportHighlightsDescription':
     'Descarga tus anotaciones y resaltaros en JSON o Markdown',

@@ -4,7 +4,7 @@
   import { createSettingsAppearance } from '../useSettingsAppearance.svelte';
   import { createSettingsReader } from '../useSettingsReader.svelte';
   import { createSettingsData } from '../useSettingsData.svelte';
-  import { createSettingsAddons } from '../useSettingsAddons.svelte';
+  import { addonsState, bindAddonsNotifier } from '$lib/features/addons/addonsStore.svelte';
   import SettingsAddonsSection from './SettingsAddonsSection.svelte';
   import { createSettingsProfile } from '../useSettingsProfile.svelte';
   import SettingsTabs from './SettingsTabs.svelte';
@@ -63,10 +63,11 @@
   const profile = createSettingsProfile({ t });
   // svelte-ignore state_referenced_locally
   const data = createSettingsData({ t });
-  // svelte-ignore state_referenced_locally
-  const addons = createSettingsAddons({ t });
+  // Single shared addon state (slice 7): this surface and the Addons screen
+  // mutate the same instance, so either surface updates the other.
   $effect(() => {
-    void addons.refresh();
+    bindAddonsNotifier({ t });
+    void addonsState.refresh();
   });
 
   // Keep appearance locale in sync if parent changes locale externally
@@ -269,13 +270,14 @@
           />
           <SettingsAddonsSection
             {t}
-            url={addons.url}
-            installed={addons.installed}
-            isBusy={addons.isBusy}
-            onUrlChange={(v: string) => (addons.url = v)}
-            onInstall={() => void addons.handleInstall()}
-            onToggle={(id: string, enabled: boolean) => void addons.handleToggle(id, enabled)}
-            onUninstall={(id: string) => void addons.handleUninstall(id)}
+            url={addonsState.url}
+            installed={addonsState.installed}
+            isBusy={addonsState.isBusy}
+            installOutcome={addonsState.installOutcome}
+            onUrlChange={(v: string) => (addonsState.url = v)}
+            onInstall={() => void addonsState.handleInstall()}
+            onToggle={(id: string, enabled: boolean) => void addonsState.handleToggle(id, enabled)}
+            onUninstall={(id: string) => void addonsState.handleUninstall(id)}
           />
         </div>
       {:else if router.activeTab === 'almacenamiento'}

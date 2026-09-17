@@ -20,9 +20,12 @@ import type {
 } from './CatalogProvider';
 import { googleBooksKeyFromEnv } from './BuiltInCatalogProviders';
 import { resolveDownloadUrl } from './mappers';
-import { AddonRegistry } from '../addons/AddonRegistry';
+import { AddonRegistry, getAddonRegistry } from '../addons/AddonRegistry';
 
-const registry = new AddonRegistry();
+// Slice 7 single-state-source: the live composite listens on the SHARED
+// registry instance (the same one the addons singleton mutates), so screen
+// install/enable/disable/uninstall drive the existing invalidation below.
+const registry: AddonRegistry = getAddonRegistry();
 
 /**
  * Production Discover cache: an in-memory mirror over the durable

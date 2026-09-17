@@ -305,6 +305,19 @@ export const messagesEn = {
   'settings.addons.enable': 'Enable',
   'settings.addons.disable': 'Disable',
   'settings.addons.uninstall': 'Uninstall',
+
+  // Addons screen (new surfaces only; settings.addons.* copy is reused)
+  'addons.title': 'Addons',
+  'addons.subtitle': 'Manage installed catalogs and browse first-party sources',
+  'addons.firstParty.title': 'First-party sources',
+  'addons.firstParty.builtinTitle': 'Built-in',
+  'addons.firstParty.curatedTitle': 'Curated',
+  'addons.firstParty.readOnly': 'Read-only: always available, never installed.',
+  'addons.firstParty.builtinBadge': 'Built-in',
+  'addons.install.errorInline': 'Could not install the addon. Check the URL and try again.',
+  'addons.install.offline': 'You are offline. Reconnect and try again.',
+  'addons.install.retry': 'Retry',
+  'addons.install.installing': 'Installing…',
   'settings.data.exportHighlights': 'Export highlights',
   'settings.data.exportHighlightsDescription':
     'Download your annotations and highlights in JSON or Markdown',

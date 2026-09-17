@@ -3,6 +3,7 @@ import {
   AddonRegistry as DefaultAddonRegistry,
   type InstalledAddonRow,
 } from '$lib/shared/services/addons/AddonRegistry';
+import { AddonFetchError, AddonFetchErrorCode } from '@nextpage/manifest-validator';
 
 export type AddonsDeps = {
   registry?: {
@@ -19,23 +20,37 @@ export type AddonsDeps = {
   t?: (key: string, params?: Record<string, string | number>) => string;
 };
 
+/** Inline install state for the Addons screen (Settings keeps its toast). */
+export type InstallOutcome =
+  | { kind: 'idle' }
+  | { kind: 'installing' }
+  | { kind: 'error'; code?: AddonFetchErrorCode }
+  | { kind: 'offline' };
+
 export function createSettingsAddons(deps: AddonsDeps = {}): {
   url: string;
   installed: InstalledAddonRow[];
   isBusy: boolean;
+  installOutcome: InstallOutcome;
   refresh: () => Promise<void>;
   handleInstall: () => Promise<void>;
   handleToggle: (id: string, enabled: boolean) => Promise<void>;
   handleUninstall: (id: string) => Promise<void>;
 } {
   const registry = deps.registry ?? new DefaultAddonRegistry();
-  const pushToast = deps.pushToast ?? defaultPushToast;
-  const t = deps.t ?? ((k: string) => k);
+  // t/pushToast resolve PER CALL (not once at construction) so the app-wide
+  // singleton (created at module load) still uses the mounted surface's
+  // translator and toast host.
+  const translate = (key: string, params?: Record<string, string | number>): string =>
+    (deps.t ?? ((k: string) => k))(key, params);
+  const notify = (kind: 'success' | 'error', message: string): void =>
+    (deps.pushToast ?? defaultPushToast)(kind, message);
   registry.onChanged?.(() => deps.onAddonsChanged?.());
 
   let url = $state('');
   let installed = $state<InstalledAddonRow[]>([]);
   let isBusy = $state(false);
+  let installOutcome = $state<InstallOutcome>({ kind: 'idle' });
 
   async function refresh(): Promise<void> {
     installed = await registry.listInstalled();
@@ -44,14 +59,25 @@ export function createSettingsAddons(deps: AddonsDeps = {}): {
   async function handleInstall(): Promise<void> {
     const target = url.trim();
     if (target === '') return;
+    // Fail fast when offline: no registry I/O is attempted.
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      installOutcome = { kind: 'offline' };
+      notify('error', translate('settings.addons.installFailed'));
+      return;
+    }
     isBusy = true;
+    installOutcome = { kind: 'installing' };
     try {
       await registry.install(target);
       url = '';
+      installOutcome = { kind: 'idle' };
       await refresh();
-      pushToast('success', t('settings.addons.installedToast'));
+      notify('success', translate('settings.addons.installedToast'));
     } catch (e) {
-      pushToast('error', e instanceof Error ? e.message : t('settings.addons.installFailed'));
+      const code = e instanceof AddonFetchError ? e.code : undefined;
+      installOutcome =
+        code === AddonFetchErrorCode.NETWORK ? { kind: 'offline' } : { kind: 'error', code };
+      notify('error', e instanceof Error ? e.message : translate('settings.addons.installFailed'));
     } finally {
       isBusy = false;
     }
@@ -89,6 +115,9 @@ export function createSettingsAddons(deps: AddonsDeps = {}): {
     },
     get isBusy() {
       return isBusy;
+    },
+    get installOutcome() {
+      return installOutcome;
     },
     refresh,
     handleInstall,

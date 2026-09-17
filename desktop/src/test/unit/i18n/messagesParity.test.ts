@@ -115,4 +115,26 @@ describe('i18n es/en parity (REQ-X-Cross-2)', () => {
     expect(messagesEn['discover.accessOpen']).toBe('Open');
     expect(messagesEs['discover.accessOpen']).toBe('Abrir');
   });
+
+  it('includes the addon read-sheet keys in both locales', () => {
+    const readSheetKeys = [
+      'addons.readSheet.resolving',
+      'addons.readSheet.downloading',
+      'addons.readSheet.error',
+      'addons.readSheet.legalNotice',
+      'addons.readSheet.empty.title',
+      'addons.readSheet.empty.body',
+    ] as const;
+
+    for (const key of readSheetKeys) {
+      expect(messagesEn[key]).toBeDefined();
+      expect(messagesEs[key]).toBeDefined();
+    }
+
+    // Exact copy: progress states + the empty state.
+    expect(messagesEn['addons.readSheet.downloading']).toBe('Downloading…');
+    expect(messagesEs['addons.readSheet.downloading']).toBe('Descargando…');
+    expect(messagesEn['addons.readSheet.empty.title']).toBe('No reading access');
+    expect(messagesEs['addons.readSheet.empty.title']).toBe('Sin acceso de lectura');
+  });
 });

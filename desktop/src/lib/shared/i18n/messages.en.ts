@@ -328,6 +328,13 @@ export const messagesEn = {
   'addons.capabilities.title': 'Capabilities',
   'addons.capabilities.detail': 'What this addon is allowed to do.',
   'addons.capabilities.resolve': 'Resolve reading access',
+  'addons.readSheet.resolving': 'Resolving reading access…',
+  'addons.readSheet.downloading': 'Downloading…',
+  'addons.readSheet.error': 'Could not resolve reading access.',
+  'addons.readSheet.legalNotice':
+    'Only public-domain works can be downloaded in the app; everything else opens externally.',
+  'addons.readSheet.empty.title': 'No reading access',
+  'addons.readSheet.empty.body': 'This addon has no readable options for this title.',
   'settings.data.exportHighlights': 'Export highlights',
   'settings.data.exportHighlightsDescription':
     'Download your annotations and highlights in JSON or Markdown',

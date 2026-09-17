@@ -331,6 +331,13 @@ export const messagesEs: Record<MessageKey, string> = {
   'addons.capabilities.title': 'Capacidades',
   'addons.capabilities.detail': 'Lo que este complemento puede hacer.',
   'addons.capabilities.resolve': 'Resolver acceso de lectura',
+  'addons.readSheet.resolving': 'Resolviendo el acceso de lectura…',
+  'addons.readSheet.downloading': 'Descargando…',
+  'addons.readSheet.error': 'No se pudo resolver el acceso de lectura.',
+  'addons.readSheet.legalNotice':
+    'Solo las obras de dominio público pueden descargarse en la aplicación; el resto se abre externamente.',
+  'addons.readSheet.empty.title': 'Sin acceso de lectura',
+  'addons.readSheet.empty.body': 'Este complemento no ofrece opciones de lectura para este título.',
   'settings.data.exportHighlights': 'Exportar resaltados',
   'settings.data.exportHighlightsDescription':
     'Descarga tus anotaciones y resaltaros en JSON o Markdown',

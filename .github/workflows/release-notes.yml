@@ -1,15 +1,18 @@
-# Release notes — release-please driven release PR + draft GitHub release.
+# Release notes — release-please driven release PR + GitHub release per component.
 #
 # Triggered on every push to `main` that touches a version-relevant path.
-# release-please-action reads `release-please-config.json` + `.release-please-manifest.json`,
-# opens (or updates) a release PR bumping `desktop/package.json`, `android/app/build.gradle.kts:versionName`,
-# `.release-please-manifest.json`, and `CHANGELOG.md` in a single commit.
-# On release-PR merge, a draft GitHub release is created.
+# release-please-action reads `release-please-config.json` + `.release-please-manifest.json`
+# and opens (or updates) one release PR that bumps the payload files declared per package:
+# `desktop/package.json`, `desktop/src-tauri/tauri.conf.json`, `desktop/src-tauri/Cargo.toml`,
+# `android/app/build.gradle.kts:versionName`, `.release-please-manifest.json` and each
+# package's `CHANGELOG.md`.
+# On release-PR merge, a GitHub release is created per component.
 #
-# Token-gated: `RELEASE_PLEASE_TOKEN` is a Personal Access Token (NOT the default
-# `GITHUB_TOKEN`) because release-please needs `contents: write` + `pull-requests: write`
-# + `issues: write` to open release PRs and manage labels. The default token does not
-# have those scopes. Missing token fails closed — release-please-action exits non-zero.
+# Token-gated: `RELEASE_PLEASE_TOKEN` is a Personal Access Token, and it MUST be passed as
+# the `token` INPUT. release-please-action only reads `inputs.token` (whose default is
+# `github.token`); supplying it as an env var is inert. With the default token the release
+# PR is authored by `github-actions[bot]`, GitHub does not start workflows for such PRs, so
+# the required `Android checks` context never reports and the release PR stays BLOCKED.
 name: Release Notes
 
 on:
@@ -47,9 +50,17 @@ jobs:
 
       - name: Run release-please
         id: release-please
-        uses: googleapis/release-please-action@v4
-        env:
-          RELEASE_PLEASE_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+        # Pinned instead of `@v4`: that is a moving tag, and a silent release-please
+        # upgrade is what changed the default tag naming (include-component-in-tag
+        # flipped to false), collapsing desktop and android onto one `v0.2.0` tag and
+        # leaving android without a release.
+        uses: googleapis/release-please-action@v4.4.1
         with:
+          # Must be the `token` INPUT, never an env var: the action only reads
+          # `inputs.token`, whose default is `github.token`. With the default token the
+          # release PR is authored by `github-actions[bot]`; GitHub does not start
+          # workflows for those PRs, so the required `Android checks` context never
+          # reports and the release PR stays permanently BLOCKED.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json

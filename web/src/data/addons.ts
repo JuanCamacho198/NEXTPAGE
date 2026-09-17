@@ -2,12 +2,15 @@
 // by Astro components and the prebuild emitter (scripts/emit-surfaces.mjs), which
 // reads the JSON directly with JSON.parse.
 //
-// The JSON is authored and CI-validated against `AddonSeed`, but JSON strings do
-// not narrow to the literal unions below, so the import is asserted. The value is
-// not silently widened: consumers still see `AddonSeed[]`.
+// JSON strings do not narrow to the literal unions below, so the import is
+// asserted. Nothing validates this file against `AddonSeed` today: `astro check`
+// cannot see through the cast, and the emitter only requires a non-empty array.
+// Schema validation of this file is added in task A6. The value is not silently
+// widened: consumers still see `AddonSeed[]`.
 import addonsData from './addons.json';
 
 export type AddonKind = 'builtin';
+export type AddonAvailability = 'builtin' | 'community' | 'planned';
 export type AddonCategory =
   | 'dominio-publico'
   | 'bibliotecas'
@@ -31,6 +34,7 @@ export interface AddonSeed extends AddonManifestRef {
   languages: AddonLang[];
   category: AddonCategory;
   kind: AddonKind;
+  availability: AddonAvailability;
   updatedAt: string;
   icon: 'book' | 'library' | 'sparkles' | 'headphones' | 'globe' | 'archive';
   installUrl: string | null;

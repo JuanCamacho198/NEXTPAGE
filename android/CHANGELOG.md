@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/JuanCamacho198/NEXTPAGE/compare/v0.2.0...v0.2.1) (2026-09-17)
+
+
+### Bug Fixes
+
+* **release:** bump real version files via extra-files ([b5ed82e](https://github.com/JuanCamacho198/NEXTPAGE/commit/b5ed82e5c8edf2da3a02d6744190b1b57ab33faf))
+
 ## [0.2.0](https://github.com/JuanCamacho198/NEXTPAGE/compare/v0.1.0...v0.2.0) (2026-09-17)
 
 

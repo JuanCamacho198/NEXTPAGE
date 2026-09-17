@@ -38,6 +38,8 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tauri::Manager;
 
+use crate::filename::{sanitize_extension, sanitize_segment};
+
 pub const DOWNLOAD_USER_AGENT: &str = "NextPage/Desktop (contact: TBD)";
 pub const MAX_DOWNLOAD_BYTES: u64 = 67_108_864;
 pub const MAX_REDIRECTS: usize = 5;
@@ -68,8 +70,6 @@ pub(crate) const PHASE_CANCELLED: &str = "cancelled";
 
 const DOWNLOADS_DIR: &str = "downloads";
 const MAX_ID_CHARS: usize = 64;
-const MAX_EXT_CHARS: usize = 5;
-const DEFAULT_EXT: &str = "epub";
 const HASH_BUFFER_BYTES: usize = 64 * 1024;
 const FALLBACK_ID: &str = "download";
 
@@ -249,37 +249,6 @@ pub(crate) fn should_emit(elapsed_ms: u128, delta_bytes: u64) -> bool {
 
 fn downloads_dir(app_data_dir: &Path) -> PathBuf {
     app_data_dir.join("tmp").join(DOWNLOADS_DIR)
-}
-
-/// Keeps only `[A-Za-z0-9_-]`, bounded in length. A fully filtered-out or empty
-/// input falls back, so a segment can never be empty or contain a separator.
-fn sanitize_segment(raw: &str, max_chars: usize, fallback: &str) -> String {
-    let filtered: String = raw
-        .chars()
-        .filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_')
-        .take(max_chars)
-        .collect();
-    if filtered.is_empty() {
-        fallback.to_string()
-    } else {
-        filtered
-    }
-}
-
-/// `format` sanitized to `[a-z0-9]{1,5}`, defaulting to `epub`. Anything longer
-/// than five characters (or empty) is not a plausible extension and is replaced.
-fn sanitize_extension(format: Option<&str>) -> String {
-    let filtered: String = format
-        .unwrap_or(DEFAULT_EXT)
-        .to_ascii_lowercase()
-        .chars()
-        .filter(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
-        .collect();
-    if filtered.is_empty() || filtered.len() > MAX_EXT_CHARS {
-        DEFAULT_EXT.to_string()
-    } else {
-        filtered
-    }
 }
 
 pub(crate) fn download_paths(

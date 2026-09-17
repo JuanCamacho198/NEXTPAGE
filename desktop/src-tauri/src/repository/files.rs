@@ -1,5 +1,8 @@
 use super::LibraryRepository;
 use crate::error::{AppError, AppResult};
+use crate::filename::{
+    sanitize_extension, sanitize_file_stem, FALLBACK_BOOK_ID, MAX_BOOK_ID_CHARS,
+};
 use chrono::Utc;
 use rusqlite::{params, OptionalExtension};
 use std::fs;
@@ -57,7 +60,12 @@ pub fn save_book_file(
             let books_dir = app.path().app_data_dir()?.join("books");
             std::fs::create_dir_all(&books_dir)?;
             let fmt = format.unwrap_or("epub").trim_start_matches('.');
-            let dest = books_dir.join(format!("{}.{}", book_id, fmt));
+            // The catalog id (`gutendex:2701`) is not a valid Windows path
+            // segment: `:` starts an NTFS ADS. Sanitize the stem and keep the
+            // persisted `format` untouched for the row below.
+            let stem = sanitize_file_stem(book_id, MAX_BOOK_ID_CHARS, FALLBACK_BOOK_ID);
+            let ext = sanitize_extension(Some(fmt));
+            let dest = books_dir.join(format!("{stem}.{ext}"));
             let now = Utc::now().to_rfc3339();
             repo.connection.execute(
                 "INSERT INTO books (id, title, author, file_path, format, sync_status, current_page, total_pages, created_at, updated_at, version)

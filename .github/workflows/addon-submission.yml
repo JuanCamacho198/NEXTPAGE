@@ -1,0 +1,218 @@
+name: Addon submission
+
+# Handles `addon-submission` issues: validates the proposed manifest with the
+# B1 CLI and, on success, opens a PR appending one entry to
+# `web/src/data/addons.json`. Runs only when the `addon-submission` label is
+# added — note `web-ci.yml` does NOT run on `issues` events, so there is no
+# overlap with Web CI.
+#
+# Token rationale (house precedent: `release-notes.yml`): a PR opened with the
+# default `GITHUB_TOKEN` does not trigger workflows, so Web CI would stay
+# blind on the submission PR. PR creation therefore uses the dedicated
+# `ADDONS_SUBMISSION_TOKEN` secret (PAT or GitHub App token with
+# contents:write + pull-requests:write on this repo) via
+# `env: GH_TOKEN: ${{ secrets.ADDONS_SUBMISSION_TOKEN }}`. Everything else
+# runs on least-privilege `permissions:` below.
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: addon-submission-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  process-submission:
+    name: Process addon submission
+    if: github.event.label.name == 'addon-submission'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          # Pinned to match the root `packageManager` field (`bun@1.4.2`).
+          bun-version: '1.4.2'
+
+      - name: Install dependencies (frozen lockfile)
+        run: bun install --frozen-lockfile
+
+      - name: Check submission token present (fail closed)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -z "${{ secrets.ADDONS_SUBMISSION_TOKEN }}" ]; then
+            gh issue comment "${{ github.event.issue.number }}" --body "⚠️ The \`ADDONS_SUBMISSION_TOKEN\` secret is not configured on this repo, so this submission cannot proceed. A maintainer must create it in Settings → Secrets → Actions (contents:write + pull-requests:write), then re-apply the \`addon-submission\` label."
+            echo "::error::ADDONS_SUBMISSION_TOKEN secret is missing."
+            exit 1
+          fi
+
+      - name: Parse submission fields
+        id: parse
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          bun -e '
+            const body = process.env.ISSUE_BODY ?? "";
+            const sections = {};
+            const parts = body.split(/^### (.+)$/m).slice(1);
+            for (let i = 0; i < parts.length; i += 2) {
+              sections[parts[i].trim()] = (parts[i + 1] ?? "").trim();
+            }
+            const clean = (v) => (v === "_No response_" ? "" : (v ?? "").trim());
+            const out = {
+              manifest_url: clean(sections["Manifest URL"]),
+              addon_name: clean(sections["Addon name"]),
+              author: clean(sections["Author or owner"]),
+              description_es: clean(sections["Description (Spanish)"]),
+              description_en: clean(sections["Description (English)"]),
+              category: clean(sections["Category"]).split("\n")[0].trim(),
+              languages_raw: clean(sections["Languages"]),
+            };
+            const fs = await import("node:fs");
+            const lines = Object.entries(out).map(([k, v]) => {
+              const safe = String(v).replaceAll("%", "%25").replaceAll("\n", "%0A").replaceAll("\r", "%0D");
+              return `${k}=${safe}`;
+            });
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, lines.join("\n") + "\n");
+          '
+
+      - name: Validate manifest
+        id: validate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MANIFEST_URL: ${{ steps.parse.outputs.manifest_url }}
+        run: |
+          set +e
+          VALIDATOR_OUTPUT=$(bun run --cwd packages/manifest-validator validate -- "$MANIFEST_URL" 2>&1)
+          VALIDATOR_EXIT=$?
+          set -e
+          echo "$VALIDATOR_OUTPUT"
+          echo "validator_exit=$VALIDATOR_EXIT" >> "$GITHUB_OUTPUT"
+
+          if [ "$VALIDATOR_EXIT" -eq 0 ]; then
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Advisory: unreachable hosts (including hosts blocking Azure runner
+          # IPs), timeouts and non-2xx responses are NEVER conflated with an
+          # invalid manifest and never silently swallowed — report and stop.
+          if echo "$VALIDATOR_OUTPUT" | grep -q "ADDON_FETCH_NETWORK"; then
+            gh issue comment "${{ github.event.issue.number }}" --body "⚠️ The manifest at \`$MANIFEST_URL\` could not be reached from CI (\`ADDON_FETCH_NETWORK\` — the host may be down, blocking runner IPs, or timing out). This is **advisory only**: it does not fail the submission and says nothing about the manifest itself. Re-apply the \`addon-submission\` label once the host is reachable to retry."
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Hard gates (block, open nothing): HTTPS, JSON content type, ≤64 KB, shape.
+          case "$VALIDATOR_OUTPUT" in
+            *ADDON_FETCH_HTTPS_REQUIRED*) MEANING="the manifest URL must use \`https:\` (checked before any network request)." ;;
+            *ADDON_FETCH_BAD_CONTENT_TYPE*) MEANING="the manifest must be served as JSON, not an HTML error page." ;;
+            *ADDON_FETCH_TOO_LARGE*) MEANING="the manifest exceeds the 64 KB size cap." ;;
+            *ADDON_FETCH_INVALID_MANIFEST*) MEANING="the manifest is not a valid addon manifest — it must declare \`id\`, \`name\`, \`version\`, \`catalogs\` and \`resources\`." ;;
+            *) MEANING="validation failed with an unrecognised error." ;;
+          esac
+          CODE=$(echo "$VALIDATOR_OUTPUT" | grep -o "ADDON_FETCH_[A-Z_]*" | head -n 1)
+          gh issue comment "${{ github.event.issue.number }}" --body "❌ Manifest validation failed: \`${CODE:-UNKNOWN}\` — $MEANING No PR was opened. Fix the manifest and re-apply the \`addon-submission\` label to retry. Full output: \`$VALIDATOR_OUTPUT\`"
+          echo "proceed=false" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Append catalog entry and open PR
+        if: steps.validate.outputs.proceed == 'true'
+        env:
+          # Dedicated PAT: a PR opened with the default GITHUB_TOKEN would not
+          # trigger workflows and Web CI would stay blind (see header comment).
+          GH_TOKEN: ${{ secrets.ADDONS_SUBMISSION_TOKEN }}
+          MANIFEST_URL: ${{ steps.parse.outputs.manifest_url }}
+          ADDON_NAME: ${{ steps.parse.outputs.addon_name }}
+          AUTHOR: ${{ steps.parse.outputs.author }}
+          DESCRIPTION_ES: ${{ steps.parse.outputs.description_es }}
+          DESCRIPTION_EN: ${{ steps.parse.outputs.description_en }}
+          CATEGORY: ${{ steps.parse.outputs.category }}
+          LANGUAGES_RAW: ${{ steps.parse.outputs.languages_raw }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 20 -H 'Accept: application/json' "$MANIFEST_URL" -o /tmp/addon-manifest.json || {
+            gh issue comment "$ISSUE_NUMBER" --body "⚠️ The manifest at \`$MANIFEST_URL\` passed validation but could not be re-fetched while building the catalog entry (\`ADDON_FETCH_NETWORK\` class). This is **advisory only** — no PR was opened. Re-apply the \`addon-submission\` label to retry."
+            exit 0
+          }
+
+          bun -e '
+            const fs = await import("node:fs");
+            const manifest = JSON.parse(fs.readFileSync("/tmp/addon-manifest.json", "utf8"));
+            const categoryMap = {
+              "Public domain": "dominio-publico",
+              "Open libraries": "bibliotecas",
+              "Audiobooks": "audiolibros",
+              "Wikis and sources": "wikis",
+              "Press": "prensa",
+              "Independent": "independientes",
+            };
+            const category = categoryMap[process.env.CATEGORY] ?? "independientes";
+            const raw = process.env.LANGUAGES_RAW ?? "";
+            const langs = [];
+            if (/Spanish/i.test(raw)) langs.push("es");
+            if (/English/i.test(raw)) langs.push("en");
+            if (/Multiple languages/i.test(raw)) langs.length = 0, langs.push("multi");
+            const entry = {
+              id: manifest.id,
+              name: manifest.name,
+              version: manifest.version,
+              catalogs: manifest.catalogs,
+              resources: manifest.resources,
+              author: process.env.AUTHOR ?? "",
+              license: typeof manifest.license === "string" ? manifest.license : "",
+              languages: langs.length > 0 ? langs : ["multi"],
+              category,
+              kind: "builtin",
+              availability: "community",
+              updatedAt: new Date().toISOString().slice(0, 10),
+              icon: "sparkles",
+              installUrl: process.env.MANIFEST_URL,
+              description: { es: process.env.DESCRIPTION_ES ?? "", en: process.env.DESCRIPTION_EN ?? "" },
+            };
+            fs.writeFileSync("/tmp/addon-entry.json", JSON.stringify(entry));
+          '
+
+          ENTRY_ID=$(bun -e 'console.log(JSON.parse(await (await import("node:fs")).promises.readFile("/tmp/addon-entry.json", "utf8")).id)')
+
+          # Idempotency: never open a duplicate PR for an id that is already listed.
+          if bun -e '
+            const fs = await import("node:fs");
+            const addons = JSON.parse(fs.readFileSync("web/src/data/addons.json", "utf8"));
+            if (addons.some((a) => a.id === process.env.ENTRY_ID)) process.exit(0);
+            process.exit(1);
+          ' ENTRY_ID="$ENTRY_ID"; then
+            gh issue comment "$ISSUE_NUMBER" --body "ℹ️ An entry with id \`$ENTRY_ID\` already exists in \`web/src/data/addons.json\` — no duplicate PR was opened."
+            exit 0
+          fi
+
+          bun -e '
+            const fs = await import("node:fs");
+            const addons = JSON.parse(fs.readFileSync("web/src/data/addons.json", "utf8"));
+            const entry = JSON.parse(fs.readFileSync("/tmp/addon-entry.json", "utf8"));
+            addons.push(entry);
+            fs.writeFileSync("web/src/data/addons.json", JSON.stringify(addons, null, 2) + "\n");
+            // Validate the resulting JSON parses before opening the PR.
+            JSON.parse(fs.readFileSync("web/src/data/addons.json", "utf8"));
+          '
+
+          SAFE_ID=$(echo "$ENTRY_ID" | tr -cd 'a-zA-Z0-9-')
+          BRANCH="addon-submission/$ISSUE_NUMBER-$SAFE_ID"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add web/src/data/addons.json
+          git commit -m "feat(addons): add community addon $ENTRY_ID (#$ISSUE_NUMBER)"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "HEAD:$BRANCH"
+          gh pr create --head "$BRANCH" \
+            --title "feat(addons): add community addon $ENTRY_ID" \
+            --body "Community addon submission from #$ISSUE_NUMBER. Validated manifest: \`$MANIFEST_URL\`. Closes #$ISSUE_NUMBER once merged."

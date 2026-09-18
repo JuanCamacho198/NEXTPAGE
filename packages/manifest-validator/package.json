@@ -12,7 +12,8 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "test": "vitest run"
+    "test": "vitest run",
+    "validate": "bun src/cli-main.ts"
   },
   "devDependencies": {
     "vitest": "^4.1.11"

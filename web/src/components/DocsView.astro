@@ -7,6 +7,15 @@ export interface Props {
 
 const { locale } = Astro.props;
 
+const submitHref = locale === 'es' ? '/enviar' : '/en/submit';
+
+const gates = [
+  t(locale, 'docs.approvalGateHttps'),
+  t(locale, 'docs.approvalGateSize'),
+  t(locale, 'docs.approvalGateType'),
+  t(locale, 'docs.approvalGateShape'),
+];
+
 const yes = t(locale, 'docs.requiredYes');
 const no = t(locale, 'docs.requiredNo');
 
@@ -141,4 +150,29 @@ const checklist = [
       </ul>
     </aside>
   </div>
+
+  <section class="flex flex-col gap-4">
+    <h2 class="font-serif text-3xl font-bold text-text-primary">{t(locale, 'docs.approvalTitle')}</h2>
+    <p class="max-w-3xl text-base text-text-secondary">{t(locale, 'docs.approvalIntro')}</p>
+    <ul class="flex flex-col gap-3">
+      {
+        gates.map((gate) => (
+          <li class="rounded-xl border border-border-subtle bg-surface-1 px-4 py-3">
+            <p class="font-mono text-xs leading-relaxed text-text-secondary">{gate}</p>
+          </li>
+        ))
+      }
+    </ul>
+    <p class="max-w-3xl text-sm text-text-secondary">{t(locale, 'docs.approvalNetwork')}</p>
+    <p class="max-w-3xl text-sm text-text-secondary">{t(locale, 'docs.approvalLanding')}</p>
+    <p class="max-w-3xl text-sm text-text-secondary">{t(locale, 'docs.approvalLicense')}</p>
+    <div>
+      <a
+        href={submitHref}
+        class="inline-flex items-center gap-2 rounded-lg bg-accent px-6 py-2.5 font-sans text-sm font-semibold text-accent-ink transition hover:brightness-110"
+      >
+        {t(locale, 'docs.approvalSubmitCta')}
+      </a>
+    </div>
+  </section>
 </div>

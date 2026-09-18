@@ -7,9 +7,8 @@
 //   - llms.txt     (summary + routes + catalog pointer)
 //   - robots.txt   (allow all + absolute sitemap reference)
 //
-// Dependency-free: the ADDONS seed lives in a TypeScript module, so instead of
-// a TS toolchain the script extracts the `ADDONS = [...]` array literal with a
-// bounded bracket scan (string-aware) and evaluates that literal only.
+// Dependency-free: the ADDONS seed lives in src/data/addons.json and is parsed
+// directly with JSON.parse — no TS toolchain and no source-text scanning.
 // `site` is read from astro.config.mjs — never hardcoded here.
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -31,56 +30,22 @@ if (!siteMatch) fail('`site` not found in astro.config.mjs; refusing to emit wit
 const SITE = siteMatch[1].replace(/\/$/, '');
 const abs = (p) => `${SITE}${p.startsWith('/') ? p : `/${p}`}`;
 
-// --- Single source: ADDONS seed (bounded literal extraction, no TS toolchain) --
-const addonsSrc = readFileSync(join(root, 'src/data/addons.ts'), 'utf8');
-const marker = 'export const ADDONS';
-const markerIdx = addonsSrc.indexOf(marker);
-if (markerIdx === -1) fail('`export const ADDONS` not found in src/data/addons.ts.');
-const eqIdx = addonsSrc.indexOf('=', markerIdx);
-if (eqIdx === -1) fail('ADDONS assignment not found.');
-const arrStart = addonsSrc.indexOf('[', eqIdx);
-if (arrStart === -1) fail('ADDONS array literal not found.');
-
-let depth = 0;
-let inStr = null;
-let end = -1;
-for (let i = arrStart; i < addonsSrc.length; i++) {
-  const c = addonsSrc[i];
-  if (inStr) {
-    if (c === '\\') {
-      i += 1;
-      continue;
-    }
-    if (c === inStr) inStr = null;
-    continue;
-  }
-  if (c === "'" || c === '"' || c === '`') {
-    inStr = c;
-    continue;
-  }
-  if (c === '[') depth += 1;
-  else if (c === ']') {
-    depth -= 1;
-    if (depth === 0) {
-      end = i;
-      break;
-    }
-  }
-}
-if (end === -1) fail('Unbalanced brackets while extracting the ADDONS literal.');
-const literal = addonsSrc.slice(arrStart, end + 1);
+// --- Single source: ADDONS seed (JSON, parsed directly) ----------------------
 let ADDONS;
 try {
-  ADDONS = new Function(`return (${literal});`)();
+  ADDONS = JSON.parse(readFileSync(join(root, 'src/data/addons.json'), 'utf8'));
 } catch (err) {
-  fail(`Could not evaluate the ADDONS literal: ${err.message}`);
+  fail(`Could not parse src/data/addons.json: ${err.message}`);
 }
-if (!Array.isArray(ADDONS) || ADDONS.length === 0) fail('ADDONS literal did not evaluate to a non-empty array.');
+if (!Array.isArray(ADDONS) || ADDONS.length === 0) fail('src/data/addons.json must contain a non-empty array.');
 
 // --- Route table (404 excluded; param URLs never emitted) --------------------
 const esIndex = ['/', '/catalogo', '/enviar', '/docs'];
 const enIndex = ['/en/', '/en/catalog', '/en/submit', '/en/docs'];
-const ids = ADDONS.map((a) => a.id);
+// `planned` entries keep their pages (routes still build) but are not advertised
+// on the machine-readable surfaces (sitemap, catalog, llms).
+const visibleAddons = ADDONS.filter((a) => a.availability !== 'planned');
+const ids = visibleAddons.map((a) => a.id);
 const esDetail = ids.map((id) => `/catalogo/${id}`);
 const enDetail = ids.map((id) => `/en/catalog/${id}`);
 
@@ -115,8 +80,8 @@ const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://w
 const catalog = {
   'generated-at': new Date().toISOString(),
   site: SITE,
-  count: ADDONS.length,
-  addons: [...ADDONS]
+  count: visibleAddons.length,
+  addons: [...visibleAddons]
     .sort((a, b) => a.id.localeCompare(b.id))
     .map((a) => ({
       id: a.id,
@@ -127,6 +92,7 @@ const catalog = {
       languages: a.languages,
       category: a.category,
       kind: a.kind,
+      availability: a.availability,
       updatedAt: a.updatedAt,
       description: a.description,
       catalogs: a.catalogs,
@@ -142,7 +108,7 @@ const catalogJson = `${JSON.stringify(catalog, null, 2)}\n`;
 // --- llms.txt ---------------------------------------------------------------------
 const esRoutes = [...esIndex, ...esDetail];
 const enRoutes = [...enIndex, ...enDetail];
-const addonBullets = [...ADDONS]
+const addonBullets = [...visibleAddons]
   .sort((a, b) => a.id.localeCompare(b.id))
   .map((a) => `- ${a.name} — ${a.description.en} — ${abs(`/catalogo/${a.id}`)}`);
 const llms = `# NextPage Addons

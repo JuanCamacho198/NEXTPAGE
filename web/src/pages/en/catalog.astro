@@ -7,11 +7,16 @@ import { t } from '../../i18n';
 const locale = 'en' as const;
 const site = (Astro.site?.href ?? '').replace(/\/$/, '');
 const abs = (p: string): string => (site ? `${site}${p}` : p);
+// Machine-readable surfaces must not advertise addons that do not work yet:
+// only `builtin` / `community` entries are listed in the ItemList.
+const machineAddons = ADDONS.filter(
+  (addon) => addon.availability === 'builtin' || addon.availability === 'community',
+);
 const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'ItemList',
   name: t(locale, 'catalog.title'),
-  itemListElement: ADDONS.map((addon, index) => ({
+  itemListElement: machineAddons.map((addon, index) => ({
     '@type': 'ListItem',
     position: index + 1,
     name: addon.name,

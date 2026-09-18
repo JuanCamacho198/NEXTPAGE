@@ -1,5 +1,11 @@
 ---
-import { ADDONS, addonDetailHref, catalogHref, type AddonCategory } from '../data/addons';
+import {
+  ADDONS,
+  addonDetailHref,
+  catalogHref,
+  type AddonAvailability,
+  type AddonCategory,
+} from '../data/addons';
 import { t, type UiLocale } from '../i18n';
 
 export interface Props {
@@ -11,8 +17,19 @@ const { locale } = Astro.props;
 const catalogUrl = catalogHref(locale);
 const submitHref = locale === 'es' ? '/enviar' : '/en/submit';
 
-const addonCount = ADDONS.length;
-const sourceCount = ADDONS.reduce((n, a) => n + a.catalogs.length, 0);
+// The home advertises what actually works: `planned` entries are registered but
+// have no working catalog, so they never inflate the counts. They are still
+// listed below, each carrying its real status.
+const workingAddons = ADDONS.filter((a) => a.availability !== 'planned');
+const addonCount = workingAddons.length;
+const sourceCount = workingAddons.reduce((n, a) => n + a.catalogs.length, 0);
+const plannedCount = ADDONS.length - addonCount;
+
+const availabilityTag: Record<AddonAvailability, string> = {
+  builtin: t(locale, 'catalog.tagIncluded'),
+  community: t(locale, 'catalog.tagCommunity'),
+  planned: t(locale, 'catalog.tagPlanned'),
+};
 
 const categories: AddonCategory[] = [
   'dominio-publico',
@@ -23,7 +40,8 @@ const categories: AddonCategory[] = [
   'independientes',
 ];
 
-const countFor = (c: AddonCategory) => ADDONS.filter((a) => a.category === c).length;
+// Match the catalog facets: `planned` entries never inflate a category count.
+const countFor = (c: AddonCategory) => workingAddons.filter((a) => a.category === c).length;
 
 const latest = [...ADDONS].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 
@@ -74,8 +92,8 @@ const steps = [
       <p class="mt-1 text-sm text-text-secondary">{t(locale, 'home.statsSources')}</p>
     </div>
     <div class="rounded-xl border border-border-subtle bg-surface-1 p-6 text-center">
-      <p class="font-serif text-4xl font-bold text-text-primary">100%</p>
-      <p class="mt-1 text-sm text-text-secondary">{t(locale, 'home.statsFree')}</p>
+      <p class="font-serif text-4xl font-bold text-text-primary">{plannedCount}</p>
+      <p class="mt-1 text-sm text-text-secondary">{t(locale, 'home.statsPlanned')}</p>
     </div>
   </section>
 
@@ -142,8 +160,19 @@ const steps = [
                 </span>
                 <span class="block truncate text-sm text-text-secondary">{addon.description[locale]}</span>
               </span>
-              <span class="shrink-0 text-xs text-text-muted">
-                {t(locale, 'detail.updatedAgo', { x: agoFor(addon.updatedAt) })}
+              <span class="flex shrink-0 flex-col items-end gap-1">
+                <span
+                  class={`rounded-full px-2.5 py-0.5 text-xs ${
+                    addon.availability === 'planned'
+                      ? 'bg-surface-2 text-text-muted'
+                      : 'bg-accent/15 text-accent'
+                  }`}
+                >
+                  {availabilityTag[addon.availability]}
+                </span>
+                <span class="text-xs text-text-muted">
+                  {t(locale, 'detail.updatedAgo', { x: agoFor(addon.updatedAt) })}
+                </span>
               </span>
             </a>
           </li>

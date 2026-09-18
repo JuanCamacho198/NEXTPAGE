@@ -1,4 +1,17 @@
+// Catalog seed data lives in ./addons.json — the single source of truth shared
+// by Astro components and the prebuild emitter (scripts/emit-surfaces.mjs), which
+// reads the JSON directly with JSON.parse.
+//
+// JSON strings do not narrow to the literal unions below, so the import is
+// asserted. The cast erases compile-time checking: `astro check` cannot see
+// through it, and the emitter only requires a non-empty array. Runtime schema
+// validation of this file lives in ./addons.spec.ts and is enforced in CI by
+// `bun run --cwd web test`. The value is not silently widened: consumers still
+// see `AddonSeed[]`.
+import addonsData from './addons.json';
+
 export type AddonKind = 'builtin';
+export type AddonAvailability = 'builtin' | 'community' | 'planned';
 export type AddonCategory =
   | 'dominio-publico'
   | 'bibliotecas'
@@ -22,128 +35,14 @@ export interface AddonSeed extends AddonManifestRef {
   languages: AddonLang[];
   category: AddonCategory;
   kind: AddonKind;
+  availability: AddonAvailability;
   updatedAt: string;
   icon: 'book' | 'library' | 'sparkles' | 'headphones' | 'globe' | 'archive';
   installUrl: string | null;
   description: { es: string; en: string };
 }
 
-export const ADDONS: AddonSeed[] = [
-  {
-    id: 'gutendex',
-    name: 'Gutendex',
-    version: '1.0.0',
-    catalogs: [{ type: 'book-catalog', id: 'gutendex', name: 'Project Gutenberg (via Gutendex)' }],
-    resources: ['search', 'book-details'],
-    author: 'Project Gutenberg',
-    license: 'Dominio público',
-    languages: ['multi'],
-    category: 'dominio-publico',
-    kind: 'builtin',
-    updatedAt: '2026-09-07',
-    icon: 'book',
-    installUrl: null,
-    description: {
-      es: 'Más de 70.000 ebooks libres del Proyecto Gutenberg, con búsqueda y fichas completas.',
-      en: 'Over 70,000 free ebooks from Project Gutenberg, with search and full details.',
-    },
-  },
-  {
-    id: 'openlibrary',
-    name: 'Open Library',
-    version: '1.0.0',
-    catalogs: [{ type: 'book-catalog', id: 'openlibrary', name: 'Open Library' }],
-    resources: ['search'],
-    author: 'Internet Archive',
-    license: 'Mixta abierta',
-    languages: ['multi'],
-    category: 'bibliotecas',
-    kind: 'builtin',
-    updatedAt: '2026-09-05',
-    icon: 'library',
-    installUrl: null,
-    description: {
-      es: 'Millones de fichas y portadas de la biblioteca abierta de Internet Archive.',
-      en: 'Millions of records and covers from the Internet Archive open library.',
-    },
-  },
-  {
-    id: 'standard-ebooks',
-    name: 'Standard Ebooks',
-    version: '1.0.0',
-    catalogs: [{ type: 'book-catalog', id: 'standard-ebooks', name: 'Standard Ebooks' }],
-    resources: ['search'],
-    author: 'Standard Ebooks',
-    license: 'Dominio público',
-    languages: ['en'],
-    category: 'dominio-publico',
-    kind: 'builtin',
-    updatedAt: '2026-08-28',
-    icon: 'sparkles',
-    installUrl: null,
-    description: {
-      es: 'Ediciones cuidadas y bien formateadas de clásicos en dominio público, en inglés.',
-      en: 'Carefully produced, well-formatted public-domain classics, in English.',
-    },
-  },
-  {
-    id: 'librivox',
-    name: 'LibriVox',
-    version: '1.0.0',
-    catalogs: [{ type: 'book-catalog', id: 'librivox', name: 'LibriVox' }],
-    resources: ['search'],
-    author: 'LibriVox',
-    license: 'Dominio público',
-    languages: ['multi'],
-    category: 'audiolibros',
-    kind: 'builtin',
-    updatedAt: '2026-08-20',
-    icon: 'headphones',
-    installUrl: null,
-    description: {
-      es: 'Audiolibros gratuitos narrados por voluntarios, en varios idiomas.',
-      en: 'Free volunteer-narrated audiobooks in several languages.',
-    },
-  },
-  {
-    id: 'wikisource',
-    name: 'Wikisource',
-    version: '1.0.0',
-    catalogs: [{ type: 'book-catalog', id: 'wikisource', name: 'Wikisource' }],
-    resources: ['search'],
-    author: 'Wikimedia',
-    license: 'Mixta abierta',
-    languages: ['es'],
-    category: 'wikis',
-    kind: 'builtin',
-    updatedAt: '2026-09-01',
-    icon: 'globe',
-    installUrl: null,
-    description: {
-      es: 'Textos fuente libres en español mantenidos por la comunidad Wikimedia.',
-      en: 'Free Spanish source texts maintained by the Wikimedia community.',
-    },
-  },
-  {
-    id: 'faded-page',
-    name: 'Faded Page',
-    version: '1.0.0',
-    catalogs: [{ type: 'book-catalog', id: 'faded-page', name: 'Faded Page' }],
-    resources: ['search'],
-    author: 'Faded Page',
-    license: 'Dominio público (CA)',
-    languages: ['en'],
-    category: 'independientes',
-    kind: 'builtin',
-    updatedAt: '2026-08-15',
-    icon: 'archive',
-    installUrl: null,
-    description: {
-      es: 'Libros canadienses en dominio público, digitalizados por voluntarios.',
-      en: 'Canadian public-domain books, digitized by volunteers.',
-    },
-  },
-];
+export const ADDONS = addonsData as unknown as AddonSeed[];
 
 export function getAddon(id: string): AddonSeed | undefined {
   return ADDONS.find((a) => a.id === id);

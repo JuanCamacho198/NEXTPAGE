@@ -13,6 +13,15 @@ const { locale } = Astro.props;
 
 const submitHref = locale === 'es' ? '/enviar' : '/en/submit';
 
+// Two honest groups: addons that ship with NextPage (`builtin`) and addons
+// installable by URL from the community. `planned` entries keep their detail
+// pages and are listed later as an informational roadmap, but they must never
+// inflate the facet or result counts.
+const builtinAddons = ADDONS.filter((a) => a.availability === 'builtin');
+const communityAddons = ADDONS.filter((a) => a.availability === 'community');
+const catalogAddons = [...builtinAddons, ...communityAddons];
+const plannedAddons = ADDONS.filter((a) => a.availability === 'planned');
+
 const categories: AddonCategory[] = [
   'dominio-publico',
   'bibliotecas',
@@ -25,24 +34,24 @@ const categories: AddonCategory[] = [
 const facetCategories = categories.map((c) => ({
   value: c,
   label: t(locale, `catalog.cat.${c}`),
-  count: ADDONS.filter((a) => a.category === c).length,
+  count: catalogAddons.filter((a) => a.category === c).length,
 }));
 
 const facetLangs = [
   {
     value: 'es',
     label: t(locale, 'catalog.langEs'),
-    count: ADDONS.filter((a) => a.languages.includes('es') || a.languages.includes('multi')).length,
+    count: catalogAddons.filter((a) => a.languages.includes('es') || a.languages.includes('multi')).length,
   },
   {
     value: 'en',
     label: t(locale, 'catalog.langEn'),
-    count: ADDONS.filter((a) => a.languages.includes('en') || a.languages.includes('multi')).length,
+    count: catalogAddons.filter((a) => a.languages.includes('en') || a.languages.includes('multi')).length,
   },
   {
     value: 'multi',
     label: t(locale, 'catalog.langMulti'),
-    count: ADDONS.filter((a) => a.languages.includes('multi')).length,
+    count: catalogAddons.filter((a) => a.languages.includes('multi')).length,
   },
 ];
 
@@ -50,12 +59,12 @@ const facetCaps = [
   {
     value: 'search',
     label: t(locale, 'catalog.filter.capSearch'),
-    count: ADDONS.filter((a) => a.resources.includes('search')).length,
+    count: catalogAddons.filter((a) => a.resources.includes('search')).length,
   },
   {
     value: 'book-details',
     label: t(locale, 'catalog.filter.capDetails'),
-    count: ADDONS.filter((a) => a.resources.includes('book-details')).length,
+    count: catalogAddons.filter((a) => a.resources.includes('book-details')).length,
   },
 ];
 
@@ -65,12 +74,12 @@ const facetUpdated = [
   {
     value: '30',
     label: t(locale, 'catalog.filter.updated30'),
-    count: ADDONS.filter((a) => now - new Date(a.updatedAt).getTime() <= 30 * DAY).length,
+    count: catalogAddons.filter((a) => now - new Date(a.updatedAt).getTime() <= 30 * DAY).length,
   },
   {
     value: '90',
     label: t(locale, 'catalog.filter.updated90'),
-    count: ADDONS.filter((a) => now - new Date(a.updatedAt).getTime() <= 90 * DAY).length,
+    count: catalogAddons.filter((a) => now - new Date(a.updatedAt).getTime() <= 90 * DAY).length,
   },
 ];
 ---
@@ -133,12 +142,73 @@ const facetUpdated = [
       </div>
 
       <div class="mt-2 flex justify-end">
-        <span data-count class="text-sm text-text-muted">{t(locale, 'catalog.count', { n: ADDONS.length })}</span>
+        <span data-count class="text-sm text-text-muted">{t(locale, 'catalog.count', { n: catalogAddons.length })}</span>
       </div>
 
-      <div data-grid class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {ADDONS.map((addon) => <AddonCard addon={addon} locale={locale} />)}
+      <div data-grid class="mt-4 flex flex-col gap-8">
+        <section data-group="builtin" class="flex flex-col gap-3">
+          <h2 class="font-sans text-lg font-semibold text-text-primary">
+            {t(locale, 'catalog.groupBuiltin')}
+          </h2>
+          <div data-group-grid class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {builtinAddons.map((addon) => <AddonCard addon={addon} locale={locale} />)}
+          </div>
+        </section>
+
+        <section data-group="community" class="flex flex-col gap-3">
+          <h2 class="font-sans text-lg font-semibold text-text-primary">
+            {t(locale, 'catalog.groupCommunity')}
+          </h2>
+          {
+            communityAddons.length > 0 ? (
+              <div data-group-grid class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {communityAddons.map((addon) => <AddonCard addon={addon} locale={locale} />)}
+              </div>
+            ) : (
+              <div
+                data-community-empty
+                class="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border-subtle px-4 py-12 text-center"
+              >
+                <p class="font-sans text-lg font-semibold text-text-primary">
+                  {t(locale, 'catalog.communityEmptyTitle')}
+                </p>
+                <p class="max-w-md text-sm text-text-secondary">
+                  {t(locale, 'catalog.communityEmptySub')}
+                </p>
+                <a
+                  href={submitHref}
+                  class="mt-1 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-ink transition hover:brightness-110"
+                >
+                  {t(locale, 'catalog.submitAddon')}
+                </a>
+              </div>
+            )
+          }
+        </section>
       </div>
+
+      <section
+        data-roadmap
+        class="mt-8 flex flex-col gap-3 rounded-xl border border-dashed border-border-subtle bg-surface-2/40 p-5"
+      >
+        <div class="flex items-center gap-2">
+          <span
+            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-text-muted"
+            aria-hidden="true"
+          >
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path>
+            </svg>
+          </span>
+          <h2 class="font-sans text-lg font-semibold text-text-primary">
+            {t(locale, 'catalog.roadmapTitle')}
+          </h2>
+        </div>
+        <p class="max-w-2xl text-sm text-text-secondary">{t(locale, 'catalog.roadmapSub')}</p>
+        <div class="grid grid-cols-1 gap-4 opacity-80 sm:grid-cols-2 lg:grid-cols-4">
+          {plannedAddons.map((addon) => <AddonCard addon={addon} locale={locale} />)}
+        </div>
+      </section>
     </div>
   </div>
 
@@ -200,6 +270,7 @@ const facetUpdated = [
   const empty = root.querySelector('[data-empty]');
   const countEl = root.querySelector('[data-count]');
   const cards = [...grid.querySelectorAll('[data-card]')];
+  const groupGrids = [...grid.querySelectorAll('[data-group-grid]')];
   const trigger = root.querySelector('[data-drawer-trigger]');
   const drawer = root.querySelector('#filter-drawer');
   const closeBtn = root.querySelector('[data-drawer-close]');
@@ -249,12 +320,16 @@ const facetUpdated = [
       c.style.display = ok ? '' : 'none';
       if (ok) visible.push(c);
     }
-    visible.sort((a, b) => {
-      if (state.sort === 'name') return a.dataset.name.localeCompare(b.dataset.name);
-      if (state.sort === 'updated') return b.dataset.updated.localeCompare(a.dataset.updated);
-      return 0;
-    });
-    for (const c of visible) grid.appendChild(c);
+    // Sort inside each group so the builtin/community sections stay intact.
+    for (const g of groupGrids) {
+      const groupVisible = visible.filter((c) => g.contains(c));
+      groupVisible.sort((a, b) => {
+        if (state.sort === 'name') return a.dataset.name.localeCompare(b.dataset.name);
+        if (state.sort === 'updated') return b.dataset.updated.localeCompare(a.dataset.updated);
+        return 0;
+      });
+      for (const c of groupVisible) g.appendChild(c);
+    }
     empty.hidden = visible.length > 0;
     countEl.textContent = visible.length === 1 ? countOne : countTemplate.replace('{{n}}', String(visible.length));
 

@@ -54,5 +54,8 @@ CLAUDE.md
 # pi
 .pi/
 
+# ODD feature documents
+odd/
+
 # Local scratch (not part of the repo)
 .trabajo/

@@ -1,5 +1,5 @@
 ---
-import type { AddonLang } from '../data/addons';
+import type { AddonAvailability, AddonLang } from '../data/addons';
 import { addonDetailHref, type AddonSeed } from '../data/addons';
 import { t, type UiLocale } from '../i18n';
 import AddonIcon from './AddonIcon.astro';
@@ -15,6 +15,15 @@ const langTag: Record<AddonLang, string> = {
   es: t(locale, 'catalog.tagEs'),
   en: t(locale, 'catalog.tagEn'),
   multi: t(locale, 'catalog.tagMulti'),
+};
+
+// The status pill is derived from the data model — never hardcoded. `builtin`
+// really ships with the app, `community` is installable by URL, and `planned`
+// has no working catalog yet.
+const availabilityTag: Record<AddonAvailability, string> = {
+  builtin: t(locale, 'catalog.tagIncluded'),
+  community: t(locale, 'catalog.tagCommunity'),
+  planned: t(locale, 'catalog.tagPlanned'),
 };
 
 const searchable = [addon.name, addon.author, addon.description[locale]].join(' ').toLowerCase();
@@ -46,7 +55,7 @@ const searchable = [addon.name, addon.author, addon.description[locale]].join(' 
   <span class="line-clamp-2 text-sm text-text-secondary">{addon.description[locale]}</span>
   <span class="mt-auto flex flex-wrap gap-1.5 pt-1">
     <span class="rounded-full bg-accent/15 px-2.5 py-0.5 text-xs font-medium text-accent">
-      {t(locale, 'catalog.tagBuiltin')}
+      {availabilityTag[addon.availability]}
     </span>
     <span class="rounded-full bg-surface-2 px-2.5 py-0.5 text-xs text-text-secondary">
       {addon.languages.map((l) => langTag[l]).join(' · ')}

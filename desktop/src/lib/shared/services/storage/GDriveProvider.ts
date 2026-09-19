@@ -1,4 +1,7 @@
-import { getDriveToken, refreshDriveToken } from '$lib/shared/services/SupabaseAuthService';
+import {
+  getDriveAccessToken,
+  refreshDriveAccessToken,
+} from '$lib/shared/services/DriveConnectService';
 import { DRIVE_BOOKS_PATH } from '$lib/shared/protocol/DriveCatalogContract';
 import { redactLogLine, type SyncErrorCode } from '$lib/shared/protocol/DriveCatalogContract';
 import type { StorageProvider } from './StorageProvider';
@@ -6,7 +9,7 @@ import type { StorageProvider } from './StorageProvider';
 /**
  * Typed Drive error: carries a stable SyncErrorCode (`AUTH_EXPIRED`,
  * `AUTH_REQUIRED`, `PERMISSION_DENIED`) and `retryable=false` so callers can
- * surface a re-sign-in prompt instead of silently retrying. Messages are
+ * surface a Drive-connect prompt instead of silently retrying. Messages are
  * always redacted (DTL-3).
  */
 export type DriveError = Error & { code?: SyncErrorCode; retryable?: boolean };
@@ -32,16 +35,14 @@ export class GDriveProvider implements StorageProvider {
   private static readonly FOLDER_NAME = DRIVE_BOOKS_PATH;
 
   /**
-   * Resolve a usable Drive access token once per operation. `getDriveToken()`
-   * returns the session `provider_token` when present; when absent (session
-   * auto-refresh dropped it, or fresh restart) the layered
-   * `refreshDriveToken()` is used (DTL-1). Refresh failure throws a typed
-   * `AUTH_REQUIRED` instead of failing silently (DTL-2).
+   * Resolve a usable Drive access token once per operation from the
+   * independent Drive grant (`drive.json`, login-drive-separation). The Drive
+   * module owns the store → silent-refresh chain and the single-flight refresh
+   * mutex; refresh failure throws a typed `AUTH_REQUIRED` pointing at Drive
+   * connect (DTL-2).
    */
   private async getAccessToken(): Promise<string> {
-    const token = await getDriveToken();
-    if (token) return token;
-    return refreshDriveToken();
+    return getDriveAccessToken();
   }
 
   private authError(code: SyncErrorCode, message: string): DriveError {
@@ -57,7 +58,7 @@ export class GDriveProvider implements StorageProvider {
     if (response.status === 401) {
       throw this.authError(
         'AUTH_EXPIRED',
-        `${prefix}: Google Drive access expired. Please sign in with Google again.`,
+        `${prefix}: Google Drive access expired. Connect Google Drive in Settings to use Drive features.`,
       );
     }
     if (response.status === 403) {
@@ -83,7 +84,7 @@ export class GDriveProvider implements StorageProvider {
     });
     let response = await fetch(url, authorized(token));
     if (response.status === 401 || response.status === 403) {
-      token = await refreshDriveToken(); // throws typed AUTH_REQUIRED when refresh is impossible
+      token = await refreshDriveAccessToken(); // throws typed AUTH_REQUIRED when refresh is impossible
       response = await fetch(url, authorized(token));
     }
     return response;

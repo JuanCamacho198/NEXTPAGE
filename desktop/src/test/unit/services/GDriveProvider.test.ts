@@ -1,13 +1,15 @@
 /**
- * Unit tests for GDriveProvider — Task 2.1
- * Tests NEW behavior: token from GoogleOAuthService, optional `name` on upload.
+ * Unit tests for GDriveProvider — token source is the independent Drive
+ * grant (login-drive-separation, work unit 3).
+ * Tests behavior: token from DriveConnectService (Drive store + silent
+ * refresh chain), optional `name` on upload.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock SupabaseAuthService BEFORE importing GDriveProvider
-vi.mock('$lib/shared/services/SupabaseAuthService', () => ({
-  getDriveToken: vi.fn(),
-  refreshDriveToken: vi.fn(),
+// Mock DriveConnectService BEFORE importing GDriveProvider
+vi.mock('$lib/shared/services/DriveConnectService', () => ({
+  getDriveAccessToken: vi.fn(),
+  refreshDriveAccessToken: vi.fn(),
 }));
 
 import {
@@ -15,7 +17,10 @@ import {
   __resetGDriveFolderCache,
   type DriveError,
 } from '$lib/shared/services/storage/GDriveProvider';
-import { getDriveToken, refreshDriveToken } from '$lib/shared/services/SupabaseAuthService';
+import {
+  getDriveAccessToken,
+  refreshDriveAccessToken,
+} from '$lib/shared/services/DriveConnectService';
 
 function mockDriveApiResponses(
   responses: Array<{
@@ -39,12 +44,12 @@ function mockDriveApiResponses(
   });
 }
 
-function mockAuth(token: string | null) {
-  vi.mocked(getDriveToken).mockResolvedValue(token);
+function mockAuth(token: string) {
+  vi.mocked(getDriveAccessToken).mockResolvedValue(token);
 }
 
 function mockAuthError(message: string) {
-  vi.mocked(getDriveToken).mockRejectedValue(new Error(message));
+  vi.mocked(getDriveAccessToken).mockRejectedValue(new Error(message));
 }
 
 describe('GDriveProvider — token source swap', () => {
@@ -57,7 +62,7 @@ describe('GDriveProvider — token source swap', () => {
     provider = new GDriveProvider();
   });
 
-  it('calls getDriveToken for authentication', async () => {
+  it('calls getDriveAccessToken (Drive store) for authentication', async () => {
     mockAuth('ya29.test-token');
     mockDriveApiResponses([
       { ok: true, json: () => Promise.resolve({ files: [{ id: 'folder-1', name: 'Books' }] }) },
@@ -66,16 +71,14 @@ describe('GDriveProvider — token source swap', () => {
 
     await provider.list('');
 
-    expect(getDriveToken).toHaveBeenCalled();
+    expect(getDriveAccessToken).toHaveBeenCalled();
   });
 
-  it('throws when getDriveToken rejects (not authenticated)', async () => {
-    mockAuthError('No Google Drive token available. Please sign in with Google again.');
+  it('propagates typed AUTH_REQUIRED when the Drive grant is missing (Drive connect, not login)', async () => {
+    mockAuthError('Google Drive is not connected. Connect Google Drive in Settings.');
 
-    await expect(provider.list('')).rejects.toThrow(
-      'No Google Drive token available. Please sign in with Google again.',
-    );
-    expect(getDriveToken).toHaveBeenCalled();
+    await expect(provider.list('')).rejects.toThrow(/not connected/i);
+    expect(getDriveAccessToken).toHaveBeenCalled();
   });
 
   it('upload with custom name uses it in Drive API metadata', async () => {
@@ -135,7 +138,7 @@ describe('GDriveProvider — idempotent upload (DRP-3)', () => {
     globalThis.fetch = vi.fn();
     __resetGDriveFolderCache();
     provider = new GDriveProvider();
-    vi.mocked(refreshDriveToken).mockResolvedValue('ya29.refreshed-token');
+    vi.mocked(refreshDriveAccessToken).mockResolvedValue('ya29.refreshed-token');
   });
 
   it('RED: finds existing file by canonical name and PATCH-updates it (no duplicate create)', async () => {
@@ -235,22 +238,44 @@ describe('GDriveProvider — token refresh layers (DTL-1/DTL-2/DTL-3)', () => {
     globalThis.fetch = vi.fn();
     __resetGDriveFolderCache();
     provider = new GDriveProvider();
-    vi.mocked(refreshDriveToken).mockResolvedValue('ya29.refreshed-token');
+    vi.mocked(refreshDriveAccessToken).mockResolvedValue('ya29.refreshed-token');
   });
 
-  it('RED: falls back to refreshDriveToken when getDriveToken returns null (auto-refresh dropped token)', async () => {
-    mockAuth(null);
+  it('uses the Drive store token directly — no session fallback (single refresh chain in the Drive module)', async () => {
+    mockAuth('token-r0');
     mockDriveApiResponses([
-      { ok: true, json: () => Promise.resolve({ files: [{ id: 'root-r1' }] }) },
-      { ok: true, json: () => Promise.resolve({ files: [{ id: 'folder-r1' }] }) },
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'root-r0' }] }) },
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'folder-r0' }] }) },
       { ok: true, json: () => Promise.resolve({ files: [] }) },
-      { ok: true, json: () => Promise.resolve({ id: 'file-r1' }) },
+      { ok: true, json: () => Promise.resolve({ id: 'file-r0' }) },
     ]);
 
-    const fileId = await provider.upload('book-r1', new Uint8Array([1]), 'book-r1.epub');
+    const fileId = await provider.upload('book-r0', new Uint8Array([1]), 'book-r0.epub');
 
-    expect(refreshDriveToken).toHaveBeenCalledTimes(1);
-    expect(fileId).toBe('file-r1');
+    expect(getDriveAccessToken).toHaveBeenCalledTimes(1);
+    expect(refreshDriveAccessToken).not.toHaveBeenCalled();
+    expect(fileId).toBe('file-r0');
+  });
+
+  it('propagates AUTH_REQUIRED from the Drive module when refresh is impossible (invalid grant)', async () => {
+    mockAuth('token-r0b');
+    vi.mocked(refreshDriveAccessToken).mockRejectedValue(
+      Object.assign(new Error('Google Drive is not connected. Connect Google Drive in Settings.'), {
+        code: 'AUTH_REQUIRED',
+        retryable: false,
+      }),
+    );
+    mockDriveApiResponses([
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'root-r0b' }] }) },
+      { ok: true, json: () => Promise.resolve({ files: [{ id: 'folder-r0b' }] }) },
+      { ok: false, status: 401, json: () => Promise.resolve({}) },
+    ]);
+
+    await expect(provider.upload('book-r0b', new Uint8Array([1]), 'book-r0b.epub')).rejects.toThrow(
+      /not connected/i,
+    );
+
+    expect(refreshDriveAccessToken).toHaveBeenCalledTimes(1);
   });
 
   it('RED: 401 mid-request → refresh once → retry once → succeeds (no duplicate work)', async () => {
@@ -265,7 +290,7 @@ describe('GDriveProvider — token refresh layers (DTL-1/DTL-2/DTL-3)', () => {
 
     const fileId = await provider.upload('book-r2', new Uint8Array([1]), 'book-r2.epub');
 
-    expect(refreshDriveToken).toHaveBeenCalledTimes(1);
+    expect(refreshDriveAccessToken).toHaveBeenCalledTimes(1);
     expect(fileId).toBe('file-r2');
   });
 
@@ -279,10 +304,10 @@ describe('GDriveProvider — token refresh layers (DTL-1/DTL-2/DTL-3)', () => {
     ]);
 
     await expect(provider.upload('book-r3', new Uint8Array([1]), 'book-r3.epub')).rejects.toThrow(
-      /sign in with Google again/i,
+      /connect google drive/i,
     );
 
-    expect(refreshDriveToken).toHaveBeenCalledTimes(1);
+    expect(refreshDriveAccessToken).toHaveBeenCalledTimes(1);
   });
 
   it('RED: 403 after refresh → typed PERMISSION_DENIED, refresh bounded to ONE attempt', async () => {
@@ -298,7 +323,7 @@ describe('GDriveProvider — token refresh layers (DTL-1/DTL-2/DTL-3)', () => {
       /permission denied/i,
     );
 
-    expect(refreshDriveToken).toHaveBeenCalledTimes(1);
+    expect(refreshDriveAccessToken).toHaveBeenCalledTimes(1);
   });
 
   it('RED: second upload reuses the resolved folder (no duplicate NextPage/Books)', async () => {
@@ -360,7 +385,7 @@ describe('GDriveProvider — delete (trash, REQ-11)', () => {
     globalThis.fetch = vi.fn();
     __resetGDriveFolderCache();
     provider = new GDriveProvider();
-    vi.mocked(refreshDriveToken).mockResolvedValue('ya29.refreshed-token');
+    vi.mocked(refreshDriveAccessToken).mockResolvedValue('ya29.refreshed-token');
   });
 
   it('trashes a file directly by ID (PATCH to the file ID)', async () => {

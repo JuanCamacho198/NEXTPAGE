@@ -8,6 +8,7 @@ import {
   reconcileLegacyReference,
   coverError,
   parseCanonicalBookName,
+  syncError,
   type Lifecycle,
   type SyncErrorCode,
 } from '$lib/shared/protocol/DriveCatalogContract';
@@ -101,6 +102,7 @@ describe('Drive catalog contract', () => {
       'AUTH_REQUIRED',
       'AUTH_EXPIRED',
       'PERMISSION_DENIED',
+      'DRIVE_NOT_CONNECTED',
       'REMOTE_NOT_FOUND',
       'HASH_MISMATCH',
       'CONFLICT',
@@ -116,5 +118,17 @@ describe('Drive catalog contract', () => {
     const errNoBook = coverError('corr-2');
     expect(errNoBook.code).toBe('COVER_FAILED');
     expect(errNoBook.bookId).toBeUndefined();
+  });
+  it('exposes DRIVE_NOT_CONNECTED as a non-retryable connect-route error (login-drive-separation)', () => {
+    expect(DRIVE_SCOPE).toBe('https://www.googleapis.com/auth/drive.file');
+    const err = syncError(
+      'DRIVE_NOT_CONNECTED',
+      'Google Drive is not connected. Connect Google Drive in Settings.',
+      false,
+    );
+    expect(err.code).toBe('DRIVE_NOT_CONNECTED');
+    expect(err.retryable).toBe(false);
+    expect(err.message).toMatch(/settings/i);
+    expect(err.correlationId).toBeTruthy();
   });
 });

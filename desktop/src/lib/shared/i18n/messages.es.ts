@@ -277,6 +277,18 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.sync.signedIn': 'Sesion iniciada',
   'settings.sync.signedOut': 'Sin sesion',
 
+  // Sync Tab — Drive connection card (login-drive-separation)
+  'settings.sync.drive.title': 'Google Drive',
+  'settings.sync.drive.description':
+    'Conecta Google Drive para el respaldo frio y las descargas entre dispositivos. El inicio de sesion es independiente — desconectar Drive nunca cierra tu sesion.',
+  'settings.sync.drive.connected': 'Conectado',
+  'settings.sync.drive.notConnected': 'No conectado',
+  'settings.sync.drive.connect': 'Conectar Drive',
+  'settings.sync.drive.disconnect': 'Desconectar',
+  'settings.sync.drive.connecting': 'Conectando...',
+  'settings.sync.drive.connectFailed': 'No se pudo conectar Drive',
+  'settings.sync.drive.disconnected': 'Drive desconectado',
+
   // Data Tab
   'settings.data.description': 'Gestiona el almacenamiento y la configuracion.',
   'settings.data.storage': 'Almacenamiento',
@@ -818,6 +830,16 @@ export const messagesEs: Record<MessageKey, string> = {
   'settings.data.coldExport': 'Exportar a Drive',
   'settings.data.coldImport': 'Importar desde Drive',
   'settings.data.importing': 'Importando…',
+  'settings.data.driveNotConnected':
+    'Google Drive no esta conectado. Conecta Drive para usar el respaldo frio.',
+  'settings.data.connectDrive': 'Conectar Drive',
+
+  // Drive connect pre-prompt (login-drive-separation)
+  'drive.prompt.title': '¿Conectar Google Drive?',
+  'drive.prompt.body':
+    'Esta accion necesita acceso a Google Drive. Conecta ahora para continuar u omite y sigue en local.',
+  'drive.prompt.connect': 'Conectar',
+  'drive.prompt.notNow': 'Ahora no',
 
   // Stats home grid labels
   'stats.booksStartedLabel': 'Iniciados',

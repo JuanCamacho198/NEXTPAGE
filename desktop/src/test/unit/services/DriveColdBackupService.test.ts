@@ -10,6 +10,11 @@ const mockUpsertHighlight = vi.fn();
 const mockUpsertBookmark = vi.fn();
 const mockUpsertReadingSession = vi.fn();
 const mockFetchReadingSessions = vi.fn(() => Promise.resolve([]));
+const mockIsDriveAuthorized = vi.hoisted(() => vi.fn());
+
+vi.mock('$lib/shared/services/DriveConnectService', () => ({
+  isDriveAuthorized: mockIsDriveAuthorized,
+}));
 
 vi.mock('$lib/shared/services/storage/GDriveProvider', () => ({
   GDriveProvider: vi.fn(function () {
@@ -54,6 +59,7 @@ let DriveColdBackupService: typeof import('$lib/shared/services/DriveColdBackupS
 beforeEach(async () => {
   vi.clearAllMocks();
   mockHasLiveSession.mockReturnValue(true);
+  mockIsDriveAuthorized.mockResolvedValue(true);
   mockUpload.mockResolvedValue('id');
   mockDownload.mockResolvedValue(
     new TextEncoder().encode(
@@ -184,5 +190,61 @@ describe('DriveColdBackupService — cold export/import', () => {
     expect(result.totalImported).toBe(0);
     expect(mockDownload).not.toHaveBeenCalled();
     expect(mockUpsertBook).not.toHaveBeenCalled();
+  });
+});
+
+describe('DriveColdBackupService — Drive authorization gate (login-drive-separation)', () => {
+  it('export unauthorized → typed DRIVE_NOT_CONNECTED (connect path), no upload fires', async () => {
+    mockIsDriveAuthorized.mockResolvedValue(false);
+
+    const err = await DriveColdBackupService.exportColdBackup('u1').catch((e) => e);
+
+    expect(err).toMatchObject({ code: 'DRIVE_NOT_CONNECTED', retryable: false });
+    expect(String(err.message)).toMatch(/connect google drive in settings/i);
+    expect(mockUpload).not.toHaveBeenCalled();
+  });
+
+  it('import unauthorized → typed DRIVE_NOT_CONNECTED, no download fires', async () => {
+    mockIsDriveAuthorized.mockResolvedValue(false);
+
+    const err = await DriveColdBackupService.importColdBackup('u1').catch((e) => e);
+
+    expect(err).toMatchObject({ code: 'DRIVE_NOT_CONNECTED', retryable: false });
+    expect(mockDownload).not.toHaveBeenCalled();
+    expect(mockUpsertBook).not.toHaveBeenCalled();
+  });
+
+  it('backfill unauthorized → typed DRIVE_NOT_CONNECTED, Drive never listed', async () => {
+    mockIsDriveAuthorized.mockResolvedValue(false);
+
+    const err = await DriveColdBackupService.backfillFromDrive('u1').catch((e) => e);
+
+    expect(err).toMatchObject({ code: 'DRIVE_NOT_CONNECTED', retryable: false });
+    expect(mockDownload).not.toHaveBeenCalled();
+    expect(mockList).not.toHaveBeenCalled();
+  });
+
+  it('signed-in but Drive-disconnected degrades to the connect path (not silent zero)', async () => {
+    mockHasLiveSession.mockReturnValue(true);
+    mockIsDriveAuthorized.mockResolvedValue(false);
+
+    await expect(DriveColdBackupService.importColdBackup('u1')).rejects.toMatchObject({
+      code: 'DRIVE_NOT_CONNECTED',
+    });
+  });
+
+  it('signed-out and disconnected routes to the connect path regardless of session state', async () => {
+    mockHasLiveSession.mockReturnValue(false);
+    mockIsDriveAuthorized.mockResolvedValue(false);
+
+    await expect(DriveColdBackupService.importColdBackup('u1')).rejects.toMatchObject({
+      code: 'DRIVE_NOT_CONNECTED',
+    });
+  });
+
+  it('authorized + live session proceeds (gate is additive, existing behavior intact)', async () => {
+    await DriveColdBackupService.exportColdBackup('u1');
+    expect(mockIsDriveAuthorized).toHaveBeenCalled();
+    expect(mockUpload).toHaveBeenCalled();
   });
 });

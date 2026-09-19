@@ -1,11 +1,17 @@
 import { storageState as defaultStorageState } from '$lib/shared/stores/StorageState.svelte';
 import { DriveColdBackupService as DefaultDriveColdBackupService } from '$lib/shared/services';
+import { isDriveAuthorized as defaultIsDriveAuthorized } from '$lib/shared/services/DriveConnectService';
 import { authState as defaultAuthState } from '$lib/shared/stores/AuthState.svelte';
 import { pushToast as defaultPushToast } from '$lib/shared/stores/ToastQueue.svelte';
+
+export type DriveAuthDep = {
+  isAuthorized: () => Promise<boolean>;
+};
 
 export type DataDeps = {
   storageState?: typeof defaultStorageState;
   DriveColdBackupService?: typeof DefaultDriveColdBackupService;
+  drive?: DriveAuthDep;
   authState?: typeof defaultAuthState;
   pushToast?: typeof defaultPushToast;
   t?: (key: string, params?: Record<string, string | number>) => string;
@@ -30,6 +36,7 @@ export function createSettingsData(deps: DataDeps = {}): {
 } {
   const storage = deps.storageState ?? defaultStorageState;
   const ColdBackup = deps.DriveColdBackupService ?? DefaultDriveColdBackupService;
+  const drive: DriveAuthDep = deps.drive ?? { isAuthorized: defaultIsDriveAuthorized };
   const auth = deps.authState ?? defaultAuthState;
   const pushToast = deps.pushToast ?? defaultPushToast;
   const t = deps.t ?? ((k: string) => k);
@@ -74,10 +81,33 @@ export function createSettingsData(deps: DataDeps = {}): {
     }
   }
 
+  // Q4 decided: CTA-only. Export/import handlers never raise a modal —
+  // the DriveConnectPrompt dialog stays scoped to the cloud-download
+  // pre-prompt. Unauthorized cold backup routes to the Data-tab connect CTA
+  // via this toast; the tab CTA performs the connect.
+  function driveNotConnectedToast(): void {
+    pushToast('error', t('settings.data.driveNotConnected'));
+  }
+
+  function isDriveConnectError(e: unknown): boolean {
+    const code = (e as { code?: unknown } | null)?.code;
+    return code === 'DRIVE_NOT_CONNECTED' || code === 'AUTH_REQUIRED';
+  }
+
   async function handleExportColdBackup(): Promise<void> {
     const userId = auth.userId;
     if (!userId) {
       pushToast('error', t('errors.commandFailure'));
+      return;
+    }
+    let authorized = false;
+    try {
+      authorized = await drive.isAuthorized();
+    } catch {
+      authorized = false;
+    }
+    if (!authorized) {
+      driveNotConnectedToast();
       return;
     }
     isExportingColdBackup = true;
@@ -85,7 +115,8 @@ export function createSettingsData(deps: DataDeps = {}): {
       await ColdBackup.exportColdBackup(userId);
       pushToast('success', t('settings.data.exportSuccess'));
     } catch (e) {
-      pushToast('error', e instanceof Error ? e.message : t('errors.commandFailure'));
+      if (isDriveConnectError(e)) driveNotConnectedToast();
+      else pushToast('error', e instanceof Error ? e.message : t('errors.commandFailure'));
     } finally {
       isExportingColdBackup = false;
     }
@@ -97,12 +128,23 @@ export function createSettingsData(deps: DataDeps = {}): {
       pushToast('error', t('errors.commandFailure'));
       return;
     }
+    let authorized = false;
+    try {
+      authorized = await drive.isAuthorized();
+    } catch {
+      authorized = false;
+    }
+    if (!authorized) {
+      driveNotConnectedToast();
+      return;
+    }
     isImportingColdBackup = true;
     try {
       await ColdBackup.importColdBackup(userId);
       pushToast('success', t('settings.data.importSuccess'));
     } catch (e) {
-      pushToast('error', e instanceof Error ? e.message : t('errors.importCommandFailed'));
+      if (isDriveConnectError(e)) driveNotConnectedToast();
+      else pushToast('error', e instanceof Error ? e.message : t('errors.importCommandFailed'));
     } finally {
       isImportingColdBackup = false;
     }

@@ -5,8 +5,7 @@
  * reactive interface as before for backward compatibility.
  *
  * Consumers read: `isSignedIn`, `email`, `userId`, `displayName`,
- * `photoUrl`, `isLocalUser`, `accessToken`, `refreshToken`, `expiresAt`,
- * and call `startAuth()`, `signOut()`.
+ * `photoUrl`, `isLocalUser`, `accessToken`, `refreshToken`, `expiresAt`.
  *
  * Local-user support:
  * Local users are first-class profiles that do NOT set `accessToken`.
@@ -20,18 +19,11 @@ import type { LocalUserProfile } from './authPersistence';
 export type { LocalUserProfile };
 
 /**
- * Legacy TokenSet type for backward compatibility with GoogleOAuthService.ts.
- * @deprecated Will be removed next release cycle.
- */
-export interface TokenSet {
-  accessToken: string;
-  refreshToken: string;
-  idToken: string;
-  expiresIn: number;
-}
-
-/**
- * Internal Supabase session data shape.
+ * Internal Supabase session data shape (identity-only, login-drive-separation).
+ *
+ * Carries the Supabase identity session and nothing else. Drive
+ * authorization lives in drive.json under DriveConnectService — this store
+ * never holds provider or Drive refresh tokens.
  */
 export interface SupabaseSessionData {
   accessToken: string | null;
@@ -41,14 +33,6 @@ export interface SupabaseSessionData {
   email: string | null;
   displayName: string | null;
   photoUrl: string | null;
-  providerToken: string | null;
-  /**
-   * Google OAuth refresh token from the session's `provider_refresh_token`
-   * (issued because sign-in requests `access_type=offline`). Distinct from
-   * `refreshToken` (the Supabase session refresh token — never reusable as a
-   * Google refresh token). Persisted to auth.json so it survives restart.
-   */
-  driveRefreshToken?: string | null;
 }
 
 let accessToken: string | null = $state(null);
@@ -59,8 +43,6 @@ let displayName: string | null = $state(null);
 let photoUrl: string | null = $state(null);
 let userId: string | null = $state(null);
 let localUser: LocalUserProfile | null = $state(null);
-let providerToken: string | null = $state(null);
-let driveRefreshToken: string | null = $state(null);
 
 const isSignedIn = $derived(accessToken !== null);
 const isLocalUser = $derived(localUser !== null);
@@ -79,13 +61,12 @@ export function setSupabaseSession(data: SupabaseSessionData): void {
   email = data.email;
   displayName = data.displayName;
   photoUrl = data.photoUrl;
-  providerToken = data.providerToken;
-  driveRefreshToken = data.driveRefreshToken ?? null;
   localUser = null; // Clear local user when supabase session is set
 }
 
 /**
- * Clear the Supabase session (sign out).
+ * Clear the Supabase session (sign out). Identity-only: the independent
+ * Drive grant in drive.json is never touched here.
  */
 export function clearSupabaseSession(): void {
   accessToken = null;
@@ -95,8 +76,6 @@ export function clearSupabaseSession(): void {
   displayName = null;
   photoUrl = null;
   userId = null;
-  providerToken = null;
-  driveRefreshToken = null;
 }
 
 /**
@@ -114,10 +93,6 @@ export function setLocalUser(profile: LocalUserProfile): void {
 
 export function clearLocalUser(): void {
   localUser = null;
-}
-
-export function getProviderToken(): string | null {
-  return providerToken;
 }
 
 export function getAccessToken(): string | null {
@@ -167,12 +142,6 @@ export const authState = {
   get expiresAt(): number | null {
     return expiresAt;
   },
-  get providerToken(): string | null {
-    return providerToken;
-  },
-  get driveRefreshToken(): string | null {
-    return driveRefreshToken;
-  },
   get localUser(): LocalUserProfile | null {
     return localUser;
   },
@@ -183,9 +152,5 @@ export const authState = {
   getAccessToken,
   getRefreshToken,
   getExpiresAt,
-  getProviderToken,
   needsRefresh,
-  // @deprecated Kept for GoogleOAuthService.ts backward compat. Remove next cycle.
-  setSession: setSupabaseSession,
-  clearSession: clearSupabaseSession,
 };

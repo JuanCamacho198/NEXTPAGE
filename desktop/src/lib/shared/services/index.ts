@@ -34,21 +34,35 @@ export {
 export { fromCfi, derivePage, parseSpineIndex } from './LocatorCodec';
 export type { CanonicalLocator, LocatorLocations } from './LocatorCodec';
 export {
-  getDriveToken,
-  refreshDriveToken,
   registerSupabaseCallbackHandler,
   restoreSession,
   signInAnonymously,
   signInWithGoogle,
   signOut,
 } from './SupabaseAuthService';
+export type { SupabaseSessionData } from '$lib/shared/stores/AuthState.svelte';
 export {
-  generateCodeChallenge,
-  generateCodeVerifier,
-  getValidAccessToken,
-  handleCallback,
-  OAuthError,
-  refreshAccessToken,
-  registerOAuthCallbackHandler,
-  startAuth,
-} from './GoogleOAuthService';
+  beginDriveConnect,
+  buildDriveAuthorizeUrl,
+  buildDriveState,
+  consumeDriveAuthResult,
+  disconnectDrive,
+  DriveConfigError,
+  DriveOAuthError,
+  generateDriveCodeChallenge,
+  generateDriveCodeVerifier,
+  getDriveAccessToken,
+  getDriveOAuthConfig,
+  isDriveAuthorized,
+  parseDriveCallbackUrl,
+  refreshDriveAccessToken,
+  type DriveAuthResult,
+  type DriveCallbackErrorCode,
+  type DriveConfigErrorCode,
+  type DriveOAuthConfig,
+} from './DriveConnectService';
+export {
+  markDriveDeclined,
+  shouldShowDrivePrompt,
+  type DrivePromptInput,
+} from './driveConnectPromptGate';

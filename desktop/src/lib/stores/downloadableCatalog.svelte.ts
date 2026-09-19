@@ -14,6 +14,13 @@
 import type { SupabaseUserBookRow } from '$lib/shared/sync/SupabaseBookCatalogSync';
 import { SupabaseBookCatalogSync } from '$lib/shared/sync/SupabaseBookCatalogSync';
 import { GDriveProvider } from '$lib/shared/services/storage/GDriveProvider';
+import { isDriveAuthorized } from '$lib/shared/services/DriveConnectService';
+import { getIdentityProvider } from '$lib/shared/services/SupabaseAuthService';
+import {
+  declineKeyForUser,
+  markDriveDeclined,
+  shouldShowDrivePrompt,
+} from '$lib/shared/services/driveConnectPromptGate';
 import { parseCanonicalBookName } from '$lib/shared/protocol/DriveCatalogContract';
 import { reportAuthError } from '$lib/shared/stores/syncAlert.svelte';
 import { authState } from '$lib/shared/stores/AuthState.svelte';
@@ -49,6 +56,47 @@ export function setDownloadableCatalogPort(port: LibraryPort): void {
 let downloadableBooks: AvailableDriveBook[] = $state([]);
 let isDownloadingSet: Set<string> = $state(new Set());
 let downloadErrorMsg: string | null = $state(null);
+
+/**
+ * One-time "Connect Google Drive?" pre-prompt request (login-drive-separation).
+ * Set when a Google-signed-in user with no prior decline invokes a cloud
+ * download while Drive is unauthorized. The `DriveConnectPrompt` dialog
+ * (work unit 4) observes this flag; declining persists a per-user marker via
+ * `declineDrivePrompt()` so later attempts degrade cleanly without re-offer.
+ */
+let drivePromptPending: boolean = $state(false);
+
+export function isDrivePromptPending(): boolean {
+  return drivePromptPending;
+}
+
+export function clearDrivePrompt(): void {
+  drivePromptPending = false;
+}
+
+export function declineDrivePrompt(): void {
+  drivePromptPending = false;
+  const userId = authState.userId;
+  const marker = markDriveDeclined(userId);
+  if (marker === null || typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(declineKeyForUser(userId as string), marker);
+  } catch {
+    // best-effort: a declined prompt simply re-offers next launch
+  }
+}
+
+function readDriveDeclineMarker(userId: string | null): string | null {
+  if (userId === null || typeof localStorage === 'undefined') return null;
+  try {
+    return localStorage.getItem(declineKeyForUser(userId));
+  } catch {
+    return null;
+  }
+}
+
+const DRIVE_NOT_CONNECTED_COPY =
+  'Google Drive is not connected. Connect Google Drive in Settings to download books.';
 
 // ─── Public Setters ───────────────────────────────────────────────────
 
@@ -147,11 +195,13 @@ const isFallbackTitle = (title: string, id: string): boolean =>
 /**
  * Download a Drive book from the shelf section.
  *
- * Flow: download temp bytes via GDriveProvider (it resolves the token with a
- * refresh fallback — no manual `getDriveToken` check) → atomic persist (Rust
- * saveBookFile creates row + temp/rename) → mark the catalog row imported
- * (version bump) only when a live user session exists → remove from
- * downloadable on success.
+ * Flow: Drive-authorization pre-check (unauthorized + Google provider +
+ * no prior decline → raise the connect-prompt request and stop before any
+ * Drive call; declined/non-Google → clean not-connected outcome) → download
+ * temp bytes via GDriveProvider (it resolves the token from the Drive store
+ * with a silent-refresh fallback) → atomic persist (Rust saveBookFile creates
+ * row + temp/rename) → mark the catalog row imported (version bump) only
+ * when a live user session exists → remove from downloadable on success.
  */
 export async function downloadBook(bookId: string): Promise<void> {
   if (isDownloadingSet.has(bookId)) return;
@@ -159,6 +209,23 @@ export async function downloadBook(bookId: string): Promise<void> {
   const book = downloadableBooks.find((b) => b.id === bookId);
   if (!book) {
     downloadErrorMsg = 'Book not found in downloadable list';
+    return;
+  }
+
+  if (!(await isDriveAuthorized())) {
+    const userId = authState.userId;
+    const provider = await getIdentityProvider().catch(() => null);
+    if (
+      shouldShowDrivePrompt({
+        driveEnabled: false,
+        providerIsGoogle: provider === 'google',
+        declinedForUser: readDriveDeclineMarker(userId),
+        currentUser: userId,
+      })
+    ) {
+      drivePromptPending = true;
+    }
+    downloadErrorMsg = DRIVE_NOT_CONNECTED_COPY;
     return;
   }
 
@@ -259,6 +326,9 @@ export const downloadableCatalog = {
   get error(): string | null {
     return downloadErrorMsg;
   },
+  get drivePromptPending(): boolean {
+    return drivePromptPending;
+  },
   setDownloadableBooks,
   clearDownloadableBooks,
   removeDownloadableBook,
@@ -266,4 +336,7 @@ export const downloadableCatalog = {
   loadAvailableFromDrive,
   setDownloadError,
   clearDownloadError,
+  isDrivePromptPending,
+  clearDrivePrompt,
+  declineDrivePrompt,
 };

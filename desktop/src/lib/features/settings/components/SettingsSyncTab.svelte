@@ -1,4 +1,5 @@
 <script lang="ts">
+  import DriveConnectionCard from '$lib/features/sync/components/DriveConnectionCard.svelte';
   import SyncView from '$lib/features/sync/components/SyncView.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
 
@@ -15,5 +16,6 @@
   aria-labelledby="tab-sincronizacion"
   class="flex-1 overflow-y-auto p-4 flex flex-col gap-4"
 >
+  <DriveConnectionCard {t} />
   <SyncView {t} />
 </div>

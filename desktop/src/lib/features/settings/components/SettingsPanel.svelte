@@ -21,6 +21,9 @@
   import { onDestroy } from 'svelte';
   import { authState } from '$lib/shared/stores/AuthState.svelte';
   import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
+  import { driveState } from '$lib/shared/stores/driveState.svelte';
+  import { beginDriveConnect } from '$lib/shared/services/DriveConnectService';
+  import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
 
   let {
     isOpen = $bindable(false),
@@ -96,6 +99,15 @@
       return;
     }
     isOpen = false;
+  }
+
+  async function handleConnectDrive(): Promise<void> {
+    const result = await beginDriveConnect();
+    if (result.kind === 'failure') {
+      pushToast('error', result.message || t('settings.sync.drive.connectFailed'));
+    } else if (result.kind === 'success') {
+      pushToast('success', t('settings.sync.drive.connected'));
+    }
   }
 
   async function handleTabChange(tab: SettingsTab): Promise<void> {
@@ -259,6 +271,9 @@
             isExportingHighlights={data.isExportingHighlights}
             isExportingColdBackup={data.isExportingColdBackup}
             isImportingColdBackup={data.isImportingColdBackup}
+            isDriveConnected={driveState.isAuthorized}
+            isConnectingDrive={driveState.isConnecting}
+            onConnectDrive={() => void handleConnectDrive()}
             onClearCache={() => void data.handleClearCache()}
             onExportLibrary={() => {}}
             onExportHighlights={() => void data.handleExportHighlights()}

@@ -50,7 +50,7 @@ describe('useSettingsData', () => {
     expect(pushToast).toHaveBeenCalledWith('error', 'storage.permission_denied');
   });
 
-  it('handleExportColdBackup calls Drive service when userId present', async () => {
+  it('handleExportColdBackup calls Drive service when userId present and Drive authorized', async () => {
     const exportColdBackup = vi.fn().mockResolvedValue(undefined);
     const pushToast = vi.fn();
     const t = vi.fn((k: string) => k);
@@ -59,6 +59,7 @@ describe('useSettingsData', () => {
     const d = createSettingsData({
       authState,
       DriveColdBackupService,
+      drive: { isAuthorized: async () => true },
       pushToast: pushToast as never,
       t: t as never,
     });
@@ -67,7 +68,7 @@ describe('useSettingsData', () => {
     expect(pushToast).toHaveBeenCalledWith('success', expect.any(String));
   });
 
-  it('handleImportColdBackup calls import when userId present', async () => {
+  it('handleImportColdBackup calls import when userId present and Drive authorized', async () => {
     const importColdBackup = vi.fn().mockResolvedValue(undefined);
     const pushToast = vi.fn();
     const t = vi.fn((k: string) => k);
@@ -76,11 +77,65 @@ describe('useSettingsData', () => {
     const d = createSettingsData({
       authState,
       DriveColdBackupService,
+      drive: { isAuthorized: async () => true },
       pushToast: pushToast as never,
       t: t as never,
     });
     await d.handleImportColdBackup();
     expect(importColdBackup).toHaveBeenCalledWith('u1');
+  });
+
+  it('handleExportColdBackup routes unauthorized to the connect CTA toast without Drive I/O', async () => {
+    const exportColdBackup = vi.fn().mockResolvedValue(undefined);
+    const pushToast = vi.fn();
+    const t = vi.fn((k: string) => k);
+    const d = createSettingsData({
+      authState: { userId: 'user-1' } as never,
+      DriveColdBackupService: { exportColdBackup } as never,
+      drive: { isAuthorized: async () => false },
+      pushToast: pushToast as never,
+      t: t as never,
+    });
+    await d.handleExportColdBackup();
+    expect(exportColdBackup).not.toHaveBeenCalled();
+    expect(pushToast).toHaveBeenCalledWith('error', 'settings.data.driveNotConnected');
+    expect(d.isExportingColdBackup).toBe(false);
+  });
+
+  it('handleImportColdBackup routes unauthorized to the connect CTA toast without Drive I/O', async () => {
+    const importColdBackup = vi.fn().mockResolvedValue(undefined);
+    const pushToast = vi.fn();
+    const t = vi.fn((k: string) => k);
+    const d = createSettingsData({
+      authState: { userId: 'u1' } as never,
+      DriveColdBackupService: { importColdBackup } as never,
+      drive: { isAuthorized: async () => false },
+      pushToast: pushToast as never,
+      t: t as never,
+    });
+    await d.handleImportColdBackup();
+    expect(importColdBackup).not.toHaveBeenCalled();
+    expect(pushToast).toHaveBeenCalledWith('error', 'settings.data.driveNotConnected');
+    expect(d.isImportingColdBackup).toBe(false);
+  });
+
+  it('handleExportColdBackup routes a mid-flight DRIVE_NOT_CONNECTED to the connect CTA toast', async () => {
+    const exportColdBackup = vi
+      .fn()
+      .mockRejectedValue(
+        Object.assign(new Error('not connected'), { code: 'DRIVE_NOT_CONNECTED' }),
+      );
+    const pushToast = vi.fn();
+    const t = vi.fn((k: string) => k);
+    const d = createSettingsData({
+      authState: { userId: 'user-1' } as never,
+      DriveColdBackupService: { exportColdBackup } as never,
+      drive: { isAuthorized: async () => true },
+      pushToast: pushToast as never,
+      t: t as never,
+    });
+    await d.handleExportColdBackup();
+    expect(pushToast).toHaveBeenCalledWith('error', 'settings.data.driveNotConnected');
   });
 
   it('handleExportColdBackup errors when no userId', async () => {

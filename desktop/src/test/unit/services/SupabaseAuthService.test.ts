@@ -1,9 +1,10 @@
 /**
- * Unit tests for SupabaseAuthService.
+ * Unit tests for SupabaseAuthService (identity-only, login-drive-separation).
  *
- * Verifies Supabase Auth integration: sign-in via OAuth loopback,
- * session handling, Drive token extraction, sign-out, anonymous sign-in,
- * and callback registration.
+ * Verifies Supabase Auth integration: identity-only sign-in via OAuth
+ * loopback (no Drive scope), session handling without Drive tokens, sign-out
+ * (preserves the independent Drive grant), anonymous sign-in, identity
+ * provider detection, and callback registration.
  */
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 
@@ -16,16 +17,12 @@ let capturedOnUrlHandler: ((url: string) => void) | null = null;
 const mockSetSupabaseSession = vi.fn();
 const mockClearSupabaseSession = vi.fn();
 const mockSavePersistedAuth = vi.fn();
-const mockLoadDriveRefreshToken = vi.fn<() => Promise<string | null>>(async () => null);
-const mockSaveDriveRefreshToken = vi.fn(async (_token: string) => undefined);
 
 const mockSignInWithOAuth = vi.fn();
 const mockExchangeCodeForSession = vi.fn();
 const mockGetSession = vi.fn();
 const mockSignOut = vi.fn();
 const mockSignInAnonymously = vi.fn();
-const mockRefreshSession = vi.fn();
-const mockDriveRefreshToken = vi.fn<() => string | null>();
 const mockGetLiveSession = vi.fn<() => unknown>(() => null);
 
 // ---- Mock layers ----
@@ -51,16 +48,11 @@ vi.mock('$lib/shared/stores/AuthState.svelte', () => ({
   authState: {
     setSupabaseSession: (...args: unknown[]) => mockSetSupabaseSession(...args),
     clearSupabaseSession: (...args: unknown[]) => mockClearSupabaseSession(...args),
-    get driveRefreshToken(): string | null {
-      return mockDriveRefreshToken();
-    },
   },
 }));
 
 vi.mock('$lib/shared/stores/authPersistence', () => ({
   savePersistedAuth: (...args: unknown[]) => mockSavePersistedAuth(...args),
-  loadDriveRefreshToken: () => mockLoadDriveRefreshToken(),
-  saveDriveRefreshToken: (token: string) => mockSaveDriveRefreshToken(token),
 }));
 
 vi.mock('$lib/services/supabase', () => ({
@@ -71,7 +63,6 @@ vi.mock('$lib/services/supabase', () => ({
       getSession: mockGetSession,
       signOut: mockSignOut,
       signInAnonymously: mockSignInAnonymously,
-      refreshSession: mockRefreshSession,
     },
   }),
   getLiveSession: () => mockGetLiveSession(),
@@ -113,8 +104,6 @@ beforeEach(async () => {
   mockSetSupabaseSession.mockReturnValue(undefined);
   mockClearSupabaseSession.mockReturnValue(undefined);
   mockSavePersistedAuth.mockResolvedValue(undefined);
-  mockLoadDriveRefreshToken.mockResolvedValue(null);
-  mockSaveDriveRefreshToken.mockResolvedValue(undefined);
   mockSignInWithOAuth.mockResolvedValue({
     data: { url: 'https://example.supabase.co/auth/v1/callback', provider: null },
     error: null,
@@ -123,8 +112,6 @@ beforeEach(async () => {
   mockGetSession.mockResolvedValue({ data: { session: null } });
   mockSignOut.mockResolvedValue({ error: null });
   mockSignInAnonymously.mockResolvedValue({ data: { session: null }, error: null });
-  mockRefreshSession.mockResolvedValue({ data: { session: null }, error: null });
-  mockDriveRefreshToken.mockReturnValue(null);
   mockGetLiveSession.mockReturnValue(null);
   globalThis.fetch = vi.fn();
 
@@ -139,13 +126,13 @@ beforeEach(async () => {
 
 // ---- Helpers ----
 
+// Identity-only session fixture: no provider_token / provider_refresh_token.
+// The login grant never carries Drive tokens (login-drive-separation).
 function makeMockSession(overrides: Record<string, unknown> = {}) {
   return {
     access_token: 'access-123',
     refresh_token: 'refresh-123',
     expires_at: Math.floor(Date.now() / 1000) + 3600,
-    provider_token: 'ya29.provider-token',
-    provider_refresh_token: 'google-refresh-token',
     user: {
       id: 'user-1',
       email: 'test@example.com',
@@ -197,23 +184,22 @@ describe('SupabaseAuthService — signInWithGoogle', () => {
     expect(mockOpenUrl).toHaveBeenCalledTimes(1);
   });
 
-  it('requests the Drive scope via options.scopes, not queryParams.scope (DRIVE_TOKEN_MISSING)', async () => {
+  it('requests identity scopes only: no Drive scope, select_account prompt (identity-only login)', async () => {
     mockPluginStart.mockResolvedValue(48723);
     mockSignInWithOAuth.mockResolvedValue(makeMockOAuthData());
 
     await sut.signInWithGoogle();
 
     const options = mockSignInWithOAuth.mock.calls[0]?.[0];
-    // Drive scope must be a provider scope (supabase-js merges options.scopes
-    // into Google's authorization URL). Putting it in queryParams.scope meant
-    // Google never issued a Drive-scoped token → no provider_token came back.
-    expect(options.options.scopes).toContain('https://www.googleapis.com/auth/drive.file');
-    // offline access + consent still go through queryParams (Google params).
+    // Login establishes identity only. Drive authorization is the independent
+    // on-demand DriveConnectService flow — no provider scopes requested here.
+    expect(options.options.scopes).toBeUndefined();
     expect(options.options.queryParams).toMatchObject({
-      access_type: 'offline',
-      prompt: 'consent',
+      prompt: 'select_account',
     });
     expect(options.options.queryParams.scope).toBeUndefined();
+    expect(options.options.queryParams.access_type).toBeUndefined();
+    expect(JSON.stringify(options)).not.toContain('drive.file');
   });
 
   it('throws when plugin.start() fails', async () => {
@@ -258,7 +244,7 @@ describe('SupabaseAuthService — registerSupabaseCallbackHandler', () => {
     expect(capturedOnUrlHandler).not.toBeNull();
   });
 
-  it('handles callback with valid code and exchanges for session', async () => {
+  it('handles callback with valid code and stores the identity session only', async () => {
     await sut.registerSupabaseCallbackHandler();
     expect(capturedOnUrlHandler).not.toBeNull();
 
@@ -271,30 +257,30 @@ describe('SupabaseAuthService — registerSupabaseCallbackHandler', () => {
     expect(mockSetSupabaseSession).toHaveBeenCalledTimes(1);
     expect(mockSetSupabaseSession.mock.calls[0]?.[0]).toMatchObject({
       accessToken: 'access-123',
-      providerToken: 'ya29.provider-token',
-      // DTL-1: provider_refresh_token must be persisted at sign-in (not dropped)
-      driveRefreshToken: 'google-refresh-token',
+      userId: 'user-1',
     });
+    // Identity-only: no Drive tokens flow into authState or auth.json.
+    const stored = mockSetSupabaseSession.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect('providerToken' in stored).toBe(false);
+    expect('driveRefreshToken' in stored).toBe(false);
     expect(mockSavePersistedAuth).toHaveBeenCalledTimes(1);
   });
 
-  it('preserves a previously persisted Drive refresh token when GoTrue omits it (DRIVE_TOKEN_LOST)', async () => {
+  it('ignores provider tokens even when GoTrue issues them (identity-only session)', async () => {
     await sut.registerSupabaseCallbackHandler();
-    // The persisted token from a prior sign-in (e.g. manual OAuth or earlier login).
-    mockLoadDriveRefreshToken.mockResolvedValue('persisted-drive-refresh-token');
-    // GoTrue session WITHOUT provider_refresh_token (the common case for this project).
-    const session = makeMockSession({ provider_refresh_token: null });
+    const session = makeMockSession({
+      provider_token: 'ya29.stray-provider-token',
+      provider_refresh_token: 'stray-google-refresh',
+    });
     mockExchangeCodeForSession.mockResolvedValue(makeMockSessionData(session));
 
     await capturedOnUrlHandler!('http://127.0.0.1:48723/callback?code=valid-code');
 
     expect(mockSetSupabaseSession).toHaveBeenCalledTimes(1);
-    expect(mockSetSupabaseSession.mock.calls[0]?.[0]).toMatchObject({
-      accessToken: 'access-123',
-      driveRefreshToken: 'persisted-drive-refresh-token',
-    });
-    // The preserved token is re-written to auth.json so it survives the re-login.
-    expect(mockSaveDriveRefreshToken).toHaveBeenCalledWith('persisted-drive-refresh-token');
+    const stored = mockSetSupabaseSession.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect('providerToken' in stored).toBe(false);
+    expect('driveRefreshToken' in stored).toBe(false);
+    expect(JSON.stringify(stored)).not.toContain('ya29.stray-provider-token');
   });
 
   it('ignores callback when code is missing', async () => {
@@ -317,168 +303,55 @@ describe('SupabaseAuthService — registerSupabaseCallbackHandler', () => {
   });
 });
 
-describe('SupabaseAuthService — getDriveToken', () => {
-  it('returns provider_token from current session', async () => {
+describe('SupabaseAuthService — getIdentityProvider', () => {
+  it('prefers app_metadata.provider (GoTrue server-set OAuth provider)', async () => {
     mockGetSession.mockResolvedValue({
-      data: { session: { provider_token: 'ya29.drive-token' } },
+      data: {
+        session: {
+          user: { app_metadata: { provider: 'google' }, user_metadata: {} },
+        },
+      },
     });
 
-    const token = await sut.getDriveToken();
-    expect(token).toBe('ya29.drive-token');
+    await expect(sut.getIdentityProvider()).resolves.toBe('google');
   });
 
-  it('returns null when no session exists', async () => {
+  it('falls back to user_metadata.provider when app_metadata is absent', async () => {
+    mockGetSession.mockResolvedValue({
+      data: {
+        session: {
+          user: { app_metadata: {}, user_metadata: { provider: 'google' } },
+        },
+      },
+    });
+
+    await expect(sut.getIdentityProvider()).resolves.toBe('google');
+  });
+
+  it('returns non-Google providers verbatim (callers decide the Drive offer)', async () => {
+    mockGetSession.mockResolvedValue({
+      data: {
+        session: {
+          user: { app_metadata: { provider: 'github' }, user_metadata: {} },
+        },
+      },
+    });
+
+    await expect(sut.getIdentityProvider()).resolves.toBe('github');
+  });
+
+  it('returns null when signed out', async () => {
     mockGetSession.mockResolvedValue({ data: { session: null } });
 
-    const token = await sut.getDriveToken();
-    expect(token).toBeNull();
+    await expect(sut.getIdentityProvider()).resolves.toBeNull();
   });
 
-  it('returns null when provider_token is not present', async () => {
+  it('returns null when no provider is recorded', async () => {
     mockGetSession.mockResolvedValue({
-      data: { session: { provider_token: null } },
+      data: { session: { user: { app_metadata: {}, user_metadata: {} } } },
     });
 
-    const token = await sut.getDriveToken();
-    expect(token).toBeNull();
-  });
-});
-
-describe('SupabaseAuthService — refreshDriveToken layered refresh (DTL-1/DTL-2/DTL-3)', () => {
-  function mockGoogleTokenResponse(data: Record<string, unknown>, ok = true) {
-    vi.mocked(globalThis.fetch).mockResolvedValue({
-      ok,
-      status: ok ? 200 : 400,
-      json: async () => data,
-    } as Response);
-  }
-
-  it('uses the re-issued provider_token from GoTrue refreshSession (path 1)', async () => {
-    mockRefreshSession.mockResolvedValue({
-      data: { session: makeMockSession({ provider_token: 'ya29.reissued' }) },
-      error: null,
-    });
-
-    const token = await sut.refreshDriveToken();
-    expect(token).toBe('ya29.reissued');
-    expect(globalThis.fetch).not.toHaveBeenCalled();
-  });
-
-  it('falls through to the Google token endpoint when GoTrue drops provider_token (path 2)', async () => {
-    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_ID', 'client-123');
-    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_SECRET', 'secret-456');
-    mockRefreshSession.mockResolvedValue({
-      data: { session: makeMockSession({ provider_token: null }) },
-      error: null,
-    });
-    mockDriveRefreshToken.mockReturnValue('google-refresh-token');
-    mockGoogleTokenResponse({ access_token: 'ya29.direct-exchange' });
-
-    const token = await sut.refreshDriveToken();
-
-    expect(token).toBe('ya29.direct-exchange');
-    const [url, init] = vi.mocked(globalThis.fetch).mock.calls[0];
-    expect(url).toBe('https://oauth2.googleapis.com/token');
-    const body = (init?.body as URLSearchParams).toString();
-    expect(body).toContain('grant_type=refresh_token');
-    expect(body).toContain('client_id=client-123');
-    expect(body).toContain('refresh_token=google-refresh-token');
-  });
-
-  it('throws typed AUTH_REQUIRED when no refresh token is persisted (path 3, retryable=false)', async () => {
-    mockRefreshSession.mockResolvedValue({
-      data: { session: makeMockSession({ provider_token: null }) },
-      error: null,
-    });
-    mockDriveRefreshToken.mockReturnValue(null);
-
-    const err = (await sut.refreshDriveToken().catch((e: Error) => e)) as Error & {
-      code?: string;
-      retryable?: boolean;
-    };
-    expect(err.message).toContain('sign in with Google again');
-    expect(err.code).toBe('AUTH_REQUIRED');
-    expect(err.retryable).toBe(false);
-    expect(globalThis.fetch).not.toHaveBeenCalled();
-  });
-
-  it('throws typed AUTH_REQUIRED when env client credentials are missing (path 3)', async () => {
-    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_ID', '');
-    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_SECRET', '');
-    mockRefreshSession.mockResolvedValue({
-      data: { session: makeMockSession({ provider_token: null }) },
-      error: null,
-    });
-    mockDriveRefreshToken.mockReturnValue('google-refresh-token');
-
-    const err = (await sut.refreshDriveToken().catch((e: Error) => e)) as Error & { code?: string };
-    expect(err.code).toBe('AUTH_REQUIRED');
-    expect(globalThis.fetch).not.toHaveBeenCalled();
-  });
-
-  it('throws typed AUTH_REQUIRED when the Google token endpoint rejects (no raw token in error)', async () => {
-    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_ID', 'client-123');
-    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_SECRET', 'secret-456');
-    mockRefreshSession.mockResolvedValue({
-      data: { session: makeMockSession({ provider_token: null }) },
-      error: null,
-    });
-    mockDriveRefreshToken.mockReturnValue('google-refresh-token');
-    mockGoogleTokenResponse({ error: 'invalid_grant' }, false);
-
-    const err = (await sut.refreshDriveToken().catch((e: Error) => e)) as Error;
-    expect(err.message).toContain('sign in with Google again');
-    expect(err.message).not.toContain('google-refresh-token');
-    expect(err.message).not.toContain('secret-456');
-  });
-
-  it('never retries refresh in a hot loop — single attempt then typed failure', async () => {
-    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_ID', 'client-123');
-    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_SECRET', 'secret-456');
-    mockRefreshSession.mockResolvedValue({
-      data: { session: makeMockSession({ provider_token: null }) },
-      error: null,
-    });
-    mockDriveRefreshToken.mockReturnValue('google-refresh-token');
-    mockGoogleTokenResponse({ error: 'invalid_grant' }, false);
-
-    await expect(sut.refreshDriveToken()).rejects.toThrow();
-    // Exactly one Google token endpoint call
-    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('coalesces concurrent refreshes into one Google exchange (single-use refresh token race)', async () => {
-    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_ID', 'client-123');
-    vi.stubEnv('VITE_GOOGLE_OAUTH_CLIENT_SECRET', 'secret-456');
-    mockRefreshSession.mockResolvedValue({
-      data: { session: makeMockSession({ provider_token: null }) },
-      error: null,
-    });
-    mockDriveRefreshToken.mockReturnValue('google-refresh-token');
-
-    // A deferred response so both callers overlap before the exchange resolves.
-    let resolveExchange!: (r: Response) => void;
-    const deferred = new Promise<Response>((r) => {
-      resolveExchange = r;
-    });
-    vi.mocked(globalThis.fetch).mockReturnValue(deferred as unknown as ReturnType<typeof fetch>);
-
-    const first = sut.refreshDriveToken();
-    const second = sut.refreshDriveToken();
-
-    resolveExchange({
-      ok: true,
-      status: 200,
-      json: async () => ({ access_token: 'ya29.coalesced' }),
-    } as Response);
-
-    const [tokenA, tokenB] = await Promise.all([first, second]);
-
-    expect(tokenA).toBe('ya29.coalesced');
-    expect(tokenB).toBe('ya29.coalesced');
-    // Single-use refresh token must be exchanged exactly ONCE even under
-    // concurrent callers — the second caller reuses the in-flight result.
-    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    await expect(sut.getIdentityProvider()).resolves.toBeNull();
   });
 });
 
@@ -526,7 +399,6 @@ describe('SupabaseAuthService — signInAnonymously', () => {
         email: null,
         user_metadata: {},
       },
-      provider_token: null,
     });
     const anonData = { data: { session: anonSession }, error: null };
     mockSignInAnonymously.mockResolvedValue(anonData);
@@ -539,7 +411,6 @@ describe('SupabaseAuthService — signInAnonymously', () => {
         userId: 'anon-1',
         email: null,
         displayName: null,
-        providerToken: null,
       }),
     );
   });
@@ -569,7 +440,6 @@ describe('SupabaseAuthService — signInAnonymously', () => {
     const anonSession = makeMockSession({
       email: null,
       user: { id: 'anon-1', email: null, user_metadata: {} },
-      provider_token: null,
     });
     mockSignInAnonymously.mockResolvedValue({ data: { session: anonSession }, error: null });
     // Passes the pre-check (cache empty), then a real session lands mid-flight

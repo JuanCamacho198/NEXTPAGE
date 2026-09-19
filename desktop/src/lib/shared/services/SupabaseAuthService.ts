@@ -1,8 +1,8 @@
 /**
  * SupabaseAuthService — wraps supabase-js auth for desktop.
  *
- * Replaces the custom PKCE OAuth flow (GoogleOAuthService.ts) with
- * Supabase Auth's built-in OAuth + session management.
+ * Replaces the custom PKCE OAuth flow with Supabase Auth's built-in OAuth +
+ * session management.
  *
  * Flow:
  * 1. signInWithGoogle() opens Supabase OAuth URL in system browser
@@ -12,9 +12,11 @@
  * 5. We extract the PKCE code and call exchangeCodeForSession()
  * 6. supabase-js stores the session internally (via TauriStorage adapter)
  *
- * Google Drive token (provider_token) is stored alongside session.
- *
- * @deprecated GoogleOAuthService.ts — kept for 1 release cycle, then removed.
+ * Identity-only (login-drive-separation): sign-in establishes the Supabase
+ * identity session and nothing else. Google Drive authorization is an
+ * independent on-demand flow owned by DriveConnectService with its own
+ * durable drive.json grant — login never requests Drive scope and the
+ * session carries no Drive tokens.
  */
 
 import { start, cancel, onUrl } from '@fabianlars/tauri-plugin-oauth';
@@ -22,15 +24,10 @@ import { openUrl } from '@tauri-apps/plugin-opener';
 import type { Session } from '@supabase/supabase-js';
 
 import { getSessionClient, getLiveSession } from '$lib/services/supabase';
-import {
-  savePersistedAuth,
-  loadDriveRefreshToken,
-  saveDriveRefreshToken,
-} from '$lib/shared/stores/authPersistence';
+import { savePersistedAuth } from '$lib/shared/stores/authPersistence';
 import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { createErrorEvent } from '$lib/shared/events/ErrorEvent';
 import { logger } from '$lib/shared/logger/Logger';
-import { DRIVE_SCOPE, redactLogLine, syncError } from '$lib/shared/protocol/DriveCatalogContract';
 
 let currentPort: number | null = null;
 let urlUnlisten: (() => void) | null = null;
@@ -216,15 +213,12 @@ export async function signInWithGoogle(): Promise<void> {
     options: {
       redirectTo,
       skipBrowserRedirect: true,
-      // Additional provider scopes MUST go in `options.scopes`, not
-      // `queryParams.scope`. supabase-js merges these into Google's
-      // authorization URL; putting drive.file in queryParams meant Google
-      // never issued a token with the Drive scope, so GoTrue returned no
-      // provider_token/provider_refresh_token (DRIVE_TOKEN_MISSING).
-      scopes: DRIVE_SCOPE,
+      // Identity-only (login-drive-separation): no Drive scope here. Drive
+      // authorization is an independent on-demand flow (DriveConnectService).
+      // `prompt: select_account` lets multi-account users pick an identity
+      // without re-granting Drive consent at login.
       queryParams: {
-        access_type: 'offline',
-        prompt: 'consent',
+        prompt: 'select_account',
       },
     },
   });
@@ -239,19 +233,18 @@ export async function signInWithGoogle(): Promise<void> {
 }
 
 /**
- * Handle a Supabase session — store it in authState and persist it.
- * Persists `provider_refresh_token` (issued because sign-in requests
- * `access_type=offline`) so Drive tokens can be refreshed after supabase-js
- * auto-refresh drops `provider_token` (DTL-1).
+ * Handle a Supabase session — store the identity in authState and persist it.
+ *
+ * Identity-only (login-drive-separation): the session carries no Drive
+ * grant. `provider_token` / `provider_refresh_token` are deliberately
+ * ignored — Drive tokens live in drive.json under DriveConnectService, and
+ * sign-out must preserve them (see AppState.signOutAndReturnToWelcome).
+ *
+ * Q1 verified: stripping login scopes does not affect GoTrue identity
+ * refresh — `refreshSession()` rotates the Supabase access/refresh token
+ * pair independent of any provider scopes granted at sign-in.
  */
 async function handleSession(session: Session): Promise<void> {
-  const providerToken = session.provider_token ?? null;
-  // GoTrue does not always re-issue the Google provider refresh token on every
-  // sign-in (project-dependent, DTL-1). Preserve a previously persisted token
-  // so Drive sync survives re-login instead of losing it (DRIVE_TOKEN_LOST).
-  const previous = await loadDriveRefreshToken();
-  const providerRefreshToken = session.provider_refresh_token ?? previous;
-
   authState.setSupabaseSession({
     accessToken: session.access_token,
     refreshToken: session.refresh_token,
@@ -260,143 +253,40 @@ async function handleSession(session: Session): Promise<void> {
     email: session.user.email ?? null,
     displayName: session.user.user_metadata?.full_name ?? session.user.user_metadata?.name ?? null,
     photoUrl: session.user.user_metadata?.avatar_url ?? session.user.user_metadata?.picture ?? null,
-    providerToken,
-    driveRefreshToken: providerRefreshToken,
   });
 
   await savePersistedAuth({
     kind: 'supabase',
     session: session as unknown as Record<string, unknown>,
   });
-
-  // Ensure the (possibly preserved) Drive refresh token survives in auth.json
-  // even when GoTrue omits provider_refresh_token on this login (DRIVE_TOKEN_LOST).
-  if (providerRefreshToken && !session.provider_refresh_token) {
-    await saveDriveRefreshToken(providerRefreshToken);
-  }
 }
 
 /**
- * Get the Google Drive access token from the Supabase session's provider_token.
- * Returns null if the token is not available (user not signed in or not via Google).
+ * Identity provider of the current Supabase session (login-drive-separation).
+ *
+ * Used by Drive-gated callers to decide whether the Google-Drive connect
+ * offer applies. Reads `app_metadata.provider` (the GoTrue server-set OAuth
+ * provider) with a `user_metadata.provider` fallback — Q2 resolved by
+ * supporting both, preferring `app_metadata`. Returns null when signed out.
  */
-export async function getDriveToken(): Promise<string | null> {
+export async function getIdentityProvider(): Promise<string | null> {
   const supabase = getSessionClient();
   const { data } = await supabase.auth.getSession();
-  return data.session?.provider_token ?? null;
-}
-
-/**
- * Module-level mutex for Drive token refresh. Google refresh tokens are
- * single-use: if two concurrent sync paths (`syncBooks` + `syncState` run
- * under `Promise.all` in SyncService.syncMetadata) both hit a 401/403 and both
- * call `refreshDriveToken()` at the same time, the second exchange invalidates
- * the first → intermittent 403 `PERMISSION_DENIED` on every write (not a
- * token-expiry issue). This lock coalesces concurrent refreshes into one and
- * makes the waiters reuse the same freshly-issued token.
- */
-let driveTokenRefreshInFlight: Promise<string> | null = null;
-
-/**
- * Layered Google Drive token refresh (DTL-1/DTL-2):
- * 1. `supabase.auth.refreshSession()` → use the re-issued `provider_token`
- *    when GoTrue provides one (project-dependent; see apply-progress 4.1).
- * 2. Direct Google token endpoint (`oauth2.googleapis.com/token`,
- *    `grant_type=refresh_token`) with `VITE_GOOGLE_OAUTH_CLIENT_ID` +
- *    `VITE_GOOGLE_OAUTH_CLIENT_SECRET` and the persisted
- *    `provider_refresh_token`. Only valid when the env Google client is the
- *    one configured in the Supabase dashboard (apply-progress 4.2).
- * 3. Typed `AUTH_REQUIRED` (retryable=false) — single attempt, no hot loop.
- *
- * Never logs tokens; every message passes through `redactLogLine` (DTL-3).
- *
- * The public function is concurrency-safe: concurrent callers await the same
- * in-flight refresh promise instead of each burning the single-use refresh
- * token. Exposed as a named function (not an arrow) so it is hoisted and the
- * lock variable above can live at module scope.
- */
-export function refreshDriveToken(): Promise<string> {
-  // Coalesce: if a refresh is already in flight, wait for it and reuse the
-  // same token. This is the fix for the intermittent Drive 403 caused by
-  // concurrent refreshes invalidating each other's single-use refresh token.
-  if (driveTokenRefreshInFlight) return driveTokenRefreshInFlight;
-
-  driveTokenRefreshInFlight = doRefreshDriveToken().finally(() => {
-    driveTokenRefreshInFlight = null;
-  });
-  return driveTokenRefreshInFlight;
-}
-
-async function doRefreshDriveToken(): Promise<string> {
-  const supabase = getSessionClient();
-
-  // Path 1: GoTrue session refresh may re-issue provider_token.
-  try {
-    const { data, error } = await supabase.auth.refreshSession();
-    if (!error && data.session?.provider_token) {
-      return data.session.provider_token;
-    }
-  } catch (e) {
-    logger.warn(
-      createErrorEvent({
-        severity: 'low',
-        category: 'runtime',
-        code: 'DRIVE_TOKEN_REFRESH_GOTRUE_FAILED',
-        message: redactLogLine('Drive token refresh via GoTrue failed; falling back'),
-        context: { reason: e instanceof Error ? redactLogLine(e.message) : 'unknown' },
-        source: 'sync',
-        recoverable: true,
-      }),
-    );
-  }
-
-  // Path 2: direct Google token exchange with the persisted refresh token.
-  const refreshToken = authState.driveRefreshToken;
-  const clientId = import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID as string | undefined;
-  const clientSecret = import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_SECRET as string | undefined;
-  if (refreshToken && clientId && clientSecret) {
-    try {
-      const response = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          grant_type: 'refresh_token',
-          client_id: clientId,
-          client_secret: clientSecret,
-          refresh_token: refreshToken,
-        }),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        if (typeof data.access_token === 'string' && data.access_token) {
-          return data.access_token;
-        }
-      }
-    } catch (e) {
-      logger.warn(
-        createErrorEvent({
-          severity: 'low',
-          category: 'runtime',
-          code: 'DRIVE_TOKEN_REFRESH_GOOGLE_FAILED',
-          message: redactLogLine('Direct Google token refresh failed'),
-          context: { reason: e instanceof Error ? redactLogLine(e.message) : 'unknown' },
-          source: 'sync',
-          recoverable: true,
-        }),
-      );
-    }
-  }
-
-  // Path 3: typed re-auth fallback — never a silent no-op, never a hot loop.
-  throw syncError(
-    'AUTH_REQUIRED',
-    'Google Drive access expired. Please sign in with Google again.',
-    false,
-  );
+  const user = data.session?.user as
+    { app_metadata?: { provider?: unknown }; user_metadata?: { provider?: unknown } } | undefined;
+  const appProvider = user?.app_metadata?.provider;
+  if (typeof appProvider === 'string' && appProvider.length > 0) return appProvider;
+  const userProvider = user?.user_metadata?.provider;
+  if (typeof userProvider === 'string' && userProvider.length > 0) return userProvider;
+  return null;
 }
 
 /**
  * Sign the user out: clear Supabase session, reset state, clear persistence.
+ *
+ * Identity-only: only the Supabase session is cleared. The independent
+ * Drive grant in drive.json is preserved (spec: sign-out keeps Drive
+ * connected) — use DriveConnectService.disconnectDrive() to disconnect Drive.
  */
 export async function signOut(): Promise<void> {
   if (currentPort !== null) {
@@ -449,7 +339,6 @@ export async function signInAnonymously(): Promise<void> {
       email: null,
       displayName: null,
       photoUrl: null,
-      providerToken: null,
     });
   }
 }

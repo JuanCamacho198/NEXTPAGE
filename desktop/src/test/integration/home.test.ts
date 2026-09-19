@@ -126,7 +126,6 @@ vi.mock('$lib/shared/services/SupabaseAuthService', () => ({
   restoreSession: vi.fn(async () => null),
   signInAnonymously: vi.fn(async () => undefined),
   signOut: vi.fn(async () => undefined),
-  getDriveToken: vi.fn(async () => null),
   registerSupabaseCallbackHandler: vi.fn(async () => undefined),
   unregisterCallbackHandler: vi.fn(),
 }));

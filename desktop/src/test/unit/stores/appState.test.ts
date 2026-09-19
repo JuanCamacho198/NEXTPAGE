@@ -128,7 +128,6 @@ vi.mock('$lib/shared/services/SupabaseAuthService', () => ({
   restoreSession: mockRestoreSession,
   signInAnonymously: mockSignInAnonymously,
   signOut: vi.fn(async () => undefined),
-  getDriveToken: vi.fn(async () => null),
   registerSupabaseCallbackHandler: vi.fn(async () => undefined),
   unregisterCallbackHandler: vi.fn(),
 }));
@@ -169,7 +168,6 @@ vi.mock('$lib/services/supabase', () => ({
 
 vi.mock('$lib/shared/stores/authPersistence', () => ({
   loadPersistedAuth: mockLoadPersistedAuth,
-  loadDriveRefreshToken: vi.fn(async () => null),
   savePersistedAuth: vi.fn(async () => undefined),
   clearPersistedAuth: vi.fn(async () => undefined),
 }));
@@ -289,7 +287,6 @@ describe.skip('AppState', () => {
       refresh_token: 'refresh-token',
       expires_at: 1_900_000_000,
       user: { id: 'user-1', email: 'user@example.com', user_metadata: {} },
-      provider_token: null,
     });
     const subscribeAll = vi
       .spyOn(appState.reader, 'subscribeToAllRemoteChanges')
@@ -307,7 +304,6 @@ describe.skip('AppState', () => {
       refresh_token: 'refresh-token',
       expires_at: 1_900_000_000,
       user: { id: 'user-1', email: 'user@example.com', user_metadata: {} },
-      provider_token: null,
     });
     mockSyncMetadata.mockRejectedValue(new Error('offline'));
     vi.spyOn(appState.reader, 'subscribeToAllRemoteChanges').mockImplementation(() => undefined);
@@ -854,13 +850,12 @@ type AppStateRoute = 'home' | 'library' | 'stats' | 'reader' | 'highlights' | 's
 
 // ─── Live-session auth gate (WU1) ──────────────────────────────────
 
+// Identity-only fixture: no provider or Drive tokens (login-drive-separation).
 function makeSession(overrides: Record<string, unknown> = {}) {
   return {
     access_token: 'access-123',
     refresh_token: 'refresh-123',
     expires_at: Math.floor(Date.now() / 1000) + 3600,
-    provider_token: null,
-    provider_refresh_token: null,
     user: { id: 'user-1', email: 'user@example.com', user_metadata: {} },
     ...overrides,
   };
@@ -875,7 +870,6 @@ function hydrateSignedInAuthState(userId = 'user-1'): void {
     email: 'user@example.com',
     displayName: null,
     photoUrl: null,
-    providerToken: null,
   });
 }
 

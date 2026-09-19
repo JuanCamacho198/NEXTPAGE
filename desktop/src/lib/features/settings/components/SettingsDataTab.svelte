@@ -14,11 +14,14 @@
     isExportingHighlights: boolean;
     isExportingColdBackup?: boolean;
     isImportingColdBackup?: boolean;
+    isDriveConnected?: boolean;
+    isConnectingDrive?: boolean;
     onClearCache: () => void;
     onExportLibrary: () => void;
     onExportHighlights: () => void;
     onExportColdBackup?: () => void;
     onImportColdBackup?: () => void;
+    onConnectDrive?: () => void;
     onSelectedExportBookChange: (value: string) => void;
     onSelectedExportFormatChange: (value: 'json' | 'markdown') => void;
   };
@@ -33,11 +36,14 @@
     isExportingHighlights,
     isExportingColdBackup = false,
     isImportingColdBackup = false,
+    isDriveConnected = true,
+    isConnectingDrive = false,
     onClearCache,
     onExportLibrary,
     onExportHighlights,
     onExportColdBackup = () => {},
     onImportColdBackup = () => {},
+    onConnectDrive = () => {},
     onSelectedExportBookChange,
     onSelectedExportFormatChange,
   }: Props = $props();
@@ -127,6 +133,25 @@
 </Panel>
 
 <Panel title={t('settings.data.coldBackup')} subtitle={t('settings.data.coldBackupDescription')}>
+  {#if !isDriveConnected}
+    <div
+      class="mb-2 flex flex-col gap-2 p-3 bg-(--color-background) border border-(--color-border) rounded-lg"
+    >
+      <p class="text-xs text-(--color-text-muted)">{t('settings.data.driveNotConnected')}</p>
+      <button
+        type="button"
+        class="flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-(--color-primary) bg-(--color-primary) cursor-pointer transition-all duration-200 text-xs font-medium text-(--color-background) hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+        onclick={onConnectDrive}
+        disabled={isConnectingDrive || isExportingColdBackup || isImportingColdBackup}
+      >
+        <span
+          >{isConnectingDrive
+            ? t('settings.sync.drive.connecting')
+            : t('settings.data.connectDrive')}</span
+        >
+      </button>
+    </div>
+  {/if}
   <div class="flex gap-2">
     <button
       type="button"

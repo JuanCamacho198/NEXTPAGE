@@ -13,10 +13,11 @@ import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
 import {
   clearPersistedAuth,
-  loadDriveRefreshToken,
   loadPersistedAuth,
   type LocalUserProfile,
 } from '$lib/shared/stores/authPersistence';
+import { migrateLoginGrantOnce } from '$lib/shared/stores/drivePersistence';
+import { isDriveAuthorized } from '$lib/shared/services/DriveConnectService';
 import {
   getSessionClient,
   setLiveSession,
@@ -159,9 +160,8 @@ export class AppState {
       const supabaseSession = await restoreSession();
       if (supabaseSession) {
         restoredAuthenticatedSession = true;
-        const driveRefreshToken = await loadDriveRefreshToken();
         setLiveSession(supabaseSession);
-        this.hydrateAuthState(supabaseSession, driveRefreshToken);
+        this.hydrateAuthState(supabaseSession);
         this.startAuthenticatedSync();
         initialRoute = 'home';
       } else {
@@ -183,6 +183,17 @@ export class AppState {
         } catch {}
       }
     }
+    // Login–Drive separation: seed drive.json once from any pre-separation
+    // login-coupled grant, then sync the reactive Drive state from disk. This
+    // runs on every launch independent of sign-in state (spec: migration
+    // requires at most one re-connect; sign-out never clears the grant).
+    // Best-effort: a disk failure degrades to unauthorized, never to a crash.
+    try {
+      await migrateLoginGrantOnce();
+    } catch {}
+    try {
+      await isDriveAuthorized();
+    } catch {}
     this.navigation.route = initialRoute;
     SyncService.setupOutboxProcessor();
     if (authState.userId && !restoredAuthenticatedSession) SyncService.syncBookCatalog();
@@ -227,17 +238,13 @@ export class AppState {
       if (event === 'TOKEN_REFRESHED' && session) {
         setLiveSession(session);
         SyncService.resetOutboxBreaker();
-        this.hydrateAuthState(
-          session,
-          authState.driveRefreshToken ?? session.provider_refresh_token ?? null,
-        );
+        this.hydrateAuthState(session);
         return;
       }
       if (event === 'INITIAL_SESSION') {
         if (session) {
           setLiveSession(session);
-          if (authState.userId === null)
-            this.hydrateAuthState(session, session.provider_refresh_token ?? null);
+          if (authState.userId === null) this.hydrateAuthState(session);
         } else clearLiveSession();
       }
     });
@@ -340,7 +347,7 @@ export class AppState {
     await this.statsDomain.loadTodayMinutes(uid);
   }
 
-  private hydrateAuthState(session: Session, driveRefreshToken: string | null): void {
+  private hydrateAuthState(session: Session): void {
     authState.setSupabaseSession({
       accessToken: session.access_token,
       refreshToken: session.refresh_token,
@@ -351,8 +358,6 @@ export class AppState {
         session.user.user_metadata?.full_name ?? session.user.user_metadata?.name ?? null,
       photoUrl:
         session.user.user_metadata?.avatar_url ?? session.user.user_metadata?.picture ?? null,
-      providerToken: session.provider_token ?? null,
-      driveRefreshToken,
     });
   }
 }

@@ -1,5 +1,6 @@
 <script lang="ts">
   import Button from '$lib/shared/ui/forms/Button.svelte';
+  import DriveConnectPrompt from '$lib/shared/ui/feedback/DriveConnectPrompt.svelte';
   import SafeCover from './SafeCover.svelte';
   import { downloadableCatalog, downloadBook } from '$lib/stores/downloadableCatalog.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
@@ -154,3 +155,5 @@
     </ul>
   </section>
 {/if}
+
+<DriveConnectPrompt {t} />

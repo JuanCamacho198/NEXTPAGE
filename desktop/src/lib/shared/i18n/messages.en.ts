@@ -275,6 +275,18 @@ export const messagesEn = {
   'settings.sync.signedIn': 'Signed in',
   'settings.sync.signedOut': 'Not signed in',
 
+  // Sync Tab — Drive connection card (login-drive-separation)
+  'settings.sync.drive.title': 'Google Drive',
+  'settings.sync.drive.description':
+    'Connect Google Drive for cold backup and cross-device downloads. Sign-in stays separate — disconnecting Drive never signs you out.',
+  'settings.sync.drive.connected': 'Connected',
+  'settings.sync.drive.notConnected': 'Not connected',
+  'settings.sync.drive.connect': 'Connect Drive',
+  'settings.sync.drive.disconnect': 'Disconnect',
+  'settings.sync.drive.connecting': 'Connecting...',
+  'settings.sync.drive.connectFailed': 'Drive connect failed',
+  'settings.sync.drive.disconnected': 'Drive disconnected',
+
   // Data Tab
   'settings.data.description': 'Manage storage and configuration.',
   'settings.data.storage': 'Storage',
@@ -857,6 +869,16 @@ export const messagesEn = {
   'settings.data.coldExport': 'Export to Drive',
   'settings.data.coldImport': 'Import from Drive',
   'settings.data.importing': 'Importing...',
+  'settings.data.driveNotConnected':
+    'Google Drive is not connected. Connect Drive to use cold backup.',
+  'settings.data.connectDrive': 'Connect Drive',
+
+  // Drive connect pre-prompt (login-drive-separation)
+  'drive.prompt.title': 'Connect Google Drive?',
+  'drive.prompt.body':
+    'This action needs Google Drive access. Connect now to continue, or skip and stay local.',
+  'drive.prompt.connect': 'Connect',
+  'drive.prompt.notNow': 'Not now',
 
   // Stats home grid labels
   'stats.booksStartedLabel': 'Started',

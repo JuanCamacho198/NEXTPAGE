@@ -21,6 +21,7 @@ import {
   resetReaderSettingsToDefaults,
   sanitizeReaderSettings,
   saveHighlightTags,
+  updateDictionaryEvidence,
   updateHighlight,
   upsertReaderSettings,
   upsertRemoteReadingSessions,
@@ -334,6 +335,65 @@ describe('tauriClient highlight menu commands', () => {
     await removeDictionaryWord('word-1');
 
     expect(invokeMock).toHaveBeenCalledWith('removeDictionaryWord', { id: 'word-1' });
+  });
+});
+
+describe('tauriClient dictionary evidence commands', () => {
+  beforeEach(() => {
+    invokeMock.mockReset();
+  });
+
+  it('forwards the ten rich-entry fields on addDictionaryWord', async () => {
+    invokeMock.mockResolvedValueOnce({
+      id: 'word-1',
+      word: 'Abyss',
+      createdAt: '2024-01-01T00:00:00Z',
+    });
+    const payload = {
+      word: 'Abyss',
+      definition: 'a deep hole',
+      partOfSpeech: 'noun',
+      phonetic: '/əˈbɪs/',
+      example: 'the abyss stared back',
+      quote: 'He gazed into the abyss.',
+      sourceBookId: 'book-1',
+      sourceBookTitle: 'Meditations',
+      sourceBookAuthor: 'Marcus Aurelius',
+      sourceChapter: 'Book IV',
+      sourceLocator: 'epubcfi(/6/14!/4/2/2)',
+    };
+
+    await addDictionaryWord(payload);
+
+    expect(invokeMock).toHaveBeenCalledWith('addDictionaryWord', { payload });
+  });
+
+  it('invokes updateDictionaryEvidence with the re-capture payload', async () => {
+    invokeMock.mockResolvedValueOnce({
+      id: 'word-1',
+      word: 'Abyss',
+      createdAt: '2024-01-01T00:00:00Z',
+    });
+    const payload = {
+      id: 'word-1',
+      quote: 'A new passage.',
+      sourceBookId: 'book-2',
+      sourceBookTitle: 'Letters',
+      sourceBookAuthor: 'Seneca',
+      sourceChapter: 'Letter I',
+      sourceLocator: 'epubcfi(/6/8!/4/2)',
+    };
+
+    const result = await updateDictionaryEvidence(payload);
+
+    expect(invokeMock).toHaveBeenCalledWith('updateDictionaryEvidence', { payload });
+    expect(result.id).toBe('word-1');
+  });
+
+  it('surfaces a rejected updateDictionaryEvidence as a command error', async () => {
+    invokeMock.mockRejectedValueOnce(new Error('not found'));
+
+    await expect(updateDictionaryEvidence({ id: 'missing' })).rejects.toThrow();
   });
 });
 

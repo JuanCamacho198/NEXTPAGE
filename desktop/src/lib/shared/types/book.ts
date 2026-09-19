@@ -94,7 +94,25 @@ export type DictionaryWordDto = {
   updatedAt?: string | null;
   deletedAt?: string | null;
   syncedAt?: string | null;
+  definition?: string | null;
+  partOfSpeech?: string | null;
+  phonetic?: string | null;
+  example?: string | null;
+  quote?: string | null;
+  sourceBookId?: string | null;
+  sourceBookTitle?: string | null;
+  sourceBookAuthor?: string | null;
+  sourceChapter?: string | null;
+  sourceLocator?: string | null;
 };
+
+/**
+ * The six reader-captured evidence fields (REQ-DRE-003, REQ-DSI-003). The
+ * declaration lives beside the capture orchestration that builds it; it is
+ * re-exported here so the type has exactly one definition — a second
+ * declaration in this file would be free to drift from that one.
+ */
+export type { DictionaryEvidence } from '$lib/shared/dictionary/captureFromSelection';
 
 export type BookCoverDto = {
   bookId: string;

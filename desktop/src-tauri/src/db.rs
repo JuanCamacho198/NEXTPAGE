@@ -8,7 +8,7 @@ use tauri::{AppHandle, Manager};
 
 use crate::error::{AppError, AppResult};
 
-const MIGRATIONS: [(&str, &str); 18] = [
+const MIGRATIONS: [(&str, &str); 19] = [
     ("0001_init", include_str!("../migrations/0001_init.sql")),
     ("0002_books", include_str!("../migrations/0002_books.sql")),
     ("0003_highlights", include_str!("../migrations/0003_highlights.sql")),
@@ -30,6 +30,10 @@ const MIGRATIONS: [(&str, &str); 18] = [
     ("0016_discover_cache", include_str!("../migrations/0016_discover_cache.sql")),
     ("0017_addon_registry", include_str!("../migrations/0017_addon_registry.sql")),
     ("0018_addon_consent", include_str!("../migrations/0018_addon_consent.sql")),
+    (
+        "0019_dictionary_rich_entries",
+        include_str!("../migrations/0019_dictionary_rich_entries.sql"),
+    ),
 ];
 
 pub fn resolve_db_path(app: &AppHandle) -> AppResult<PathBuf> {
@@ -369,6 +373,29 @@ mod tests {
         rows.expect("table_info works").map(|r| r.unwrap()).collect()
     }
 
+    fn migrate_prefix_in_memory(count: usize) -> Connection {
+        let connection = Connection::open_in_memory().expect("in-memory db");
+        connection
+            .execute(
+                "CREATE TABLE IF NOT EXISTS schema_migrations (
+                   name TEXT PRIMARY KEY,
+                   applied_at TEXT NOT NULL
+                 )",
+                [],
+            )
+            .unwrap();
+        for (name, sql) in MIGRATIONS.iter().take(count) {
+            connection.execute_batch(sql).expect("migration applies cleanly");
+            connection
+                .execute(
+                    "INSERT INTO schema_migrations (name, applied_at) VALUES (?1, 'test')",
+                    [name],
+                )
+                .unwrap();
+        }
+        connection
+    }
+
     #[test]
     fn test_installed_addons_schema_after_migration() {
         let connection = migrate_in_memory();
@@ -574,5 +601,77 @@ mod tests {
         let connection = memory_db_with_cache_table();
         let miss = discover_cache_read(&connection, "p:v2:missing:1").expect("read succeeds");
         assert_eq!(miss, None);
+    }
+
+    #[test]
+    fn test_dictionary_rich_entries_migration_adds_nullable_columns() {
+        const NEW_COLUMNS: [&str; 10] = [
+            "definition",
+            "part_of_speech",
+            "phonetic",
+            "example",
+            "quote",
+            "source_book_id",
+            "source_book_title",
+            "source_book_author",
+            "source_chapter",
+            "source_locator",
+        ];
+
+        // Pre-0019 schema: the full chain minus the final migration.
+        let pre_0019_count = MIGRATIONS.len() - 1;
+        let (name, sql) = MIGRATIONS[pre_0019_count];
+        assert_eq!(name, "0019_dictionary_rich_entries");
+
+        let connection = migrate_prefix_in_memory(pre_0019_count);
+        for new_column in NEW_COLUMNS {
+            let exists = table_columns(&connection, "dictionary_words")
+                .iter()
+                .any(|(column, _)| column == new_column);
+            assert!(!exists, "{new_column} must not exist before 0019");
+        }
+
+        connection
+            .execute(
+                "INSERT INTO dictionary_words (id, word, normalized_word, created_at)
+                 VALUES ('pre-0019', 'pride', 'pride', '2026-01-01T00:00:00.000Z')",
+                [],
+            )
+            .unwrap();
+
+        connection.execute_batch(sql).expect("0019 applies cleanly");
+        connection
+            .execute("INSERT INTO schema_migrations (name, applied_at) VALUES (?1, 'test')", [name])
+            .unwrap();
+
+        let columns = table_columns(&connection, "dictionary_words");
+        for new_column in NEW_COLUMNS {
+            let exists =
+                columns.iter().any(|(column, kind)| column == new_column && kind == "TEXT");
+            assert!(exists, "{new_column} must exist as TEXT after 0019");
+        }
+
+        let select = NEW_COLUMNS.join(", ");
+        let (word, created_at, nulls): (String, String, Vec<Option<String>>) = connection
+            .query_row(
+                &format!(
+                    "SELECT word, created_at, {select} FROM dictionary_words WHERE id = 'pre-0019'"
+                ),
+                [],
+                |row| {
+                    let nulls: rusqlite::Result<Vec<Option<String>>> = (0..NEW_COLUMNS.len())
+                        .map(|i| row.get::<_, Option<String>>(2 + i))
+                        .collect();
+                    Ok((row.get(0)?, row.get(1)?, nulls?))
+                },
+            )
+            .unwrap();
+
+        assert_eq!(word, "pride", "migration must preserve the existing word");
+        assert_eq!(created_at, "2026-01-01T00:00:00.000Z", "migration must preserve created_at");
+        assert!(
+            nulls.iter().all(Option::is_none),
+            "every new column must read NULL on a migrated row"
+        );
     }
 }

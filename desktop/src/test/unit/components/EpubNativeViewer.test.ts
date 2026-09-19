@@ -149,6 +149,8 @@ describe('EpubNativeViewer', () => {
         rects: [{ left: 10, top: 20, width: 90, height: 20 }],
         pageNumber: 0,
         cfi: null,
+        quote: null,
+        chapterTitle: null,
       });
     });
 

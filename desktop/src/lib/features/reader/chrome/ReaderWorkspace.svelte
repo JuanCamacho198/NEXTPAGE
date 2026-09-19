@@ -37,7 +37,12 @@
   import { createViewerSelection, type ViewerSelection } from '../viewer-shared/Viewer';
   import type { SelectionData } from '../highlight/SelectionToolbar.svelte';
   import { dictionaryState } from '$lib/shared/stores/DictionaryState.svelte';
-  import type { DictionaryCaptureFeedback } from '$lib/shared/dictionary/captureFromSelection';
+  import {
+    buildEvidence,
+    captureFromSelection,
+    type DictionaryActions,
+    type DictionaryCaptureFeedback,
+  } from '$lib/shared/dictionary/captureFromSelection';
 
   type ActiveBook = LibraryBookDto & { filePath: string };
   type Props = {
@@ -68,6 +73,7 @@
     getUserId?: () => string | null;
     outboxDao?: SyncOutboxDao;
     viewerPort?: ViewerPort;
+    dictionaryActions?: DictionaryActions;
     libraryPort?: LibraryPort;
   };
 
@@ -93,6 +99,7 @@
     getUserId: getUserIdProp = undefined,
     outboxDao: outboxDaoProp = undefined,
     viewerPort: viewerPortProp = undefined,
+    dictionaryActions: dictionaryActionsProp = undefined,
     libraryPort: libraryPortProp = undefined,
   }: Props = $props();
 
@@ -106,6 +113,10 @@
   const outboxDao = outboxDaoProp ?? new SyncOutboxDao();
   // svelte-ignore state_referenced_locally
   const viewerPort = viewerPortProp ?? new TauriViewerAdapter();
+  // The store is the reader's write surface (Decision 5): it is the only path
+  // that enqueues the outbox row, so capture never routes through `ViewerPort`.
+  // svelte-ignore state_referenced_locally
+  const dictionaryActions = dictionaryActionsProp ?? dictionaryState;
   // svelte-ignore state_referenced_locally
   const libraryPort = libraryPortProp ?? new TauriLibraryAdapter();
 
@@ -403,20 +414,23 @@
     if (selectedText) navigator.clipboard.writeText(selectedText).catch(() => {});
   }
   /**
-   * The dictionary write goes through the store, never through `ViewerPort`:
-   * the port's `addDictionaryWord` wrote straight to SQLite and skipped the
-   * outbox, so anything captured there could never sync (REQ-DSI-003). The
-   * store's `add` enqueues the full-row snapshot and is the single write path.
-   * Resolution (create vs attach vs ambiguous) lands in 3C on top of this
-   * signature; until then every selection is treated as a create.
+   * The reader is glue: it assembles the evidence at click time and hands the
+   * selection to `captureFromSelection`, which decides create / attach /
+   * feedback-only and performs at most one write through the store.
+   *
+   * `buildEvidence` returns null for PDF and for an EPUB selection with no
+   * block ancestor (REQ-DRE-006), and `entries` is the store's own `words`
+   * (trap: the resolver takes entries, not the actions object). The store's
+   * `add`/`capture` are the only write paths — the deleted
+   * `ViewerPort.addDictionaryWord` wrote to SQLite and skipped the outbox, so
+   * anything captured there could never sync (REQ-DSI-003).
    */
   async function handleAddToDictionary(data: SelectionData): Promise<DictionaryCaptureFeedback> {
-    try {
-      await dictionaryState.add(data.text.trim());
-      return 'created';
-    } catch {
-      return 'error';
-    }
+    return captureFromSelection(data.text, {
+      actions: dictionaryActions,
+      entries: dictionaryActions.words,
+      evidence: buildEvidence(data, activeReadingBook, viewer.kind),
+    });
   }
   async function handleColorSelect(color: string, data: SelectionData): Promise<void> {
     await highlightsState.handleColorSelect(color, data);

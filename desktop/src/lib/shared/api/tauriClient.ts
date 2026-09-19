@@ -954,6 +954,13 @@ export const updateDictionaryWord = async (payload: {
   tags?: string[];
   isFavorite?: boolean;
   srsStage?: number;
+  // REQ-DRE-002 / REQ-DRE-007: the four user-authored fields. Rust's
+  // `UpdateDictionaryWordInput` accepts them and deliberately does not accept
+  // evidence, so a capture cannot be smuggled through this payload.
+  definition?: string | null;
+  partOfSpeech?: string | null;
+  phonetic?: string | null;
+  example?: string | null;
 }): Promise<DictionaryWordDto> => {
   try {
     return await invoke<DictionaryWordDto>('updateDictionaryWord', { payload });

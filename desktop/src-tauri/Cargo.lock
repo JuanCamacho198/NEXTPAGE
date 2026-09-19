@@ -2638,6 +2638,7 @@ dependencies = [
  "tauri-plugin-single-instance",
  "tempfile",
  "thiserror 1.0.69",
+ "unicode-normalization",
  "url",
  "uuid",
  "zip 8.6.0",

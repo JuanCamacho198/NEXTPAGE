@@ -6,31 +6,19 @@ use crate::models::{
 };
 use chrono::Utc;
 use rusqlite::{params, OptionalExtension};
+use unicode_normalization::UnicodeNormalization;
 use uuid::Uuid;
 
 /// Single source of truth for the selected column list. Its order MUST match
 /// the field order read by [`read_full_row`].
 const SELECT_COLUMNS: &str = "id, word, created_at, normalized_word, user_id, tags_json, is_favorite, srs_stage, updated_at, deleted_at, synced_at, definition, part_of_speech, phonetic, example, quote, source_book_id, source_book_title, source_book_author, source_chapter, source_locator";
 
+/// Shared normalization contract (REQ-DSI-004): trim -> lowercase -> NFD
+/// decompose -> strip combining marks U+0300-U+036F. TS (`normalizeDictionaryKey`)
+/// and Kotlin (`DictionaryNormalizer.normalize`) implement the same rule, so the
+/// natural key `(user_id, normalized_word)` is identical on every platform.
 fn normalize_word(word: &str) -> String {
-    let trimmed = word.trim().to_lowercase();
-    strip_accents(&trimmed)
-}
-
-fn strip_accents(input: &str) -> String {
-    input
-        .chars()
-        .map(|c| match c {
-            'á' | 'à' | 'ä' | 'â' => 'a',
-            'é' | 'è' | 'ë' | 'ê' => 'e',
-            'í' | 'ì' | 'ï' | 'î' => 'i',
-            'ó' | 'ò' | 'ö' | 'ô' => 'o',
-            'ú' | 'ù' | 'ü' | 'û' => 'u',
-            'ñ' => 'n',
-            'ç' => 'c',
-            _ => c,
-        })
-        .collect()
+    word.trim().to_lowercase().nfd().filter(|c| !('\u{0300}'..='\u{036f}').contains(c)).collect()
 }
 
 fn has_column(conn: &rusqlite::Connection, table: &str, col: &str) -> bool {
@@ -1105,5 +1093,66 @@ mod tests {
             },
         );
         assert!(matches!(result, Err(AppError::NotFound(_))));
+    }
+
+    /// Conformance vectors shared verbatim with the TypeScript test (task 2A.3) and
+    /// the Kotlin test (task 5B.1): same inputs, same expected keys (REQ-DSI-004).
+    ///
+    /// Punctuation stays in the key: the contract strips only combining marks, so a
+    /// surrounding comma survives normalization. Stripping punctuation belongs to
+    /// `tokenizeSelection` (slice 2A), not to the normalizer.
+    const NORMALIZATION_VECTORS: &[(&str, &str)] = &[
+        ("", ""),
+        ("   ", ""),
+        ("  Serendipity  ", "serendipity"),
+        ("café", "cafe"),
+        ("CAFÉ", "cafe"),
+        ("  Café  ", "cafe"),
+        ("Ñandú", "nandu"),
+        ("Ōkami", "okami"),
+        ("Řeka", "reka"),
+        ("Île", "ile"),
+        ("Āris", "aris"),
+        ("Ștefan", "stefan"),
+        ("İstanbul", "istanbul"),
+        ("Abyss,", "abyss,"),
+        ("(Ephemeral)", "(ephemeral)"),
+        ("¡Hola!", "¡hola!"),
+        ("Ephemeral's", "ephemeral's"),
+    ];
+
+    #[test]
+    fn normalization_vectors_match_shared_contract() {
+        for (input, expected) in NORMALIZATION_VECTORS {
+            assert_eq!(normalize_word(input), *expected, "input {:?}", input);
+        }
+    }
+
+    #[test]
+    fn normalization_backs_the_per_user_natural_key() {
+        let repo = new_repository();
+        let created = add_dictionary_word(
+            &repo,
+            AddDictionaryWordInput {
+                word: "Tōkyō".to_string(),
+                user_id: Some("u1".to_string()),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(created.normalized_word.as_deref(), Some("tokyo"));
+        assert_eq!(created.word, "Tōkyō");
+        let dup = add_dictionary_word(
+            &repo,
+            AddDictionaryWordInput {
+                word: "TOKYO".to_string(),
+                user_id: Some("u1".to_string()),
+                ..Default::default()
+            },
+        );
+        assert!(matches!(dup, Err(AppError::DbConstraint(_))));
+        let listed = list_dictionary_words(&repo).unwrap();
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].word, "Tōkyō");
     }
 }

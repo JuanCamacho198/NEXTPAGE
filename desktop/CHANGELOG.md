@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.4.0](https://github.com/JuanCamacho198/NEXTPAGE/compare/desktop-v0.3.0...desktop-v0.4.0) (2026-09-19)
+
+
+### Features
+
+* **desktop:** add DriveConnectService for the Drive OAuth flow ([fd7c48f](https://github.com/JuanCamacho198/NEXTPAGE/commit/fd7c48f9d6e2581a9f27c41c175cbebd3d21a970))
+* **desktop:** add the durable Drive store, prompt gate, and drive state ([394a0e0](https://github.com/JuanCamacho198/NEXTPAGE/commit/394a0e0862669461b869704dd91185f839ae0934))
+* **desktop:** gate Drive consumers behind an explicit connect ([820a3cc](https://github.com/JuanCamacho198/NEXTPAGE/commit/820a3ccb77ea43d28a3f2e152bc050b0214eb800))
+* **desktop:** make desktop login identity-only and delete the legacy OAuth module ([d41b87b](https://github.com/JuanCamacho198/NEXTPAGE/commit/d41b87b191f604100ad1d6b05775b62822fe481d))
+* **desktop:** separate desktop login from Google Drive ([752cf2f](https://github.com/JuanCamacho198/NEXTPAGE/commit/752cf2f1e5c3ebdbec3c684b87f2e15547491045))
+
 ## [0.3.0](https://github.com/JuanCamacho198/NEXTPAGE/compare/desktop-v0.2.0...desktop-v0.3.0) (2026-09-17)
 
 

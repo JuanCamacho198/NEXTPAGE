@@ -55,6 +55,12 @@
       rects: Array<{ left: number; top: number; width: number; height: number }>;
       pageNumber: number;
       cfi: string | null;
+      // EPUB evidence forwarded by the bridge guard (REQ-DRE-005). Declared
+      // structurally instead of importing `ViewerSelection`, because
+      // `viewer-shared/Viewer.ts` already type-imports this component and the
+      // duplicate declaration would create a type-only import cycle.
+      quote?: string | null;
+      chapterTitle?: string | null;
     }) => void;
     persistedHighlights?: Array<{
       id: string;

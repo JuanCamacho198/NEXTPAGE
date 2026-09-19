@@ -964,6 +964,12 @@ export const messagesEs: Record<MessageKey, string> = {
   'reader.copiedToClipboard': 'Copiado al portapapeles',
   'reader.addToDictionary': 'Agregar al diccionario',
   'reader.addedToDictionary': 'Guardado',
+  // Feedback de captura del lector (REQ-DRE-014). Sin comillas: el texto del
+  // marco tenía una comilla de cierre sin abrir y no se replica el defecto.
+  'reader.dictionaryEvidenceUpdated': 'Evidencia actualizada',
+  'reader.dictionaryNoMatch': 'Ninguna entrada del diccionario coincide con esta selección',
+  'reader.dictionarySeveralMatches': 'Varias entradas coinciden, selecciona una sola palabra',
+  'reader.dictionaryAlreadyInDictionary': 'Ya está en tu diccionario',
   'reader.nota': 'Nota',
   'reader.eliminar_destacado': 'Eliminar resaltado',
   'reader.seleccion_no_disponible': 'Selección no disponible en este formato',

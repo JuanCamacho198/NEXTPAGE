@@ -36,6 +36,8 @@
   import BookmarkSidebar from './BookmarkSidebar.svelte';
   import { createViewerSelection, type ViewerSelection } from '../viewer-shared/Viewer';
   import type { SelectionData } from '../highlight/SelectionToolbar.svelte';
+  import { dictionaryState } from '$lib/shared/stores/DictionaryState.svelte';
+  import type { DictionaryCaptureFeedback } from '$lib/shared/dictionary/captureFromSelection';
 
   type ActiveBook = LibraryBookDto & { filePath: string };
   type Props = {
@@ -358,6 +360,11 @@
       rects: event.rects,
       pageNumber: event.pageNumber,
       cfi: event.cfi ?? null,
+      // EPUB evidence crosses the iframe -> bridge -> workspace boundary here
+      // (REQ-DRE-005); both stay null for PDF and for a selection with no block
+      // ancestor.
+      quote: event.quote ?? null,
+      chapterTitle: event.chapterTitle ?? null,
     };
     showToolbar = true;
   }
@@ -395,10 +402,21 @@
   function handleCopy(): void {
     if (selectedText) navigator.clipboard.writeText(selectedText).catch(() => {});
   }
-  async function handleAddToDictionary(word: string): Promise<void> {
+  /**
+   * The dictionary write goes through the store, never through `ViewerPort`:
+   * the port's `addDictionaryWord` wrote straight to SQLite and skipped the
+   * outbox, so anything captured there could never sync (REQ-DSI-003). The
+   * store's `add` enqueues the full-row snapshot and is the single write path.
+   * Resolution (create vs attach vs ambiguous) lands in 3C on top of this
+   * signature; until then every selection is treated as a create.
+   */
+  async function handleAddToDictionary(data: SelectionData): Promise<DictionaryCaptureFeedback> {
     try {
-      await viewerPort.addDictionaryWord({ word });
-    } catch {}
+      await dictionaryState.add(data.text.trim());
+      return 'created';
+    } catch {
+      return 'error';
+    }
   }
   async function handleColorSelect(color: string, data: SelectionData): Promise<void> {
     await highlightsState.handleColorSelect(color, data);

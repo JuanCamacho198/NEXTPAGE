@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import SelectionToolbar, {
   type SelectionData,
 } from '$lib/features/reader/highlight/SelectionToolbar.svelte';
+import type { DictionaryCaptureFeedback } from '$lib/shared/dictionary/captureFromSelection';
 
 const t = (key: string, params?: Record<string, string | number>) => {
   const translations: Record<string, string> = {
@@ -17,6 +18,11 @@ const t = (key: string, params?: Record<string, string | number>) => {
     'reader.copiedToClipboard': 'Copied to clipboard',
     'reader.addToDictionary': 'Add to Dictionary',
     'reader.addedToDictionary': 'Saved',
+    'reader.dictionaryEvidenceUpdated': 'Evidence updated',
+    'reader.dictionaryNoMatch': 'No dictionary entry matches this selection',
+    'reader.dictionarySeveralMatches': 'Several entries match - select a single word',
+    'reader.dictionaryAlreadyInDictionary': 'Already in your dictionary',
+    'error.somethingWrong': 'Something went wrong',
   };
   let value = translations[key] ?? key;
   if (params) {
@@ -44,7 +50,7 @@ const baseProps = () => ({
   containerRect: { left: 100, top: 200, width: 320, height: 480 },
   selectionData: makeSelectionData(),
   onCopy: () => undefined,
-  onAddToDictionary: () => undefined,
+  onAddToDictionary: async (): Promise<DictionaryCaptureFeedback> => 'created',
   onColorSelect: () => undefined,
   t,
 });
@@ -101,17 +107,72 @@ describe('SelectionToolbar', () => {
     expect(style).toContain('top: 248px');
   });
 
-  it('calls onAddToDictionary with selected text', async () => {
-    const onAddToDictionary = vi.fn();
+  it('forwards the whole SelectionData — text and evidence — to onAddToDictionary', async () => {
+    const onAddToDictionary = vi.fn(async () => 'created' as DictionaryCaptureFeedback);
+    const data = makeSelectionData({
+      text: 'ephemeral',
+      quote: 'The ephemeral nature of the artefact was obvious.',
+      chapterTitle: 'Chapter 3',
+    });
     const { getByLabelText } = render(SelectionToolbar, {
       ...baseProps(),
       selectedText: 'ephemeral',
+      selectionData: data,
       onAddToDictionary,
     });
 
-    const button = getByLabelText('Add to Dictionary');
-    await fireEvent.click(button);
-    expect(onAddToDictionary).toHaveBeenCalledWith('ephemeral');
+    await fireEvent.click(getByLabelText('Add to Dictionary'));
+
+    expect(onAddToDictionary).toHaveBeenCalledOnce();
+    expect(onAddToDictionary).toHaveBeenCalledWith(data);
+  });
+
+  it('does not call onAddToDictionary when there is no selection data', async () => {
+    const onAddToDictionary = vi.fn(async () => 'created' as DictionaryCaptureFeedback);
+    const { getByLabelText } = render(SelectionToolbar, {
+      ...baseProps(),
+      selectionData: null,
+      onAddToDictionary,
+    });
+
+    await fireEvent.click(getByLabelText('Add to Dictionary'));
+
+    expect(onAddToDictionary).not.toHaveBeenCalled();
+  });
+
+  it('does not call onAddToDictionary for a whitespace-only selection', async () => {
+    const onAddToDictionary = vi.fn(async () => 'created' as DictionaryCaptureFeedback);
+    const { getByLabelText } = render(SelectionToolbar, {
+      ...baseProps(),
+      selectionData: makeSelectionData({ text: '   ' }),
+      onAddToDictionary,
+    });
+
+    await fireEvent.click(getByLabelText('Add to Dictionary'));
+
+    expect(onAddToDictionary).not.toHaveBeenCalled();
+  });
+
+  // ── Dictionary capture feedback (REQ-DRE-014) ──────────────────────────
+  // The parent resolves the selection and returns one `DictionaryCaptureFeedback`
+  // value; the toolbar owes the user a localized message for every one of them.
+
+  it.each([
+    ['created', 'Saved'],
+    ['evidence-updated', 'Evidence updated'],
+    ['already-in-dictionary', 'Already in your dictionary'],
+    ['no-match', 'No dictionary entry matches this selection'],
+    ['ambiguous', 'Several entries match - select a single word'],
+    ['error', 'Something went wrong'],
+  ] as const)('maps the %s feedback to its localized message', async (feedback, message) => {
+    const { getByLabelText, queryByText } = render(SelectionToolbar, {
+      ...baseProps(),
+      onAddToDictionary: async () => feedback,
+    });
+
+    await fireEvent.click(getByLabelText('Add to Dictionary'));
+
+    expect(queryByText(message)).toBeTruthy();
   });
 
   it('calls onCopy and shows copy feedback when copy button clicked', async () => {

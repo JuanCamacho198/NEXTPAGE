@@ -14,6 +14,11 @@ export type ViewerSelection = {
   rects: Array<{ left: number; top: number; width: number; height: number }>;
   pageNumber: number;
   cfi?: string | null;
+  // EPUB evidence (REQ-DRE-005): the containing paragraph and chapter label the
+  // iframe extracted. Both are absent for PDF and for a selection with no block
+  // ancestor. No `selectionOffset`/`blockTag`: no column and no consumer exists.
+  quote?: string | null;
+  chapterTitle?: string | null;
 };
 
 export type ViewerHandle = {

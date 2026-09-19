@@ -30,6 +30,10 @@ export type SelectionData = {
   rects: Array<{ left: number; top: number; width: number; height: number }>;
   pageNumber: number;
   cfi: string | null;
+  /** EPUB evidence: the containing paragraph (`null` when there is no block ancestor). */
+  quote?: string | null;
+  /** EPUB evidence: the chapter label the selection came from. */
+  chapterTitle?: string | null;
 };
 
 export type HighlightsDeps = {

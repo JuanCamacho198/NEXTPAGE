@@ -604,6 +604,11 @@ export const messagesEn = {
   'reader.copiedToClipboard': 'Copied to clipboard',
   'reader.addToDictionary': 'Add to Dictionary',
   'reader.addedToDictionary': 'Saved',
+  // Reader capture feedback (REQ-DRE-014): one message per capture outcome.
+  'reader.dictionaryEvidenceUpdated': 'Evidence updated',
+  'reader.dictionaryNoMatch': 'No dictionary entry matches this selection',
+  'reader.dictionarySeveralMatches': 'Several entries match - select a single word',
+  'reader.dictionaryAlreadyInDictionary': 'Already in your dictionary',
   'reader.nota': 'Note',
   'reader.eliminar_destacado': 'Delete highlight',
   'reader.seleccion_no_disponible': 'Selection unavailable for this format',

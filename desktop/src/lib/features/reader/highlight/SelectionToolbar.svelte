@@ -3,6 +3,7 @@
   import { cubicOut } from 'svelte/easing';
   import type { MessageKey } from '$lib/shared/i18n';
   import { HIGHLIGHT_COLORS } from '$lib/features/reader/highlight/highlightColors';
+  import type { DictionaryCaptureFeedback } from '$lib/shared/dictionary/captureFromSelection';
 
   // The full data we need to persist a highlight. The parent captures this at
   // selection time and passes it back to us as a prop so that the click on a
@@ -16,21 +17,27 @@
     rects: Array<{ left: number; top: number; width: number; height: number }>;
     pageNumber: number;
     cfi: string | null;
+    /** EPUB evidence: the containing paragraph, or null when none was found. */
+    quote?: string | null;
+    /** EPUB evidence: the chapter the selection came from. */
+    chapterTitle?: string | null;
   };
 
   type Props = {
+    // Kept in the contract for callers that only have the raw string; the
+    // toolbar itself reads `selectionData`, which carries the same text plus
+    // the EPUB evidence the capture path needs.
     selectedText: string;
     selectionBounds: { left: number; top: number; right: number; bottom: number };
     containerRect: { left: number; top: number; width: number; height: number };
     selectionData: SelectionData | null;
     onCopy: () => void;
-    onAddToDictionary: (text: string) => void;
+    onAddToDictionary: (data: SelectionData) => Promise<DictionaryCaptureFeedback>;
     onColorSelect: (color: string, data: SelectionData) => void;
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
   };
 
   let {
-    selectedText,
     selectionBounds,
     containerRect,
     selectionData,
@@ -50,6 +57,18 @@
   const TOOLBAR_WIDTH_ESTIMATE = 260;
   const TOOLBAR_EDGE_PADDING = 16;
   const TOOLBAR_OFFSET = 16;
+
+  // One localized message per capture outcome (REQ-DRE-014). `error` reuses the
+  // app's generic failure copy: the reader has no capture-specific error the
+  // user can act on, and inventing one would add a key no requirement names.
+  const DICTIONARY_FEEDBACK_KEYS: Record<DictionaryCaptureFeedback, MessageKey> = {
+    created: 'reader.addedToDictionary',
+    'evidence-updated': 'reader.dictionaryEvidenceUpdated',
+    'already-in-dictionary': 'reader.dictionaryAlreadyInDictionary',
+    'no-match': 'reader.dictionaryNoMatch',
+    ambiguous: 'reader.dictionarySeveralMatches',
+    error: 'error.somethingWrong',
+  };
 
   const selectionCenterX = $derived((selectionBounds.left + selectionBounds.right) / 2);
   const viewerAnchorX = $derived(
@@ -91,11 +110,15 @@
     }, 1500);
   }
 
-  function handleAddToDictionary(): void {
-    const word = selectedText.trim();
-    if (!word) return;
-    onAddToDictionary(word);
-    dictionaryFeedback = t('reader.addedToDictionary');
+  async function handleAddToDictionary(): Promise<void> {
+    // The parent resolves the selection and writes at most one entry, so the
+    // evidence captured with the selection (quote + chapter) travels in the
+    // argument instead of the trimmed word string it replaced.
+    if (!selectionData) return;
+    if (!selectionData.text.trim()) return;
+
+    const feedback = await onAddToDictionary(selectionData);
+    dictionaryFeedback = t(DICTIONARY_FEEDBACK_KEYS[feedback] ?? 'reader.addedToDictionary');
     if (dictionaryFeedbackTimer) clearTimeout(dictionaryFeedbackTimer);
     dictionaryFeedbackTimer = setTimeout(() => {
       dictionaryFeedback = null;

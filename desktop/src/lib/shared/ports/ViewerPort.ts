@@ -56,13 +56,6 @@ export interface ViewerPort {
     bookId?: string,
   ): Promise<ActivityPoint[]>;
   getReadingStreak(bookId?: string, userId?: string): Promise<number>;
-  addDictionaryWord(payload: {
-    word: string;
-    tags?: string[];
-    isFavorite?: boolean;
-    srsStage?: number;
-    userId?: string;
-  }): Promise<import('$lib/shared/types').DictionaryWordDto>;
   getLogs(): Promise<string[]>;
   diagnose(): Promise<import('$lib/shared/types').DiagnoseResult>;
 }

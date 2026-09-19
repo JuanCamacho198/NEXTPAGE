@@ -153,6 +153,15 @@
   --color-border-strong: rgba(148, 173, 206, 0.3);
   --color-border-deep: #17263a;
 
+  /* Diccionario screen — pen `nuevo diseño.pen` `$--np-*` variables that have no
+     exact semantic equivalent (DARK values from the measured spec, frame ZPZb7).
+     Dark values only; the LIGHT block mirrors pen frame X6iIZ. */
+  --color-panel: #122336; /* $--np-panel */
+  --color-panel-input: #162844; /* $--np-input */
+  --color-accent-fill: #153040; /* $--np-accent-soft */
+  --color-panel-border: #1c324d; /* $--np-border */
+  --color-text-tertiary: #64748b; /* $--np-text-tertiary */
+
   /* Shadows */
   --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.2);
   --shadow-panel: 0 16px 48px rgba(2, 10, 20, 0.2);
@@ -238,6 +247,15 @@
   --color-border: rgba(30, 58, 95, 0.15);
   --color-border-strong: rgba(30, 58, 95, 0.28);
   --color-border-deep: #b0c0d4;
+
+  /* Diccionario screen — LIGHT values of the same pen `$--np-*` variables
+     (pen frame X6iIZ; the measured spec did not record the LIGHT frame, the
+     values come from the pen variable table). */
+  --color-panel: #f7fafc; /* $--np-panel */
+  --color-panel-input: #f1f5f9; /* $--np-input */
+  --color-accent-fill: #dbeafe; /* $--np-accent-soft */
+  --color-panel-border: #cbd5e1; /* $--np-border */
+  --color-text-tertiary: #94a3b8; /* $--np-text-tertiary */
 
   /* Shadows */
   --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.08);

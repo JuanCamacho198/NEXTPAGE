@@ -361,4 +361,6 @@ export function createDictionaryState() {
   };
 }
 
+export type DictionaryStateApi = ReturnType<typeof createDictionaryState>;
+
 export const dictionaryState = createDictionaryState();

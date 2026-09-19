@@ -67,6 +67,48 @@ describe('i18n es/en parity (REQ-X-Cross-2)', () => {
     }
   });
 
+  it('includes the dictionary screen keys in both locales', () => {
+    const screenKeys = [
+      'dictionary.title',
+      'dictionary.subtitle',
+      'dictionary.searchPlaceholder',
+      'dictionary.newWord',
+      'dictionary.tabAll',
+      'dictionary.tabRecent',
+      'dictionary.tabAz',
+      'dictionary.kpiTotal',
+      'dictionary.kpiThisWeek',
+      'dictionary.kpiReferencedBooks',
+      'dictionary.description',
+      'dictionary.personalExample',
+      'dictionary.bookReference',
+      'dictionary.viewBook',
+      'dictionary.edit',
+    ] as const;
+
+    for (const key of screenKeys) {
+      expect(messagesEn[key]).toBeDefined();
+      expect(messagesEs[key]).toBeDefined();
+    }
+
+    // KPI labels are binding: the Spanish copy is the frame's wording verbatim,
+    // English is the faithful equivalent.
+    expect(messagesEs['dictionary.kpiTotal']).toBe('Palabras guardadas');
+    expect(messagesEs['dictionary.kpiThisWeek']).toBe('Esta semana');
+    expect(messagesEs['dictionary.kpiReferencedBooks']).toBe('Libros referenciados');
+    expect(messagesEn['dictionary.kpiTotal']).toBe('Saved words');
+    expect(messagesEn['dictionary.kpiThisWeek']).toBe('This week');
+    expect(messagesEn['dictionary.kpiReferencedBooks']).toBe('Books referenced');
+
+    // The frame's subtitle + search placeholder are the pen copy, corrected to
+    // a balanced `...` rather than the frame's typographic run.
+    expect(messagesEs['dictionary.subtitle']).toBe(
+      'Tus palabras guardadas con descripción y referencia.',
+    );
+    expect(messagesEs['dictionary.searchPlaceholder']).toBe('Buscar palabra...');
+    expect(messagesEs['dictionary.newWord']).toBe('Nueva palabra');
+  });
+
   it('includes the addons route keys in both locales', () => {
     const addonsKeys = ['sidebar.addons', 'discover.manageAddons'] as const;
 

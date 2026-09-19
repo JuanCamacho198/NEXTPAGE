@@ -9,6 +9,7 @@
   import Icon from '$lib/shared/ui/navigation/Icon.svelte';
   import Button from '$lib/shared/ui/forms/Button.svelte';
   import DictionaryKpiRow from './DictionaryKpiRow.svelte';
+  import DictionaryRow from './DictionaryRow.svelte';
   import { deriveDictionaryKpis } from '../dictionaryKpis';
 
   type Props = {
@@ -267,21 +268,14 @@
         </div>
       {:else}
         <ul class="m-0 flex list-none flex-col gap-1.5 p-0" data-testid="dictionary-list">
-          {#each filteredWords as w (w.id)}
-            <li>
-              <button
-                type="button"
-                aria-current={selectedId === w.id ? 'true' : undefined}
-                class={`flex w-full cursor-pointer items-center gap-3 rounded-[10px] p-3 text-left text-2sm text-(--color-primary) transition-colors ${
-                  selectedId === w.id
-                    ? 'bg-(--color-accent-fill)'
-                    : 'bg-(--color-panel-input) hover:bg-(--color-accent-fill)'
-                }`}
-                onclick={() => (selectedId = w.id)}
-              >
-                <span class="truncate">{w.word}</span>
-              </button>
-            </li>
+          {#each filteredWords as w, index (w.id)}
+            <DictionaryRow
+              word={w}
+              {index}
+              selected={selectedId === w.id}
+              {t}
+              onselect={(id) => (selectedId = id)}
+            />
           {/each}
         </ul>
       {/if}

@@ -111,6 +111,22 @@
 }
 
 /* ============================================
+ * DICCIONARIO SCREEN — PER-ENTRY AVATAR ROTATION
+ * The frame lists these seven colours for the DARK frame (ZPZb7); they are hue
+ * accents applied on a saturated fill, so the same measured set holds in both
+ * themes and is declared once, outside the theme blocks.
+ * ============================================ */
+:root {
+  --color-avatar-1: #49d4ff;
+  --color-avatar-2: #a78bfa;
+  --color-avatar-3: #2dd4bf;
+  --color-avatar-4: #fbbf24;
+  --color-avatar-5: #fb7185;
+  --color-avatar-6: #34d399;
+  --color-avatar-7: #e879f9;
+}
+
+/* ============================================
  * DARK THEME (default)
  * ============================================ */
 :root,

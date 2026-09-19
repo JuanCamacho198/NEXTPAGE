@@ -1,10 +1,11 @@
 /**
- * Unit tests for the downloadableCatalog store — T-03 (Batch 2 / PR 2).
+ * Unit tests for the downloadableCatalog store — T-03 (Batch 2 / PR 2) plus
+ * the login-drive-separation cloud-download pre-prompt gate (work unit 3).
  *
  * Covers `loadAvailableFromDrive()` (Drive listing with local-library
- * exclusion and unparseable-name filtering) and `downloadBook()` without a
- * pre-existing Drive token (GDriveProvider's refresh fallback handles auth —
- * the store performs no manual `getDriveToken` check).
+ * exclusion and unparseable-name filtering), `downloadBook()` with the Drive
+ * store authorized, and the unauthorized pre-prompt matrix (offer vs
+ * decline-suppressed vs non-Google vs clean degrade).
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
@@ -17,6 +18,12 @@ const mockCatalogFindByHash = vi.hoisted(() => vi.fn());
 const mockCatalogFetchCatalog = vi.hoisted(() => vi.fn());
 const mockAuthUserId = vi.hoisted(() => ({ value: null as string | null }));
 const mockExtractEpubMetadata = vi.hoisted(() => vi.fn());
+const mockIsDriveAuthorized = vi.hoisted(() => vi.fn());
+const mockGetIdentityProvider = vi.hoisted(() => vi.fn());
+
+vi.mock('$lib/shared/services/DriveConnectService', () => ({
+  isDriveAuthorized: mockIsDriveAuthorized,
+}));
 
 vi.mock('$lib/shared/services/storage/GDriveProvider', () => ({
   GDriveProvider: vi.fn(function () {
@@ -43,11 +50,15 @@ vi.mock('$lib/shared/sync/SupabaseBookCatalogSync', () => ({
   }),
 }));
 
-// No pre-existing Drive token — the provider's refresh fallback must cover it.
+// Drive authorized by default — the provider's silent-refresh chain covers auth.
+// Unauthorized paths are exercised in the pre-prompt matrix below.
+mockIsDriveAuthorized.mockResolvedValue(true);
+
+// Identity provider for the pre-prompt gate (null = anonymous/local).
 vi.mock('$lib/shared/services/SupabaseAuthService', () => ({
-  getDriveToken: vi.fn().mockResolvedValue(null),
-  refreshDriveToken: vi.fn().mockResolvedValue('fresh-token'),
+  getIdentityProvider: mockGetIdentityProvider,
 }));
+mockGetIdentityProvider.mockResolvedValue(null);
 
 // No live user session → downloadBook's catalog upsert must be a no-op.
 vi.mock('$lib/shared/stores/AuthState.svelte', () => ({
@@ -61,6 +72,7 @@ vi.mock('$lib/shared/stores/AuthState.svelte', () => ({
 import {
   downloadableCatalog,
   clearDownloadableBooks,
+  clearDrivePrompt,
   loadAvailableFromDrive,
   downloadBook,
 } from '$lib/stores/downloadableCatalog.svelte';
@@ -218,7 +230,7 @@ describe('downloadableCatalog — catalog metadata enrichment (REQ-01)', () => {
   });
 });
 
-describe('downloadableCatalog — downloadBook without a token (REQ-02, SCN-03)', () => {
+describe('downloadableCatalog — downloadBook (REQ-02, SCN-03)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAuthUserId.value = null;
@@ -357,5 +369,98 @@ describe('downloadableCatalog — real EPUB title extraction on download', () =>
       format: 'epub',
     });
     expect(downloadableCatalog.books).toEqual([]);
+  });
+});
+
+describe('downloadableCatalog — Drive pre-prompt gate (login-drive-separation)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockAuthUserId.value = 'user-123';
+    clearDownloadableBooks();
+    downloadableCatalog.clearDownloadError();
+    clearDrivePrompt();
+    localStorage.clear();
+    mockGDriveList.mockResolvedValue(['book-9.epub']);
+    mockListLibraryBooks.mockResolvedValue([]);
+    mockCatalogFetchCatalog.mockResolvedValue([]);
+    mockGetIdentityProvider.mockResolvedValue('google');
+  });
+
+  afterEach(() => {
+    mockAuthUserId.value = null;
+    localStorage.clear();
+  });
+
+  async function seedBook(): Promise<void> {
+    await loadAvailableFromDrive();
+    expect(downloadableCatalog.books.map((b) => b.id)).toEqual(['book-9']);
+  }
+
+  it('authorized download proceeds with no prompt', async () => {
+    mockIsDriveAuthorized.mockResolvedValue(true);
+    await seedBook();
+
+    mockGDriveDownload.mockResolvedValue(new Uint8Array([1]));
+    mockSaveBookFile.mockResolvedValue(undefined);
+
+    await downloadBook('book-9');
+
+    expect(mockGDriveDownload).toHaveBeenCalledWith('book-9.epub');
+    expect(downloadableCatalog.drivePromptPending).toBe(false);
+    expect(downloadableCatalog.books).toEqual([]);
+  });
+
+  it('unauthorized first attempt raises the connect offer before any Drive call', async () => {
+    mockIsDriveAuthorized.mockResolvedValue(false);
+    await seedBook();
+
+    await downloadBook('book-9');
+
+    expect(downloadableCatalog.drivePromptPending).toBe(true);
+    expect(mockGDriveDownload).not.toHaveBeenCalled();
+    expect(downloadableCatalog.error).toMatch(/not connected/i);
+    expect(downloadableCatalog.books).toHaveLength(1);
+  });
+
+  it('declined prompt suppresses the re-offer and degrades cleanly', async () => {
+    mockIsDriveAuthorized.mockResolvedValue(false);
+    await seedBook();
+
+    await downloadBook('book-9');
+    expect(downloadableCatalog.drivePromptPending).toBe(true);
+
+    downloadableCatalog.declineDrivePrompt();
+    expect(downloadableCatalog.drivePromptPending).toBe(false);
+
+    await downloadBook('book-9');
+
+    expect(downloadableCatalog.drivePromptPending).toBe(false);
+    expect(mockGDriveDownload).not.toHaveBeenCalled();
+    expect(downloadableCatalog.error).toMatch(/not connected/i);
+  });
+
+  it('non-Google users are never prompted', async () => {
+    mockIsDriveAuthorized.mockResolvedValue(false);
+    mockGetIdentityProvider.mockResolvedValue('github');
+    await seedBook();
+
+    await downloadBook('book-9');
+
+    expect(downloadableCatalog.drivePromptPending).toBe(false);
+    expect(mockGDriveDownload).not.toHaveBeenCalled();
+    expect(downloadableCatalog.error).toMatch(/not connected/i);
+  });
+
+  it('anonymous users degrade without a prompt', async () => {
+    mockIsDriveAuthorized.mockResolvedValue(false);
+    mockGetIdentityProvider.mockResolvedValue(null);
+    mockAuthUserId.value = null;
+    await seedBook();
+
+    await downloadBook('book-9');
+
+    expect(downloadableCatalog.drivePromptPending).toBe(false);
+    expect(mockGDriveDownload).not.toHaveBeenCalled();
+    expect(downloadableCatalog.error).toMatch(/not connected/i);
   });
 });

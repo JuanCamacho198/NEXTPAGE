@@ -12,6 +12,8 @@
  * chunk 100 idempotent (onConflict). Backfill reuses same path.
  */
 import { GDriveProvider } from './storage/GDriveProvider';
+import { isDriveAuthorized } from '$lib/shared/services/DriveConnectService';
+import { syncError } from '$lib/shared/protocol/DriveCatalogContract';
 import { hasLiveSession } from '$lib/services/supabase';
 import { SupabaseProgressSync } from '../sync/SupabaseProgressSync';
 import { SupabaseBookCatalogSync } from '../sync/SupabaseBookCatalogSync';
@@ -97,11 +99,31 @@ export class DriveColdBackupService {
   private static gdrive = new GDriveProvider();
 
   /**
+   * Drive-authorization gate (login-drive-separation): cold-backup Drive I/O
+   * requires the independent Drive grant, not merely a live identity session.
+   * Unauthorized callers get a typed `DRIVE_NOT_CONNECTED` (retryable=false)
+   * carrying the Settings connect route so UI layers can offer the connect
+   * CTA / pre-prompt instead of failing opaquely. Supabase I/O keeps its own
+   * `hasLiveSession()` checks at each call site below.
+   */
+  private static async requireDriveAuthorized(
+    action: 'export' | 'import' | 'backfill',
+  ): Promise<void> {
+    if (await isDriveAuthorized()) return;
+    throw syncError(
+      'DRIVE_NOT_CONNECTED',
+      `Google Drive is not connected. Connect Google Drive in Settings to enable cold-backup ${action}.`,
+      false,
+    );
+  }
+
+  /**
    * Export local state to Drive as single JSON.
    * Gathers via tauri (books, progress, highlights, bookmarks) and Supabase sessions (if live).
    * Reuses GDriveProvider.upload which sends parents only on create (403 fix).
    */
   static async exportColdBackup(userId: string): Promise<void> {
+    await this.requireDriveAuthorized('export');
     const [libraryBooks, sourceBooks] = await Promise.all([
       this.libraryPort.listLibraryBooks().catch(() => []),
       this.libraryPort.listBooks().catch(() => []),
@@ -206,9 +228,11 @@ export class DriveColdBackupService {
 
   /**
    * Import cold backup JSON from Drive, FK-order chunk 100 idempotent.
-   * Gated by hasLiveSession — no request fires without live session.
+   * Gated by the Drive grant (typed DRIVE_NOT_CONNECTED) and the live
+   * session — no request fires without both.
    */
   static async importColdBackup(userId: string): Promise<ImportResult> {
+    await this.requireDriveAuthorized('import');
     if (!hasLiveSession())
       return { books: 0, progress: 0, highlights: 0, bookmarks: 0, sessions: 0, totalImported: 0 };
     const bytes: Uint8Array = await this.gdrive.download(COLD_BACKUP_FILE);
@@ -223,6 +247,7 @@ export class DriveColdBackupService {
    * otherwise no-op (legacy per-book state.json path already covered by import).
    */
   static async backfillFromDrive(userId: string): Promise<ImportResult> {
+    await this.requireDriveAuthorized('backfill');
     if (!hasLiveSession())
       return { books: 0, progress: 0, highlights: 0, bookmarks: 0, sessions: 0, totalImported: 0 };
     try {

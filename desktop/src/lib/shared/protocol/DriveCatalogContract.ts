@@ -7,6 +7,7 @@ export type SyncErrorCode =
   | 'AUTH_REQUIRED'
   | 'AUTH_EXPIRED'
   | 'PERMISSION_DENIED'
+  | 'DRIVE_NOT_CONNECTED'
   | 'REMOTE_NOT_FOUND'
   | 'HASH_MISMATCH'
   | 'CONFLICT'

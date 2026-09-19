@@ -7,7 +7,7 @@
     },
     "desktop": {
       "name": "nextpage-desktop",
-      "version": "0.1.0",
+      "version": "0.3.0",
       "dependencies": {
         "@fabianlars/tauri-plugin-oauth": "^2.1.0",
         "@nextpage/manifest-validator": "workspace:*",
@@ -67,7 +67,7 @@
     },
     "web": {
       "name": "@nextpage/web",
-      "version": "0.0.1",
+      "version": "0.1.0",
       "dependencies": {
         "@fontsource/inter": "^5.3.0",
         "@fontsource/jetbrains-mono": "^5.3.0",

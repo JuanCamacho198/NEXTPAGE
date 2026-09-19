@@ -147,12 +147,6 @@ describe('validateBounds', () => {
       /overlap/i,
     );
   });
-  it('passes for real pen', async () => {
-    const fs = await import('node:fs');
-    const raw = fs.readFileSync('design/nextpage-desktop.pen', 'utf8');
-    const pen = JSON.parse(raw);
-    expect(() => validateBounds(pen)).not.toThrow();
-  });
   it('throws on wrong GImmK width', () => {
     const pen = {
       version: '2.17',

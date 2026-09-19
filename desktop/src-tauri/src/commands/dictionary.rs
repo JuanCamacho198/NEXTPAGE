@@ -39,6 +39,16 @@ pub fn updateDictionaryWord(
 
 #[allow(non_snake_case)]
 #[tauri::command(rename_all = "camelCase")]
+pub fn updateDictionaryEvidence(
+    state: State<'_, AppState>,
+    payload: crate::models::UpdateDictionaryEvidenceInput,
+) -> Result<DictionaryWordDto, String> {
+    let repository = state.repository.lock().map_err(|e| format!("{}", e))?;
+    repository.update_dictionary_evidence(payload).map_err(map_command_error)
+}
+
+#[allow(non_snake_case)]
+#[tauri::command(rename_all = "camelCase")]
 pub fn searchDictionaryWords(
     state: State<'_, AppState>,
     payload: crate::models::SearchDictionaryWordsInput,

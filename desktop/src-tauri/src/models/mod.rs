@@ -186,6 +186,27 @@ pub struct UpdateDictionaryWordInput {
     pub example: Option<String>,
 }
 
+/// Captured evidence only. The four user-authored fields are intentionally
+/// absent so that a re-capture can never clear them (REQ-DRE-008); evidence is
+/// written exclusively through this input.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateDictionaryEvidenceInput {
+    pub id: String,
+    #[serde(default)]
+    pub quote: Option<String>,
+    #[serde(default)]
+    pub source_book_id: Option<String>,
+    #[serde(default)]
+    pub source_book_title: Option<String>,
+    #[serde(default)]
+    pub source_book_author: Option<String>,
+    #[serde(default)]
+    pub source_chapter: Option<String>,
+    #[serde(default)]
+    pub source_locator: Option<String>,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchDictionaryWordsInput {

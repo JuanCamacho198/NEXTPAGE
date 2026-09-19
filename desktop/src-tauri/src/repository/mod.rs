@@ -287,6 +287,13 @@ impl LibraryRepository {
         dictionary::update_dictionary_word(self, input)
     }
 
+    pub fn update_dictionary_evidence(
+        &self,
+        input: crate::models::UpdateDictionaryEvidenceInput,
+    ) -> AppResult<DictionaryWordDto> {
+        dictionary::update_dictionary_evidence(self, input)
+    }
+
     pub fn search_dictionary_words(
         &self,
         query: &str,

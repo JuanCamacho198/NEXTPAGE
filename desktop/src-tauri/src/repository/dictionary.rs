@@ -2,7 +2,7 @@ use super::LibraryRepository;
 use crate::error::{AppError, AppResult};
 use crate::models::{
     AddDictionaryWordInput, DictionaryWordDto, ImportDictionaryError, ImportDictionaryResult,
-    UpdateDictionaryWordInput,
+    UpdateDictionaryEvidenceInput, UpdateDictionaryWordInput,
 };
 use chrono::Utc;
 use rusqlite::{params, OptionalExtension};
@@ -348,6 +348,28 @@ pub fn update_dictionary_word(
         source_chapter: existing.source_chapter.clone(),
         source_locator: existing.source_locator.clone(),
     })
+}
+
+pub fn update_dictionary_evidence(
+    repo: &LibraryRepository,
+    input: UpdateDictionaryEvidenceInput,
+) -> AppResult<DictionaryWordDto> {
+    repo.connection.execute(
+        "UPDATE dictionary_words SET quote = ?1, source_book_id = ?2, source_book_title = ?3, source_book_author = ?4, source_chapter = ?5, source_locator = ?6 WHERE id = ?7",
+        params![
+            input.quote,
+            input.source_book_id,
+            input.source_book_title,
+            input.source_book_author,
+            input.source_chapter,
+            input.source_locator,
+            input.id
+        ],
+    )?;
+    let sql = format!("SELECT {} FROM dictionary_words WHERE id = ?1 LIMIT 1", SELECT_COLUMNS);
+    let mut stmt = repo.connection.prepare(&sql)?;
+    let updated = stmt.query_row(params![input.id], read_full_row).optional()?;
+    updated.ok_or_else(|| AppError::NotFound(format!("Dictionary word {} not found", input.id)))
 }
 
 pub fn remove_dictionary_word(repo: &LibraryRepository, id: &str) -> AppResult<()> {
@@ -941,5 +963,147 @@ mod tests {
         assert_eq!(read.source_book_author.as_deref(), Some("Autor"));
         assert_eq!(read.source_chapter.as_deref(), Some("Cap 1"));
         assert_eq!(read.source_locator.as_deref(), Some("epubcfi(/6/4!/4/2)"));
+    }
+
+    #[test]
+    fn recapture_overwrites_all_evidence_columns() {
+        let repo = new_repository();
+        let created = add_dictionary_word(
+            &repo,
+            AddDictionaryWordInput {
+                word: "Recaptura".to_string(),
+                quote: Some("cita A".to_string()),
+                source_book_id: Some("book-a".to_string()),
+                source_book_title: Some("Libro A".to_string()),
+                source_book_author: Some("Autor A".to_string()),
+                source_chapter: Some("Cap 1".to_string()),
+                source_locator: Some("epubcfi(/6/4!/4/2)".to_string()),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        let recaptured = update_dictionary_evidence(
+            &repo,
+            UpdateDictionaryEvidenceInput {
+                id: created.id.clone(),
+                quote: Some("cita B".to_string()),
+                source_book_id: Some("book-b".to_string()),
+                source_book_title: Some("Libro B".to_string()),
+                source_book_author: Some("Autor B".to_string()),
+                source_chapter: Some("Cap 9".to_string()),
+                source_locator: Some("epubcfi(/6/8!/4/6)".to_string()),
+            },
+        )
+        .unwrap();
+        assert_eq!(recaptured.quote.as_deref(), Some("cita B"));
+        assert_eq!(recaptured.source_book_id.as_deref(), Some("book-b"));
+        assert_eq!(recaptured.source_book_title.as_deref(), Some("Libro B"));
+        assert_eq!(recaptured.source_book_author.as_deref(), Some("Autor B"));
+        assert_eq!(recaptured.source_chapter.as_deref(), Some("Cap 9"));
+        assert_eq!(recaptured.source_locator.as_deref(), Some("epubcfi(/6/8!/4/6)"));
+        let listed = list_dictionary_words(&repo).unwrap();
+        let read = listed.iter().find(|w| w.id == created.id).unwrap();
+        assert_eq!(read.quote.as_deref(), Some("cita B"));
+        assert_eq!(read.source_book_id.as_deref(), Some("book-b"));
+        assert_eq!(read.source_book_title.as_deref(), Some("Libro B"));
+        assert_eq!(read.source_book_author.as_deref(), Some("Autor B"));
+        assert_eq!(read.source_chapter.as_deref(), Some("Cap 9"));
+        assert_eq!(read.source_locator.as_deref(), Some("epubcfi(/6/8!/4/6)"));
+    }
+
+    #[test]
+    fn recapture_leaves_user_fields_unchanged() {
+        let repo = new_repository();
+        let created = add_dictionary_word(
+            &repo,
+            AddDictionaryWordInput {
+                word: "Efímero".to_string(),
+                definition: Some("Que dura poco tiempo".to_string()),
+                part_of_speech: Some("adjetivo".to_string()),
+                phonetic: Some("/eˈfimeɾo/".to_string()),
+                example: Some("Un amor efímero".to_string()),
+                quote: Some("cita A".to_string()),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        let recaptured = update_dictionary_evidence(
+            &repo,
+            UpdateDictionaryEvidenceInput {
+                id: created.id.clone(),
+                quote: Some("cita B".to_string()),
+                source_book_id: Some("book-b".to_string()),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(recaptured.word, created.word);
+        assert_eq!(recaptured.definition.as_deref(), created.definition.as_deref());
+        assert_eq!(recaptured.part_of_speech.as_deref(), created.part_of_speech.as_deref());
+        assert_eq!(recaptured.phonetic.as_deref(), created.phonetic.as_deref());
+        assert_eq!(recaptured.example.as_deref(), created.example.as_deref());
+        let listed = list_dictionary_words(&repo).unwrap();
+        let read = listed.iter().find(|w| w.id == created.id).unwrap();
+        assert_eq!(read.definition.as_deref(), Some("Que dura poco tiempo"));
+        assert_eq!(read.part_of_speech.as_deref(), Some("adjetivo"));
+        assert_eq!(read.phonetic.as_deref(), Some("/eˈfimeɾo/"));
+        assert_eq!(read.example.as_deref(), Some("Un amor efímero"));
+    }
+
+    #[test]
+    fn recapture_accepts_null_quote() {
+        let repo = new_repository();
+        let created = add_dictionary_word(
+            &repo,
+            AddDictionaryWordInput {
+                word: "SinCita".to_string(),
+                quote: Some("cita A".to_string()),
+                source_book_id: Some("book-a".to_string()),
+                source_book_title: Some("Libro A".to_string()),
+                source_book_author: Some("Autor A".to_string()),
+                source_chapter: Some("Cap 1".to_string()),
+                source_locator: Some("epubcfi(/6/4!/4/2)".to_string()),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        let cleared = update_dictionary_evidence(
+            &repo,
+            UpdateDictionaryEvidenceInput {
+                id: created.id.clone(),
+                quote: None,
+                source_book_id: None,
+                source_book_title: None,
+                source_book_author: None,
+                source_chapter: None,
+                source_locator: None,
+            },
+        )
+        .unwrap();
+        assert!(cleared.quote.is_none());
+        assert!(cleared.source_book_id.is_none());
+        assert!(cleared.source_book_title.is_none());
+        assert!(cleared.source_book_author.is_none());
+        assert!(cleared.source_chapter.is_none());
+        assert!(cleared.source_locator.is_none());
+        let listed = list_dictionary_words(&repo).unwrap();
+        let read = listed.iter().find(|w| w.id == created.id).unwrap();
+        assert!(read.quote.is_none() && read.source_book_id.is_none());
+        assert!(read.source_book_title.is_none() && read.source_book_author.is_none());
+        assert!(read.source_chapter.is_none() && read.source_locator.is_none());
+    }
+
+    #[test]
+    fn recapture_requires_existing_id() {
+        let repo = new_repository();
+        let result = update_dictionary_evidence(
+            &repo,
+            UpdateDictionaryEvidenceInput {
+                id: "missing-id".to_string(),
+                quote: Some("cita".to_string()),
+                ..Default::default()
+            },
+        );
+        assert!(matches!(result, Err(AppError::NotFound(_))));
     }
 }

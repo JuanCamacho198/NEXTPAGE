@@ -33,6 +33,8 @@ let mockCatalogUpsertBook = vi.fn();
 let mockCatalogTombstone = vi.fn();
 let mockCatalogFetchCatalog = vi.fn();
 let mockUpsertReadingSession = vi.fn();
+let mockDictUpsert = vi.fn();
+let mockDictDelete = vi.fn();
 const capturedOutboxHandler = vi.hoisted(() => ({
   value: null as
     | ((
@@ -134,6 +136,15 @@ vi.mock('$lib/shared/sync/SupabaseProgressSync', () => ({
   }),
 }));
 
+vi.mock('$lib/shared/sync/SupabaseDictionarySync', () => ({
+  SupabaseDictionarySync: vi.fn(function () {
+    return {
+      upsert: mockDictUpsert,
+      delete: mockDictDelete,
+    };
+  }),
+}));
+
 vi.mock('$lib/shared/outbox/SyncOutboxService', () => ({
   SyncOutboxService: vi.fn(function (this: {
     setHandler: (h: (typeof capturedOutboxHandler)['value']) => void;
@@ -188,6 +199,8 @@ beforeEach(() => {
   mockCatalogTombstone.mockResolvedValue(undefined);
   mockCatalogFetchCatalog.mockResolvedValue([]);
   mockUpsertReadingSession.mockResolvedValue(undefined);
+  mockDictUpsert.mockResolvedValue(undefined);
+  mockDictDelete.mockResolvedValue(undefined);
 });
 
 function makeLocalBook(id: string, title: string, filePath: string) {
@@ -693,5 +706,39 @@ describe('SyncService — outbox READING_SESSION handler (D10)', () => {
     await expect(
       capturedOutboxHandler.value!('READING_SESSION', 'book-1', 'UPSERT', sessionPayload()),
     ).rejects.toThrow('network drop');
+  });
+});
+
+describe('SyncService — outbox DICTIONARY_WORD handler (REQ-DSI-002)', () => {
+  beforeEach(() => {
+    mockUserId.mockReturnValue('user-1');
+    SyncService.setupOutboxProcessor();
+  });
+
+  const dictDeletePayload = (overrides: Record<string, unknown> = {}) =>
+    JSON.stringify({
+      userId: 'user-1',
+      updatedAt: '2025-06-01T00:00:00Z',
+      deletedAt: '2025-06-01T00:00:00Z',
+      normalizedWord: 'abyss',
+      ...overrides,
+    });
+
+  it('DELETE targets the normalized word carried in the payload, not the entity id', async () => {
+    await capturedOutboxHandler.value!('DICTIONARY_WORD', 'local-1', 'DELETE', dictDeletePayload());
+
+    expect(mockDictDelete).toHaveBeenCalledWith('abyss');
+    expect(mockDictDelete).toHaveBeenCalledTimes(1);
+  });
+
+  it('DELETE falls back to an empty natural key when the payload omits normalizedWord', async () => {
+    await capturedOutboxHandler.value!(
+      'DICTIONARY_WORD',
+      'local-1',
+      'DELETE',
+      dictDeletePayload({ normalizedWord: undefined }),
+    );
+
+    expect(mockDictDelete).toHaveBeenCalledWith('');
   });
 });

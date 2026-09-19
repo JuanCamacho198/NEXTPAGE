@@ -3,6 +3,7 @@ import type { DictionaryWordDto } from '$lib/shared/types';
 import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { hasLiveSession } from '$lib/services/supabase';
 import { SupabaseDictionarySync } from '$lib/shared/sync/SupabaseDictionarySync';
+import { normalizeDictionaryKey } from '$lib/shared/dictionary/dictionaryKey';
 
 function normalize(word: string): string {
   return word.trim().toLowerCase();
@@ -119,6 +120,7 @@ export function createDictionaryState() {
   }
 
   async function remove(id: string): Promise<void> {
+    const removed = words.find((w) => w.id === id);
     await invoke('removeDictionaryWord', { id });
     words = words.filter((w) => w.id !== id);
     const now = new Date().toISOString();
@@ -127,7 +129,13 @@ export function createDictionaryState() {
         entityType: 'DICTIONARY_WORD',
         entityId: id,
         operation: 'DELETE',
-        payloadJson: JSON.stringify({ userId: authState.userId, updatedAt: now, deletedAt: now }),
+        payloadJson: JSON.stringify({
+          userId: authState.userId,
+          updatedAt: now,
+          deletedAt: now,
+          // REQ-DSI-002: the remote delete targets the natural key, not the id.
+          normalizedWord: normalizeDictionaryKey(removed?.word ?? ''),
+        }),
       }).catch(() => {});
     }
   }
@@ -190,7 +198,11 @@ export function createDictionaryState() {
         (w) => w.id === row.id || normalizedForSearch(w.word ?? '') === row.normalizedWord,
       );
       if (row.deletedAt) {
-        words = words.filter((w) => w.id !== row.id);
+        // REQ-DSI-002: the remote row's id may belong to another device, so the
+        // natural key decides too — otherwise the local entry stays visible.
+        words = words.filter(
+          (w) => w.id !== row.id && normalizeDictionaryKey(w.word ?? '') !== row.normalizedWord,
+        );
         return;
       }
       if (local) {

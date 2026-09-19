@@ -37,11 +37,16 @@ export class SupabaseDictionarySync {
     return !hasLiveSession() || this.userId !== authState.userId;
   }
 
+  /**
+   * REQ-DSI-001: the payload must not carry `id`. The server owns the primary
+   * key — it generates it on insert and keeps it on conflict. Sending the local
+   * id lets a conflicting upsert overwrite the remote id, after which a delete
+   * issued by another device targets an id that no longer exists.
+   */
   async upsert(row: SupabaseDictionaryRow): Promise<void> {
     if (this.isGated()) return;
     const { error } = await this.supabase.from('user_dictionary_words').upsert(
       {
-        id: row.id,
         user_id: row.userId,
         word: row.word,
         normalized_word: row.normalizedWord,
@@ -56,14 +61,19 @@ export class SupabaseDictionarySync {
     if (error) throw error;
   }
 
-  async delete(id: string): Promise<void> {
+  /**
+   * REQ-DSI-002: soft-delete by the natural key `(user_id, normalized_word)`,
+   * never by `id`. The caller's local id is a local-only key and may differ from
+   * the server id for the same word on another device.
+   */
+  async delete(normalizedWord: string): Promise<void> {
     if (this.isGated()) return;
     const now = new Date().toISOString();
     const { error } = await this.supabase
       .from('user_dictionary_words')
       .update({ deleted_at: now, updated_at: now })
-      .eq('id', id)
-      .eq('user_id', this.userId);
+      .eq('user_id', this.userId)
+      .eq('normalized_word', normalizedWord);
     if (error) throw error;
   }
 

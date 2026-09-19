@@ -271,7 +271,7 @@ export class SyncService {
       } else if (entityType === 'DICTIONARY_WORD') {
         const dictSync = new SupabaseDictionarySync(userId);
         if (operation === 'DELETE') {
-          await dictSync.delete(entityId);
+          await dictSync.delete(String(payload.normalizedWord ?? ''));
         } else {
           const normalized = String(payload.normalizedWord ?? payload.normalized_word ?? '')
             .toLowerCase()

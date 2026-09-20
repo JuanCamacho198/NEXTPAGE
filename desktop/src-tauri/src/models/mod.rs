@@ -96,8 +96,6 @@ pub struct DictionaryWordDto {
     #[serde(default)]
     pub tags: Option<Vec<String>>,
     #[serde(default)]
-    pub is_favorite: Option<bool>,
-    #[serde(default)]
     pub srs_stage: Option<i32>,
     #[serde(default)]
     pub updated_at: Option<String>,
@@ -136,8 +134,6 @@ pub struct AddDictionaryWordInput {
     #[serde(default)]
     pub tags: Option<Vec<String>>,
     #[serde(default)]
-    pub is_favorite: Option<bool>,
-    #[serde(default)]
     pub srs_stage: Option<i32>,
     #[serde(default)]
     pub definition: Option<String>,
@@ -172,8 +168,6 @@ pub struct UpdateDictionaryWordInput {
     pub word: Option<String>,
     #[serde(default)]
     pub tags: Option<Vec<String>>,
-    #[serde(default)]
-    pub is_favorite: Option<bool>,
     #[serde(default)]
     pub srs_stage: Option<i32>,
     #[serde(default)]

@@ -291,7 +291,6 @@ export class SyncService {
             word: String(payload.word ?? ''),
             normalizedWord: normalized,
             tags: Array.isArray(payload.tags) ? (payload.tags as string[]) : [],
-            isFavorite: Boolean(payload.isFavorite ?? payload.is_favorite ?? false),
             srsStage: Number(payload.srsStage ?? payload.srs_stage ?? 0),
             updatedAt: String(payload.updatedAt ?? payload.updated_at ?? new Date().toISOString()),
             deletedAt:

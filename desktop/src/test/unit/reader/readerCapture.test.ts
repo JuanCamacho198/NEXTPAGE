@@ -113,7 +113,6 @@ function dto(overrides: Partial<DictionaryWordDto> = {}): DictionaryWordDto {
     updatedAt: '2025-01-01T00:00:00Z',
     normalizedWord: 'abyss',
     tags: [],
-    isFavorite: false,
     srsStage: 0,
     ...USER_FIELDS,
     quote: null,

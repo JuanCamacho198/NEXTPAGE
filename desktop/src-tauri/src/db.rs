@@ -8,7 +8,7 @@ use tauri::{AppHandle, Manager};
 
 use crate::error::{AppError, AppResult};
 
-const MIGRATIONS: [(&str, &str); 19] = [
+const MIGRATIONS: [(&str, &str); 20] = [
     ("0001_init", include_str!("../migrations/0001_init.sql")),
     ("0002_books", include_str!("../migrations/0002_books.sql")),
     ("0003_highlights", include_str!("../migrations/0003_highlights.sql")),
@@ -33,6 +33,10 @@ const MIGRATIONS: [(&str, &str); 19] = [
     (
         "0019_dictionary_rich_entries",
         include_str!("../migrations/0019_dictionary_rich_entries.sql"),
+    ),
+    (
+        "0020_drop_dictionary_favorite",
+        include_str!("../migrations/0020_drop_dictionary_favorite.sql"),
     ),
 ];
 
@@ -618,8 +622,11 @@ mod tests {
             "source_locator",
         ];
 
-        // Pre-0019 schema: the full chain minus the final migration.
-        let pre_0019_count = MIGRATIONS.len() - 1;
+        // Pre-0019 schema: the full chain up to (but excluding) 0019.
+        let pre_0019_count = MIGRATIONS
+            .iter()
+            .position(|(name, _)| *name == "0019_dictionary_rich_entries")
+            .expect("0019 must be registered");
         let (name, sql) = MIGRATIONS[pre_0019_count];
         assert_eq!(name, "0019_dictionary_rich_entries");
 
@@ -673,5 +680,43 @@ mod tests {
             nulls.iter().all(Option::is_none),
             "every new column must read NULL on a migrated row"
         );
+    }
+
+    #[test]
+    fn test_dictionary_favorite_column_dropped_by_0020() {
+        let pre_0020_count = MIGRATIONS
+            .iter()
+            .position(|(name, _)| *name == "0020_drop_dictionary_favorite")
+            .expect("0020 must be registered");
+        let (name, sql) = MIGRATIONS[pre_0020_count];
+        assert_eq!(name, "0020_drop_dictionary_favorite");
+
+        let connection = migrate_prefix_in_memory(pre_0020_count);
+        let before: Vec<String> =
+            table_columns(&connection, "dictionary_words").into_iter().map(|(n, _)| n).collect();
+        assert!(before.iter().any(|c| c == "is_favorite"), "is_favorite must exist before 0020");
+
+        connection
+            .execute(
+                "INSERT INTO dictionary_words (id, word, normalized_word, created_at)
+                 VALUES ('pre-0020', 'pride', 'pride', '2026-01-01T00:00:00.000Z')",
+                [],
+            )
+            .unwrap();
+        connection
+            .execute("UPDATE dictionary_words SET is_favorite = 1 WHERE id = 'pre-0020'", [])
+            .unwrap();
+
+        connection.execute_batch(sql).expect("0020 applies cleanly");
+
+        let after: Vec<String> =
+            table_columns(&connection, "dictionary_words").into_iter().map(|(n, _)| n).collect();
+        assert!(!after.iter().any(|c| c == "is_favorite"), "is_favorite must be gone after 0020");
+        let word: String = connection
+            .query_row("SELECT word FROM dictionary_words WHERE id = 'pre-0020'", [], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert_eq!(word, "pride", "the drop must preserve the existing row");
     }
 }

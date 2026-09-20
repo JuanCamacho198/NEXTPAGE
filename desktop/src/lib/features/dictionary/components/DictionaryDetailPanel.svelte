@@ -14,6 +14,7 @@
     type Translator,
     type UserFieldDraft,
   } from '../dictionaryEntry';
+  import { resolveBookTarget, type DictionaryBookTarget } from '../dictionaryBookNavigation';
 
   type Props = {
     /** The selected entry, or null when the list has no selection. */
@@ -23,7 +24,8 @@
     editing?: boolean;
     draft?: UserFieldDraft;
     onChangeDraft?: (next: UserFieldDraft) => void;
-    onViewBook?: (bookId: string) => void;
+    /** Opens the entry's source book at the captured passage, when it has one. */
+    onViewBook?: (target: DictionaryBookTarget) => void;
     onEdit?: (id: string) => void;
     onDelete?: (id: string) => void;
     onSave?: () => void;
@@ -54,6 +56,7 @@
   const showReference = $derived(word != null && hasBookReference(word));
   const showCitation = $derived(showQuote || showReference);
   const hasDetails = $derived(word != null && hasAnyDetail(word));
+  const viewBookTarget = $derived(resolveBookTarget(word));
 
   type SectionId = 'definition' | 'example' | 'citation';
 
@@ -116,9 +119,12 @@
         >
           <button
             type="button"
-            class="flex cursor-pointer items-center gap-1.5 rounded-sm bg-(--color-panel-input) px-1.5 py-2 text-xs font-semibold text-(--color-secondary) transition-colors hover:bg-(--color-accent-fill)"
+            class="flex cursor-pointer items-center gap-1.5 rounded-sm bg-(--color-panel-input) px-1.5 py-2 text-xs font-semibold text-(--color-secondary) transition-colors hover:bg-(--color-accent-fill) disabled:cursor-not-allowed disabled:opacity-50"
             data-testid="dictionary-detail-view-book"
-            onclick={() => onViewBook?.(word.sourceBookId ?? '')}
+            disabled={viewBookTarget == null}
+            onclick={() => {
+              if (viewBookTarget) onViewBook?.(viewBookTarget);
+            }}
           >
             <Icon name="book-open" size="sm" />
             <span>{t('dictionary.viewBook')}</span>

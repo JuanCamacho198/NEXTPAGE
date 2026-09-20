@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 /// Single source of truth for the selected column list. Its order MUST match
 /// the field order read by [`read_full_row`].
-const SELECT_COLUMNS: &str = "id, word, created_at, normalized_word, user_id, tags_json, is_favorite, srs_stage, updated_at, deleted_at, synced_at, definition, part_of_speech, phonetic, example, quote, source_book_id, source_book_title, source_book_author, source_chapter, source_locator";
+const SELECT_COLUMNS: &str = "id, word, created_at, normalized_word, user_id, tags_json, srs_stage, updated_at, deleted_at, synced_at, definition, part_of_speech, phonetic, example, quote, source_book_id, source_book_title, source_book_author, source_chapter, source_locator";
 
 /// Shared normalization contract (REQ-DSI-004): trim -> lowercase -> NFD
 /// decompose -> strip combining marks U+0300-U+036F. TS (`normalizeDictionaryKey`)
@@ -44,21 +44,20 @@ fn read_full_row(row: &rusqlite::Row) -> rusqlite::Result<DictionaryWordDto> {
     let normalized_word: Option<String> = row.get(3).ok();
     let user_id: Option<String> = row.get(4).ok();
     let tags_json: Option<String> = row.get(5).ok();
-    let is_favorite: Option<i64> = row.get(6).ok();
-    let srs_stage: Option<i64> = row.get(7).ok();
-    let updated_at: Option<String> = row.get(8).ok();
-    let deleted_at: Option<String> = row.get(9).ok();
-    let synced_at: Option<String> = row.get(10).ok();
-    let definition: Option<String> = row.get(11).ok();
-    let part_of_speech: Option<String> = row.get(12).ok();
-    let phonetic: Option<String> = row.get(13).ok();
-    let example: Option<String> = row.get(14).ok();
-    let quote: Option<String> = row.get(15).ok();
-    let source_book_id: Option<String> = row.get(16).ok();
-    let source_book_title: Option<String> = row.get(17).ok();
-    let source_book_author: Option<String> = row.get(18).ok();
-    let source_chapter: Option<String> = row.get(19).ok();
-    let source_locator: Option<String> = row.get(20).ok();
+    let srs_stage: Option<i64> = row.get(6).ok();
+    let updated_at: Option<String> = row.get(7).ok();
+    let deleted_at: Option<String> = row.get(8).ok();
+    let synced_at: Option<String> = row.get(9).ok();
+    let definition: Option<String> = row.get(10).ok();
+    let part_of_speech: Option<String> = row.get(11).ok();
+    let phonetic: Option<String> = row.get(12).ok();
+    let example: Option<String> = row.get(13).ok();
+    let quote: Option<String> = row.get(14).ok();
+    let source_book_id: Option<String> = row.get(15).ok();
+    let source_book_title: Option<String> = row.get(16).ok();
+    let source_book_author: Option<String> = row.get(17).ok();
+    let source_chapter: Option<String> = row.get(18).ok();
+    let source_locator: Option<String> = row.get(19).ok();
     let tags: Option<Vec<String>> = tags_json.as_deref().and_then(|s| serde_json::from_str(s).ok());
     Ok(DictionaryWordDto {
         id: id.clone(),
@@ -67,7 +66,6 @@ fn read_full_row(row: &rusqlite::Row) -> rusqlite::Result<DictionaryWordDto> {
         normalized_word,
         user_id,
         tags,
-        is_favorite: is_favorite.map(|v| v != 0),
         srs_stage: srs_stage.map(|v| v as i32),
         updated_at: updated_at.or(Some(created_at)),
         deleted_at,
@@ -129,7 +127,6 @@ pub fn add_dictionary_word(
     let now = Utc::now().to_rfc3339();
     let user_id = input.user_id.clone().unwrap_or_default();
     let tags_json = serde_json::to_string(&input.tags.unwrap_or_default()).unwrap();
-    let is_favorite = if input.is_favorite.unwrap_or(false) { 1 } else { 0 };
     let srs_stage = input.srs_stage.unwrap_or(0).clamp(0, 5);
     let definition = input.definition.clone();
     let part_of_speech = input.part_of_speech.clone();
@@ -153,8 +150,8 @@ pub fn add_dictionary_word(
         }
         let id = Uuid::new_v4().to_string();
         repo.connection.execute(
-            "INSERT INTO dictionary_words (id, word, normalized_word, user_id, tags_json, is_favorite, srs_stage, created_at, updated_at, deleted_at, synced_at, definition, part_of_speech, phonetic, example, quote, source_book_id, source_book_title, source_book_author, source_chapter, source_locator) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, NULL, NULL, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19)",
-            params![id, word, normalized, user_id, tags_json, is_favorite, srs_stage, now, now, definition, part_of_speech, phonetic, example, quote, source_book_id, source_book_title, source_book_author, source_chapter, source_locator],
+            "INSERT INTO dictionary_words (id, word, normalized_word, user_id, tags_json, srs_stage, created_at, updated_at, deleted_at, synced_at, definition, part_of_speech, phonetic, example, quote, source_book_id, source_book_title, source_book_author, source_chapter, source_locator) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, NULL, NULL, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)",
+            params![id, word, normalized, user_id, tags_json, srs_stage, now, now, definition, part_of_speech, phonetic, example, quote, source_book_id, source_book_title, source_book_author, source_chapter, source_locator],
         )?;
         Ok(DictionaryWordDto {
             id,
@@ -163,7 +160,6 @@ pub fn add_dictionary_word(
             normalized_word: Some(normalized),
             user_id: Some(user_id),
             tags: serde_json::from_str(&tags_json).ok(),
-            is_favorite: Some(is_favorite != 0),
             srs_stage: Some(srs_stage),
             updated_at: Some(now.clone()),
             deleted_at: None,
@@ -302,7 +298,6 @@ pub fn update_dictionary_word(
     }
     let tags = input.tags.clone().or(existing.tags.clone()).unwrap_or_default();
     let tags_json = serde_json::to_string(&tags).unwrap();
-    let is_favorite = input.is_favorite.or(existing.is_favorite).unwrap_or(false);
     let srs_stage = input.srs_stage.or(existing.srs_stage).unwrap_or(0).clamp(0, 5);
     let definition = input.definition.clone().or(existing.definition.clone());
     let part_of_speech = input.part_of_speech.clone().or(existing.part_of_speech.clone());
@@ -310,8 +305,8 @@ pub fn update_dictionary_word(
     let example = input.example.clone().or(existing.example.clone());
     let now = Utc::now().to_rfc3339();
     repo.connection.execute(
-        "UPDATE dictionary_words SET word = ?1, normalized_word = ?2, tags_json = ?3, is_favorite = ?4, srs_stage = ?5, updated_at = ?6, definition = ?7, part_of_speech = ?8, phonetic = ?9, example = ?10 WHERE id = ?11",
-        params![trimmed, normalized, tags_json, if is_favorite { 1 } else { 0 }, srs_stage, now, definition, part_of_speech, phonetic, example, input.id],
+        "UPDATE dictionary_words SET word = ?1, normalized_word = ?2, tags_json = ?3, srs_stage = ?4, updated_at = ?5, definition = ?6, part_of_speech = ?7, phonetic = ?8, example = ?9 WHERE id = ?10",
+        params![trimmed, normalized, tags_json, srs_stage, now, definition, part_of_speech, phonetic, example, input.id],
     )?;
     Ok(DictionaryWordDto {
         id: existing.id.clone(),
@@ -320,7 +315,6 @@ pub fn update_dictionary_word(
         normalized_word: Some(normalized),
         user_id: Some(user_id),
         tags: Some(tags),
-        is_favorite: Some(is_favorite),
         srs_stage: Some(srs_stage),
         updated_at: Some(now),
         deleted_at: None,
@@ -513,14 +507,13 @@ fn levenshtein(a: &str, b: &str) -> usize {
 pub fn export_dictionary(repo: &LibraryRepository, format: &str) -> AppResult<String> {
     let words = list_dictionary_words(repo)?;
     if format == "csv" {
-        let mut out = String::from("word,tags,is_favorite,srs_stage,updated_at\n");
+        let mut out = String::from("word,tags,srs_stage,updated_at\n");
         for w in words {
             let tags = w.tags.unwrap_or_default().join("|");
-            let fav = if w.is_favorite.unwrap_or(false) { "true" } else { "false" };
             let srs = w.srs_stage.unwrap_or(0).to_string();
             let updated = w.updated_at.unwrap_or(w.created_at);
             let word_esc = w.word.replace('"', "\"\"");
-            out.push_str(&format!("\"{}\",\"{}\",{},{},{}\n", word_esc, tags, fav, srs, updated));
+            out.push_str(&format!("\"{}\",\"{}\",{},{}\n", word_esc, tags, srs, updated));
         }
         Ok(out)
     } else {
@@ -530,7 +523,6 @@ pub fn export_dictionary(repo: &LibraryRepository, format: &str) -> AppResult<St
                 serde_json::json!({
                     "word": w.word,
                     "tags": w.tags.unwrap_or_default(),
-                    "is_favorite": w.is_favorite.unwrap_or(false),
                     "srs_stage": w.srs_stage.unwrap_or(0),
                     "updated_at": w.updated_at.unwrap_or(w.created_at)
                 })
@@ -549,10 +541,35 @@ pub fn import_dictionary(
     let uid = user_id.unwrap_or("");
     let mut imported: i64 = 0;
     let mut errors: Vec<ImportDictionaryError> = vec![];
-    let entries: Vec<(String, Vec<String>, bool, i32, String)> = if format == "csv" {
+    let entries: Vec<(String, Vec<String>, i32, String)> = if format == "csv" {
         let mut v = vec![];
+        // Resolve column positions from the header rather than assuming an index.
+        // A file exported before `is_favorite` was dropped carries it between
+        // `tags` and `srs_stage`; reading by name keeps `srs_stage`/`updated_at`
+        // in the right slots for both layouts.
+        let header: Vec<String> = payload
+            .lines()
+            .next()
+            .map(|line| {
+                split_csv_line(line)
+                    .iter()
+                    .map(|cell| cell.trim().trim_matches('"').to_string())
+                    .collect()
+            })
+            .unwrap_or_default();
+        let named_header = header.first().map(|cell| cell == "word").unwrap_or(false);
+        let column = |name: &str, fallback: usize| -> usize {
+            if named_header {
+                header.iter().position(|cell| cell == name).unwrap_or(fallback)
+            } else {
+                fallback
+            }
+        };
+        let tags_col = column("tags", 1);
+        let srs_col = column("srs_stage", 2);
+        let updated_col = column("updated_at", 3);
         for (idx, line) in payload.lines().enumerate() {
-            if idx == 0 && line.starts_with("word") {
+            if idx == 0 && named_header {
                 continue;
             }
             if line.trim().is_empty() {
@@ -568,26 +585,30 @@ pub fn import_dictionary(
             }
             let word =
                 parts.first().cloned().unwrap_or_default().trim().trim_matches('"').to_string();
-            let tags_str =
-                parts.get(1).cloned().unwrap_or_default().trim().trim_matches('"').to_string();
+            let tags_str = parts
+                .get(tags_col)
+                .cloned()
+                .unwrap_or_default()
+                .trim()
+                .trim_matches('"')
+                .to_string();
             let tags = if tags_str.is_empty() {
                 vec![]
             } else {
                 tags_str.split('|').map(|s| s.to_string()).collect()
             };
-            let fav = parts.get(2).map(|s| s.trim().trim_matches('"') == "true").unwrap_or(false);
             let srs = parts
-                .get(3)
+                .get(srs_col)
                 .and_then(|s| s.trim().trim_matches('"').parse::<i32>().ok())
                 .unwrap_or(0);
             let updated = parts
-                .get(4)
+                .get(updated_col)
                 .cloned()
                 .unwrap_or_else(|| Utc::now().to_rfc3339())
                 .trim()
                 .trim_matches('"')
                 .to_string();
-            v.push((word, tags, fav, srs, updated));
+            v.push((word, tags, srs, updated));
         }
         v
     } else {
@@ -602,18 +623,17 @@ pub fn import_dictionary(
                 .and_then(|x| x.as_array())
                 .map(|a| a.iter().filter_map(|e| e.as_str().map(|s| s.to_string())).collect())
                 .unwrap_or_default();
-            let fav = item.get("is_favorite").and_then(|x| x.as_bool()).unwrap_or(false);
             let srs = item.get("srs_stage").and_then(|x| x.as_i64()).unwrap_or(0) as i32;
             let updated = item
                 .get("updated_at")
                 .and_then(|x| x.as_str())
                 .unwrap_or(&Utc::now().to_rfc3339())
                 .to_string();
-            v.push((word, tags, fav, srs, updated));
+            v.push((word, tags, srs, updated));
         }
         v
     };
-    for (idx, (word, tags, fav, srs, updated_at)) in entries.into_iter().enumerate() {
+    for (idx, (word, tags, srs, updated_at)) in entries.into_iter().enumerate() {
         let trimmed = word.trim();
         if trimmed.is_empty() || trimmed.len() > 200 {
             errors.push(ImportDictionaryError {
@@ -643,8 +663,8 @@ pub fn import_dictionary(
             }
             let tags_json = serde_json::to_string(&tags).unwrap();
             let _ = repo.connection.execute(
-                "UPDATE dictionary_words SET word = ?1, tags_json = ?2, is_favorite = ?3, srs_stage = ?4, updated_at = ?5 WHERE id = ?6",
-                params![trimmed, tags_json, if fav { 1 } else { 0 }, srs.clamp(0, 5), updated_at, ex.id],
+                "UPDATE dictionary_words SET word = ?1, tags_json = ?2, srs_stage = ?3, updated_at = ?4 WHERE id = ?5",
+                params![trimmed, tags_json, srs.clamp(0, 5), updated_at, ex.id],
             );
             imported += 1;
         } else {
@@ -653,8 +673,8 @@ pub fn import_dictionary(
             let now_created = updated_at.clone();
             if col_exists(&repo.connection, "user_id") {
                 let _ = repo.connection.execute(
-                    "INSERT INTO dictionary_words (id, word, normalized_word, user_id, tags_json, is_favorite, srs_stage, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-                    params![id, trimmed, normalized, uid, tags_json, if fav { 1 } else { 0 }, srs.clamp(0, 5), now_created, updated_at],
+                    "INSERT INTO dictionary_words (id, word, normalized_word, user_id, tags_json, srs_stage, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                    params![id, trimmed, normalized, uid, tags_json, srs.clamp(0, 5), now_created, updated_at],
                 );
             } else {
                 let _ = repo.connection.execute(
@@ -706,7 +726,6 @@ mod tests {
                 word: "Serendipity".to_string(),
                 user_id: None,
                 tags: None,
-                is_favorite: None,
                 srs_stage: None,
                 ..Default::default()
             },
@@ -733,7 +752,6 @@ mod tests {
                 word: "Ephemeral".to_string(),
                 user_id: None,
                 tags: None,
-                is_favorite: None,
                 srs_stage: None,
                 ..Default::default()
             },
@@ -753,7 +771,6 @@ mod tests {
                 word: "Hola".to_string(),
                 user_id: Some("u1".to_string()),
                 tags: None,
-                is_favorite: None,
                 srs_stage: None,
                 ..Default::default()
             },
@@ -765,7 +782,6 @@ mod tests {
                 word: "hola".to_string(),
                 user_id: Some("u1".to_string()),
                 tags: None,
-                is_favorite: None,
                 srs_stage: None,
                 ..Default::default()
             },
@@ -777,7 +793,6 @@ mod tests {
                 word: "hola".to_string(),
                 user_id: Some("u2".to_string()),
                 tags: None,
-                is_favorite: None,
                 srs_stage: None,
                 ..Default::default()
             },
@@ -795,7 +810,6 @@ mod tests {
                 word: "hola".to_string(),
                 user_id: None,
                 tags: None,
-                is_favorite: None,
                 srs_stage: None,
                 ..Default::default()
             },
@@ -807,7 +821,6 @@ mod tests {
                 id: w.id.clone(),
                 word: Some("Hola!".to_string()),
                 tags: None,
-                is_favorite: None,
                 srs_stage: None,
                 ..Default::default()
             },
@@ -827,7 +840,6 @@ mod tests {
                 word: "biblioteca".to_string(),
                 user_id: None,
                 tags: None,
-                is_favorite: None,
                 srs_stage: None,
                 ..Default::default()
             },
@@ -842,10 +854,42 @@ mod tests {
     #[test]
     fn import_csv_partial_success() {
         let repo = new_repository();
-        let csv = "word,tags,is_favorite,srs_stage,updated_at\n\"hola\",\"\",false,0,2026-08-25T10:00:00Z\n\"\",\"\",false,0,2026-08-25T10:00:00Z\n";
+        let csv = "word,tags,srs_stage,updated_at\n\"hola\",\"\",0,2026-08-25T10:00:00Z\n\"\",\"\",0,2026-08-25T10:00:00Z\n";
         let r = import_dictionary(&repo, csv, "csv", None).unwrap();
         assert_eq!(r.imported, 1);
         assert_eq!(r.errors.len(), 1);
+    }
+
+    /// A file exported before `is_favorite` was dropped still imports. The
+    /// legacy column sits between `tags` and `srs_stage`, so a positional
+    /// reader would land `srs_stage` in the timestamp slot; the header lookup
+    /// keeps both fields where they belong.
+    #[test]
+    fn import_legacy_csv_with_favorite_column_keeps_srs_and_updated_at() {
+        let repo = new_repository();
+        let csv = "word,tags,is_favorite,srs_stage,updated_at\n\"hola\",\"greeting\",true,4,2026-08-25T10:00:00Z\n";
+        let r = import_dictionary(&repo, csv, "csv", Some("u1")).unwrap();
+        assert_eq!(r.imported, 1);
+        let words = list_dictionary_words(&repo).unwrap();
+        assert_eq!(words.len(), 1);
+        assert_eq!(words[0].srs_stage, Some(4));
+        assert_eq!(words[0].updated_at.as_deref(), Some("2026-08-25T10:00:00Z"));
+        assert_eq!(words[0].tags, Some(vec!["greeting".to_string()]));
+    }
+
+    #[test]
+    fn export_omits_the_favorite_column_from_csv_and_json() {
+        let repo = new_repository();
+        add_dictionary_word(
+            &repo,
+            AddDictionaryWordInput { word: "hola".to_string(), ..Default::default() },
+        )
+        .unwrap();
+        let csv = export_dictionary(&repo, "csv").unwrap();
+        assert!(csv.starts_with("word,tags,srs_stage,updated_at\n"), "csv: {csv}");
+        assert!(!csv.contains("is_favorite"), "csv: {csv}");
+        let json = export_dictionary(&repo, "json").unwrap();
+        assert!(!json.contains("is_favorite"), "json: {json}");
     }
 
     #[test]

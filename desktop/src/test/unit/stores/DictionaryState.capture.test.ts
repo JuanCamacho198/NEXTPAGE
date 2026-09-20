@@ -61,13 +61,12 @@ beforeAll(async () => {
   dictionaryOutboxPayload = mod.dictionaryOutboxPayload;
 });
 
-/** The 18 columns the outbox sends; `userId` is added by the outbox enqueue. */
+/** The 17 columns the outbox sends; `userId` is added by the outbox enqueue. */
 const SNAPSHOT_KEYS = [
   'createdAt',
   'definition',
   'deletedAt',
   'example',
-  'isFavorite',
   'normalizedWord',
   'partOfSpeech',
   'phonetic',
@@ -91,7 +90,6 @@ function fullEntry(overrides: Partial<DictionaryWordDto> = {}): DictionaryWordDt
     updatedAt: '2025-01-01T00:00:00Z',
     normalizedWord: 'abyss',
     tags: ['classic'],
-    isFavorite: true,
     srsStage: 3,
     definition: 'A deep void',
     partOfSpeech: 'noun',
@@ -203,7 +201,6 @@ describe('DictionaryState.add — evidence forwarding and snapshot enqueue', () 
       payload: {
         word: 'Abyss',
         tags: undefined,
-        isFavorite: undefined,
         srsStage: undefined,
         userId: 'user-1',
         quote: EVIDENCE.quote,
@@ -294,7 +291,6 @@ describe('DictionaryState realtime spread — REQ-DSI-003 scenario 2', () => {
       word: 'Abyss',
       normalizedWord: 'abyss',
       tags: ['remote'],
-      isFavorite: false,
       srsStage: 0,
       updatedAt: '2025-06-01T00:00:00Z',
       deletedAt: null,
@@ -335,7 +331,6 @@ describe('DictionaryState realtime spread — REQ-DSI-003 scenario 2', () => {
       word: 'Abyss',
       normalizedWord: 'abyss',
       tags: [],
-      isFavorite: false,
       srsStage: 0,
       updatedAt: '2025-06-01T00:00:00Z',
       deletedAt: null,

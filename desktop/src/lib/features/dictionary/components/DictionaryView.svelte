@@ -5,6 +5,11 @@
     dictionaryState,
     type DictionaryStateApi,
   } from '$lib/shared/stores/DictionaryState.svelte';
+  import { libraryState } from '$lib/shared/stores/LibraryDomainState.svelte';
+  import { readerState } from '$lib/shared/stores/ReaderDomainState.svelte';
+  import { navigationState } from '$lib/shared/stores/NavigationDomainState.svelte';
+  import { searchState } from '$lib/shared/stores/SearchDomainState.svelte';
+  import { statsState } from '$lib/shared/stores/StatsDomainState.svelte';
   import EmptyState from '$lib/shared/ui/feedback/EmptyState.svelte';
   import Icon from '$lib/shared/ui/navigation/Icon.svelte';
   import Button from '$lib/shared/ui/forms/Button.svelte';
@@ -18,24 +23,53 @@
     userFieldPatchFrom,
     type UserFieldDraft,
   } from '../dictionaryEntry';
+  import {
+    openDictionaryBook,
+    type DictionaryBookNavigationDeps,
+    type DictionaryBookTarget,
+  } from '../dictionaryBookNavigation';
 
   type Props = {
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
     dictionary?: DictionaryStateApi;
     /**
-     * Opens the entry's source book in the reader. Not supplied yet: the
-     * `Ver libro` button renders with its measured geometry and forwards this
-     * prop, but nothing owns the navigation. Wiring it is the Highlights
-     * pattern (libraryState.getBookById -> promoteBookForReading -> route
-     * "reader" + sourceLocator), a reader-navigation feature the tasks do not
-     * assign to this screen unit. Named follow-up: work unit 4E.
+     * Overrides the reader-navigation surface behind `Ver libro`. Production
+     * uses `storeBookNavigation` below, the Highlights pattern bound to the
+     * domain stores; tests inject a fake to observe the sequence.
      */
-    onViewBook?: (bookId: string) => void;
+    bookNavigation?: DictionaryBookNavigationDeps;
     /** Notified when an edit session for the four user-authored fields opens. */
     onEdit?: (id: string) => void;
   };
 
-  let { t, dictionary = dictionaryState, onViewBook, onEdit }: Props = $props();
+  let { t, dictionary = dictionaryState, bookNavigation, onEdit }: Props = $props();
+
+  const storeBookNavigation: DictionaryBookNavigationDeps = {
+    getBookById: (bookId) => libraryState.getBookById(bookId),
+    promoteBookForReading: (bookId) => libraryState.promoteBookForReading(bookId),
+    setActiveReadingBookId: (bookId) => {
+      readerState.activeReadingBookId = bookId;
+    },
+    clearShelfDetails: () => {
+      navigationState.shelfDetailsBookId = null;
+    },
+    openReader: () => {
+      navigationState.route = 'reader';
+    },
+    resetSearch: () => searchState.resetSearch(),
+    recordReaderOpenMetric: (format) => libraryState.recordReaderOpenMetric(format),
+    startReading: (book) => readerState.startReading(book),
+    loadStats: (bookId) => {
+      void statsState.loadStats(bookId);
+    },
+    setSearchTargetLocator: (locator) => {
+      searchState.searchTargetLocator = locator;
+    },
+  };
+
+  function handleViewBook(target: DictionaryBookTarget): void {
+    void openDictionaryBook(target, bookNavigation ?? storeBookNavigation);
+  }
 
   type Tab = 'all' | 'recent' | 'az';
 
@@ -299,7 +333,7 @@
       editing={isEditing}
       draft={editDraft}
       onChangeDraft={(next) => (editDraft = next)}
-      {onViewBook}
+      onViewBook={handleViewBook}
       onEdit={handleEdit}
       onDelete={handleDelete}
       onSave={handleSaveEdit}

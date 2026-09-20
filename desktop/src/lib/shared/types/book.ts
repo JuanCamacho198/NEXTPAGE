@@ -89,7 +89,6 @@ export type DictionaryWordDto = {
   normalizedWord?: string | null;
   userId?: string | null;
   tags?: string[] | null;
-  isFavorite?: boolean | null;
   srsStage?: number | null;
   updatedAt?: string | null;
   deletedAt?: string | null;

@@ -518,6 +518,12 @@ export const messagesEs: Record<MessageKey, string> = {
   'dictionary.bookReference': 'Referencia del libro',
   'dictionary.viewBook': 'Ver libro',
   'dictionary.edit': 'Editar',
+  'dictionary.selectWordTitle': 'Selecciona una palabra',
+  'dictionary.selectWordDescription':
+    'Elige una entrada de la lista para ver su descripción, su ejemplo y la evidencia capturada.',
+  'dictionary.noDetailTitle': 'Todavía sin detalles',
+  'dictionary.noDetailDescription':
+    'Esta entrada no tiene descripción, ejemplo ni evidencia capturada. Captura una cita desde el lector para completarla.',
   'dictionary.addWord': 'Agregar palabra',
   'dictionary.wordPlaceholder': 'Palabra',
   'dictionary.definitionPlaceholder': 'Definición (opcional)',

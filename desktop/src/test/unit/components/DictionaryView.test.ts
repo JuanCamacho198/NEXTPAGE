@@ -4,8 +4,14 @@ import DictionaryView from '$lib/features/dictionary/components/DictionaryView.s
 import { deriveDictionaryKpis } from '$lib/features/dictionary/dictionaryKpis';
 import {
   avatarColorVariable,
+  bookInitials,
+  bookReferenceLine,
   entryInitial,
   formatEntryDate,
+  formatPhonetic,
+  hasAnyDetail,
+  hasBookReference,
+  hasQuote,
   isComplete,
 } from '$lib/features/dictionary/dictionaryEntry';
 import type { DictionaryStateApi } from '$lib/shared/stores/DictionaryState.svelte';
@@ -401,6 +407,287 @@ describe('dictionary KPI derivations (Decision 15)', () => {
   });
 });
 
+describe('DictionaryView detail panel (4C)', () => {
+  const EVIDENCE = {
+    sourceBookId: 'book-a',
+    sourceBookTitle: 'Hábitos Atómicos',
+    sourceBookAuthor: 'James Clear',
+    sourceChapter: 'Capítulo 3',
+  } as const;
+
+  const FULL_ENTRY = word({
+    id: 'efimero',
+    word: 'Efímero',
+    ...EVIDENCE,
+    definition: 'Que tiene una duración muy breve o que pasa rápidamente.',
+    partOfSpeech: 'Adjetivo',
+    phonetic: 'eˈfimeɾo',
+    example: 'La belleza de un atardecer es efímera.',
+    quote: 'Los pequeños momentos de éxito son casi invisibles.',
+  });
+
+  async function select(container: HTMLElement, term: string): Promise<void> {
+    await fireEvent.click(rowFor(container, term));
+  }
+
+  it('shows the no-selection state until a row is selected', async () => {
+    const { container } = render(DictionaryView, {
+      props: { t: tEs, dictionary: makeState([FULL_ENTRY]) },
+    });
+
+    expect(screen.getByTestId('dictionary-detail-no-selection')).toBeInTheDocument();
+    expect(screen.queryByTestId('dictionary-detail-header')).not.toBeInTheDocument();
+    expect(screen.getByText(messagesEs['dictionary.selectWordTitle'])).toBeInTheDocument();
+
+    await select(container, 'Efímero');
+
+    expect(screen.queryByTestId('dictionary-detail-no-selection')).not.toBeInTheDocument();
+    expect(screen.getByTestId('dictionary-detail-term')).toHaveTextContent('Efímero');
+  });
+
+  it('renders every populated field from real data (REQ-DRE-009 scenario 1)', async () => {
+    const { container } = render(DictionaryView, {
+      props: { t: tEs, dictionary: makeState([FULL_ENTRY]) },
+    });
+
+    await select(container, 'Efímero');
+
+    expect(screen.getByTestId('dictionary-detail-term')).toHaveTextContent('Efímero');
+    expect(screen.getByTestId('dictionary-detail-tag')).toHaveTextContent('Adjetivo');
+    expect(screen.getByTestId('dictionary-detail-definition')).toHaveTextContent(
+      'Que tiene una duración muy breve o que pasa rápidamente.',
+    );
+    expect(screen.getByTestId('dictionary-detail-example')).toHaveTextContent(
+      'La belleza de un atardecer es efímera.',
+    );
+    expect(screen.getByTestId('dictionary-quote')).toHaveTextContent(
+      'Los pequeños momentos de éxito son casi invisibles.',
+    );
+
+    // The frame's copy, verbatim.
+    expect(screen.getByTestId('dictionary-detail-definition-label')).toHaveTextContent(
+      messagesEs['dictionary.description'],
+    );
+    expect(screen.getByTestId('dictionary-detail-example-label')).toHaveTextContent(
+      messagesEs['dictionary.personalExample'],
+    );
+    expect(screen.getByTestId('dictionary-reference-label')).toHaveTextContent(
+      messagesEs['dictionary.bookReference'],
+    );
+    expect(messagesEs['dictionary.description']).toBe('Descripción');
+    expect(messagesEs['dictionary.personalExample']).toBe('Ejemplo personal');
+    expect(messagesEs['dictionary.bookReference']).toBe('Referencia del libro');
+  });
+
+  it('draws the frame section order: description, example, citation', async () => {
+    const { container } = render(DictionaryView, {
+      props: { t: tEs, dictionary: makeState([FULL_ENTRY]) },
+    });
+
+    await select(container, 'Efímero');
+    const panel = screen.getByTestId('dictionary-detail');
+
+    expect(
+      [...panel.querySelectorAll('[data-testid="dictionary-detail-section"]')].map((node) => {
+        if (node.querySelector('[data-testid="dictionary-detail-definition-label"]')) {
+          return 'definition';
+        }
+        if (node.querySelector('[data-testid="dictionary-detail-example-label"]')) return 'example';
+        if (node.querySelector('[data-testid="dictionary-citation"]')) return 'citation';
+        return 'unknown';
+      }),
+    ).toEqual(['definition', 'example', 'citation']);
+
+    // One 1px divider between each adjacent pair of present sections.
+    expect(panel.querySelectorAll('[data-testid="dictionary-detail-divider"]')).toHaveLength(2);
+  });
+
+  it('shows the reference card with cover initials, title and author - chapter', async () => {
+    const { container } = render(DictionaryView, {
+      props: { t: tEs, dictionary: makeState([FULL_ENTRY]) },
+    });
+
+    await select(container, 'Efímero');
+
+    expect(screen.getByTestId('dictionary-reference-initials')).toHaveTextContent('HA');
+    expect(screen.getByTestId('dictionary-reference-title')).toHaveTextContent('Hábitos Atómicos');
+    expect(screen.getByTestId('dictionary-reference-author')).toHaveTextContent(
+      'James Clear · Capítulo 3',
+    );
+  });
+
+  it('renders the quote as text and never interprets it as HTML', async () => {
+    const hostile = 'Un <b>rey</b> que &nbsp;<script>alert(1)</script>';
+    const { container } = render(DictionaryView, {
+      props: { t: tEs, dictionary: makeState([word({ ...FULL_ENTRY, quote: hostile })]) },
+    });
+
+    await select(container, 'Efímero');
+    const quote = screen.getByTestId('dictionary-quote');
+
+    expect(quote.children).toHaveLength(0);
+    expect(quote.querySelector('b')).toBeNull();
+    expect(quote.querySelector('script')).toBeNull();
+    expect(quote.textContent).toContain('<b>rey</b>');
+    expect(container.querySelector('script')).toBeNull();
+  });
+
+  it('renders no quote and no reference card when the evidence is null', async () => {
+    const { container } = render(DictionaryView, {
+      props: {
+        t: tEs,
+        dictionary: makeState([
+          word({
+            id: 'sin-evidencia',
+            word: 'Sísifo',
+            definition: 'Un rey condenado a empujar una roca.',
+            partOfSpeech: 'Sustantivo',
+            phonetic: 'sísifo',
+            example: 'Sísifo nunca termina.',
+            quote: null,
+            sourceBookTitle: null,
+            sourceBookAuthor: null,
+            sourceChapter: null,
+            sourceBookId: null,
+          }),
+        ]),
+      },
+    });
+
+    await select(container, 'Sísifo');
+
+    expect(screen.queryByTestId('dictionary-citation')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('dictionary-quote')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('dictionary-reference')).not.toBeInTheDocument();
+
+    // The user-authored sections still render, with a single divider now.
+    expect(screen.getByTestId('dictionary-detail-definition')).toBeInTheDocument();
+    expect(screen.getByTestId('dictionary-detail-example')).toBeInTheDocument();
+    expect(
+      screen
+        .getByTestId('dictionary-detail')
+        .querySelectorAll('[data-testid="dictionary-detail-divider"]'),
+    ).toHaveLength(1);
+  });
+
+  it('adds the phonetic slashes as presentation over a stored value without them', async () => {
+    const { container } = render(DictionaryView, {
+      props: { t: tEs, dictionary: makeState([FULL_ENTRY]) },
+    });
+
+    await select(container, 'Efímero');
+
+    expect(FULL_ENTRY.phonetic).toBe('eˈfimeɾo');
+    expect(FULL_ENTRY.phonetic).not.toContain('/');
+    expect(screen.getByTestId('dictionary-detail-phonetic')).toHaveTextContent('/eˈfimeɾo/');
+  });
+
+  it('offers no control that writes or clears the captured evidence', async () => {
+    const { container } = render(DictionaryView, {
+      props: { t: tEs, dictionary: makeState([FULL_ENTRY]) },
+    });
+
+    await select(container, 'Efímero');
+    const panel = screen.getByTestId('dictionary-detail');
+
+    expect(panel.querySelector('input, textarea, select, [contenteditable]')).toBeNull();
+
+    // The panel's only controls are the frame's three actions.
+    const actions = screen.getByTestId('dictionary-detail-actions');
+    expect([...actions.querySelectorAll('button')].map((b) => b.dataset.testid)).toEqual([
+      'dictionary-detail-view-book',
+      'dictionary-detail-edit',
+      'dictionary-detail-delete',
+    ]);
+  });
+
+  it('closes the selection through the store when the destructive action is used', async () => {
+    const state = makeState([FULL_ENTRY]);
+    const { container } = render(DictionaryView, { props: { t: tEs, dictionary: state } });
+
+    await select(container, 'Efímero');
+    await fireEvent.click(screen.getByTestId('dictionary-detail-delete'));
+
+    expect(state.remove).toHaveBeenCalledWith('efimero');
+    expect(screen.queryByTestId('dictionary-detail-header')).not.toBeInTheDocument();
+  });
+
+  it('forwards the frame actions that other units own', async () => {
+    const onViewBook = vi.fn();
+    const onEdit = vi.fn();
+    const { container } = render(DictionaryView, {
+      props: { t: tEs, dictionary: makeState([FULL_ENTRY]), onViewBook, onEdit },
+    });
+
+    await select(container, 'Efímero');
+    await fireEvent.click(screen.getByTestId('dictionary-detail-view-book'));
+    await fireEvent.click(screen.getByTestId('dictionary-detail-edit'));
+
+    expect(onViewBook).toHaveBeenCalledWith('book-a');
+    expect(onEdit).toHaveBeenCalledWith('efimero');
+  });
+
+  it('shows the empty state for a selected entry with no fields at all', async () => {
+    const { container } = render(DictionaryView, {
+      props: { t: tEs, dictionary: makeState([word({ id: 'bare', word: 'Paradigma' })]) },
+    });
+
+    await select(container, 'Paradigma');
+
+    expect(screen.getByTestId('dictionary-detail-empty')).toBeInTheDocument();
+    expect(screen.getByText(messagesEs['dictionary.noDetailTitle'])).toBeInTheDocument();
+    expect(screen.queryByTestId('dictionary-detail-section')).not.toBeInTheDocument();
+    expect(screen.getByTestId('dictionary-detail-actions')).toBeInTheDocument();
+  });
+});
+
+describe('dictionary detail formatting helpers', () => {
+  it('wraps the stored phonetic once and tolerates blanks', () => {
+    expect(formatPhonetic('eˈfimeɾo')).toBe('/eˈfimeɾo/');
+    expect(formatPhonetic('  /eˈfimeɾo/  ')).toBe('/eˈfimeɾo/');
+    expect(formatPhonetic('/')).toBe('');
+    expect(formatPhonetic('   ')).toBe('');
+  });
+
+  it('derives the cover initials from the first two words', () => {
+    expect(bookInitials('Hábitos Atómicos')).toBe('HA');
+    expect(bookInitials('Mindset')).toBe('M');
+    expect(bookInitials('  el poder de la resiliencia ')).toBe('EP');
+    expect(bookInitials('')).toBe('');
+  });
+
+  it('joins author and chapter without a dangling separator', () => {
+    expect(bookReferenceLine('James Clear', 'Capítulo 3')).toBe('James Clear · Capítulo 3');
+    expect(bookReferenceLine('James Clear', null)).toBe('James Clear');
+    expect(bookReferenceLine(null, 'Capítulo 3')).toBe('Capítulo 3');
+    expect(bookReferenceLine('  ', '  ')).toBe('');
+    expect(bookReferenceLine(null, null)).toBe('');
+  });
+
+  it('detects evidence presence for the detail panel', () => {
+    expect(hasQuote(word({ id: '1', word: 'A', quote: 'Una frase.' }))).toBe(true);
+    expect(hasQuote(word({ id: '1', word: 'A', quote: '   ' }))).toBe(false);
+    expect(hasQuote(word({ id: '1', word: 'A' }))).toBe(false);
+
+    expect(hasBookReference(word({ id: '1', word: 'A', sourceBookTitle: 'Un libro' }))).toBe(true);
+    expect(hasBookReference(word({ id: '1', word: 'A', sourceBookAuthor: 'Alguien' }))).toBe(true);
+    expect(hasBookReference(word({ id: '1', word: 'A', sourceChapter: 'Capítulo 1' }))).toBe(true);
+    expect(hasBookReference(word({ id: '1', word: 'A' }))).toBe(false);
+    expect(hasBookReference(word({ id: '1', word: 'A', sourceBookTitle: '  ' }))).toBe(false);
+  });
+
+  it('reports whether the panel has anything past the term', () => {
+    expect(hasAnyDetail(word({ id: '1', word: 'A' }))).toBe(false);
+    expect(hasAnyDetail(word({ id: '1', word: 'A', definition: 'Algo' }))).toBe(true);
+    expect(hasAnyDetail(word({ id: '1', word: 'A', partOfSpeech: 'Sustantivo' }))).toBe(true);
+    expect(hasAnyDetail(word({ id: '1', word: 'A', phonetic: 'a' }))).toBe(true);
+    expect(hasAnyDetail(word({ id: '1', word: 'A', example: 'Una frase.' }))).toBe(true);
+    expect(hasAnyDetail(word({ id: '1', word: 'A', quote: 'Una cita.' }))).toBe(true);
+    expect(hasAnyDetail(word({ id: '1', word: 'A', sourceBookTitle: 'Un libro' }))).toBe(true);
+    expect(hasAnyDetail(word({ id: '1', word: 'A', definition: '   ' }))).toBe(false);
+  });
+});
+
 describe('dictionary screen i18n parity', () => {
   const screenKeys = [
     'dictionary.title',
@@ -425,6 +712,10 @@ describe('dictionary screen i18n parity', () => {
     'dictionary.bookReference',
     'dictionary.viewBook',
     'dictionary.edit',
+    'dictionary.selectWordTitle',
+    'dictionary.selectWordDescription',
+    'dictionary.noDetailTitle',
+    'dictionary.noDetailDescription',
   ] as const;
 
   it('defines every screen key in both locales with an English KPI equivalent', () => {

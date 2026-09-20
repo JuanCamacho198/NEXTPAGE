@@ -43,6 +43,81 @@ export function entryInitial(word: string): string {
   return word.trim().charAt(0).toUpperCase();
 }
 
+/**
+ * The detail panel's phonetic line. The frame draws the value wrapped in
+ * presentation slashes; the stored value carries none, so the wrapper is added
+ * here and any slashes already stored are not doubled.
+ */
+export function formatPhonetic(value: string): string {
+  const core = value.trim().replace(/^\/+|\/+$/g, '');
+  return core.length > 0 ? `/${core}/` : '';
+}
+
+/** The book cover's initials: the leading letter of the first two words. */
+export function bookInitials(title: string): string {
+  return title
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('');
+}
+
+/**
+ * The reference card's third line, `author · chapter`. Whichever half is blank
+ * is omitted, so the separator never dangles.
+ */
+export function bookReferenceLine(author?: string | null, chapter?: string | null): string {
+  return [author, chapter]
+    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+    .filter(Boolean)
+    .join(' · ');
+}
+
+/**
+ * Evidence presence for the detail panel. The reference card renders exactly
+ * title / author / chapter, so those three decide whether it exists at all;
+ * the reader captures them as a set with `sourceBookId` and `sourceLocator`.
+ */
+export function hasBookReference(
+  entry: Pick<DictionaryWordDto, 'sourceBookTitle' | 'sourceBookAuthor' | 'sourceChapter'>,
+): boolean {
+  return [entry.sourceBookTitle, entry.sourceBookAuthor, entry.sourceChapter].some(isNonBlank);
+}
+
+/** Whether the entry carries a captured quote (REQ-DRE-007 evidence). */
+export function hasQuote(entry: Pick<DictionaryWordDto, 'quote'>): boolean {
+  return isNonBlank(entry.quote);
+}
+
+/**
+ * Whether the detail panel has anything to show past the term itself. Drives
+ * 4C.3's empty state; a false value means the entry has no field at all.
+ */
+export function hasAnyDetail(
+  entry: Pick<
+    DictionaryWordDto,
+    | 'definition'
+    | 'partOfSpeech'
+    | 'phonetic'
+    | 'example'
+    | 'quote'
+    | 'sourceBookTitle'
+    | 'sourceBookAuthor'
+    | 'sourceChapter'
+  >,
+): boolean {
+  return (
+    isNonBlank(entry.definition) ||
+    isNonBlank(entry.partOfSpeech) ||
+    isNonBlank(entry.phonetic) ||
+    isNonBlank(entry.example) ||
+    hasQuote(entry) ||
+    hasBookReference(entry)
+  );
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**

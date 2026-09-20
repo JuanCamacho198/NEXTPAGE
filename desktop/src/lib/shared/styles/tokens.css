@@ -177,6 +177,7 @@
   --color-accent-fill: #153040; /* $--np-accent-soft */
   --color-panel-border: #1c324d; /* $--np-border */
   --color-text-tertiary: #64748b; /* $--np-text-tertiary */
+  --color-error-soft: #2a1a22; /* $--np-error-soft — destructive button fill */
 
   /* Shadows */
   --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.2);
@@ -272,6 +273,7 @@
   --color-accent-fill: #dbeafe; /* $--np-accent-soft */
   --color-panel-border: #cbd5e1; /* $--np-border */
   --color-text-tertiary: #94a3b8; /* $--np-text-tertiary */
+  --color-error-soft: #fee2e2; /* $--np-error-soft — destructive button fill */
 
   /* Shadows */
   --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.08);

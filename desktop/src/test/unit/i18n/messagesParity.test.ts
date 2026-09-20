@@ -84,6 +84,10 @@ describe('i18n es/en parity (REQ-X-Cross-2)', () => {
       'dictionary.bookReference',
       'dictionary.viewBook',
       'dictionary.edit',
+      'dictionary.selectWordTitle',
+      'dictionary.selectWordDescription',
+      'dictionary.noDetailTitle',
+      'dictionary.noDetailDescription',
     ] as const;
 
     for (const key of screenKeys) {

@@ -514,6 +514,12 @@ export const messagesEn = {
   'dictionary.bookReference': 'Book reference',
   'dictionary.viewBook': 'View book',
   'dictionary.edit': 'Edit',
+  'dictionary.selectWordTitle': 'Select a word',
+  'dictionary.selectWordDescription':
+    'Pick an entry from the list to see its description, example and captured evidence.',
+  'dictionary.noDetailTitle': 'No details yet',
+  'dictionary.noDetailDescription':
+    'This entry has no description, example or captured evidence. Capture a quote from the reader to fill it in.',
   'dictionary.addWord': 'Add word',
   'dictionary.wordPlaceholder': 'Word',
   'dictionary.definitionPlaceholder': 'Definition (optional)',

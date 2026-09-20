@@ -10,14 +10,19 @@
   import Button from '$lib/shared/ui/forms/Button.svelte';
   import DictionaryKpiRow from './DictionaryKpiRow.svelte';
   import DictionaryRow from './DictionaryRow.svelte';
+  import DictionaryDetailPanel from './DictionaryDetailPanel.svelte';
   import { deriveDictionaryKpis } from '../dictionaryKpis';
 
   type Props = {
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
     dictionary?: DictionaryStateApi;
+    /** Opens the entry's source book in the reader. Unwired until a unit owns it. */
+    onViewBook?: (bookId: string) => void;
+    /** Enters edit mode for the four user-authored fields (4D). */
+    onEdit?: (id: string) => void;
   };
 
-  let { t, dictionary = dictionaryState }: Props = $props();
+  let { t, dictionary = dictionaryState, onViewBook, onEdit }: Props = $props();
 
   type Tab = 'all' | 'recent' | 'az';
 
@@ -54,6 +59,8 @@
     }
     return base;
   });
+
+  const selectedWord = $derived(dictionary.words.find((w) => w.id === selectedId) ?? null);
 
   $effect(() => {
     const q = searchQuery;
@@ -98,6 +105,11 @@
     } finally {
       isAdding = false;
     }
+  }
+
+  async function handleDelete(id: string): Promise<void> {
+    await dictionary.remove(id);
+    if (selectedId === id) selectedId = null;
   }
 
   async function handleExport(format: 'json' | 'csv'): Promise<void> {
@@ -280,5 +292,7 @@
         </ul>
       {/if}
     </div>
+
+    <DictionaryDetailPanel word={selectedWord} {t} {onViewBook} {onEdit} onDelete={handleDelete} />
   </div>
 </section>

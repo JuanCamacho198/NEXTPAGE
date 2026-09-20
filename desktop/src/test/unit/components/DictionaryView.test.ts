@@ -6,6 +6,7 @@ import {
   avatarColorVariable,
   bookInitials,
   bookReferenceLine,
+  EMPTY_USER_FIELD_DRAFT,
   entryInitial,
   formatEntryDate,
   formatPhonetic,
@@ -13,6 +14,9 @@ import {
   hasBookReference,
   hasQuote,
   isComplete,
+  USER_FIELD_KEYS,
+  userFieldDraft,
+  userFieldPatchFrom,
 } from '$lib/features/dictionary/dictionaryEntry';
 import type { DictionaryStateApi } from '$lib/shared/stores/DictionaryState.svelte';
 import { messagesEn } from '$lib/shared/i18n/messages.en';
@@ -638,6 +642,321 @@ describe('DictionaryView detail panel (4C)', () => {
     expect(screen.getByText(messagesEs['dictionary.noDetailTitle'])).toBeInTheDocument();
     expect(screen.queryByTestId('dictionary-detail-section')).not.toBeInTheDocument();
     expect(screen.getByTestId('dictionary-detail-actions')).toBeInTheDocument();
+  });
+});
+
+describe('DictionaryView edit mode (4D)', () => {
+  const EVIDENCE = {
+    sourceBookId: 'book-a',
+    sourceBookTitle: 'Hábitos Atómicos',
+    sourceBookAuthor: 'James Clear',
+    sourceChapter: 'Capítulo 3',
+  } as const;
+
+  const USER_FIELDS = {
+    definition: 'Que tiene una duración muy breve o que pasa rápidamente.',
+    partOfSpeech: 'Adjetivo',
+    phonetic: 'eˈfimeɾo',
+    example: 'La belleza de un atardecer es efímera.',
+  } as const;
+
+  const ENTRY = word({
+    id: 'efimero',
+    word: 'Efímero',
+    ...EVIDENCE,
+    ...USER_FIELDS,
+    quote: 'Los pequeños momentos de éxito son casi invisibles.',
+  });
+
+  async function select(container: HTMLElement, term: string): Promise<void> {
+    await fireEvent.click(rowFor(container, term));
+  }
+
+  async function openEdit(container: HTMLElement, term = 'Efímero'): Promise<void> {
+    await select(container, term);
+    await fireEvent.click(screen.getByTestId('dictionary-detail-edit'));
+  }
+
+  it('opens an edit session carrying the four user fields and nothing else', async () => {
+    const { container } = render(DictionaryView, {
+      props: { t: tEs, dictionary: makeState([ENTRY]) },
+    });
+
+    await openEdit(container);
+
+    const form = screen.getByTestId('dictionary-edit-form');
+    expect(form).toBeInTheDocument();
+
+    // The four controls carry the stored values, ready to be changed.
+    const controls = [
+      ...form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea, select'),
+    ];
+    expect(screen.getByTestId('dictionary-edit-definition')).toHaveValue(USER_FIELDS.definition);
+    expect(screen.getByTestId('dictionary-edit-partOfSpeech')).toHaveValue(
+      USER_FIELDS.partOfSpeech,
+    );
+    expect(screen.getByTestId('dictionary-edit-phonetic')).toHaveValue(USER_FIELDS.phonetic);
+    expect(screen.getByTestId('dictionary-edit-example')).toHaveValue(USER_FIELDS.example);
+
+    // Exactly four controls, and none of them can name an evidence field.
+    expect(controls).toHaveLength(4);
+    expect(
+      [...form.querySelectorAll<HTMLElement>('[data-testid]')].map((n) => n.dataset.testid),
+    ).toEqual([
+      'dictionary-edit-definition',
+      'dictionary-edit-partOfSpeech',
+      'dictionary-edit-phonetic',
+      'dictionary-edit-example',
+      'dictionary-edit-cancel',
+      'dictionary-edit-save',
+    ]);
+
+    // The term itself is never editable.
+    expect(screen.getByTestId('dictionary-detail-term')).toHaveTextContent('Efímero');
+    expect(controls.some((node) => node.value === 'Efímero')).toBe(false);
+  });
+
+  it('saves the four fields through DictionaryState.update and never writes evidence', async () => {
+    const state = makeState([ENTRY]);
+    const { container } = render(DictionaryView, { props: { t: tEs, dictionary: state } });
+
+    await openEdit(container);
+    await fireEvent.input(screen.getByTestId('dictionary-edit-definition'), {
+      target: { value: 'Nueva definición.' },
+    });
+    await fireEvent.input(screen.getByTestId('dictionary-edit-partOfSpeech'), {
+      target: { value: 'Sustantivo' },
+    });
+    await fireEvent.input(screen.getByTestId('dictionary-edit-phonetic'), {
+      target: { value: 'nuevo' },
+    });
+    await fireEvent.input(screen.getByTestId('dictionary-edit-example'), {
+      target: { value: 'Nuevo ejemplo.' },
+    });
+    await fireEvent.click(screen.getByTestId('dictionary-edit-save'));
+
+    expect(state.update).toHaveBeenCalledTimes(1);
+    const update = vi.mocked(state.update);
+    const [savedId, patch] = update.mock.calls[0];
+    expect(savedId).toBe('efimero');
+    expect(patch).toEqual({
+      definition: 'Nueva definición.',
+      partOfSpeech: 'Sustantivo',
+      phonetic: 'nuevo',
+      example: 'Nuevo ejemplo.',
+    });
+    expect(Object.keys(patch).sort()).toEqual([...USER_FIELD_KEYS].sort());
+    expect(Object.keys(patch).some((key) => /quote|source/i.test(key))).toBe(false);
+    expect(state.capture).not.toHaveBeenCalled();
+
+    // Saving closes the session.
+    expect(screen.queryByTestId('dictionary-edit-form')).not.toBeInTheDocument();
+  });
+
+  it('keeps the captured evidence read-only inside edit mode (REQ-DRE-007 scenario 2)', async () => {
+    const { container } = render(DictionaryView, {
+      props: { t: tEs, dictionary: makeState([ENTRY]) },
+    });
+
+    await openEdit(container);
+
+    // The evidence is still visible while editing...
+    expect(screen.getByTestId('dictionary-quote')).toHaveTextContent(
+      'Los pequeños momentos de éxito son casi invisibles.',
+    );
+    expect(screen.getByTestId('dictionary-reference-title')).toHaveTextContent('Hábitos Atómicos');
+    expect(screen.getByTestId('dictionary-reference-author')).toHaveTextContent(
+      'James Clear · Capítulo 3',
+    );
+
+    // ...and offers no control that could edit or clear it.
+    const citation = screen.getByTestId('dictionary-citation');
+    expect(
+      citation.querySelectorAll('input, textarea, select, button, a, [contenteditable]'),
+    ).toHaveLength(0);
+    expect(screen.getByTestId('dictionary-quote').children).toHaveLength(0);
+
+    // The edit-mode header drops the read-only tag/phonetic and the frame
+    // actions; the four inputs are the only way in.
+    expect(screen.queryByTestId('dictionary-detail-actions')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('dictionary-detail-tag')).not.toBeInTheDocument();
+  });
+
+  it('discards the draft on cancel without writing anything', async () => {
+    const state = makeState([ENTRY]);
+    const { container } = render(DictionaryView, { props: { t: tEs, dictionary: state } });
+
+    await openEdit(container);
+    await fireEvent.input(screen.getByTestId('dictionary-edit-definition'), {
+      target: { value: 'Borrador descartado.' },
+    });
+    await fireEvent.click(screen.getByTestId('dictionary-edit-cancel'));
+
+    expect(state.update).not.toHaveBeenCalled();
+    expect(state.capture).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('dictionary-edit-form')).not.toBeInTheDocument();
+    expect(screen.getByTestId('dictionary-detail-definition')).toHaveTextContent(
+      USER_FIELDS.definition,
+    );
+  });
+
+  it('closes the edit session when another row is selected', async () => {
+    const state = makeState([ENTRY, word({ id: 'sisifo', word: 'Sísifo', definition: 'Un rey.' })]);
+    const { container } = render(DictionaryView, { props: { t: tEs, dictionary: state } });
+
+    await openEdit(container);
+    expect(screen.getByTestId('dictionary-edit-form')).toBeInTheDocument();
+
+    await select(container, 'Sísifo');
+
+    expect(screen.queryByTestId('dictionary-edit-form')).not.toBeInTheDocument();
+    expect(screen.getByTestId('dictionary-detail-term')).toHaveTextContent('Sísifo');
+    expect(state.update).not.toHaveBeenCalled();
+  });
+
+  it('shows the re-captured evidence with the user fields unchanged (REQ-DRE-008 scenario 2)', async () => {
+    const state = makeState([ENTRY]);
+    const { container, rerender } = render(DictionaryView, {
+      props: { t: tEs, dictionary: state },
+    });
+
+    await select(container, 'Efímero');
+    expect(screen.getByTestId('dictionary-quote')).toHaveTextContent(
+      'Los pequeños momentos de éxito son casi invisibles.',
+    );
+
+    // A re-capture overwrites the six evidence columns and leaves the four
+    // user-authored fields byte-identical (Decision 9).
+    await rerender({
+      t: tEs,
+      dictionary: makeState([
+        word({
+          ...ENTRY,
+          quote: 'Otra frase, de otro capítulo.',
+          sourceBookTitle: 'Mindset',
+          sourceBookAuthor: 'Carol Dweck',
+          sourceChapter: 'Capítulo 7',
+          sourceBookId: 'book-b',
+        }),
+      ]),
+    });
+
+    expect(screen.getByTestId('dictionary-quote')).toHaveTextContent(
+      'Otra frase, de otro capítulo.',
+    );
+    expect(screen.getByTestId('dictionary-reference-title')).toHaveTextContent('Mindset');
+    expect(screen.getByTestId('dictionary-reference-author')).toHaveTextContent(
+      'Carol Dweck · Capítulo 7',
+    );
+
+    expect(screen.getByTestId('dictionary-detail-definition')).toHaveTextContent(
+      USER_FIELDS.definition,
+    );
+    expect(screen.getByTestId('dictionary-detail-tag')).toHaveTextContent(USER_FIELDS.partOfSpeech);
+    expect(screen.getByTestId('dictionary-detail-phonetic')).toHaveTextContent(
+      `/${USER_FIELDS.phonetic}/`,
+    );
+    expect(screen.getByTestId('dictionary-detail-example')).toHaveTextContent(USER_FIELDS.example);
+
+    // Display alone changed; nothing wrote.
+    expect(state.update).not.toHaveBeenCalled();
+    expect(state.capture).not.toHaveBeenCalled();
+  });
+
+  it('renders the re-capture affordance as explanatory copy, never as a writer', async () => {
+    const state = makeState([ENTRY]);
+    const { container } = render(DictionaryView, { props: { t: tEs, dictionary: state } });
+
+    await select(container, 'Efímero');
+
+    const note = screen.getByTestId('dictionary-evidence-note');
+    expect(note).toHaveTextContent(messagesEs['dictionary.evidenceNote']);
+    expect(note.closest('button, a, input, textarea, select, form')).toBeNull();
+    expect(note.querySelectorAll('button, a, input, textarea, select')).toHaveLength(0);
+
+    // The citation area as a whole stays control-free in read mode.
+    const citation = screen.getByTestId('dictionary-citation');
+    expect(citation.querySelectorAll('button, a, input, textarea, select')).toHaveLength(0);
+    expect(state.capture).not.toHaveBeenCalled();
+
+    // The note also explains the evidence while the session is open.
+    await fireEvent.click(screen.getByTestId('dictionary-detail-edit'));
+    expect(screen.getByTestId('dictionary-evidence-note')).toHaveTextContent(
+      messagesEs['dictionary.evidenceNote'],
+    );
+  });
+
+  it('keeps Ver libro inert but harmless until a unit owns the navigation (4E)', async () => {
+    const state = makeState([ENTRY]);
+    const { container } = render(DictionaryView, { props: { t: tEs, dictionary: state } });
+
+    await select(container, 'Efímero');
+    await fireEvent.click(screen.getByTestId('dictionary-detail-view-book'));
+
+    // Nothing supplies onViewBook yet, so the click reaches no navigation and
+    // writes nothing. The gap is known and named (work unit 4E); this test
+    // keeps it visible instead of letting the button drift silently.
+    expect(state.update).not.toHaveBeenCalled();
+    expect(state.capture).not.toHaveBeenCalled();
+    expect(state.remove).not.toHaveBeenCalled();
+    expect(messagesEs['dictionary.viewBook']).toBe('Ver libro');
+  });
+
+  it('offers no evidence control even while the session is open', async () => {
+    const state = makeState([ENTRY]);
+    const { container } = render(DictionaryView, { props: { t: tEs, dictionary: state } });
+
+    await openEdit(container);
+
+    // No control anywhere in the panel can write or clear the evidence: the
+    // edit form holds the four user fields and the citation holds no control.
+    const panel = screen.getByTestId('dictionary-detail');
+    const controls = [...panel.querySelectorAll<HTMLElement>('input, textarea')];
+    expect(controls.map((node) => node.dataset.testid)).toEqual([
+      'dictionary-edit-definition',
+      'dictionary-edit-partOfSpeech',
+      'dictionary-edit-phonetic',
+      'dictionary-edit-example',
+    ]);
+  });
+});
+
+describe('dictionary user-field edit helpers (4D)', () => {
+  it('seeds a draft from the entry, blank-safe', () => {
+    expect(userFieldDraft({})).toEqual({
+      definition: '',
+      partOfSpeech: '',
+      phonetic: '',
+      example: '',
+    });
+    expect(
+      userFieldDraft({
+        definition: 'Algo',
+        partOfSpeech: null,
+        phonetic: 'a',
+        example: undefined,
+      }),
+    ).toEqual({ definition: 'Algo', partOfSpeech: '', phonetic: 'a', example: '' });
+  });
+
+  it('builds the update payload from exactly the four user fields', () => {
+    const draft = {
+      definition: 'Algo',
+      partOfSpeech: 'Sustantivo',
+      phonetic: 'a',
+      example: 'Una frase.',
+    };
+
+    expect(userFieldPatchFrom(draft)).toEqual(draft);
+    expect(Object.keys(userFieldPatchFrom(draft))).toEqual([...USER_FIELD_KEYS]);
+    expect(Object.keys(userFieldPatchFrom(draft)).some((key) => /quote|source/i.test(key))).toBe(
+      false,
+    );
+  });
+
+  it('names the four user fields in the frame section order', () => {
+    expect(USER_FIELD_KEYS).toEqual(['definition', 'partOfSpeech', 'phonetic', 'example']);
+    expect(EMPTY_USER_FIELD_DRAFT).toEqual(userFieldPatchFrom(EMPTY_USER_FIELD_DRAFT));
   });
 });
 

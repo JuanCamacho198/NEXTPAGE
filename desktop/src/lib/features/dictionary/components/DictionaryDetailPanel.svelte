@@ -2,26 +2,46 @@
   import type { DictionaryWordDto } from '$lib/shared/types';
   import EmptyState from '$lib/shared/ui/feedback/EmptyState.svelte';
   import Icon from '$lib/shared/ui/navigation/Icon.svelte';
+  import DictionaryEditForm from './DictionaryEditForm.svelte';
   import {
     bookInitials,
     bookReferenceLine,
+    EMPTY_USER_FIELD_DRAFT,
     formatPhonetic,
     hasAnyDetail,
     hasBookReference,
     hasQuote,
     type Translator,
+    type UserFieldDraft,
   } from '../dictionaryEntry';
 
   type Props = {
     /** The selected entry, or null when the list has no selection. */
     word: DictionaryWordDto | null;
     t: Translator;
+    /** True while the entry is being edited; the four user fields become controls. */
+    editing?: boolean;
+    draft?: UserFieldDraft;
+    onChangeDraft?: (next: UserFieldDraft) => void;
     onViewBook?: (bookId: string) => void;
     onEdit?: (id: string) => void;
     onDelete?: (id: string) => void;
+    onSave?: () => void;
+    onCancelEdit?: () => void;
   };
 
-  let { word, t, onViewBook, onEdit, onDelete }: Props = $props();
+  let {
+    word,
+    t,
+    editing = false,
+    draft = EMPTY_USER_FIELD_DRAFT,
+    onChangeDraft,
+    onViewBook,
+    onEdit,
+    onDelete,
+    onSave,
+    onCancelEdit,
+  }: Props = $props();
 
   const tag = $derived(word?.partOfSpeech?.trim() ?? '');
   const phonetic = $derived(formatPhonetic(word?.phonetic ?? ''));
@@ -71,58 +91,79 @@
         {word.word}
       </h2>
 
-      {#if tag}
-        <span
-          class="shrink-0 rounded-full bg-(--color-accent-fill) px-2.5 py-1 text-2xs font-semibold text-(--color-accent-blue)"
-          data-testid="dictionary-detail-tag"
+      {#if !editing}
+        {#if tag}
+          <span
+            class="shrink-0 rounded-full bg-(--color-accent-fill) px-2.5 py-1 text-2xs font-semibold text-(--color-accent-blue)"
+            data-testid="dictionary-detail-tag"
+          >
+            {tag}
+          </span>
+        {/if}
+
+        {#if phonetic}
+          <span
+            class="min-w-0 truncate text-2sm text-(--color-text-tertiary)"
+            data-testid="dictionary-detail-phonetic"
+          >
+            {phonetic}
+          </span>
+        {/if}
+
+        <div
+          class="ms-auto flex shrink-0 items-center gap-2"
+          data-testid="dictionary-detail-actions"
         >
-          {tag}
-        </span>
+          <button
+            type="button"
+            class="flex cursor-pointer items-center gap-1.5 rounded-sm bg-(--color-panel-input) px-1.5 py-2 text-xs font-semibold text-(--color-secondary) transition-colors hover:bg-(--color-accent-fill)"
+            data-testid="dictionary-detail-view-book"
+            onclick={() => onViewBook?.(word.sourceBookId ?? '')}
+          >
+            <Icon name="book-open" size="sm" />
+            <span>{t('dictionary.viewBook')}</span>
+          </button>
+
+          <button
+            type="button"
+            class="flex cursor-pointer items-center gap-1.5 rounded-sm bg-(--color-panel-input) px-1.5 py-2 text-xs font-semibold text-(--color-secondary) transition-colors hover:bg-(--color-accent-fill)"
+            data-testid="dictionary-detail-edit"
+            onclick={() => onEdit?.(word.id)}
+          >
+            <Icon name="edit" size="sm" />
+            <span>{t('dictionary.edit')}</span>
+          </button>
+
+          <button
+            type="button"
+            class="flex h-8.5 w-8.5 shrink-0 cursor-pointer items-center justify-center rounded-sm bg-(--color-error-soft) text-(--color-error) transition-opacity hover:opacity-90"
+            aria-label={t('dictionary.deleteConfirm')}
+            data-testid="dictionary-detail-delete"
+            onclick={() => onDelete?.(word.id)}
+          >
+            <Icon name="trash" size="md" />
+          </button>
+        </div>
       {/if}
-
-      {#if phonetic}
-        <span
-          class="min-w-0 truncate text-2sm text-(--color-text-tertiary)"
-          data-testid="dictionary-detail-phonetic"
-        >
-          {phonetic}
-        </span>
-      {/if}
-
-      <div class="ms-auto flex shrink-0 items-center gap-2" data-testid="dictionary-detail-actions">
-        <button
-          type="button"
-          class="flex cursor-pointer items-center gap-1.5 rounded-sm bg-(--color-panel-input) px-1.5 py-2 text-xs font-semibold text-(--color-secondary) transition-colors hover:bg-(--color-accent-fill)"
-          data-testid="dictionary-detail-view-book"
-          onclick={() => onViewBook?.(word.sourceBookId ?? '')}
-        >
-          <Icon name="book-open" size="sm" />
-          <span>{t('dictionary.viewBook')}</span>
-        </button>
-
-        <button
-          type="button"
-          class="flex cursor-pointer items-center gap-1.5 rounded-sm bg-(--color-panel-input) px-1.5 py-2 text-xs font-semibold text-(--color-secondary) transition-colors hover:bg-(--color-accent-fill)"
-          data-testid="dictionary-detail-edit"
-          onclick={() => onEdit?.(word.id)}
-        >
-          <Icon name="edit" size="sm" />
-          <span>{t('dictionary.edit')}</span>
-        </button>
-
-        <button
-          type="button"
-          class="flex h-8.5 w-8.5 shrink-0 cursor-pointer items-center justify-center rounded-sm bg-(--color-error-soft) text-(--color-error) transition-opacity hover:opacity-90"
-          aria-label={t('dictionary.deleteConfirm')}
-          data-testid="dictionary-detail-delete"
-          onclick={() => onDelete?.(word.id)}
-        >
-          <Icon name="trash" size="md" />
-        </button>
-      </div>
     </div>
 
-    {#if !hasDetails}
+    {#if editing}
+      <DictionaryEditForm
+        {t}
+        {draft}
+        onChangeDraft={(next) => onChangeDraft?.(next)}
+        onSave={() => onSave?.()}
+        onCancelEdit={() => onCancelEdit?.()}
+      />
+
+      {#if showCitation}
+        <div
+          class="h-px w-full shrink-0 bg-(--color-panel-border)"
+          data-testid="dictionary-detail-divider"
+        ></div>
+        {@render citation()}
+      {/if}
+    {:else if !hasDetails}
       <div class="flex flex-1 items-center justify-center" data-testid="dictionary-detail-empty">
         <EmptyState
           icon="book"
@@ -167,61 +208,73 @@
               {example}
             </p>
           {:else}
-            <div
-              class="flex flex-col gap-2.5 rounded-md bg-(--color-panel-input) p-3.5"
-              data-testid="dictionary-citation"
-            >
-              {#if showQuote}
-                <p
-                  class="text-2sm text-(--color-secondary)"
-                  style="font-family: var(--font-serif)"
-                  data-testid="dictionary-quote"
-                >
-                  {quote}
-                </p>
-              {/if}
-
-              {#if showReference}
-                <div class="flex items-center gap-2.5" data-testid="dictionary-reference">
-                  <span
-                    class="flex h-12.5 w-9 shrink-0 items-center justify-center rounded-[4px] bg-(--color-accent-blue) text-2xs font-semibold text-white"
-                    aria-hidden="true"
-                    data-testid="dictionary-reference-initials"
-                  >
-                    {bookInitials(bookTitle)}
-                  </span>
-
-                  <div class="flex min-w-0 flex-col gap-0.5">
-                    <span
-                      class="flex items-center gap-1.5 text-micro font-semibold text-(--color-accent-blue)"
-                      data-testid="dictionary-reference-label"
-                    >
-                      <Icon name="book-open" size="sm" />
-                      {t('dictionary.bookReference')}
-                    </span>
-                    {#if bookTitle}
-                      <span
-                        class="truncate text-2sm text-(--color-primary)"
-                        data-testid="dictionary-reference-title"
-                      >
-                        {bookTitle}
-                      </span>
-                    {/if}
-                    {#if referenceLine}
-                      <span
-                        class="truncate text-2xs text-(--color-text-tertiary)"
-                        data-testid="dictionary-reference-author"
-                      >
-                        {referenceLine}
-                      </span>
-                    {/if}
-                  </div>
-                </div>
-              {/if}
-            </div>
+            {@render citation()}
           {/if}
         </div>
       {/each}
     {/if}
   {/if}
 </section>
+
+{#snippet citation()}
+  <div
+    class="flex flex-col gap-2.5 rounded-md bg-(--color-panel-input) p-3.5"
+    data-testid="dictionary-citation"
+  >
+    {#if showQuote}
+      <p
+        class="text-2sm text-(--color-secondary)"
+        style="font-family: var(--font-serif)"
+        data-testid="dictionary-quote"
+      >
+        {quote}
+      </p>
+    {/if}
+
+    {#if showReference}
+      <div class="flex items-center gap-2.5" data-testid="dictionary-reference">
+        <span
+          class="flex h-12.5 w-9 shrink-0 items-center justify-center rounded-[4px] bg-(--color-accent-blue) text-2xs font-semibold text-white"
+          aria-hidden="true"
+          data-testid="dictionary-reference-initials"
+        >
+          {bookInitials(bookTitle)}
+        </span>
+
+        <div class="flex min-w-0 flex-col gap-0.5">
+          <span
+            class="flex items-center gap-1.5 text-micro font-semibold text-(--color-accent-blue)"
+            data-testid="dictionary-reference-label"
+          >
+            <Icon name="book-open" size="sm" />
+            {t('dictionary.bookReference')}
+          </span>
+          {#if bookTitle}
+            <span
+              class="truncate text-2sm text-(--color-primary)"
+              data-testid="dictionary-reference-title"
+            >
+              {bookTitle}
+            </span>
+          {/if}
+          {#if referenceLine}
+            <span
+              class="truncate text-2xs text-(--color-text-tertiary)"
+              data-testid="dictionary-reference-author"
+            >
+              {referenceLine}
+            </span>
+          {/if}
+        </div>
+      </div>
+    {/if}
+
+    <p
+      class="flex items-start gap-1.5 text-2xs text-(--color-text-tertiary)"
+      data-testid="dictionary-evidence-note"
+    >
+      <Icon name="info" size="sm" class="mt-0.5 shrink-0" />
+      <span>{t('dictionary.evidenceNote')}</span>
+    </p>
+  </div>
+{/snippet}

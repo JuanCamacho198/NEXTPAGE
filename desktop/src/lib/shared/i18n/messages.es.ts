@@ -518,6 +518,12 @@ export const messagesEs: Record<MessageKey, string> = {
   'dictionary.bookReference': 'Referencia del libro',
   'dictionary.viewBook': 'Ver libro',
   'dictionary.edit': 'Editar',
+  'dictionary.partOfSpeechLabel': 'Categoría gramatical',
+  'dictionary.phoneticLabel': 'Fonética',
+  'dictionary.save': 'Guardar',
+  'dictionary.cancel': 'Cancelar',
+  'dictionary.evidenceNote':
+    'Capturado del libro. Para reemplazarlo, abre el libro y vuelve a seleccionar la palabra.',
   'dictionary.selectWordTitle': 'Selecciona una palabra',
   'dictionary.selectWordDescription':
     'Elige una entrada de la lista para ver su descripción, su ejemplo y la evidencia capturada.',

@@ -29,6 +29,61 @@ export function isComplete(entry: CompletenessInput): boolean {
   );
 }
 
+/** The four user-authored fields an edit session may write (REQ-DRE-002). */
+export type UserFieldKey = 'definition' | 'partOfSpeech' | 'phonetic' | 'example';
+
+/**
+ * The update payload an edit session may build. The type names the four
+ * user-authored fields and nothing else, so a payload built from it cannot
+ * carry `quote` or a book-reference field — the read-only half of REQ-DRE-007
+ * is enforced by the payload's shape, mirroring the Rust
+ * `UpdateDictionaryWordInput` (Decision 7). Evidence moves only through the
+ * reader capture path (`DictionaryState.capture`).
+ */
+export type DictionaryUserFieldPatch = Pick<DictionaryWordDto, UserFieldKey>;
+
+/** What the edit form holds while a session is open. */
+export type UserFieldDraft = Record<UserFieldKey, string>;
+
+/** The four fields in the frame's section order. */
+export const USER_FIELD_KEYS: readonly UserFieldKey[] = [
+  'definition',
+  'partOfSpeech',
+  'phonetic',
+  'example',
+];
+
+export const EMPTY_USER_FIELD_DRAFT: UserFieldDraft = {
+  definition: '',
+  partOfSpeech: '',
+  phonetic: '',
+  example: '',
+};
+
+/** The draft a session opens with: the entry's four user fields, blank-safe. */
+export function userFieldDraft(entry: DictionaryUserFieldPatch): UserFieldDraft {
+  return {
+    definition: entry.definition ?? '',
+    partOfSpeech: entry.partOfSpeech ?? '',
+    phonetic: entry.phonetic ?? '',
+    example: entry.example ?? '',
+  };
+}
+
+/**
+ * Turns a draft into the update payload. The stored value is what the user
+ * typed — clearing a field stores an empty value, which the completeness
+ * predicate already reads as missing.
+ */
+export function userFieldPatchFrom(draft: UserFieldDraft): DictionaryUserFieldPatch {
+  return {
+    definition: draft.definition,
+    partOfSpeech: draft.partOfSpeech,
+    phonetic: draft.phonetic,
+    example: draft.example,
+  };
+}
+
 /** The frame's seven avatar colours, in rotation order (frame ZPZb7). */
 const AVATAR_TOKEN_COUNT = 7;
 

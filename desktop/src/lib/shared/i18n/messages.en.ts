@@ -514,6 +514,12 @@ export const messagesEn = {
   'dictionary.bookReference': 'Book reference',
   'dictionary.viewBook': 'View book',
   'dictionary.edit': 'Edit',
+  'dictionary.partOfSpeechLabel': 'Part of speech',
+  'dictionary.phoneticLabel': 'Phonetic',
+  'dictionary.save': 'Save',
+  'dictionary.cancel': 'Cancel',
+  'dictionary.evidenceNote':
+    'Captured from the book. To replace it, open the book and select the word again.',
   'dictionary.selectWordTitle': 'Select a word',
   'dictionary.selectWordDescription':
     'Pick an entry from the list to see its description, example and captured evidence.',

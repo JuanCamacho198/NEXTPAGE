@@ -12,13 +12,26 @@
   import DictionaryRow from './DictionaryRow.svelte';
   import DictionaryDetailPanel from './DictionaryDetailPanel.svelte';
   import { deriveDictionaryKpis } from '../dictionaryKpis';
+  import {
+    EMPTY_USER_FIELD_DRAFT,
+    userFieldDraft,
+    userFieldPatchFrom,
+    type UserFieldDraft,
+  } from '../dictionaryEntry';
 
   type Props = {
     t: (key: MessageKey, params?: Record<string, string | number>) => string;
     dictionary?: DictionaryStateApi;
-    /** Opens the entry's source book in the reader. Unwired until a unit owns it. */
+    /**
+     * Opens the entry's source book in the reader. Not supplied yet: the
+     * `Ver libro` button renders with its measured geometry and forwards this
+     * prop, but nothing owns the navigation. Wiring it is the Highlights
+     * pattern (libraryState.getBookById -> promoteBookForReading -> route
+     * "reader" + sourceLocator), a reader-navigation feature the tasks do not
+     * assign to this screen unit. Named follow-up: work unit 4E.
+     */
     onViewBook?: (bookId: string) => void;
-    /** Enters edit mode for the four user-authored fields (4D). */
+    /** Notified when an edit session for the four user-authored fields opens. */
     onEdit?: (id: string) => void;
   };
 
@@ -30,6 +43,9 @@
   let debouncedQuery = $state('');
   let activeTab = $state<Tab>('all');
   let selectedId = $state<string | null>(null);
+  /** The entry whose user-authored fields are being edited, or null. */
+  let editingId = $state<string | null>(null);
+  let editDraft = $state<UserFieldDraft>(EMPTY_USER_FIELD_DRAFT);
   let showAddForm = $state(false);
   let newWord = $state('');
   let newTags = $state('');
@@ -61,6 +77,12 @@
   });
 
   const selectedWord = $derived(dictionary.words.find((w) => w.id === selectedId) ?? null);
+
+  /**
+   * The edit session is open only for the entry the panel is showing, so
+   * selecting another row closes it without a second state to keep in sync.
+   */
+  const isEditing = $derived(editingId != null && editingId === selectedWord?.id);
 
   $effect(() => {
     const q = searchQuery;
@@ -110,6 +132,42 @@
   async function handleDelete(id: string): Promise<void> {
     await dictionary.remove(id);
     if (selectedId === id) selectedId = null;
+    if (editingId === id) closeEdit();
+  }
+
+  function handleSelect(id: string): void {
+    selectedId = id;
+    closeEdit();
+  }
+
+  function closeEdit(): void {
+    editingId = null;
+    editDraft = EMPTY_USER_FIELD_DRAFT;
+  }
+
+  /**
+   * Opens the edit session with a draft seeded from the stored entry, so the
+   * four inputs start from what is saved rather than from a stale draft.
+   */
+  function handleEdit(id: string): void {
+    if (editingId === id) return;
+    const entry = dictionary.words.find((w) => w.id === id);
+    if (!entry) return;
+    editingId = id;
+    editDraft = userFieldDraft(entry);
+    onEdit?.(id);
+  }
+
+  /**
+   * REQ-DRE-002 / REQ-DRE-007: the only write an edit session performs. The
+   * payload is built from the four user-authored fields, so no evidence value
+   * can travel through it — a re-capture stays the reader flow.
+   */
+  async function handleSaveEdit(): Promise<void> {
+    const id = editingId;
+    if (!id) return;
+    await dictionary.update(id, userFieldPatchFrom(editDraft));
+    closeEdit();
   }
 
   async function handleExport(format: 'json' | 'csv'): Promise<void> {
@@ -286,13 +344,24 @@
               {index}
               selected={selectedId === w.id}
               {t}
-              onselect={(id) => (selectedId = id)}
+              onselect={(id) => handleSelect(id)}
             />
           {/each}
         </ul>
       {/if}
     </div>
 
-    <DictionaryDetailPanel word={selectedWord} {t} {onViewBook} {onEdit} onDelete={handleDelete} />
+    <DictionaryDetailPanel
+      word={selectedWord}
+      {t}
+      editing={isEditing}
+      draft={editDraft}
+      onChangeDraft={(next) => (editDraft = next)}
+      {onViewBook}
+      onEdit={handleEdit}
+      onDelete={handleDelete}
+      onSave={handleSaveEdit}
+      onCancelEdit={closeEdit}
+    />
   </div>
 </section>

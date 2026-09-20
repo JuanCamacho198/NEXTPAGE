@@ -14,7 +14,7 @@
 
 <div
   role="alert"
-  class="flex flex-col items-start gap-2 rounded-lg border border-(--color-border) bg-(--color-surface-subtle) p-4"
+  class="flex max-w-2xl flex-col items-start gap-2 rounded-lg border border-(--color-border) bg-(--color-surface-subtle) p-4"
 >
   <p class="m-0 text-sm text-(--color-text-muted)">{t('discover.offline')}</p>
   <button

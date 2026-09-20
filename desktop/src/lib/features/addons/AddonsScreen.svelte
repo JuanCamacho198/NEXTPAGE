@@ -94,7 +94,7 @@
   composes nothing until an addon-source book opens it).
 -->
 <section aria-labelledby="addons-heading" class="flex h-auto flex-col gap-6">
-  <div class="flex flex-col gap-1">
+  <div class="flex max-w-2xl flex-col gap-1">
     <h2 id="addons-heading" class="m-0 text-lg font-semibold text-(--color-primary)">
       {t('addons.title')}
     </h2>

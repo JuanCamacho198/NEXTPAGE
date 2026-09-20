@@ -11,6 +11,7 @@ import { DiscoverRailsDomainState } from '$lib/features/discover/DiscoverRailsDo
 import {
   buildRailSpecs,
   DISCOVER_RAIL_COUNT,
+  DISCOVER_RAIL_FETCH_LIMIT,
   DISCOVER_RAIL_LIMIT,
   RAIL_SCOPE_LIMIT,
   withDeadline,
@@ -190,8 +191,8 @@ describe('discover rails — fixed three-rail set', () => {
     expect(loaded).toEqual(['gutendex:new', 'gutendex:pop', 'gutendex:term']);
   });
 
-  it('truncates a long rail to the render limit while short rails render as-is', async () => {
-    const many = Array.from({ length: 10 }, (_, i) => book(`gutendex:${100 + i}`));
+  it('truncates a long rail to the fetch limit while short rails render as-is', async () => {
+    const many = Array.from({ length: 30 }, (_, i) => book(`gutendex:${100 + i}`));
     const { provider } = recordingProvider({
       featured: () => many,
       searching: () => [book('gutendex:term')],
@@ -200,7 +201,7 @@ describe('discover rails — fixed three-rail set', () => {
     await state.refreshRails();
 
     const featured = state.rails[0];
-    expect(featured.kind === 'Loaded' ? featured.books.length : -1).toBe(DISCOVER_RAIL_LIMIT);
+    expect(featured.kind === 'Loaded' ? featured.books.length : -1).toBe(DISCOVER_RAIL_FETCH_LIMIT);
     const thematic = state.rails[2];
     expect(thematic.kind === 'Loaded' ? thematic.books.length : -1).toBe(1);
   });
@@ -277,7 +278,7 @@ describe('discover rails — isolated error and retry', () => {
     expect(state.rails[2].kind).toBe('Loaded');
     // Retry re-resolved ONLY the failing rail: exactly one new request, for it.
     expect(requests.slice(beforeRetry)).toEqual([
-      { kind: 'featured', sort: 'POPULAR', limit: DISCOVER_RAIL_LIMIT },
+      { kind: 'featured', sort: 'POPULAR', limit: DISCOVER_RAIL_FETCH_LIMIT },
     ]);
 
     // A rail that is not in `Error` is never re-resolved.
@@ -749,8 +750,8 @@ describe('discover rails — per-rail error presentation', () => {
 
   it('renders Loading, Loaded and Error per rail with a "Ver todo" header control', () => {
     const source = readSource('DiscoverRailSection.svelte');
-    expect(source).toContain("state.kind === 'Loading'");
-    expect(source).toContain("state.kind === 'Error'");
+    expect(source).toContain("railState.kind === 'Loading'");
+    expect(source).toContain("railState.kind === 'Error'");
     expect(source).toContain('<DiscoverRailError');
     expect(source).toContain("t('discover.rail.viewAll')");
     expect(source).toContain('onViewAll');

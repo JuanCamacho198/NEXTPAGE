@@ -34,7 +34,7 @@ function evidenceFields(row: SupabaseDictionaryRow): Partial<DictionaryWordDto> 
 
 /**
  * REQ-DSI-003 / Decision 6: one outbox payload shape for every dictionary
- * UPSERT — the full 18-column row snapshot. A partial payload would omit keys
+ * UPSERT — the full 17-column row snapshot. A partial payload would omit keys
  * that `SupabaseDictionarySync.upsert` serialises, and an absent key can only
  * be read back as "erase this column" once the mapper applies a null fallback.
  * `userId` is added by `queueOutbox`; the natural key is computed from the word
@@ -45,7 +45,6 @@ export function dictionaryOutboxPayload(dto: DictionaryWordDto): Record<string, 
     word: dto.word,
     normalizedWord: normalizeDictionaryKey(dto.word ?? ''),
     tags: dto.tags ?? [],
-    isFavorite: dto.isFavorite ?? false,
     srsStage: dto.srsStage ?? 0,
     updatedAt: dto.updatedAt ?? dto.createdAt,
     createdAt: dto.createdAt,
@@ -121,7 +120,6 @@ export function createDictionaryState() {
     word: string,
     opts?: {
       tags?: string[];
-      isFavorite?: boolean;
       srsStage?: number;
       evidence?: DictionaryEvidence | null;
     },
@@ -131,7 +129,6 @@ export function createDictionaryState() {
       payload: {
         word,
         tags: opts?.tags,
-        isFavorite: opts?.isFavorite,
         srsStage: opts?.srsStage,
         userId: authState.userId ?? undefined,
         // REQ-DRE-003: the six evidence fields are sent explicitly. When the
@@ -172,7 +169,6 @@ export function createDictionaryState() {
     patch: {
       word?: string;
       tags?: string[];
-      isFavorite?: boolean;
       srsStage?: number;
       definition?: string | null;
       partOfSpeech?: string | null;
@@ -207,13 +203,6 @@ export function createDictionaryState() {
         }),
       }).catch(() => {});
     }
-  }
-
-  async function toggleFavorite(id: string): Promise<void> {
-    const found = words.find((w) => w.id === id);
-    if (!found) return;
-    const next = !found.isFavorite;
-    await update(id, { isFavorite: next });
   }
 
   function search(query: string, limit = 20): DictionaryWordDto[] {
@@ -283,7 +272,6 @@ export function createDictionaryState() {
                   ...w,
                   word: row.word,
                   tags: row.tags,
-                  isFavorite: row.isFavorite,
                   srsStage: row.srsStage,
                   updatedAt: row.updatedAt,
                   // REQ-DSI-003 scenario 2: the ten rich-entry fields travel on
@@ -305,7 +293,6 @@ export function createDictionaryState() {
           normalizedWord: row.normalizedWord,
           userId: row.userId,
           tags: row.tags,
-          isFavorite: row.isFavorite,
           srsStage: row.srsStage,
           updatedAt: row.updatedAt,
           deletedAt: row.deletedAt ?? null,
@@ -352,7 +339,6 @@ export function createDictionaryState() {
     capture,
     update,
     remove,
-    toggleFavorite,
     search,
     exportData,
     importData,

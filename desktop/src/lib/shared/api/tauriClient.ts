@@ -911,7 +911,6 @@ export const listTagsForHighlight = async (highlightId: string): Promise<TagDto[
 export const addDictionaryWord = async (payload: {
   word: string;
   tags?: string[];
-  isFavorite?: boolean;
   srsStage?: number;
   userId?: string;
   definition?: string | null;
@@ -952,7 +951,6 @@ export const updateDictionaryWord = async (payload: {
   id: string;
   word?: string;
   tags?: string[];
-  isFavorite?: boolean;
   srsStage?: number;
   // REQ-DRE-002 / REQ-DRE-007: the four user-authored fields. Rust's
   // `UpdateDictionaryWordInput` accepts them and deliberately does not accept

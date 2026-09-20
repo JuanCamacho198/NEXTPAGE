@@ -472,6 +472,9 @@ mod tests {
         connection
             .execute_batch(include_str!("../../migrations/0019_dictionary_rich_entries.sql"))
             .unwrap();
+        connection
+            .execute_batch(include_str!("../../migrations/0020_drop_dictionary_favorite.sql"))
+            .unwrap();
     }
 
     pub(crate) fn new_repository() -> LibraryRepository {

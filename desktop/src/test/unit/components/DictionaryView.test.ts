@@ -85,7 +85,6 @@ function makeState(words: DictionaryWordDto[]): DictionaryStateApi {
     remove: vi.fn(),
     update: vi.fn(),
     capture: vi.fn(),
-    toggleFavorite: vi.fn(),
     subscribeToRemoteChanges: vi.fn(),
     unsubscribe: vi.fn(),
   };

@@ -12,7 +12,6 @@ export interface SupabaseDictionaryRow {
   word: string;
   normalizedWord: string;
   tags: string[];
-  isFavorite: boolean;
   srsStage: number;
   updatedAt: string;
   deletedAt?: string | null;
@@ -65,7 +64,6 @@ export class SupabaseDictionarySync {
         word: row.word,
         normalized_word: row.normalizedWord,
         tags: row.tags,
-        is_favorite: row.isFavorite,
         srs_stage: row.srsStage,
         updated_at: row.updatedAt,
         deleted_at: row.deletedAt ?? null,
@@ -261,7 +259,6 @@ export class SupabaseDictionarySync {
       word: String(raw.word ?? ''),
       normalizedWord: String(raw.normalized_word ?? ''),
       tags: Array.isArray(raw.tags) ? (raw.tags as string[]) : [],
-      isFavorite: Boolean(raw.is_favorite ?? false),
       srsStage: Number(raw.srs_stage ?? 0),
       updatedAt: String(raw.updated_at ?? new Date().toISOString()),
       deletedAt: raw.deleted_at != null ? String(raw.deleted_at) : null,

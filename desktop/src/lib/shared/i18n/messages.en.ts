@@ -493,8 +493,39 @@ export const messagesEn = {
   'highlight.noteInputAriaLabel': 'Highlight note',
   'highlight.saveWithNote': 'Save note',
   'dictionary.title': 'Dictionary',
-  'dictionary.subtitle': 'Your personal vocabulary collection.',
-  'dictionary.searchPlaceholder': 'Search words…',
+  'dictionary.subtitle': 'Your saved words with description and reference.',
+  'dictionary.searchPlaceholder': 'Search word...',
+  'dictionary.newWord': 'New word',
+  'dictionary.tabAll': 'All',
+  'dictionary.tabRecent': 'Recent',
+  'dictionary.tabAz': 'A-Z',
+  'dictionary.kpiTotal': 'Saved words',
+  'dictionary.kpiThisWeek': 'This week',
+  'dictionary.kpiReferencedBooks': 'Books referenced',
+  'dictionary.incomplete': 'Incomplete',
+  'dictionary.dateToday': 'Today',
+  'dictionary.dateYesterday': 'Yesterday',
+  'dictionary.dateDaysAgo': '{{n}} days ago',
+  'dictionary.dateWeeksAgo': '{{n}} wk ago',
+  'dictionary.dateMonthsAgo': '{{n}} months ago',
+  'dictionary.dateYearsAgo': '{{n}} years ago',
+  'dictionary.description': 'Description',
+  'dictionary.personalExample': 'Personal example',
+  'dictionary.bookReference': 'Book reference',
+  'dictionary.viewBook': 'View book',
+  'dictionary.edit': 'Edit',
+  'dictionary.partOfSpeechLabel': 'Part of speech',
+  'dictionary.phoneticLabel': 'Phonetic',
+  'dictionary.save': 'Save',
+  'dictionary.cancel': 'Cancel',
+  'dictionary.evidenceNote':
+    'Captured from the book. To replace it, open the book and select the word again.',
+  'dictionary.selectWordTitle': 'Select a word',
+  'dictionary.selectWordDescription':
+    'Pick an entry from the list to see its description, example and captured evidence.',
+  'dictionary.noDetailTitle': 'No details yet',
+  'dictionary.noDetailDescription':
+    'This entry has no description, example or captured evidence. Capture a quote from the reader to fill it in.',
   'dictionary.addWord': 'Add word',
   'dictionary.wordPlaceholder': 'Word',
   'dictionary.definitionPlaceholder': 'Definition (optional)',
@@ -604,6 +635,11 @@ export const messagesEn = {
   'reader.copiedToClipboard': 'Copied to clipboard',
   'reader.addToDictionary': 'Add to Dictionary',
   'reader.addedToDictionary': 'Saved',
+  // Reader capture feedback (REQ-DRE-014): one message per capture outcome.
+  'reader.dictionaryEvidenceUpdated': 'Evidence updated',
+  'reader.dictionaryNoMatch': 'No dictionary entry matches this selection',
+  'reader.dictionarySeveralMatches': 'Several entries match - select a single word',
+  'reader.dictionaryAlreadyInDictionary': 'Already in your dictionary',
   'reader.nota': 'Note',
   'reader.eliminar_destacado': 'Delete highlight',
   'reader.seleccion_no_disponible': 'Selection unavailable for this format',
@@ -872,6 +908,20 @@ export const messagesEn = {
   'settings.data.driveNotConnected':
     'Google Drive is not connected. Connect Drive to use cold backup.',
   'settings.data.connectDrive': 'Connect Drive',
+
+  // Settings Data Tab — dictionary transfer. Kept separate from the cold-backup
+  // pair above on purpose: these are local JSON/CSV files of saved words; no
+  // Drive, no auth, no library.
+  'settings.data.dictionary.title': 'Dictionary',
+  'settings.data.dictionary.description':
+    'Export or import your saved words and their references as JSON or CSV. Local files only — your books and Drive backups are untouched.',
+  'settings.data.dictionary.exportJson': 'Export JSON',
+  'settings.data.dictionary.exportCsv': 'Export CSV',
+  'settings.data.dictionary.import': 'Import',
+  'settings.data.dictionary.imported': 'Imported {{imported}}, errors {{errors}}',
+  'settings.data.dictionary.rowError': 'row {{row}}: {{reason}}',
+  'settings.data.dictionary.exportFailed': 'Export failed',
+  'settings.data.dictionary.importFailed': 'Import failed',
 
   // Drive connect pre-prompt (login-drive-separation)
   'drive.prompt.title': 'Connect Google Drive?',

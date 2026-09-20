@@ -697,6 +697,14 @@
     <string name="dictionary_word_count">%1$d palabras</string>
     <string name="dictionary_tap_to_add_definition">Tocar para agregar definición</string>
     <string name="dictionary_edit_confirm">Guardar</string>
+    <string name="dictionary_detail_part_of_speech">Categoría gramatical</string>
+    <string name="dictionary_detail_phonetic">Fonética</string>
+    <string name="dictionary_detail_phonetic_hint">/eˈfimeɾo/</string>
+    <string name="dictionary_detail_description">Descripción</string>
+    <string name="dictionary_detail_example">Ejemplo personal</string>
+    <string name="dictionary_detail_example_hint">Escribe tu propia oración de ejemplo</string>
+    <string name="dictionary_detail_book_reference">Referencia del libro</string>
+    <string name="dictionary_detail_chapter">Capítulo %1$s</string>
     <string name="settings_dictionary_label">Diccionario</string>
     <string name="context_menu_dictionary">Agregar al diccionario</string>
     <string name="reader_add_to_dictionary">Agregado al diccionario</string>

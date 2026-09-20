@@ -10,12 +10,15 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -35,6 +38,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nextpage.R
+import com.nextpage.domain.model.DictionaryWord
 import com.nextpage.presentation.viewmodel.DictionaryViewModel
 import com.nextpage.ui.components.atoms.NextPageButton
 import com.nextpage.ui.components.atoms.NextPageButtonVariant
@@ -282,8 +286,8 @@ fun DictionaryScreen(
             )
         }
 
-        // ── Edit Definition Dialog ───────────────────────────────
-        uiState.wordBeingEdited?.let { word ->
+        // ── Detail / edit dialog ─────────────────────────────────
+        uiState.selectedWord?.let { word ->
             AlertDialog(
                 onDismissRequest = { viewModel.onDismissEditDialog() },
                 title = {
@@ -293,17 +297,72 @@ fun DictionaryScreen(
                     )
                 },
                 text = {
-                    OutlinedTextField(
-                        value = uiState.editDefinitionText,
-                        onValueChange = { viewModel.onEditDefinitionTextChanged(it) },
-                        placeholder = {
-                            Text(stringResource(R.string.dictionary_add_definition_hint))
-                        },
-                        singleLine = false,
-                        minLines = 2,
-                        maxLines = 5,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    Column(
+                        modifier =
+                            Modifier
+                                .verticalScroll(rememberScrollState())
+                                .heightIn(max = 460.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        EntryHeader(
+                            partOfSpeech = uiState.editPartOfSpeechText,
+                            phonetic = uiState.editPhoneticText,
+                        )
+
+                        OutlinedTextField(
+                            value = uiState.editPartOfSpeechText,
+                            onValueChange = { viewModel.onEditPartOfSpeechTextChanged(it) },
+                            label = { Text(stringResource(R.string.dictionary_detail_part_of_speech)) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        OutlinedTextField(
+                            value = uiState.editPhoneticText,
+                            onValueChange = { viewModel.onEditPhoneticTextChanged(it) },
+                            label = { Text(stringResource(R.string.dictionary_detail_phonetic)) },
+                            placeholder = { Text(stringResource(R.string.dictionary_detail_phonetic_hint)) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+
+                        Text(
+                            text = stringResource(R.string.dictionary_detail_description),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        OutlinedTextField(
+                            value = uiState.editDefinitionText,
+                            onValueChange = { viewModel.onEditDefinitionTextChanged(it) },
+                            placeholder = {
+                                Text(stringResource(R.string.dictionary_add_definition_hint))
+                            },
+                            singleLine = false,
+                            minLines = 2,
+                            maxLines = 4,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+
+                        Text(
+                            text = stringResource(R.string.dictionary_detail_example),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        OutlinedTextField(
+                            value = uiState.editExampleText,
+                            onValueChange = { viewModel.onEditExampleTextChanged(it) },
+                            placeholder = {
+                                Text(stringResource(R.string.dictionary_detail_example_hint))
+                            },
+                            singleLine = false,
+                            minLines = 2,
+                            maxLines = 4,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+
+                        if (word.hasEvidence()) {
+                            BookReferenceCard(word = word)
+                        }
+                    }
                 },
                 confirmButton = {
                     TextButton(
@@ -321,6 +380,107 @@ fun DictionaryScreen(
         }
     }
 }
+
+/** Read-only preview of the entry's part of speech and phonetic, mirroring the frame's header. */
+@Composable
+private fun EntryHeader(
+    partOfSpeech: String,
+    phonetic: String,
+) {
+    val badge = partOfSpeech.trim()
+    val pronunciation = phonetic.trim()
+    if (badge.isEmpty() && pronunciation.isEmpty()) return
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (badge.isNotEmpty()) {
+            Surface(
+                shape = RoundedCornerShape(6.dp),
+                color = MaterialTheme.colorScheme.secondaryContainer,
+            ) {
+                Text(
+                    text = badge,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                )
+            }
+        }
+        if (pronunciation.isNotEmpty()) {
+            Text(
+                text = "/$pronunciation/",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/** Read-only book reference and quote; it exposes no control that edits or clears the evidence. */
+@Composable
+private fun BookReferenceCard(word: DictionaryWord) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            text = stringResource(R.string.dictionary_detail_book_reference),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+        ) {
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                word.sourceBookTitle?.takeIf { it.isNotBlank() }?.let { title ->
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+                bookAttribution(word)?.let { attribution ->
+                    Text(
+                        text = attribution,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                word.quote?.takeIf { it.isNotBlank() }?.let { quote ->
+                    Text(
+                        text = quote,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun bookAttribution(word: DictionaryWord): String? {
+    val author = word.sourceBookAuthor?.takeIf { it.isNotBlank() }
+    val chapter = word.sourceChapter?.takeIf { it.isNotBlank() }
+    return when {
+        author != null && chapter != null ->
+            "$author · ${stringResource(R.string.dictionary_detail_chapter, chapter)}"
+        author != null -> author
+        chapter != null -> stringResource(R.string.dictionary_detail_chapter, chapter)
+        else -> null
+    }
+}
+
+private fun DictionaryWord.hasEvidence(): Boolean =
+    !quote.isNullOrBlank() ||
+        !sourceBookTitle.isNullOrBlank() ||
+        !sourceBookAuthor.isNullOrBlank() ||
+        !sourceChapter.isNullOrBlank()
 
 private fun formatDate(epochMillis: Long): String {
     val sdf = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())

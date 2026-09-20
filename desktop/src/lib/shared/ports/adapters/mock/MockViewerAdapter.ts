@@ -198,11 +198,6 @@ export class MockViewerAdapter implements ViewerPort {
   async getReadingStreak(): Promise<number> {
     return 0;
   }
-  async addDictionaryWord(payload: {
-    word: string;
-  }): Promise<import('$lib/shared/types').DictionaryWordDto> {
-    return { id: crypto.randomUUID(), word: payload.word, createdAt: new Date().toISOString() };
-  }
   async getLogs(): Promise<string[]> {
     return [];
   }

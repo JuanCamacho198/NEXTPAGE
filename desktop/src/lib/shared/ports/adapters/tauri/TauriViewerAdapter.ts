@@ -114,16 +114,6 @@ export class TauriViewerAdapter implements ViewerPort {
     return tauriClient.getReadingStreak(bookId, userId);
   }
 
-  addDictionaryWord(payload: {
-    word: string;
-    tags?: string[];
-    isFavorite?: boolean;
-    srsStage?: number;
-    userId?: string;
-  }): Promise<import('$lib/shared/types').DictionaryWordDto> {
-    return tauriClient.addDictionaryWord(payload);
-  }
-
   getLogs(): Promise<string[]> {
     return tauriClient.getLogs();
   }

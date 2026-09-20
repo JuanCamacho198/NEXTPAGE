@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createSettingsData } from '$lib/features/settings/useSettingsData.svelte';
 
 describe('useSettingsData', () => {
@@ -145,5 +145,106 @@ describe('useSettingsData', () => {
     const d = createSettingsData({ authState, pushToast: pushToast as never, t: t as never });
     await d.handleExportColdBackup();
     expect(pushToast).toHaveBeenCalledWith('error', expect.any(String));
+  });
+});
+
+describe('useSettingsData dictionary transfer', () => {
+  let downloaded: string | null;
+
+  beforeEach(() => {
+    downloaded = null;
+    (URL as unknown as Record<string, unknown>).createObjectURL = vi.fn(() => 'blob:mock');
+    (URL as unknown as Record<string, unknown>).revokeObjectURL = vi.fn();
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      downloaded = this.download;
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('exports JSON through the dictionary store and downloads dictionary.json', async () => {
+    const exportData = vi.fn().mockResolvedValue('{"words":[]}');
+    const d = createSettingsData({
+      dictionaryState: { exportData, importData: vi.fn() } as never,
+    });
+
+    await d.handleExportDictionary('json');
+
+    expect(exportData).toHaveBeenCalledWith('json');
+    expect(downloaded).toBe('dictionary.json');
+    expect(d.isExportingDictionary).toBe(false);
+    expect(d.dictionaryExportError).toBeNull();
+  });
+
+  it('exports CSV through the dictionary store and downloads dictionary.csv', async () => {
+    const exportData = vi.fn().mockResolvedValue('word,tags');
+    const d = createSettingsData({
+      dictionaryState: { exportData, importData: vi.fn() } as never,
+    });
+
+    await d.handleExportDictionary('csv');
+
+    expect(exportData).toHaveBeenCalledWith('csv');
+    expect(downloaded).toBe('dictionary.csv');
+    expect(d.isExportingDictionary).toBe(false);
+  });
+
+  it('imports a csv file, reports counts and joins row errors with the row formatter', async () => {
+    const importData = vi.fn().mockResolvedValue({
+      imported: 3,
+      errors: [
+        { row: 2, reason: 'bad word' },
+        { row: 5, reason: 'bad tags' },
+      ],
+    });
+    const t = vi.fn((k: string, params?: Record<string, string | number>) =>
+      params ? `${k}:${JSON.stringify(params)}` : k,
+    );
+    const d = createSettingsData({
+      dictionaryState: { exportData: vi.fn(), importData } as never,
+      t: t as never,
+    });
+    const file = { name: 'words.csv', text: async () => 'a,b' } as unknown as File;
+
+    await d.handleImportDictionary(file);
+
+    expect(importData).toHaveBeenCalledWith('a,b', 'csv');
+    expect(d.dictionaryImportResult).toContain('settings.data.dictionary.imported');
+    expect(d.dictionaryImportResult).toContain('"imported":3');
+    expect(d.dictionaryImportResult).toContain('"errors":2');
+    expect(d.dictionaryImportError).toContain('settings.data.dictionary.rowError');
+    expect(d.dictionaryImportError).toContain('; ');
+    expect(d.isImportingDictionary).toBe(false);
+  });
+
+  it('defaults a non-csv file to json and leaves no error when the import is clean', async () => {
+    const importData = vi.fn().mockResolvedValue({ imported: 1, errors: [] });
+    const d = createSettingsData({
+      dictionaryState: { exportData: vi.fn(), importData } as never,
+    });
+    const file = { name: 'words.json', text: async () => '[]' } as unknown as File;
+
+    await d.handleImportDictionary(file);
+
+    expect(importData).toHaveBeenCalledWith('[]', 'json');
+    expect(d.dictionaryImportError).toBeNull();
+    expect(d.isImportingDictionary).toBe(false);
+  });
+
+  it('surfaces the store error message when the import rejects', async () => {
+    const importData = vi.fn().mockRejectedValue(new Error('bad payload'));
+    const d = createSettingsData({
+      dictionaryState: { exportData: vi.fn(), importData } as never,
+    });
+    const file = { name: 'words.json', text: async () => '[]' } as unknown as File;
+
+    await d.handleImportDictionary(file);
+
+    expect(d.dictionaryImportError).toBe('bad payload');
+    expect(d.dictionaryImportResult).toBeNull();
   });
 });

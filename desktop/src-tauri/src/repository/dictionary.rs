@@ -2,31 +2,23 @@ use super::LibraryRepository;
 use crate::error::{AppError, AppResult};
 use crate::models::{
     AddDictionaryWordInput, DictionaryWordDto, ImportDictionaryError, ImportDictionaryResult,
-    UpdateDictionaryWordInput,
+    UpdateDictionaryEvidenceInput, UpdateDictionaryWordInput,
 };
 use chrono::Utc;
 use rusqlite::{params, OptionalExtension};
+use unicode_normalization::UnicodeNormalization;
 use uuid::Uuid;
 
-fn normalize_word(word: &str) -> String {
-    let trimmed = word.trim().to_lowercase();
-    strip_accents(&trimmed)
-}
+/// Single source of truth for the selected column list. Its order MUST match
+/// the field order read by [`read_full_row`].
+const SELECT_COLUMNS: &str = "id, word, created_at, normalized_word, user_id, tags_json, is_favorite, srs_stage, updated_at, deleted_at, synced_at, definition, part_of_speech, phonetic, example, quote, source_book_id, source_book_title, source_book_author, source_chapter, source_locator";
 
-fn strip_accents(input: &str) -> String {
-    input
-        .chars()
-        .map(|c| match c {
-            'á' | 'à' | 'ä' | 'â' => 'a',
-            'é' | 'è' | 'ë' | 'ê' => 'e',
-            'í' | 'ì' | 'ï' | 'î' => 'i',
-            'ó' | 'ò' | 'ö' | 'ô' => 'o',
-            'ú' | 'ù' | 'ü' | 'û' => 'u',
-            'ñ' => 'n',
-            'ç' => 'c',
-            _ => c,
-        })
-        .collect()
+/// Shared normalization contract (REQ-DSI-004): trim -> lowercase -> NFD
+/// decompose -> strip combining marks U+0300-U+036F. TS (`normalizeDictionaryKey`)
+/// and Kotlin (`DictionaryNormalizer.normalize`) implement the same rule, so the
+/// natural key `(user_id, normalized_word)` is identical on every platform.
+fn normalize_word(word: &str) -> String {
+    word.trim().to_lowercase().nfd().filter(|c| !('\u{0300}'..='\u{036f}').contains(c)).collect()
 }
 
 fn has_column(conn: &rusqlite::Connection, table: &str, col: &str) -> bool {
@@ -57,6 +49,16 @@ fn read_full_row(row: &rusqlite::Row) -> rusqlite::Result<DictionaryWordDto> {
     let updated_at: Option<String> = row.get(8).ok();
     let deleted_at: Option<String> = row.get(9).ok();
     let synced_at: Option<String> = row.get(10).ok();
+    let definition: Option<String> = row.get(11).ok();
+    let part_of_speech: Option<String> = row.get(12).ok();
+    let phonetic: Option<String> = row.get(13).ok();
+    let example: Option<String> = row.get(14).ok();
+    let quote: Option<String> = row.get(15).ok();
+    let source_book_id: Option<String> = row.get(16).ok();
+    let source_book_title: Option<String> = row.get(17).ok();
+    let source_book_author: Option<String> = row.get(18).ok();
+    let source_chapter: Option<String> = row.get(19).ok();
+    let source_locator: Option<String> = row.get(20).ok();
     let tags: Option<Vec<String>> = tags_json.as_deref().and_then(|s| serde_json::from_str(s).ok());
     Ok(DictionaryWordDto {
         id: id.clone(),
@@ -70,6 +72,16 @@ fn read_full_row(row: &rusqlite::Row) -> rusqlite::Result<DictionaryWordDto> {
         updated_at: updated_at.or(Some(created_at)),
         deleted_at,
         synced_at,
+        definition,
+        part_of_speech,
+        phonetic,
+        example,
+        quote,
+        source_book_id,
+        source_book_title,
+        source_book_author,
+        source_chapter,
+        source_locator,
     })
 }
 
@@ -79,9 +91,11 @@ fn col_exists(conn: &rusqlite::Connection, col: &str) -> bool {
 
 pub fn list_dictionary_words(repo: &LibraryRepository) -> AppResult<Vec<DictionaryWordDto>> {
     if col_exists(&repo.connection, "user_id") {
-        let mut stmt = repo.connection.prepare(
-            "SELECT id, word, created_at, normalized_word, user_id, tags_json, is_favorite, srs_stage, updated_at, deleted_at, synced_at FROM dictionary_words WHERE deleted_at IS NULL ORDER BY normalized_word ASC",
-        )?;
+        let sql = format!(
+            "SELECT {} FROM dictionary_words WHERE deleted_at IS NULL ORDER BY normalized_word ASC",
+            SELECT_COLUMNS
+        );
+        let mut stmt = repo.connection.prepare(&sql)?;
         let rows = stmt.query_map([], read_full_row)?;
         Ok(rows.collect::<Result<Vec<_>, _>>()?)
     } else {
@@ -93,14 +107,7 @@ pub fn list_dictionary_words(repo: &LibraryRepository) -> AppResult<Vec<Dictiona
                 id: row.get(0)?,
                 word: row.get(1)?,
                 created_at: row.get(2)?,
-                normalized_word: None,
-                user_id: None,
-                tags: None,
-                is_favorite: None,
-                srs_stage: None,
-                updated_at: None,
-                deleted_at: None,
-                synced_at: None,
+                ..Default::default()
             })
         })?;
         Ok(rows.collect::<Result<Vec<_>, _>>()?)
@@ -120,22 +127,34 @@ pub fn add_dictionary_word(
     }
     let normalized = normalize_word(word);
     let now = Utc::now().to_rfc3339();
-    let user_id = input.user_id.unwrap_or_default();
+    let user_id = input.user_id.clone().unwrap_or_default();
     let tags_json = serde_json::to_string(&input.tags.unwrap_or_default()).unwrap();
     let is_favorite = if input.is_favorite.unwrap_or(false) { 1 } else { 0 };
     let srs_stage = input.srs_stage.unwrap_or(0).clamp(0, 5);
+    let definition = input.definition.clone();
+    let part_of_speech = input.part_of_speech.clone();
+    let phonetic = input.phonetic.clone();
+    let example = input.example.clone();
+    let quote = input.quote.clone();
+    let source_book_id = input.source_book_id.clone();
+    let source_book_title = input.source_book_title.clone();
+    let source_book_author = input.source_book_author.clone();
+    let source_chapter = input.source_chapter.clone();
+    let source_locator = input.source_locator.clone();
     if col_exists(&repo.connection, "user_id") {
-        let mut stmt = repo.connection.prepare(
-            "SELECT id, word, created_at, normalized_word, user_id, tags_json, is_favorite, srs_stage, updated_at, deleted_at, synced_at FROM dictionary_words WHERE user_id = ?1 AND normalized_word = ?2 AND deleted_at IS NULL LIMIT 1",
-        )?;
+        let sql = format!(
+            "SELECT {} FROM dictionary_words WHERE user_id = ?1 AND normalized_word = ?2 AND deleted_at IS NULL LIMIT 1",
+            SELECT_COLUMNS
+        );
+        let mut stmt = repo.connection.prepare(&sql)?;
         let existing = stmt.query_row(params![user_id, normalized], read_full_row).optional()?;
         if let Some(existing) = existing {
             return Err(AppError::DbConstraint(format!("dictionary.duplicate:{}", existing.word)));
         }
         let id = Uuid::new_v4().to_string();
         repo.connection.execute(
-            "INSERT INTO dictionary_words (id, word, normalized_word, user_id, tags_json, is_favorite, srs_stage, created_at, updated_at, deleted_at, synced_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, NULL, NULL)",
-            params![id, word, normalized, user_id, tags_json, is_favorite, srs_stage, now, now],
+            "INSERT INTO dictionary_words (id, word, normalized_word, user_id, tags_json, is_favorite, srs_stage, created_at, updated_at, deleted_at, synced_at, definition, part_of_speech, phonetic, example, quote, source_book_id, source_book_title, source_book_author, source_chapter, source_locator) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, NULL, NULL, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19)",
+            params![id, word, normalized, user_id, tags_json, is_favorite, srs_stage, now, now, definition, part_of_speech, phonetic, example, quote, source_book_id, source_book_title, source_book_author, source_chapter, source_locator],
         )?;
         Ok(DictionaryWordDto {
             id,
@@ -149,6 +168,16 @@ pub fn add_dictionary_word(
             updated_at: Some(now.clone()),
             deleted_at: None,
             synced_at: None,
+            definition,
+            part_of_speech,
+            phonetic,
+            example,
+            quote,
+            source_book_id,
+            source_book_title,
+            source_book_author,
+            source_chapter,
+            source_locator,
         })
     } else {
         if let Some(existing) = find_word_by_normalized(repo, &normalized)? {
@@ -165,12 +194,8 @@ pub fn add_dictionary_word(
             created_at: now.clone(),
             normalized_word: Some(normalized),
             user_id: Some(user_id),
-            tags: None,
-            is_favorite: None,
-            srs_stage: None,
             updated_at: Some(now),
-            deleted_at: None,
-            synced_at: None,
+            ..Default::default()
         })
     }
 }
@@ -180,9 +205,11 @@ fn find_word_by_normalized(
     normalized: &str,
 ) -> AppResult<Option<DictionaryWordDto>> {
     if col_exists(&repo.connection, "user_id") {
-        let mut stmt = repo.connection.prepare(
-            "SELECT id, word, created_at, normalized_word, user_id, tags_json, is_favorite, srs_stage, updated_at, deleted_at, synced_at FROM dictionary_words WHERE normalized_word = ?1 AND deleted_at IS NULL LIMIT 1",
-        )?;
+        let sql = format!(
+            "SELECT {} FROM dictionary_words WHERE normalized_word = ?1 AND deleted_at IS NULL LIMIT 1",
+            SELECT_COLUMNS
+        );
+        let mut stmt = repo.connection.prepare(&sql)?;
         let result = stmt.query_row(params![normalized], read_full_row).optional()?;
         Ok(result)
     } else {
@@ -195,14 +222,7 @@ fn find_word_by_normalized(
                     id: row.get(0)?,
                     word: row.get(1)?,
                     created_at: row.get(2)?,
-                    normalized_word: None,
-                    user_id: None,
-                    tags: None,
-                    is_favorite: None,
-                    srs_stage: None,
-                    updated_at: None,
-                    deleted_at: None,
-                    synced_at: None,
+                    ..Default::default()
                 })
             })
             .optional()?;
@@ -215,9 +235,8 @@ pub fn update_dictionary_word(
     input: UpdateDictionaryWordInput,
 ) -> AppResult<DictionaryWordDto> {
     let existing = if col_exists(&repo.connection, "user_id") {
-        let mut stmt = repo.connection.prepare(
-            "SELECT id, word, created_at, normalized_word, user_id, tags_json, is_favorite, srs_stage, updated_at, deleted_at, synced_at FROM dictionary_words WHERE id = ?1 LIMIT 1",
-        )?;
+        let sql = format!("SELECT {} FROM dictionary_words WHERE id = ?1 LIMIT 1", SELECT_COLUMNS);
+        let mut stmt = repo.connection.prepare(&sql)?;
         stmt.query_row(params![input.id], read_full_row).optional()?
     } else {
         let mut stmt = repo
@@ -228,14 +247,7 @@ pub fn update_dictionary_word(
                 id: row.get(0)?,
                 word: row.get(1)?,
                 created_at: row.get(2)?,
-                normalized_word: None,
-                user_id: None,
-                tags: None,
-                is_favorite: None,
-                srs_stage: None,
-                updated_at: None,
-                deleted_at: None,
-                synced_at: None,
+                ..Default::default()
             })
         })
         .optional()?
@@ -263,13 +275,7 @@ pub fn update_dictionary_word(
                 word: trimmed.to_string(),
                 created_at: existing.created_at,
                 normalized_word: Some(normalized),
-                user_id: None,
-                tags: None,
-                is_favorite: None,
-                srs_stage: None,
-                updated_at: None,
-                deleted_at: None,
-                synced_at: None,
+                ..Default::default()
             });
         }
         return Ok(existing);
@@ -298,10 +304,14 @@ pub fn update_dictionary_word(
     let tags_json = serde_json::to_string(&tags).unwrap();
     let is_favorite = input.is_favorite.or(existing.is_favorite).unwrap_or(false);
     let srs_stage = input.srs_stage.or(existing.srs_stage).unwrap_or(0).clamp(0, 5);
+    let definition = input.definition.clone().or(existing.definition.clone());
+    let part_of_speech = input.part_of_speech.clone().or(existing.part_of_speech.clone());
+    let phonetic = input.phonetic.clone().or(existing.phonetic.clone());
+    let example = input.example.clone().or(existing.example.clone());
     let now = Utc::now().to_rfc3339();
     repo.connection.execute(
-        "UPDATE dictionary_words SET word = ?1, normalized_word = ?2, tags_json = ?3, is_favorite = ?4, srs_stage = ?5, updated_at = ?6 WHERE id = ?7",
-        params![trimmed, normalized, tags_json, if is_favorite { 1 } else { 0 }, srs_stage, now, input.id],
+        "UPDATE dictionary_words SET word = ?1, normalized_word = ?2, tags_json = ?3, is_favorite = ?4, srs_stage = ?5, updated_at = ?6, definition = ?7, part_of_speech = ?8, phonetic = ?9, example = ?10 WHERE id = ?11",
+        params![trimmed, normalized, tags_json, if is_favorite { 1 } else { 0 }, srs_stage, now, definition, part_of_speech, phonetic, example, input.id],
     )?;
     Ok(DictionaryWordDto {
         id: existing.id.clone(),
@@ -315,7 +325,39 @@ pub fn update_dictionary_word(
         updated_at: Some(now),
         deleted_at: None,
         synced_at: None,
+        definition,
+        part_of_speech,
+        phonetic,
+        example,
+        quote: existing.quote.clone(),
+        source_book_id: existing.source_book_id.clone(),
+        source_book_title: existing.source_book_title.clone(),
+        source_book_author: existing.source_book_author.clone(),
+        source_chapter: existing.source_chapter.clone(),
+        source_locator: existing.source_locator.clone(),
     })
+}
+
+pub fn update_dictionary_evidence(
+    repo: &LibraryRepository,
+    input: UpdateDictionaryEvidenceInput,
+) -> AppResult<DictionaryWordDto> {
+    repo.connection.execute(
+        "UPDATE dictionary_words SET quote = ?1, source_book_id = ?2, source_book_title = ?3, source_book_author = ?4, source_chapter = ?5, source_locator = ?6 WHERE id = ?7",
+        params![
+            input.quote,
+            input.source_book_id,
+            input.source_book_title,
+            input.source_book_author,
+            input.source_chapter,
+            input.source_locator,
+            input.id
+        ],
+    )?;
+    let sql = format!("SELECT {} FROM dictionary_words WHERE id = ?1 LIMIT 1", SELECT_COLUMNS);
+    let mut stmt = repo.connection.prepare(&sql)?;
+    let updated = stmt.query_row(params![input.id], read_full_row).optional()?;
+    updated.ok_or_else(|| AppError::NotFound(format!("Dictionary word {} not found", input.id)))
 }
 
 pub fn remove_dictionary_word(repo: &LibraryRepository, id: &str) -> AppResult<()> {
@@ -366,14 +408,7 @@ pub fn search_dictionary_words(
                 id: row.get(0)?,
                 word: row.get(1)?,
                 created_at: row.get(2)?,
-                normalized_word: None,
-                user_id: None,
-                tags: None,
-                is_favorite: None,
-                srs_stage: None,
-                updated_at: None,
-                deleted_at: None,
-                synced_at: None,
+                ..Default::default()
             })
         })?;
         return Ok(rows.collect::<Result<Vec<_>, _>>()?);
@@ -381,16 +416,20 @@ pub fn search_dictionary_words(
     let uid = user_id.unwrap_or("");
     let pattern_prefix = format!("{}%", q);
     let pattern_sub = format!("%{}%", q);
-    let mut stmt = repo.connection.prepare(
-        "SELECT id, word, created_at, normalized_word, user_id, tags_json, is_favorite, srs_stage, updated_at, deleted_at, synced_at FROM dictionary_words WHERE deleted_at IS NULL AND (user_id = ?1 OR ?1 = '') AND (normalized_word LIKE ?2 OR normalized_word LIKE ?3) ORDER BY updated_at DESC LIMIT 200",
-    )?;
+    let sql = format!(
+        "SELECT {} FROM dictionary_words WHERE deleted_at IS NULL AND (user_id = ?1 OR ?1 = '') AND (normalized_word LIKE ?2 OR normalized_word LIKE ?3) ORDER BY updated_at DESC LIMIT 200",
+        SELECT_COLUMNS
+    );
+    let mut stmt = repo.connection.prepare(&sql)?;
     let mut candidates: Vec<DictionaryWordDto> = stmt
         .query_map(params![uid, pattern_prefix, pattern_sub], read_full_row)?
         .collect::<Result<Vec<_>, _>>()?;
     if candidates.is_empty() && fuzzy {
-        let mut stmt2 = repo.connection.prepare(
-            "SELECT id, word, created_at, normalized_word, user_id, tags_json, is_favorite, srs_stage, updated_at, deleted_at, synced_at FROM dictionary_words WHERE deleted_at IS NULL AND (user_id = ?1 OR ?1 = '') LIMIT 500",
-        )?;
+        let sql = format!(
+            "SELECT {} FROM dictionary_words WHERE deleted_at IS NULL AND (user_id = ?1 OR ?1 = '') LIMIT 500",
+            SELECT_COLUMNS
+        );
+        let mut stmt2 = repo.connection.prepare(&sql)?;
         let all: Vec<DictionaryWordDto> =
             stmt2.query_map(params![uid], read_full_row)?.collect::<Result<Vec<_>, _>>()?;
         candidates = all
@@ -404,9 +443,11 @@ pub fn search_dictionary_words(
             })
             .collect();
     } else if fuzzy {
-        let mut stmt2 = repo.connection.prepare(
-            "SELECT id, word, created_at, normalized_word, user_id, tags_json, is_favorite, srs_stage, updated_at, deleted_at, synced_at FROM dictionary_words WHERE deleted_at IS NULL AND (user_id = ?1 OR ?1 = '') LIMIT 500",
-        )?;
+        let sql = format!(
+            "SELECT {} FROM dictionary_words WHERE deleted_at IS NULL AND (user_id = ?1 OR ?1 = '') LIMIT 500",
+            SELECT_COLUMNS
+        );
+        let mut stmt2 = repo.connection.prepare(&sql)?;
         let all: Vec<DictionaryWordDto> =
             stmt2.query_map(params![uid], read_full_row)?.collect::<Result<Vec<_>, _>>()?;
         for d in all {
@@ -583,9 +624,11 @@ pub fn import_dictionary(
         }
         let normalized = normalize_word(trimmed);
         let existing: Option<DictionaryWordDto> = if col_exists(&repo.connection, "user_id") {
-            let mut stmt = repo.connection.prepare(
-                "SELECT id, word, created_at, normalized_word, user_id, tags_json, is_favorite, srs_stage, updated_at, deleted_at, synced_at FROM dictionary_words WHERE user_id = ?1 AND normalized_word = ?2 LIMIT 1",
-            ).unwrap();
+            let sql = format!(
+                "SELECT {} FROM dictionary_words WHERE user_id = ?1 AND normalized_word = ?2 LIMIT 1",
+                SELECT_COLUMNS
+            );
+            let mut stmt = repo.connection.prepare(&sql).unwrap();
             stmt.query_row(params![uid, normalized], read_full_row).optional().unwrap()
         } else {
             None
@@ -665,6 +708,7 @@ mod tests {
                 tags: None,
                 is_favorite: None,
                 srs_stage: None,
+                ..Default::default()
             },
         )
         .unwrap();
@@ -691,6 +735,7 @@ mod tests {
                 tags: None,
                 is_favorite: None,
                 srs_stage: None,
+                ..Default::default()
             },
         )
         .unwrap();
@@ -710,6 +755,7 @@ mod tests {
                 tags: None,
                 is_favorite: None,
                 srs_stage: None,
+                ..Default::default()
             },
         )
         .unwrap();
@@ -721,6 +767,7 @@ mod tests {
                 tags: None,
                 is_favorite: None,
                 srs_stage: None,
+                ..Default::default()
             },
         );
         assert!(dup.is_err());
@@ -732,6 +779,7 @@ mod tests {
                 tags: None,
                 is_favorite: None,
                 srs_stage: None,
+                ..Default::default()
             },
         )
         .unwrap();
@@ -749,6 +797,7 @@ mod tests {
                 tags: None,
                 is_favorite: None,
                 srs_stage: None,
+                ..Default::default()
             },
         )
         .unwrap();
@@ -760,6 +809,7 @@ mod tests {
                 tags: None,
                 is_favorite: None,
                 srs_stage: None,
+                ..Default::default()
             },
         )
         .unwrap();
@@ -779,6 +829,7 @@ mod tests {
                 tags: None,
                 is_favorite: None,
                 srs_stage: None,
+                ..Default::default()
             },
         )
         .unwrap();
@@ -795,5 +846,313 @@ mod tests {
         let r = import_dictionary(&repo, csv, "csv", None).unwrap();
         assert_eq!(r.imported, 1);
         assert_eq!(r.errors.len(), 1);
+    }
+
+    #[test]
+    fn create_with_only_word_leaves_new_fields_null() {
+        let repo = new_repository();
+        let created = add_dictionary_word(
+            &repo,
+            AddDictionaryWordInput { word: "Solo".to_string(), ..Default::default() },
+        )
+        .unwrap();
+        assert!(created.definition.is_none());
+        assert!(created.part_of_speech.is_none());
+        assert!(created.phonetic.is_none());
+        assert!(created.example.is_none());
+        assert!(created.quote.is_none());
+        assert!(created.source_book_id.is_none());
+        assert!(created.source_book_title.is_none());
+        assert!(created.source_book_author.is_none());
+        assert!(created.source_chapter.is_none());
+        assert!(created.source_locator.is_none());
+        let listed = list_dictionary_words(&repo).unwrap();
+        assert_eq!(listed.len(), 1);
+        let read = &listed[0];
+        assert!(read.definition.is_none() && read.part_of_speech.is_none());
+        assert!(read.phonetic.is_none() && read.example.is_none());
+        assert!(read.quote.is_none() && read.source_book_id.is_none());
+        assert!(read.source_book_title.is_none() && read.source_book_author.is_none());
+        assert!(read.source_chapter.is_none() && read.source_locator.is_none());
+    }
+
+    #[test]
+    fn user_field_round_trip_persists_fields() {
+        let repo = new_repository();
+        let created = add_dictionary_word(
+            &repo,
+            AddDictionaryWordInput {
+                word: "Efímero".to_string(),
+                definition: Some("Que dura poco tiempo".to_string()),
+                part_of_speech: Some("adjetivo".to_string()),
+                phonetic: Some("/eˈfimeɾo/".to_string()),
+                example: Some("Un amor efímero".to_string()),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(created.definition.as_deref(), Some("Que dura poco tiempo"));
+        assert_eq!(created.part_of_speech.as_deref(), Some("adjetivo"));
+        assert_eq!(created.phonetic.as_deref(), Some("/eˈfimeɾo/"));
+        assert_eq!(created.example.as_deref(), Some("Un amor efímero"));
+        let listed = list_dictionary_words(&repo).unwrap();
+        let read = listed.iter().find(|w| w.id == created.id).unwrap();
+        assert_eq!(read.definition.as_deref(), Some("Que dura poco tiempo"));
+        assert_eq!(read.part_of_speech.as_deref(), Some("adjetivo"));
+        assert_eq!(read.phonetic.as_deref(), Some("/eˈfimeɾo/"));
+        assert_eq!(read.example.as_deref(), Some("Un amor efímero"));
+    }
+
+    #[test]
+    fn update_user_fields_cannot_alter_evidence() {
+        let repo = new_repository();
+        let created = add_dictionary_word(
+            &repo,
+            AddDictionaryWordInput {
+                word: "Evidencia".to_string(),
+                definition: Some("original".to_string()),
+                quote: Some("cita original".to_string()),
+                source_book_id: Some("book-1".to_string()),
+                source_book_title: Some("Titulo".to_string()),
+                source_book_author: Some("Autor".to_string()),
+                source_chapter: Some("Cap 1".to_string()),
+                source_locator: Some("epubcfi(/6/4!/4/2)".to_string()),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        let updated = update_dictionary_word(
+            &repo,
+            UpdateDictionaryWordInput {
+                id: created.id.clone(),
+                definition: Some("nueva".to_string()),
+                part_of_speech: Some("sustantivo".to_string()),
+                phonetic: Some("/e/".to_string()),
+                example: Some("ejemplo".to_string()),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(updated.definition.as_deref(), Some("nueva"));
+        assert_eq!(updated.part_of_speech.as_deref(), Some("sustantivo"));
+        assert_eq!(updated.phonetic.as_deref(), Some("/e/"));
+        assert_eq!(updated.example.as_deref(), Some("ejemplo"));
+        assert_eq!(updated.quote.as_deref(), Some("cita original"));
+        assert_eq!(updated.source_book_id.as_deref(), Some("book-1"));
+        assert_eq!(updated.source_book_title.as_deref(), Some("Titulo"));
+        assert_eq!(updated.source_book_author.as_deref(), Some("Autor"));
+        assert_eq!(updated.source_chapter.as_deref(), Some("Cap 1"));
+        assert_eq!(updated.source_locator.as_deref(), Some("epubcfi(/6/4!/4/2)"));
+        let listed = list_dictionary_words(&repo).unwrap();
+        let read = listed.iter().find(|w| w.id == created.id).unwrap();
+        assert_eq!(read.quote.as_deref(), Some("cita original"));
+        assert_eq!(read.source_book_id.as_deref(), Some("book-1"));
+        assert_eq!(read.source_book_title.as_deref(), Some("Titulo"));
+        assert_eq!(read.source_book_author.as_deref(), Some("Autor"));
+        assert_eq!(read.source_chapter.as_deref(), Some("Cap 1"));
+        assert_eq!(read.source_locator.as_deref(), Some("epubcfi(/6/4!/4/2)"));
+    }
+
+    #[test]
+    fn recapture_overwrites_all_evidence_columns() {
+        let repo = new_repository();
+        let created = add_dictionary_word(
+            &repo,
+            AddDictionaryWordInput {
+                word: "Recaptura".to_string(),
+                quote: Some("cita A".to_string()),
+                source_book_id: Some("book-a".to_string()),
+                source_book_title: Some("Libro A".to_string()),
+                source_book_author: Some("Autor A".to_string()),
+                source_chapter: Some("Cap 1".to_string()),
+                source_locator: Some("epubcfi(/6/4!/4/2)".to_string()),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        let recaptured = update_dictionary_evidence(
+            &repo,
+            UpdateDictionaryEvidenceInput {
+                id: created.id.clone(),
+                quote: Some("cita B".to_string()),
+                source_book_id: Some("book-b".to_string()),
+                source_book_title: Some("Libro B".to_string()),
+                source_book_author: Some("Autor B".to_string()),
+                source_chapter: Some("Cap 9".to_string()),
+                source_locator: Some("epubcfi(/6/8!/4/6)".to_string()),
+            },
+        )
+        .unwrap();
+        assert_eq!(recaptured.quote.as_deref(), Some("cita B"));
+        assert_eq!(recaptured.source_book_id.as_deref(), Some("book-b"));
+        assert_eq!(recaptured.source_book_title.as_deref(), Some("Libro B"));
+        assert_eq!(recaptured.source_book_author.as_deref(), Some("Autor B"));
+        assert_eq!(recaptured.source_chapter.as_deref(), Some("Cap 9"));
+        assert_eq!(recaptured.source_locator.as_deref(), Some("epubcfi(/6/8!/4/6)"));
+        let listed = list_dictionary_words(&repo).unwrap();
+        let read = listed.iter().find(|w| w.id == created.id).unwrap();
+        assert_eq!(read.quote.as_deref(), Some("cita B"));
+        assert_eq!(read.source_book_id.as_deref(), Some("book-b"));
+        assert_eq!(read.source_book_title.as_deref(), Some("Libro B"));
+        assert_eq!(read.source_book_author.as_deref(), Some("Autor B"));
+        assert_eq!(read.source_chapter.as_deref(), Some("Cap 9"));
+        assert_eq!(read.source_locator.as_deref(), Some("epubcfi(/6/8!/4/6)"));
+    }
+
+    #[test]
+    fn recapture_leaves_user_fields_unchanged() {
+        let repo = new_repository();
+        let created = add_dictionary_word(
+            &repo,
+            AddDictionaryWordInput {
+                word: "Efímero".to_string(),
+                definition: Some("Que dura poco tiempo".to_string()),
+                part_of_speech: Some("adjetivo".to_string()),
+                phonetic: Some("/eˈfimeɾo/".to_string()),
+                example: Some("Un amor efímero".to_string()),
+                quote: Some("cita A".to_string()),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        let recaptured = update_dictionary_evidence(
+            &repo,
+            UpdateDictionaryEvidenceInput {
+                id: created.id.clone(),
+                quote: Some("cita B".to_string()),
+                source_book_id: Some("book-b".to_string()),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(recaptured.word, created.word);
+        assert_eq!(recaptured.definition.as_deref(), created.definition.as_deref());
+        assert_eq!(recaptured.part_of_speech.as_deref(), created.part_of_speech.as_deref());
+        assert_eq!(recaptured.phonetic.as_deref(), created.phonetic.as_deref());
+        assert_eq!(recaptured.example.as_deref(), created.example.as_deref());
+        let listed = list_dictionary_words(&repo).unwrap();
+        let read = listed.iter().find(|w| w.id == created.id).unwrap();
+        assert_eq!(read.definition.as_deref(), Some("Que dura poco tiempo"));
+        assert_eq!(read.part_of_speech.as_deref(), Some("adjetivo"));
+        assert_eq!(read.phonetic.as_deref(), Some("/eˈfimeɾo/"));
+        assert_eq!(read.example.as_deref(), Some("Un amor efímero"));
+    }
+
+    #[test]
+    fn recapture_accepts_null_quote() {
+        let repo = new_repository();
+        let created = add_dictionary_word(
+            &repo,
+            AddDictionaryWordInput {
+                word: "SinCita".to_string(),
+                quote: Some("cita A".to_string()),
+                source_book_id: Some("book-a".to_string()),
+                source_book_title: Some("Libro A".to_string()),
+                source_book_author: Some("Autor A".to_string()),
+                source_chapter: Some("Cap 1".to_string()),
+                source_locator: Some("epubcfi(/6/4!/4/2)".to_string()),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        let cleared = update_dictionary_evidence(
+            &repo,
+            UpdateDictionaryEvidenceInput {
+                id: created.id.clone(),
+                quote: None,
+                source_book_id: None,
+                source_book_title: None,
+                source_book_author: None,
+                source_chapter: None,
+                source_locator: None,
+            },
+        )
+        .unwrap();
+        assert!(cleared.quote.is_none());
+        assert!(cleared.source_book_id.is_none());
+        assert!(cleared.source_book_title.is_none());
+        assert!(cleared.source_book_author.is_none());
+        assert!(cleared.source_chapter.is_none());
+        assert!(cleared.source_locator.is_none());
+        let listed = list_dictionary_words(&repo).unwrap();
+        let read = listed.iter().find(|w| w.id == created.id).unwrap();
+        assert!(read.quote.is_none() && read.source_book_id.is_none());
+        assert!(read.source_book_title.is_none() && read.source_book_author.is_none());
+        assert!(read.source_chapter.is_none() && read.source_locator.is_none());
+    }
+
+    #[test]
+    fn recapture_requires_existing_id() {
+        let repo = new_repository();
+        let result = update_dictionary_evidence(
+            &repo,
+            UpdateDictionaryEvidenceInput {
+                id: "missing-id".to_string(),
+                quote: Some("cita".to_string()),
+                ..Default::default()
+            },
+        );
+        assert!(matches!(result, Err(AppError::NotFound(_))));
+    }
+
+    /// Conformance vectors shared verbatim with the TypeScript test (task 2A.3) and
+    /// the Kotlin test (task 5B.1): same inputs, same expected keys (REQ-DSI-004).
+    ///
+    /// Punctuation stays in the key: the contract strips only combining marks, so a
+    /// surrounding comma survives normalization. Stripping punctuation belongs to
+    /// `tokenizeSelection` (slice 2A), not to the normalizer.
+    const NORMALIZATION_VECTORS: &[(&str, &str)] = &[
+        ("", ""),
+        ("   ", ""),
+        ("  Serendipity  ", "serendipity"),
+        ("café", "cafe"),
+        ("CAFÉ", "cafe"),
+        ("  Café  ", "cafe"),
+        ("Ñandú", "nandu"),
+        ("Ōkami", "okami"),
+        ("Řeka", "reka"),
+        ("Île", "ile"),
+        ("Āris", "aris"),
+        ("Ștefan", "stefan"),
+        ("İstanbul", "istanbul"),
+        ("Abyss,", "abyss,"),
+        ("(Ephemeral)", "(ephemeral)"),
+        ("¡Hola!", "¡hola!"),
+        ("Ephemeral's", "ephemeral's"),
+    ];
+
+    #[test]
+    fn normalization_vectors_match_shared_contract() {
+        for (input, expected) in NORMALIZATION_VECTORS {
+            assert_eq!(normalize_word(input), *expected, "input {:?}", input);
+        }
+    }
+
+    #[test]
+    fn normalization_backs_the_per_user_natural_key() {
+        let repo = new_repository();
+        let created = add_dictionary_word(
+            &repo,
+            AddDictionaryWordInput {
+                word: "Tōkyō".to_string(),
+                user_id: Some("u1".to_string()),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(created.normalized_word.as_deref(), Some("tokyo"));
+        assert_eq!(created.word, "Tōkyō");
+        let dup = add_dictionary_word(
+            &repo,
+            AddDictionaryWordInput {
+                word: "TOKYO".to_string(),
+                user_id: Some("u1".to_string()),
+                ..Default::default()
+            },
+        );
+        assert!(matches!(dup, Err(AppError::DbConstraint(_))));
+        let listed = list_dictionary_words(&repo).unwrap();
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].word, "Tōkyō");
     }
 }

@@ -83,7 +83,7 @@ pub struct CreateTagInput {
     pub color: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DictionaryWordDto {
     pub id: String,
@@ -105,9 +105,29 @@ pub struct DictionaryWordDto {
     pub deleted_at: Option<String>,
     #[serde(default)]
     pub synced_at: Option<String>,
+    #[serde(default)]
+    pub definition: Option<String>,
+    #[serde(default)]
+    pub part_of_speech: Option<String>,
+    #[serde(default)]
+    pub phonetic: Option<String>,
+    #[serde(default)]
+    pub example: Option<String>,
+    #[serde(default)]
+    pub quote: Option<String>,
+    #[serde(default)]
+    pub source_book_id: Option<String>,
+    #[serde(default)]
+    pub source_book_title: Option<String>,
+    #[serde(default)]
+    pub source_book_author: Option<String>,
+    #[serde(default)]
+    pub source_chapter: Option<String>,
+    #[serde(default)]
+    pub source_locator: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AddDictionaryWordInput {
     pub word: String,
@@ -119,9 +139,32 @@ pub struct AddDictionaryWordInput {
     pub is_favorite: Option<bool>,
     #[serde(default)]
     pub srs_stage: Option<i32>,
+    #[serde(default)]
+    pub definition: Option<String>,
+    #[serde(default)]
+    pub part_of_speech: Option<String>,
+    #[serde(default)]
+    pub phonetic: Option<String>,
+    #[serde(default)]
+    pub example: Option<String>,
+    #[serde(default)]
+    pub quote: Option<String>,
+    #[serde(default)]
+    pub source_book_id: Option<String>,
+    #[serde(default)]
+    pub source_book_title: Option<String>,
+    #[serde(default)]
+    pub source_book_author: Option<String>,
+    #[serde(default)]
+    pub source_chapter: Option<String>,
+    #[serde(default)]
+    pub source_locator: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+/// User-authored edits only. Evidence fields are intentionally absent so that
+/// an evidence write through the update payload cannot compile (REQ-DRE-007);
+/// evidence is written exclusively by the dedicated re-capture command.
+#[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateDictionaryWordInput {
     pub id: String,
@@ -133,6 +176,35 @@ pub struct UpdateDictionaryWordInput {
     pub is_favorite: Option<bool>,
     #[serde(default)]
     pub srs_stage: Option<i32>,
+    #[serde(default)]
+    pub definition: Option<String>,
+    #[serde(default)]
+    pub part_of_speech: Option<String>,
+    #[serde(default)]
+    pub phonetic: Option<String>,
+    #[serde(default)]
+    pub example: Option<String>,
+}
+
+/// Captured evidence only. The four user-authored fields are intentionally
+/// absent so that a re-capture can never clear them (REQ-DRE-008); evidence is
+/// written exclusively through this input.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateDictionaryEvidenceInput {
+    pub id: String,
+    #[serde(default)]
+    pub quote: Option<String>,
+    #[serde(default)]
+    pub source_book_id: Option<String>,
+    #[serde(default)]
+    pub source_book_title: Option<String>,
+    #[serde(default)]
+    pub source_book_author: Option<String>,
+    #[serde(default)]
+    pub source_chapter: Option<String>,
+    #[serde(default)]
+    pub source_locator: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

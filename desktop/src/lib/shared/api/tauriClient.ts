@@ -914,6 +914,16 @@ export const addDictionaryWord = async (payload: {
   isFavorite?: boolean;
   srsStage?: number;
   userId?: string;
+  definition?: string | null;
+  partOfSpeech?: string | null;
+  phonetic?: string | null;
+  example?: string | null;
+  quote?: string | null;
+  sourceBookId?: string | null;
+  sourceBookTitle?: string | null;
+  sourceBookAuthor?: string | null;
+  sourceChapter?: string | null;
+  sourceLocator?: string | null;
 }): Promise<DictionaryWordDto> => {
   try {
     return await invoke<DictionaryWordDto>('addDictionaryWord', { payload });
@@ -944,9 +954,32 @@ export const updateDictionaryWord = async (payload: {
   tags?: string[];
   isFavorite?: boolean;
   srsStage?: number;
+  // REQ-DRE-002 / REQ-DRE-007: the four user-authored fields. Rust's
+  // `UpdateDictionaryWordInput` accepts them and deliberately does not accept
+  // evidence, so a capture cannot be smuggled through this payload.
+  definition?: string | null;
+  partOfSpeech?: string | null;
+  phonetic?: string | null;
+  example?: string | null;
 }): Promise<DictionaryWordDto> => {
   try {
     return await invoke<DictionaryWordDto>('updateDictionaryWord', { payload });
+  } catch (error) {
+    return attachCommandError(error);
+  }
+};
+
+export const updateDictionaryEvidence = async (payload: {
+  id: string;
+  quote?: string | null;
+  sourceBookId?: string | null;
+  sourceBookTitle?: string | null;
+  sourceBookAuthor?: string | null;
+  sourceChapter?: string | null;
+  sourceLocator?: string | null;
+}): Promise<DictionaryWordDto> => {
+  try {
+    return await invoke<DictionaryWordDto>('updateDictionaryEvidence', { payload });
   } catch (error) {
     return attachCommandError(error);
   }

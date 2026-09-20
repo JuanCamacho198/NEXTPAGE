@@ -10,6 +10,7 @@
  */
 import { invoke, convertFileSrc } from '@tauri-apps/api/core';
 import { IFRAME_CFI_BRIDGE_SCRIPT } from '$lib/features/reader/viewer-epub/cfiBridgeIframe';
+import { IFRAME_QUOTE_SCRIPT } from '$lib/features/reader/viewer-epub/epubQuoteIframe';
 import { IFRAME_HIGHLIGHT_OVERLAY_SCRIPT } from '$lib/features/reader/viewer-epub/epubHighlightOverlayIframe';
 import {
   HIGHLIGHT_COLORS,
@@ -257,6 +258,7 @@ export function buildChapterSrcdoc(
     margins: { top: number; bottom: number; left: number; right: number };
     fontFamily: string;
   },
+  chapterTitle?: string | null,
 ): string {
   console.warn('build srcdoc CHAPTER_INDEX', chapterIndex, 'href', currentChapterHref);
   const sanitizedHtml = sanitizeEpubHtml(chapterData.html);
@@ -380,6 +382,9 @@ export function buildChapterSrcdoc(
   const bridgeScript = doc.createElement('script');
   bridgeScript.textContent = IFRAME_CFI_BRIDGE_SCRIPT;
 
+  const quoteScript = doc.createElement('script');
+  quoteScript.textContent = IFRAME_QUOTE_SCRIPT;
+
   const spineScript = doc.createElement('script');
   spineScript.textContent = `
       (function() {
@@ -415,6 +420,7 @@ export function buildChapterSrcdoc(
         var mouseupDebounceTimer = null;
         var CHAPTER_HREF = ${JSON.stringify(normalizeHref(currentChapterHref))};
         var CHAPTER_INDEX = ${chapterIndex};
+        var CHAPTER_TITLE = ${JSON.stringify(chapterTitle ?? null)};
 
         document.addEventListener('click', function(ev) {
           var hit = null;
@@ -505,6 +511,15 @@ export function buildChapterSrcdoc(
             } catch (e) {
               console.warn('epub-cfi: rangeToCFI threw', e);
             }
+            var quote = null;
+            try {
+              if (window.__epubQuote &&
+                  typeof window.__epubQuote.extract === 'function') {
+                quote = window.__epubQuote.extract(range, document).quote;
+              }
+            } catch (e) {
+              quote = null;
+            }
             window.parent.postMessage({
               type: 'epub-selection',
               text: text,
@@ -512,7 +527,9 @@ export function buildChapterSrcdoc(
               container: containerRect,
               rects: rects,
               pageNumber: CHAPTER_INDEX,
-              cfi: cfi
+              cfi: cfi,
+              quote: quote,
+              chapterTitle: CHAPTER_TITLE
             }, '*');
           }, 100);
         });
@@ -543,6 +560,7 @@ export function buildChapterSrcdoc(
 
   doc.body.appendChild(errorScript);
   doc.body.appendChild(bridgeScript);
+  doc.body.appendChild(quoteScript);
   doc.body.appendChild(spineScript);
   doc.body.appendChild(highlightOverlayScript);
   doc.body.appendChild(resizeScript);
@@ -766,6 +784,7 @@ export function createEpubRender(deps: EpubRenderDeps) {
         spineIndex,
         missingFonts,
         readerCssOpts,
+        deps.getToc()[index]?.label ?? null,
       );
 
       iframeEl.onload = () => {

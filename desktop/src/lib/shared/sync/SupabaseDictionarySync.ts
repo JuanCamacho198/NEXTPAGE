@@ -17,6 +17,16 @@ export interface SupabaseDictionaryRow {
   updatedAt: string;
   deletedAt?: string | null;
   createdAt: string;
+  definition?: string | null;
+  partOfSpeech?: string | null;
+  phonetic?: string | null;
+  example?: string | null;
+  quote?: string | null;
+  sourceBookId?: string | null;
+  sourceBookTitle?: string | null;
+  sourceBookAuthor?: string | null;
+  sourceChapter?: string | null;
+  sourceLocator?: string | null;
 }
 
 export type DictionaryChangeCallback = (row: SupabaseDictionaryRow) => void;
@@ -37,11 +47,20 @@ export class SupabaseDictionarySync {
     return !hasLiveSession() || this.userId !== authState.userId;
   }
 
+  /**
+   * REQ-DSI-001: the payload must not carry `id`. The server owns the primary
+   * key — it generates it on insert and keeps it on conflict. Sending the local
+   * id lets a conflicting upsert overwrite the remote id, after which a delete
+   * issued by another device targets an id that no longer exists.
+   *
+   * REQ-DSI-003: all ten rich-entry columns are sent on every upsert. An absent
+   * local value maps to an explicit `null`, never to an omitted key, so the full
+   * snapshot is the payload and no column can be silently dropped.
+   */
   async upsert(row: SupabaseDictionaryRow): Promise<void> {
     if (this.isGated()) return;
     const { error } = await this.supabase.from('user_dictionary_words').upsert(
       {
-        id: row.id,
         user_id: row.userId,
         word: row.word,
         normalized_word: row.normalizedWord,
@@ -50,20 +69,35 @@ export class SupabaseDictionarySync {
         srs_stage: row.srsStage,
         updated_at: row.updatedAt,
         deleted_at: row.deletedAt ?? null,
+        definition: row.definition ?? null,
+        part_of_speech: row.partOfSpeech ?? null,
+        phonetic: row.phonetic ?? null,
+        example: row.example ?? null,
+        quote: row.quote ?? null,
+        source_book_id: row.sourceBookId ?? null,
+        source_book_title: row.sourceBookTitle ?? null,
+        source_book_author: row.sourceBookAuthor ?? null,
+        source_chapter: row.sourceChapter ?? null,
+        source_locator: row.sourceLocator ?? null,
       },
       { onConflict: 'user_id, normalized_word', ignoreDuplicates: false },
     );
     if (error) throw error;
   }
 
-  async delete(id: string): Promise<void> {
+  /**
+   * REQ-DSI-002: soft-delete by the natural key `(user_id, normalized_word)`,
+   * never by `id`. The caller's local id is a local-only key and may differ from
+   * the server id for the same word on another device.
+   */
+  async delete(normalizedWord: string): Promise<void> {
     if (this.isGated()) return;
     const now = new Date().toISOString();
     const { error } = await this.supabase
       .from('user_dictionary_words')
       .update({ deleted_at: now, updated_at: now })
-      .eq('id', id)
-      .eq('user_id', this.userId);
+      .eq('user_id', this.userId)
+      .eq('normalized_word', normalizedWord);
     if (error) throw error;
   }
 
@@ -214,6 +248,12 @@ export class SupabaseDictionarySync {
     this.unsubscribeFn = null;
   }
 
+  /**
+   * Maps a remote row (snake_case) onto the camelCase row shape, including the
+   * ten rich-entry columns (REQ-DSI-003). Every new key is present in the result
+   * and coerced null-safely: a `null`, an absent key, or a non-string primitive
+   * never erases a value and never invents one.
+   */
   private mapRow(raw: Record<string, unknown>): SupabaseDictionaryRow {
     return {
       id: String(raw.id ?? ''),
@@ -226,6 +266,16 @@ export class SupabaseDictionarySync {
       updatedAt: String(raw.updated_at ?? new Date().toISOString()),
       deletedAt: raw.deleted_at != null ? String(raw.deleted_at) : null,
       createdAt: String(raw.created_at ?? new Date().toISOString()),
+      definition: raw.definition != null ? String(raw.definition) : null,
+      partOfSpeech: raw.part_of_speech != null ? String(raw.part_of_speech) : null,
+      phonetic: raw.phonetic != null ? String(raw.phonetic) : null,
+      example: raw.example != null ? String(raw.example) : null,
+      quote: raw.quote != null ? String(raw.quote) : null,
+      sourceBookId: raw.source_book_id != null ? String(raw.source_book_id) : null,
+      sourceBookTitle: raw.source_book_title != null ? String(raw.source_book_title) : null,
+      sourceBookAuthor: raw.source_book_author != null ? String(raw.source_book_author) : null,
+      sourceChapter: raw.source_chapter != null ? String(raw.source_chapter) : null,
+      sourceLocator: raw.source_locator != null ? String(raw.source_locator) : null,
     };
   }
 }

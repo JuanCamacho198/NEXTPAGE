@@ -39,7 +39,7 @@ import com.nextpage.data.local.entity.SyncOutboxEntity
         DiscoverCacheEntity::class,
         AddonEntity::class,
     ],
-    version = 27,
+    version = 28,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {

@@ -36,6 +36,13 @@
   import BookmarkSidebar from './BookmarkSidebar.svelte';
   import { createViewerSelection, type ViewerSelection } from '../viewer-shared/Viewer';
   import type { SelectionData } from '../highlight/SelectionToolbar.svelte';
+  import { dictionaryState } from '$lib/shared/stores/DictionaryState.svelte';
+  import {
+    buildEvidence,
+    captureFromSelection,
+    type DictionaryActions,
+    type DictionaryCaptureFeedback,
+  } from '$lib/shared/dictionary/captureFromSelection';
 
   type ActiveBook = LibraryBookDto & { filePath: string };
   type Props = {
@@ -66,6 +73,7 @@
     getUserId?: () => string | null;
     outboxDao?: SyncOutboxDao;
     viewerPort?: ViewerPort;
+    dictionaryActions?: DictionaryActions;
     libraryPort?: LibraryPort;
   };
 
@@ -91,6 +99,7 @@
     getUserId: getUserIdProp = undefined,
     outboxDao: outboxDaoProp = undefined,
     viewerPort: viewerPortProp = undefined,
+    dictionaryActions: dictionaryActionsProp = undefined,
     libraryPort: libraryPortProp = undefined,
   }: Props = $props();
 
@@ -104,6 +113,10 @@
   const outboxDao = outboxDaoProp ?? new SyncOutboxDao();
   // svelte-ignore state_referenced_locally
   const viewerPort = viewerPortProp ?? new TauriViewerAdapter();
+  // The store is the reader's write surface (Decision 5): it is the only path
+  // that enqueues the outbox row, so capture never routes through `ViewerPort`.
+  // svelte-ignore state_referenced_locally
+  const dictionaryActions = dictionaryActionsProp ?? dictionaryState;
   // svelte-ignore state_referenced_locally
   const libraryPort = libraryPortProp ?? new TauriLibraryAdapter();
 
@@ -358,6 +371,11 @@
       rects: event.rects,
       pageNumber: event.pageNumber,
       cfi: event.cfi ?? null,
+      // EPUB evidence crosses the iframe -> bridge -> workspace boundary here
+      // (REQ-DRE-005); both stay null for PDF and for a selection with no block
+      // ancestor.
+      quote: event.quote ?? null,
+      chapterTitle: event.chapterTitle ?? null,
     };
     showToolbar = true;
   }
@@ -395,10 +413,24 @@
   function handleCopy(): void {
     if (selectedText) navigator.clipboard.writeText(selectedText).catch(() => {});
   }
-  async function handleAddToDictionary(word: string): Promise<void> {
-    try {
-      await viewerPort.addDictionaryWord({ word });
-    } catch {}
+  /**
+   * The reader is glue: it assembles the evidence at click time and hands the
+   * selection to `captureFromSelection`, which decides create / attach /
+   * feedback-only and performs at most one write through the store.
+   *
+   * `buildEvidence` returns null for PDF and for an EPUB selection with no
+   * block ancestor (REQ-DRE-006), and `entries` is the store's own `words`
+   * (trap: the resolver takes entries, not the actions object). The store's
+   * `add`/`capture` are the only write paths — the deleted
+   * `ViewerPort.addDictionaryWord` wrote to SQLite and skipped the outbox, so
+   * anything captured there could never sync (REQ-DSI-003).
+   */
+  async function handleAddToDictionary(data: SelectionData): Promise<DictionaryCaptureFeedback> {
+    return captureFromSelection(data.text, {
+      actions: dictionaryActions,
+      entries: dictionaryActions.words,
+      evidence: buildEvidence(data, activeReadingBook, viewer.kind),
+    });
   }
   async function handleColorSelect(color: string, data: SelectionData): Promise<void> {
     await highlightsState.handleColorSelect(color, data);

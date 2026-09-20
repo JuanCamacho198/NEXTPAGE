@@ -287,6 +287,13 @@ impl LibraryRepository {
         dictionary::update_dictionary_word(self, input)
     }
 
+    pub fn update_dictionary_evidence(
+        &self,
+        input: crate::models::UpdateDictionaryEvidenceInput,
+    ) -> AppResult<DictionaryWordDto> {
+        dictionary::update_dictionary_evidence(self, input)
+    }
+
     pub fn search_dictionary_words(
         &self,
         query: &str,
@@ -462,6 +469,9 @@ mod tests {
             .execute_batch(include_str!("../../migrations/0015_dictionary_sync.sql"))
             .unwrap();
         connection.execute_batch(include_str!("../../migrations/0017_addon_registry.sql")).unwrap();
+        connection
+            .execute_batch(include_str!("../../migrations/0019_dictionary_rich_entries.sql"))
+            .unwrap();
     }
 
     pub(crate) fn new_repository() -> LibraryRepository {

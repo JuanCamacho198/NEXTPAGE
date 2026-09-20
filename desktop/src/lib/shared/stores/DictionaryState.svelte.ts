@@ -1,19 +1,66 @@
 import { invoke } from '$lib/shared/api/invokeWrapper';
 import type { DictionaryWordDto } from '$lib/shared/types';
+import type { DictionaryEvidence } from '$lib/shared/dictionary/captureFromSelection';
 import { authState } from '$lib/shared/stores/AuthState.svelte';
 import { hasLiveSession } from '$lib/services/supabase';
-import { SupabaseDictionarySync } from '$lib/shared/sync/SupabaseDictionarySync';
+import {
+  SupabaseDictionarySync,
+  type SupabaseDictionaryRow,
+} from '$lib/shared/sync/SupabaseDictionarySync';
+import { normalizeDictionaryKey } from '$lib/shared/dictionary/dictionaryKey';
 
-function normalize(word: string): string {
-  return word.trim().toLowerCase();
-}
-
-function stripAccents(s: string): string {
-  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-}
-
+// REQ-DSI-004: the store has exactly one normalization implementation, the
+// shared `normalizeDictionaryKey` contract. The previous local variant was
+// applied in the other order (lowercase before NFD) and duplicated the rule.
 function normalizedForSearch(word: string): string {
-  return stripAccents(normalize(word));
+  return normalizeDictionaryKey(word);
+}
+
+/** The ten rich-entry fields, camelCase, applied whenever a remote row wins. */
+function evidenceFields(row: SupabaseDictionaryRow): Partial<DictionaryWordDto> {
+  return {
+    definition: row.definition ?? null,
+    partOfSpeech: row.partOfSpeech ?? null,
+    phonetic: row.phonetic ?? null,
+    example: row.example ?? null,
+    quote: row.quote ?? null,
+    sourceBookId: row.sourceBookId ?? null,
+    sourceBookTitle: row.sourceBookTitle ?? null,
+    sourceBookAuthor: row.sourceBookAuthor ?? null,
+    sourceChapter: row.sourceChapter ?? null,
+    sourceLocator: row.sourceLocator ?? null,
+  };
+}
+
+/**
+ * REQ-DSI-003 / Decision 6: one outbox payload shape for every dictionary
+ * UPSERT — the full 18-column row snapshot. A partial payload would omit keys
+ * that `SupabaseDictionarySync.upsert` serialises, and an absent key can only
+ * be read back as "erase this column" once the mapper applies a null fallback.
+ * `userId` is added by `queueOutbox`; the natural key is computed from the word
+ * so the client never depends on the server echoing a value it owns.
+ */
+export function dictionaryOutboxPayload(dto: DictionaryWordDto): Record<string, unknown> {
+  return {
+    word: dto.word,
+    normalizedWord: normalizeDictionaryKey(dto.word ?? ''),
+    tags: dto.tags ?? [],
+    isFavorite: dto.isFavorite ?? false,
+    srsStage: dto.srsStage ?? 0,
+    updatedAt: dto.updatedAt ?? dto.createdAt,
+    createdAt: dto.createdAt,
+    deletedAt: dto.deletedAt ?? null,
+    definition: dto.definition ?? null,
+    partOfSpeech: dto.partOfSpeech ?? null,
+    phonetic: dto.phonetic ?? null,
+    example: dto.example ?? null,
+    quote: dto.quote ?? null,
+    sourceBookId: dto.sourceBookId ?? null,
+    sourceBookTitle: dto.sourceBookTitle ?? null,
+    sourceBookAuthor: dto.sourceBookAuthor ?? null,
+    sourceChapter: dto.sourceChapter ?? null,
+    sourceLocator: dto.sourceLocator ?? null,
+  };
 }
 
 function levenshtein(a: string, b: string): number {
@@ -72,9 +119,14 @@ export function createDictionaryState() {
 
   async function add(
     word: string,
-    opts?: { tags?: string[]; isFavorite?: boolean; srsStage?: number },
+    opts?: {
+      tags?: string[];
+      isFavorite?: boolean;
+      srsStage?: number;
+      evidence?: DictionaryEvidence | null;
+    },
   ): Promise<DictionaryWordDto> {
-    const now = new Date().toISOString();
+    const evidence = opts?.evidence ?? null;
     const created: DictionaryWordDto = await invoke<DictionaryWordDto>('addDictionaryWord', {
       payload: {
         word,
@@ -82,43 +134,62 @@ export function createDictionaryState() {
         isFavorite: opts?.isFavorite,
         srsStage: opts?.srsStage,
         userId: authState.userId ?? undefined,
+        // REQ-DRE-003: the six evidence fields are sent explicitly. When the
+        // branch has no evidence (non-EPUB, no quote) they are an explicit
+        // null rather than an omitted key.
+        quote: evidence?.quote ?? null,
+        sourceBookId: evidence?.sourceBookId ?? null,
+        sourceBookTitle: evidence?.sourceBookTitle ?? null,
+        sourceBookAuthor: evidence?.sourceBookAuthor ?? null,
+        sourceChapter: evidence?.sourceChapter ?? null,
+        sourceLocator: evidence?.sourceLocator ?? null,
       },
     });
     words = [...words, created].sort((a, b) => (a.word ?? '').localeCompare(b.word ?? ''));
-    queueOutbox(created.id, 'UPSERT', {
-      word: created.word,
-      normalizedWord: normalizedForSearch(created.word),
-      tags: opts?.tags ?? [],
-      isFavorite: opts?.isFavorite ?? false,
-      srsStage: opts?.srsStage ?? 0,
-      updatedAt: now,
-      createdAt: now,
-    });
+    queueOutbox(created.id, 'UPSERT', dictionaryOutboxPayload(created));
     return created;
+  }
+
+  /**
+   * REQ-DRE-008 / REQ-DSI-003: the re-capture write. Only the six evidence
+   * columns travel, so a capture can never clear a user-authored field; the
+   * outbox row is still the full snapshot so the remote row keeps them too.
+   */
+  async function capture(
+    entryId: string,
+    evidence: DictionaryEvidence,
+  ): Promise<DictionaryWordDto> {
+    const updated: DictionaryWordDto = await invoke<DictionaryWordDto>('updateDictionaryEvidence', {
+      payload: { id: entryId, ...evidence },
+    });
+    words = words.map((w) => (w.id === entryId ? updated : w));
+    queueOutbox(entryId, 'UPSERT', dictionaryOutboxPayload(updated));
+    return updated;
   }
 
   async function update(
     id: string,
-    patch: { word?: string; tags?: string[]; isFavorite?: boolean; srsStage?: number },
+    patch: {
+      word?: string;
+      tags?: string[];
+      isFavorite?: boolean;
+      srsStage?: number;
+      definition?: string | null;
+      partOfSpeech?: string | null;
+      phonetic?: string | null;
+      example?: string | null;
+    },
   ): Promise<DictionaryWordDto> {
-    const now = new Date().toISOString();
     const updated: DictionaryWordDto = await invoke<DictionaryWordDto>('updateDictionaryWord', {
       payload: { id, ...patch },
     });
     words = words.map((w) => (w.id === id ? updated : w));
-    queueOutbox(id, 'UPSERT', {
-      word: updated.word,
-      normalizedWord: normalizedForSearch(updated.word),
-      tags: patch.tags ?? updated.tags ?? [],
-      isFavorite: patch.isFavorite ?? updated.isFavorite ?? false,
-      srsStage: patch.srsStage ?? updated.srsStage ?? 0,
-      updatedAt: now,
-      createdAt: updated.createdAt,
-    });
+    queueOutbox(id, 'UPSERT', dictionaryOutboxPayload(updated));
     return updated;
   }
 
   async function remove(id: string): Promise<void> {
+    const removed = words.find((w) => w.id === id);
     await invoke('removeDictionaryWord', { id });
     words = words.filter((w) => w.id !== id);
     const now = new Date().toISOString();
@@ -127,7 +198,13 @@ export function createDictionaryState() {
         entityType: 'DICTIONARY_WORD',
         entityId: id,
         operation: 'DELETE',
-        payloadJson: JSON.stringify({ userId: authState.userId, updatedAt: now, deletedAt: now }),
+        payloadJson: JSON.stringify({
+          userId: authState.userId,
+          updatedAt: now,
+          deletedAt: now,
+          // REQ-DSI-002: the remote delete targets the natural key, not the id.
+          normalizedWord: normalizeDictionaryKey(removed?.word ?? ''),
+        }),
       }).catch(() => {});
     }
   }
@@ -190,7 +267,11 @@ export function createDictionaryState() {
         (w) => w.id === row.id || normalizedForSearch(w.word ?? '') === row.normalizedWord,
       );
       if (row.deletedAt) {
-        words = words.filter((w) => w.id !== row.id);
+        // REQ-DSI-002: the remote row's id may belong to another device, so the
+        // natural key decides too — otherwise the local entry stays visible.
+        words = words.filter(
+          (w) => w.id !== row.id && normalizeDictionaryKey(w.word ?? '') !== row.normalizedWord,
+        );
         return;
       }
       if (local) {
@@ -205,11 +286,16 @@ export function createDictionaryState() {
                   isFavorite: row.isFavorite,
                   srsStage: row.srsStage,
                   updatedAt: row.updatedAt,
+                  // REQ-DSI-003 scenario 2: the ten rich-entry fields travel on
+                  // every winning realtime update, never a subset.
+                  ...evidenceFields(row),
                 }
               : w,
           );
         } else if (row.updatedAt === localUpdated && row.createdAt > (local.createdAt ?? '')) {
-          words = words.map((w) => (w.id === local.id ? { ...w, word: row.word } : w));
+          words = words.map((w) =>
+            w.id === local.id ? { ...w, word: row.word, ...evidenceFields(row) } : w,
+          );
         }
       } else {
         const dto: DictionaryWordDto = {
@@ -263,6 +349,7 @@ export function createDictionaryState() {
     },
     load,
     add,
+    capture,
     update,
     remove,
     toggleFavorite,
@@ -273,5 +360,7 @@ export function createDictionaryState() {
     unsubscribe,
   };
 }
+
+export type DictionaryStateApi = ReturnType<typeof createDictionaryState>;
 
 export const dictionaryState = createDictionaryState();

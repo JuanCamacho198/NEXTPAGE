@@ -271,6 +271,11 @@
             isExportingHighlights={data.isExportingHighlights}
             isExportingColdBackup={data.isExportingColdBackup}
             isImportingColdBackup={data.isImportingColdBackup}
+            isExportingDictionary={data.isExportingDictionary}
+            isImportingDictionary={data.isImportingDictionary}
+            dictionaryExportError={data.dictionaryExportError}
+            dictionaryImportResult={data.dictionaryImportResult}
+            dictionaryImportError={data.dictionaryImportError}
             isDriveConnected={driveState.isAuthorized}
             isConnectingDrive={driveState.isConnecting}
             onConnectDrive={() => void handleConnectDrive()}
@@ -279,6 +284,8 @@
             onExportHighlights={() => void data.handleExportHighlights()}
             onExportColdBackup={() => void data.handleExportColdBackup()}
             onImportColdBackup={() => void data.handleImportColdBackup()}
+            onExportDictionary={(format) => void data.handleExportDictionary(format)}
+            onImportDictionary={(file) => void data.handleImportDictionary(file)}
             onSelectedExportBookChange={(v: string) => data.handleSelectedExportBookChange(v)}
             onSelectedExportFormatChange={(v: 'json' | 'markdown') =>
               data.handleSelectedExportFormatChange(v)}

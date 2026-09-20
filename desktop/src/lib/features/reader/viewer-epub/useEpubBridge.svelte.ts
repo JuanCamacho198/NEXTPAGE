@@ -71,6 +71,8 @@ export type EpubBridgeDeps = {
     rects: Array<{ left: number; top: number; width: number; height: number }>;
     pageNumber: number;
     cfi: string | null;
+    quote?: string | null;
+    chapterTitle?: string | null;
   }) => void;
   onselectionclear?: () => void;
   handleEpubHighlightClick: (msg: {
@@ -358,6 +360,9 @@ export function createEpubBridge(deps: EpubBridgeDeps) {
         ? event.data.pageNumber
         : deps.getCurrentSpineIndex();
     const resolvedCfi = typeof event.data.cfi === 'string' ? event.data.cfi : null;
+    const resolvedQuote = typeof event.data.quote === 'string' ? event.data.quote : null;
+    const resolvedChapterTitle =
+      typeof event.data.chapterTitle === 'string' ? event.data.chapterTitle : null;
     deps.onselection({
       text: event.data.text,
       bounds: event.data.bounds,
@@ -366,6 +371,8 @@ export function createEpubBridge(deps: EpubBridgeDeps) {
       rects: event.data.rects ?? [],
       pageNumber: resolvedPageNumber,
       cfi: resolvedCfi,
+      quote: resolvedQuote,
+      chapterTitle: resolvedChapterTitle,
     });
   }
 

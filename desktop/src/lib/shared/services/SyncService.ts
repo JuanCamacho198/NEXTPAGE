@@ -33,6 +33,15 @@ type ReadingProgressSyncMode = 'drive' | 'dual' | 'supabase';
 type BookmarkSyncMode = 'drive' | 'dual' | 'supabase';
 type HighlightSyncMode = 'drive' | 'dual' | 'supabase';
 
+/**
+ * Map a nullable outbox payload field onto its remote column without erasing an
+ * explicit value (REQ-DSI-003): an absent key and a `null` value both land as
+ * `null`, while a present value — including an empty string — is preserved.
+ */
+function nullableText(value: unknown): string | null {
+  return value != null ? String(value) : null;
+}
+
 export class SyncService {
   private static gdrive = new GDriveProvider();
   private static libraryPort: LibraryPort = new TauriLibraryAdapter();
@@ -271,7 +280,7 @@ export class SyncService {
       } else if (entityType === 'DICTIONARY_WORD') {
         const dictSync = new SupabaseDictionarySync(userId);
         if (operation === 'DELETE') {
-          await dictSync.delete(entityId);
+          await dictSync.delete(String(payload.normalizedWord ?? ''));
         } else {
           const normalized = String(payload.normalizedWord ?? payload.normalized_word ?? '')
             .toLowerCase()
@@ -288,6 +297,18 @@ export class SyncService {
             deletedAt:
               (payload.deletedAt as string | null) ?? (payload.deleted_at as string | null) ?? null,
             createdAt: String(payload.createdAt ?? payload.created_at ?? new Date().toISOString()),
+            // REQ-DSI-003: the full snapshot travels field for field. Evidence is
+            // never omitted and never coerced to '' — an absent key is an explicit null.
+            definition: nullableText(payload.definition),
+            partOfSpeech: nullableText(payload.partOfSpeech),
+            phonetic: nullableText(payload.phonetic),
+            example: nullableText(payload.example),
+            quote: nullableText(payload.quote),
+            sourceBookId: nullableText(payload.sourceBookId),
+            sourceBookTitle: nullableText(payload.sourceBookTitle),
+            sourceBookAuthor: nullableText(payload.sourceBookAuthor),
+            sourceChapter: nullableText(payload.sourceChapter),
+            sourceLocator: nullableText(payload.sourceLocator),
           });
         }
       } else {

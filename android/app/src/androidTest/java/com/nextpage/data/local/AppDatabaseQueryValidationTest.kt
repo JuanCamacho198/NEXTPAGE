@@ -13,11 +13,13 @@ import com.nextpage.data.local.entity.BookmarkEntity
 import com.nextpage.data.local.entity.DictionaryWordEntity
 import com.nextpage.data.local.entity.HighlightEntity
 import com.nextpage.data.local.entity.ReadingSessionEntity
+import com.nextpage.data.repository.DictionaryRepositoryImpl
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -30,6 +32,8 @@ import org.junit.runner.RunWith
  * Strategy:
  * - Fresh v16: in-memory DB + RoomDatabase.Callback to create FTS5 + triggers (R1-R4, R7-R12)
  * - Migrated DB: MigrationTestHelper runs MIGRATION_15_16 on a seeded v15 schema (R13)
+ * - Rich entry (v28): the ten evidence columns exist as nullable TEXT and round-trip through the
+ *   entity, and the reader's evidence-free save path stores NULL evidence (rich-entry 5D.2, 5D.4)
  *
  * Index tests use `EXPLAIN QUERY PLAN` substring matching on `USING INDEX <name>`.
  * This is robust to SQLite version variations in plan formatting.
@@ -45,6 +49,24 @@ class AppDatabaseQueryValidationTest {
         )
 
     private lateinit var db: AppDatabase
+
+    /**
+     * The ten shared evidence columns named by REQ-DRE-001 / REQ-DRE-011. Android already had
+     * `definition`, so it gains nine of them; the parity set is the same ten names on all stores.
+     */
+    private val evidenceColumns =
+        listOf(
+            "definition",
+            "part_of_speech",
+            "phonetic",
+            "example",
+            "quote",
+            "source_book_id",
+            "source_book_title",
+            "source_book_author",
+            "source_chapter",
+            "source_locator",
+        )
 
     @Before
     fun setUp() {
@@ -312,6 +334,15 @@ class AppDatabaseQueryValidationTest {
                     word = "hello",
                     addedAtEpochMillis = 100L,
                     definition = "a greeting",
+                    partOfSpeech = "interjection",
+                    phonetic = "/həˈloʊ/",
+                    example = "hello there",
+                    quote = "The hall was quiet save for a single hello.",
+                    sourceBookId = "b-hello",
+                    sourceBookTitle = "A Book of Greetings",
+                    sourceBookAuthor = "A. Author",
+                    sourceChapter = "Chapter 1",
+                    sourceLocator = "epubcfi(/6/4!/4/2/2)",
                 ),
             )
 
@@ -335,6 +366,12 @@ class AppDatabaseQueryValidationTest {
                     word = "triggerInsert",
                     addedAtEpochMillis = 200L,
                     definition = "insert trigger test",
+                    quote = "A paragraph that mentions triggerInsert inline.",
+                    sourceBookId = "b-insert",
+                    sourceBookTitle = "Trigger Book",
+                    sourceBookAuthor = "T. Author",
+                    sourceChapter = "Chapter 2",
+                    sourceLocator = "epubcfi(/6/8!/4/2/2)",
                 ),
             )
 
@@ -363,6 +400,9 @@ class AppDatabaseQueryValidationTest {
                     word = word,
                     addedAtEpochMillis = 300L,
                     definition = "delete trigger test",
+                    partOfSpeech = "noun",
+                    phonetic = "/ˈtrɪɡər/",
+                    example = "delete the row",
                 ),
             )
 
@@ -399,6 +439,9 @@ class AppDatabaseQueryValidationTest {
                     word = "oldword",
                     addedAtEpochMillis = 400L,
                     definition = "old def",
+                    partOfSpeech = "noun",
+                    phonetic = "/oʊld/",
+                    example = "an old example",
                 ),
             )
 
@@ -424,6 +467,71 @@ class AppDatabaseQueryValidationTest {
                     if (cursor.moveToFirst()) newFound = true
                 }
             assertTrue("dict_au trigger should add new value to FTS5 on UPDATE", newFound)
+        }
+
+    // ────────── Phase 3b: Rich-entry evidence column set (5D.2) ──────────
+
+    /**
+     * REQ-DRE-011 / REQ-DRE-010: the Android table exposes the same ten evidence columns as desktop
+     * SQLite and Supabase, each a nullable `TEXT` column. Column order, table shape and the
+     * local-only columns are deliberately unconstrained — only the named set and its nullability are.
+     */
+    @Test
+    fun dictionaryWords_exposeTheTenEvidenceColumnsAsNullableText() =
+        runTest {
+            val columns = mutableMapOf<String, Pair<String, Boolean>>()
+            db.openHelper.writableDatabase.query("PRAGMA table_info(dictionary_words)").use { cursor ->
+                val nameIndex = cursor.getColumnIndex("name")
+                val typeIndex = cursor.getColumnIndex("type")
+                val notNullIndex = cursor.getColumnIndex("notnull")
+                while (cursor.moveToNext()) {
+                    columns[cursor.getString(nameIndex)] =
+                        cursor.getString(typeIndex).uppercase() to (cursor.getInt(notNullIndex) != 0)
+                }
+            }
+
+            evidenceColumns.forEach { column ->
+                val info = columns[column]
+                assertNotNull("dictionary_words is missing the evidence column $column", info)
+                assertEquals("$column should be TEXT", "TEXT", info!!.first)
+                assertFalse("$column should be nullable", info.second)
+            }
+        }
+
+    /** The ten evidence columns must store and return a fully populated row unchanged. */
+    @Test
+    fun dictionaryWords_roundTripAllTenEvidenceColumns() =
+        runTest {
+            db.dictionaryWordDao().insert(
+                DictionaryWordEntity(
+                    id = "dw-rich",
+                    word = "efímero",
+                    addedAtEpochMillis = 500L,
+                    definition = "that lasts a very short time",
+                    partOfSpeech = "adjective",
+                    phonetic = "/eˈfimeɾo/",
+                    example = "Un amor efímero.",
+                    quote = "La gloria es efímera.",
+                    sourceBookId = "b-odisea",
+                    sourceBookTitle = "La Odisea",
+                    sourceBookAuthor = "Homero",
+                    sourceChapter = "Capítulo III",
+                    sourceLocator = "epubcfi(/6/10!/4/2/4)",
+                ),
+            )
+
+            val stored = db.dictionaryWordDao().findById("dw-rich")
+            assertNotNull("the rich row should be readable back", stored)
+            assertEquals("that lasts a very short time", stored!!.definition)
+            assertEquals("adjective", stored.partOfSpeech)
+            assertEquals("/eˈfimeɾo/", stored.phonetic)
+            assertEquals("Un amor efímero.", stored.example)
+            assertEquals("La gloria es efímera.", stored.quote)
+            assertEquals("b-odisea", stored.sourceBookId)
+            assertEquals("La Odisea", stored.sourceBookTitle)
+            assertEquals("Homero", stored.sourceBookAuthor)
+            assertEquals("Capítulo III", stored.sourceChapter)
+            assertEquals("epubcfi(/6/10!/4/2/4)", stored.sourceLocator)
         }
 
     // ─────────────────────── Phase 4: PagingSource ───────────────────────
@@ -695,6 +803,10 @@ class AppDatabaseQueryValidationTest {
                 """.trimIndent(),
             )
 
+            // Defensive v15→v28 fixture. `createDatabase(dbName, 15)` materializes the real v15
+            // table from 15.json, so this `IF NOT EXISTS` statement is a no-op on device; it is kept
+            // in step with the current `DictionaryWordEntity` (the nine rich-entry columns) and the
+            // seed INSERT names its columns explicitly so it stays valid either way.
             execSQL(
                 """
                 CREATE TABLE IF NOT EXISTS dictionary_words (
@@ -702,11 +814,23 @@ class AppDatabaseQueryValidationTest {
                     word TEXT NOT NULL,
                     addedAtEpochMillis INTEGER NOT NULL,
                     definition TEXT,
+                    part_of_speech TEXT,
+                    phonetic TEXT,
+                    example TEXT,
+                    quote TEXT,
+                    source_book_id TEXT,
+                    source_book_title TEXT,
+                    source_book_author TEXT,
+                    source_chapter TEXT,
+                    source_locator TEXT,
                     PRIMARY KEY(id)
                 )
                 """.trimIndent(),
             )
-            execSQL("INSERT INTO dictionary_words VALUES ('md-1', 'migrated', 6000, 'post-migration word')")
+            execSQL(
+                "INSERT INTO dictionary_words (id, word, addedAtEpochMillis, definition) " +
+                    "VALUES ('md-1', 'migrated', 6000, 'post-migration word')",
+            )
 
             close()
         }
@@ -781,6 +905,41 @@ class AppDatabaseQueryValidationTest {
 
         migrated.close()
     }
+
+    // ────────── Phase 7: Android reader no-capture proof (5D.4) ──────────
+
+    /**
+     * REQ-DRE-010 scenario 2. Android's only add-to-dictionary entry points —
+     * `ShareDictionaryManager.onAddToDictionary` / `onSaveDefinition` — call `save(word[, definition])`
+     * and pass no evidence, because Android has no capture surface in this change. A repository save
+     * with defaults must therefore persist NULL for every evidence (and user-authored) column and
+     * surface no capture error.
+     */
+    @Test
+    fun readerDictionaryPath_persistsNullEvidenceAndSurfacesNoError() =
+        runTest {
+            val repository = DictionaryRepositoryImpl(db.dictionaryWordDao())
+
+            val result = repository.save("readerword")
+
+            assertTrue("the reader save path must not surface a capture error", result.isSuccess)
+
+            val saved = result.getOrThrow()
+            val stored =
+                checkNotNull(db.dictionaryWordDao().findById(saved.id)) {
+                    "the saved row should be readable back"
+                }
+            assertNull("quote must stay NULL — Android captures no evidence", stored.quote)
+            assertNull(stored.sourceBookId)
+            assertNull(stored.sourceBookTitle)
+            assertNull(stored.sourceBookAuthor)
+            assertNull(stored.sourceChapter)
+            assertNull(stored.sourceLocator)
+            assertNull(stored.definition)
+            assertNull(stored.partOfSpeech)
+            assertNull(stored.phonetic)
+            assertNull(stored.example)
+        }
 
     // ──────────────── Sanity test (always present, not in spec) ────────────────
 

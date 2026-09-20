@@ -3,10 +3,17 @@ import { DriveColdBackupService as DefaultDriveColdBackupService } from '$lib/sh
 import { isDriveAuthorized as defaultIsDriveAuthorized } from '$lib/shared/services/DriveConnectService';
 import { authState as defaultAuthState } from '$lib/shared/stores/AuthState.svelte';
 import { pushToast as defaultPushToast } from '$lib/shared/stores/ToastQueue.svelte';
+import {
+  dictionaryState as defaultDictionaryState,
+  type DictionaryStateApi,
+} from '$lib/shared/stores/DictionaryState.svelte';
 
 export type DriveAuthDep = {
   isAuthorized: () => Promise<boolean>;
 };
+
+/** The two store operations the dictionary transfer needs; nothing else. */
+export type DictionaryTransferDep = Pick<DictionaryStateApi, 'exportData' | 'importData'>;
 
 export type DataDeps = {
   storageState?: typeof defaultStorageState;
@@ -15,6 +22,7 @@ export type DataDeps = {
   authState?: typeof defaultAuthState;
   pushToast?: typeof defaultPushToast;
   t?: (key: string, params?: Record<string, string | number>) => string;
+  dictionaryState?: DictionaryTransferDep;
 };
 
 export function createSettingsData(deps: DataDeps = {}): {
@@ -25,12 +33,19 @@ export function createSettingsData(deps: DataDeps = {}): {
   isExportingHighlights: boolean;
   isExportingColdBackup: boolean;
   isImportingColdBackup: boolean;
+  isExportingDictionary: boolean;
+  isImportingDictionary: boolean;
+  dictionaryExportError: string | null;
+  dictionaryImportResult: string | null;
+  dictionaryImportError: string | null;
   isSaving: boolean;
   isDirty: boolean;
   handleClearCache: () => Promise<void>;
   handleExportHighlights: () => Promise<void>;
   handleExportColdBackup: () => Promise<void>;
   handleImportColdBackup: () => Promise<void>;
+  handleExportDictionary: (format: 'json' | 'csv') => Promise<void>;
+  handleImportDictionary: (file: File) => Promise<void>;
   handleSelectedExportBookChange: (value: string) => void;
   handleSelectedExportFormatChange: (value: 'json' | 'markdown') => void;
 } {
@@ -40,6 +55,7 @@ export function createSettingsData(deps: DataDeps = {}): {
   const auth = deps.authState ?? defaultAuthState;
   const pushToast = deps.pushToast ?? defaultPushToast;
   const t = deps.t ?? ((k: string) => k);
+  const dictionary = deps.dictionaryState ?? defaultDictionaryState;
 
   let isClearingCache = $state(false);
   let cacheCleared = $state(false);
@@ -48,6 +64,11 @@ export function createSettingsData(deps: DataDeps = {}): {
   let isExportingHighlights = $state(false);
   let isExportingColdBackup = $state(false);
   let isImportingColdBackup = $state(false);
+  let isExportingDictionary = $state(false);
+  let isImportingDictionary = $state(false);
+  let dictionaryExportError = $state<string | null>(null);
+  let dictionaryImportResult = $state<string | null>(null);
+  let dictionaryImportError = $state<string | null>(null);
 
   const isSaving = $derived(
     isClearingCache || isExportingHighlights || isExportingColdBackup || isImportingColdBackup,
@@ -150,6 +171,58 @@ export function createSettingsData(deps: DataDeps = {}): {
     }
   }
 
+  /**
+   * The dictionary transfer lives here (not on the dictionary screen) and is
+   * deliberately independent from the cold-backup handlers above: it never
+   * touches Drive, auth or the library — it only calls the dictionary store.
+   */
+  async function handleExportDictionary(format: 'json' | 'csv'): Promise<void> {
+    dictionaryExportError = null;
+    isExportingDictionary = true;
+    try {
+      const data = await dictionary.exportData(format);
+      const blob = new Blob([data], {
+        type: format === 'json' ? 'application/json' : 'text/csv',
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `dictionary.${format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      dictionaryExportError =
+        e instanceof Error ? e.message : t('settings.data.dictionary.exportFailed');
+    } finally {
+      isExportingDictionary = false;
+    }
+  }
+
+  async function handleImportDictionary(file: File): Promise<void> {
+    dictionaryImportError = null;
+    dictionaryImportResult = null;
+    isImportingDictionary = true;
+    try {
+      const text = await file.text();
+      const format = file.name.endsWith('.csv') ? 'csv' : 'json';
+      const res = await dictionary.importData(text, format);
+      dictionaryImportResult = t('settings.data.dictionary.imported', {
+        imported: res.imported,
+        errors: res.errors.length,
+      });
+      if (res.errors.length) {
+        dictionaryImportError = res.errors
+          .map((x) => t('settings.data.dictionary.rowError', { row: x.row, reason: x.reason }))
+          .join('; ');
+      }
+    } catch (err) {
+      dictionaryImportError =
+        err instanceof Error ? err.message : t('settings.data.dictionary.importFailed');
+    } finally {
+      isImportingDictionary = false;
+    }
+  }
+
   function handleSelectedExportBookChange(value: string): void {
     selectedExportBook = value;
   }
@@ -201,6 +274,36 @@ export function createSettingsData(deps: DataDeps = {}): {
     set isImportingColdBackup(v: boolean) {
       isImportingColdBackup = v;
     },
+    get isExportingDictionary() {
+      return isExportingDictionary;
+    },
+    set isExportingDictionary(v: boolean) {
+      isExportingDictionary = v;
+    },
+    get isImportingDictionary() {
+      return isImportingDictionary;
+    },
+    set isImportingDictionary(v: boolean) {
+      isImportingDictionary = v;
+    },
+    get dictionaryExportError() {
+      return dictionaryExportError;
+    },
+    set dictionaryExportError(v: string | null) {
+      dictionaryExportError = v;
+    },
+    get dictionaryImportResult() {
+      return dictionaryImportResult;
+    },
+    set dictionaryImportResult(v: string | null) {
+      dictionaryImportResult = v;
+    },
+    get dictionaryImportError() {
+      return dictionaryImportError;
+    },
+    set dictionaryImportError(v: string | null) {
+      dictionaryImportError = v;
+    },
     get isSaving() {
       return isSaving;
     },
@@ -211,6 +314,8 @@ export function createSettingsData(deps: DataDeps = {}): {
     handleExportHighlights,
     handleExportColdBackup,
     handleImportColdBackup,
+    handleExportDictionary,
+    handleImportDictionary,
     handleSelectedExportBookChange,
     handleSelectedExportFormatChange,
   };

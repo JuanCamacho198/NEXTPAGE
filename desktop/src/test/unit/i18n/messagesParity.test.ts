@@ -37,6 +37,118 @@ describe('i18n es/en parity (REQ-X-Cross-2)', () => {
     expect(messagesEn['home.continue.prevBook']).toBe('Previous');
   });
 
+  it('includes the reader capture-feedback keys in both locales', () => {
+    const feedbackKeys = [
+      'reader.dictionaryEvidenceUpdated',
+      'reader.dictionaryNoMatch',
+      'reader.dictionarySeveralMatches',
+      'reader.dictionaryAlreadyInDictionary',
+    ] as const;
+
+    for (const key of feedbackKeys) {
+      expect(messagesEn[key]).toBeDefined();
+      expect(messagesEs[key]).toBeDefined();
+    }
+
+    // English copy is the spec's wording (REQ-DRE-004); the locale carries it
+    // verbatim, without the frame's unbalanced closing quotation mark.
+    expect(messagesEn['reader.dictionaryEvidenceUpdated']).toBe('Evidence updated');
+    expect(messagesEn['reader.dictionaryNoMatch']).toBe(
+      'No dictionary entry matches this selection',
+    );
+    expect(messagesEn['reader.dictionarySeveralMatches']).toBe(
+      'Several entries match - select a single word',
+    );
+    expect(messagesEn['reader.dictionaryAlreadyInDictionary']).toBe('Already in your dictionary');
+
+    // Spanish is a real translation, never the English fallback.
+    for (const key of feedbackKeys) {
+      expect(messagesEs[key]).not.toBe(messagesEn[key]);
+    }
+  });
+
+  it('includes the dictionary screen keys in both locales', () => {
+    const screenKeys = [
+      'dictionary.title',
+      'dictionary.subtitle',
+      'dictionary.searchPlaceholder',
+      'dictionary.newWord',
+      'dictionary.tabAll',
+      'dictionary.tabRecent',
+      'dictionary.tabAz',
+      'dictionary.kpiTotal',
+      'dictionary.kpiThisWeek',
+      'dictionary.kpiReferencedBooks',
+      'dictionary.description',
+      'dictionary.personalExample',
+      'dictionary.bookReference',
+      'dictionary.viewBook',
+      'dictionary.edit',
+      'dictionary.partOfSpeechLabel',
+      'dictionary.phoneticLabel',
+      'dictionary.save',
+      'dictionary.cancel',
+      'dictionary.evidenceNote',
+      'dictionary.selectWordTitle',
+      'dictionary.selectWordDescription',
+      'dictionary.noDetailTitle',
+      'dictionary.noDetailDescription',
+    ] as const;
+
+    for (const key of screenKeys) {
+      expect(messagesEn[key]).toBeDefined();
+      expect(messagesEs[key]).toBeDefined();
+    }
+
+    // KPI labels are binding: the Spanish copy is the frame's wording verbatim,
+    // English is the faithful equivalent.
+    expect(messagesEs['dictionary.kpiTotal']).toBe('Palabras guardadas');
+    expect(messagesEs['dictionary.kpiThisWeek']).toBe('Esta semana');
+    expect(messagesEs['dictionary.kpiReferencedBooks']).toBe('Libros referenciados');
+    expect(messagesEn['dictionary.kpiTotal']).toBe('Saved words');
+    expect(messagesEn['dictionary.kpiThisWeek']).toBe('This week');
+    expect(messagesEn['dictionary.kpiReferencedBooks']).toBe('Books referenced');
+
+    // The frame's subtitle + search placeholder are the pen copy, corrected to
+    // a balanced `...` rather than the frame's typographic run.
+    expect(messagesEs['dictionary.subtitle']).toBe(
+      'Tus palabras guardadas con descripción y referencia.',
+    );
+    expect(messagesEs['dictionary.searchPlaceholder']).toBe('Buscar palabra...');
+    expect(messagesEs['dictionary.newWord']).toBe('Nueva palabra');
+  });
+
+  it('includes the Data-tab dictionary transfer keys in both locales', () => {
+    const transferKeys = [
+      'settings.data.dictionary.title',
+      'settings.data.dictionary.description',
+      'settings.data.dictionary.exportJson',
+      'settings.data.dictionary.exportCsv',
+      'settings.data.dictionary.import',
+      'settings.data.dictionary.imported',
+      'settings.data.dictionary.rowError',
+      'settings.data.dictionary.exportFailed',
+      'settings.data.dictionary.importFailed',
+    ] as const;
+
+    for (const key of transferKeys) {
+      expect(messagesEn[key]).toBeDefined();
+      expect(messagesEs[key]).toBeDefined();
+    }
+
+    // The group names the dictionary explicitly so it cannot be confused with
+    // the cold-backup pair that shares the tab.
+    expect(messagesEn['settings.data.dictionary.title']).toBe('Dictionary');
+    expect(messagesEs['settings.data.dictionary.title']).toBe('Diccionario');
+    expect(messagesEn['settings.data.dictionary.exportJson']).toBe('Export JSON');
+    expect(messagesEs['settings.data.dictionary.exportJson']).toBe('Exportar JSON');
+
+    // Spanish is a real translation, never the English fallback.
+    for (const key of transferKeys) {
+      expect(messagesEs[key]).not.toBe(messagesEn[key]);
+    }
+  });
+
   it('includes the addons route keys in both locales', () => {
     const addonsKeys = ['sidebar.addons', 'discover.manageAddons'] as const;
 

@@ -497,8 +497,39 @@ export const messagesEs: Record<MessageKey, string> = {
   'highlight.noteInputAriaLabel': 'Nota del resaltado',
   'highlight.saveWithNote': 'Guardar nota',
   'dictionary.title': 'Diccionario',
-  'dictionary.subtitle': 'Tu colección personal de vocabulario.',
-  'dictionary.searchPlaceholder': 'Buscar palabras…',
+  'dictionary.subtitle': 'Tus palabras guardadas con descripción y referencia.',
+  'dictionary.searchPlaceholder': 'Buscar palabra...',
+  'dictionary.newWord': 'Nueva palabra',
+  'dictionary.tabAll': 'Todas',
+  'dictionary.tabRecent': 'Recientes',
+  'dictionary.tabAz': 'A-Z',
+  'dictionary.kpiTotal': 'Palabras guardadas',
+  'dictionary.kpiThisWeek': 'Esta semana',
+  'dictionary.kpiReferencedBooks': 'Libros referenciados',
+  'dictionary.incomplete': 'Incompleta',
+  'dictionary.dateToday': 'Hoy',
+  'dictionary.dateYesterday': 'Ayer',
+  'dictionary.dateDaysAgo': 'Hace {{n}} días',
+  'dictionary.dateWeeksAgo': 'Hace {{n}} sem.',
+  'dictionary.dateMonthsAgo': 'Hace {{n}} meses',
+  'dictionary.dateYearsAgo': 'Hace {{n}} años',
+  'dictionary.description': 'Descripción',
+  'dictionary.personalExample': 'Ejemplo personal',
+  'dictionary.bookReference': 'Referencia del libro',
+  'dictionary.viewBook': 'Ver libro',
+  'dictionary.edit': 'Editar',
+  'dictionary.partOfSpeechLabel': 'Categoría gramatical',
+  'dictionary.phoneticLabel': 'Fonética',
+  'dictionary.save': 'Guardar',
+  'dictionary.cancel': 'Cancelar',
+  'dictionary.evidenceNote':
+    'Capturado del libro. Para reemplazarlo, abre el libro y vuelve a seleccionar la palabra.',
+  'dictionary.selectWordTitle': 'Selecciona una palabra',
+  'dictionary.selectWordDescription':
+    'Elige una entrada de la lista para ver su descripción, su ejemplo y la evidencia capturada.',
+  'dictionary.noDetailTitle': 'Todavía sin detalles',
+  'dictionary.noDetailDescription':
+    'Esta entrada no tiene descripción, ejemplo ni evidencia capturada. Captura una cita desde el lector para completarla.',
   'dictionary.addWord': 'Agregar palabra',
   'dictionary.wordPlaceholder': 'Palabra',
   'dictionary.definitionPlaceholder': 'Definición (opcional)',
@@ -834,6 +865,20 @@ export const messagesEs: Record<MessageKey, string> = {
     'Google Drive no esta conectado. Conecta Drive para usar el respaldo frio.',
   'settings.data.connectDrive': 'Conectar Drive',
 
+  // Settings Data Tab — diccionario. Separado a propósito del respaldo frío de
+  // arriba: son archivos locales JSON/CSV de palabras guardadas; sin Drive, sin
+  // sesión, sin biblioteca.
+  'settings.data.dictionary.title': 'Diccionario',
+  'settings.data.dictionary.description':
+    'Exporta o importa tus palabras guardadas y sus referencias en JSON o CSV. Solo archivos locales — tus libros y el respaldo de Drive no se tocan.',
+  'settings.data.dictionary.exportJson': 'Exportar JSON',
+  'settings.data.dictionary.exportCsv': 'Exportar CSV',
+  'settings.data.dictionary.import': 'Importar',
+  'settings.data.dictionary.imported': 'Importadas {{imported}}, errores {{errors}}',
+  'settings.data.dictionary.rowError': 'fila {{row}}: {{reason}}',
+  'settings.data.dictionary.exportFailed': 'No se pudo exportar',
+  'settings.data.dictionary.importFailed': 'No se pudo importar',
+
   // Drive connect pre-prompt (login-drive-separation)
   'drive.prompt.title': '¿Conectar Google Drive?',
   'drive.prompt.body':
@@ -964,6 +1009,12 @@ export const messagesEs: Record<MessageKey, string> = {
   'reader.copiedToClipboard': 'Copiado al portapapeles',
   'reader.addToDictionary': 'Agregar al diccionario',
   'reader.addedToDictionary': 'Guardado',
+  // Feedback de captura del lector (REQ-DRE-014). Sin comillas: el texto del
+  // marco tenía una comilla de cierre sin abrir y no se replica el defecto.
+  'reader.dictionaryEvidenceUpdated': 'Evidencia actualizada',
+  'reader.dictionaryNoMatch': 'Ninguna entrada del diccionario coincide con esta selección',
+  'reader.dictionarySeveralMatches': 'Varias entradas coinciden, selecciona una sola palabra',
+  'reader.dictionaryAlreadyInDictionary': 'Ya está en tu diccionario',
   'reader.nota': 'Nota',
   'reader.eliminar_destacado': 'Eliminar resaltado',
   'reader.seleccion_no_disponible': 'Selección no disponible en este formato',

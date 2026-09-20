@@ -42,8 +42,20 @@ allow = [
 ]
 confidence-threshold = 0.8
 exceptions = [
-    # epub crate uses GPL-3.0 (deprecated SPDX identifier) — needed for EPUB parsing
-    { allow = ["GPL-3.0"], crate = "epub" },
+    # epub declares the deprecated SPDX id `GPL-3.0`; the clarification below
+    # normalizes it to `GPL-3.0-only` (the modern identifier for the same terms).
+    { allow = ["GPL-3.0-only"], crate = "epub" },
+]
+
+# epub 2.1.5 ships a full GPL-3.0 LICENSE.txt but declares `license = "GPL-3.0"`,
+# a deprecated SPDX identifier that cargo-deny flags with `warning[parse-error]`.
+# Override it with the equivalent modern identifier, anchored to the crate's own
+# license text so the override is validated on every check.
+[[licenses.clarify]]
+crate = "epub"
+expression = "GPL-3.0-only"
+license-files = [
+    { path = "LICENSE.txt", hash = 0xe497def1 }
 ]
 
 #[licenses.clarify]

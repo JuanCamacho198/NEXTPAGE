@@ -24,8 +24,11 @@ data class DictionaryUiState(
     val showAddDialog: Boolean = false,
     val addWordText: String = "",
     val addDefinitionText: String = "",
-    val wordBeingEdited: DictionaryWord? = null,
+    val selectedWord: DictionaryWord? = null,
     val editDefinitionText: String = "",
+    val editPartOfSpeechText: String = "",
+    val editPhoneticText: String = "",
+    val editExampleText: String = "",
 )
 
 class DictionaryViewModel(
@@ -136,21 +139,33 @@ class DictionaryViewModel(
         }
     }
 
-    // ── Edit definition ──────────────────────────────────────────
+    // ── Detail / edit ────────────────────────────────────────────
 
-    /** Opens the edit-definition dialog pre-filled with the current definition. */
+    /**
+     * Opens the detail dialog for [word], pre-filling the four user-authored drafts. The six evidence
+     * fields are read from [word] for display only; they are never drafted or saved here.
+     */
     fun onRequestEditWord(word: DictionaryWord) {
         _uiState.update {
             it.copy(
-                wordBeingEdited = word,
+                selectedWord = word,
                 editDefinitionText = word.definition.orEmpty(),
+                editPartOfSpeechText = word.partOfSpeech.orEmpty(),
+                editPhoneticText = word.phonetic.orEmpty(),
+                editExampleText = word.example.orEmpty(),
             )
         }
     }
 
     fun onDismissEditDialog() {
         _uiState.update {
-            it.copy(wordBeingEdited = null, editDefinitionText = "")
+            it.copy(
+                selectedWord = null,
+                editDefinitionText = "",
+                editPartOfSpeechText = "",
+                editPhoneticText = "",
+                editExampleText = "",
+            )
         }
     }
 
@@ -158,28 +173,57 @@ class DictionaryViewModel(
         _uiState.update { it.copy(editDefinitionText = text) }
     }
 
+    fun onEditPartOfSpeechTextChanged(text: String) {
+        _uiState.update { it.copy(editPartOfSpeechText = text) }
+    }
+
+    fun onEditPhoneticTextChanged(text: String) {
+        _uiState.update { it.copy(editPhoneticText = text) }
+    }
+
+    fun onEditExampleTextChanged(text: String) {
+        _uiState.update { it.copy(editExampleText = text) }
+    }
+
+    /**
+     * Saves the four user-authored fields through [DictionaryRepository.updateUserFields], which
+     * cannot address an evidence column. The selected entry's quote and book reference are left
+     * untouched by construction (REQ-DRE-007).
+     */
     fun onEditDefinitionConfirm() {
-        val word = _uiState.value.wordBeingEdited ?: return
-        val definition =
-            _uiState.value.editDefinitionText
-                .trim()
-                .takeIf { it.isNotBlank() }
+        val word = _uiState.value.selectedWord ?: return
+        val state = _uiState.value
         viewModelScope.launch {
-            dictionaryRepository.updateDefinition(word.id, definition).fold(
-                onSuccess = {
-                    _uiEvent.emit(UiEvent.ShowSnackbar("Definición guardada"))
-                    _uiState.update {
-                        it.copy(wordBeingEdited = null, editDefinitionText = "")
-                    }
-                },
-                onFailure = { e ->
-                    _uiEvent.emit(
-                        UiEvent.ShowSnackbar(
-                            e.message ?: "Failed to save definition",
-                        ),
-                    )
-                },
-            )
+            dictionaryRepository
+                .updateUserFields(
+                    wordId = word.id,
+                    definition = state.editDefinitionText.trimmedOrNull(),
+                    partOfSpeech = state.editPartOfSpeechText.trimmedOrNull(),
+                    phonetic = state.editPhoneticText.trimmedOrNull(),
+                    example = state.editExampleText.trimmedOrNull(),
+                ).fold(
+                    onSuccess = {
+                        _uiEvent.emit(UiEvent.ShowSnackbar("Definición guardada"))
+                        _uiState.update {
+                            it.copy(
+                                selectedWord = null,
+                                editDefinitionText = "",
+                                editPartOfSpeechText = "",
+                                editPhoneticText = "",
+                                editExampleText = "",
+                            )
+                        }
+                    },
+                    onFailure = { e ->
+                        _uiEvent.emit(
+                            UiEvent.ShowSnackbar(
+                                e.message ?: "Failed to save word",
+                            ),
+                        )
+                    },
+                )
         }
     }
+
+    private fun String.trimmedOrNull(): String? = trim().takeIf { it.isNotBlank() }
 }

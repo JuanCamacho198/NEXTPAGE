@@ -107,6 +107,26 @@ pub struct DictionaryWordDto {
     pub deleted_at: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub synced_at: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub definition: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub part_of_speech: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub phonetic: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub example: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub quote: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_book_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_book_title: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_book_author: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_chapter: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_locator: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]

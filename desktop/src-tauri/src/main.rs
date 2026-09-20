@@ -169,6 +169,7 @@ fn main() {
             commands::addDictionaryWord,
             commands::removeDictionaryWord,
             commands::updateDictionaryWord,
+            commands::updateDictionaryEvidence,
             commands::searchDictionaryWords,
             commands::exportDictionary,
             commands::importDictionary,

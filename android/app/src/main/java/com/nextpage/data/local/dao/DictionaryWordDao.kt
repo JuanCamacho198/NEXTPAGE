@@ -30,11 +30,20 @@ interface DictionaryWordDao {
     @Query("SELECT * FROM dictionary_words WHERE id = :wordId LIMIT 1")
     suspend fun findById(wordId: String): DictionaryWordEntity?
 
-    @Query("UPDATE dictionary_words SET definition = :definition WHERE id = :wordId")
-    suspend fun updateDefinition(
+    @Query(
+        "UPDATE dictionary_words SET definition = :definition, part_of_speech = :partOfSpeech, " +
+            "phonetic = :phonetic, example = :example WHERE id = :wordId",
+    )
+    suspend fun updateUserFields(
         wordId: String,
         definition: String?,
+        partOfSpeech: String?,
+        phonetic: String?,
+        example: String?,
     )
+
+    @Query("SELECT word FROM dictionary_words")
+    suspend fun allWords(): List<String>
 
     @RawQuery(observedEntities = [DictionaryWordEntity::class])
     suspend fun searchFtsRaw(query: SupportSQLiteQuery): List<DictionaryWordEntity>

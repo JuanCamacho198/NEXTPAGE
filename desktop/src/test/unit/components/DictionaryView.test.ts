@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import DictionaryView from '$lib/features/dictionary/components/DictionaryView.svelte';
 import { deriveDictionaryKpis } from '$lib/features/dictionary/dictionaryKpis';
@@ -19,9 +19,14 @@ import {
   userFieldPatchFrom,
 } from '$lib/features/dictionary/dictionaryEntry';
 import type { DictionaryStateApi } from '$lib/shared/stores/DictionaryState.svelte';
+import {
+  openDictionaryBook,
+  resolveBookTarget,
+  type DictionaryBookNavigationDeps,
+} from '$lib/features/dictionary/dictionaryBookNavigation';
 import { messagesEn } from '$lib/shared/i18n/messages.en';
 import { messagesEs } from '$lib/shared/i18n/messages.es';
-import type { DictionaryWordDto } from '$lib/shared/types';
+import type { DictionaryWordDto, ReaderBook } from '$lib/shared/types';
 
 const HEX_PATTERN = /#[0-9a-fA-F]{3,8}/;
 const NOW = new Date('2026-09-19T12:00:00.000Z');
@@ -89,6 +94,54 @@ function makeState(words: DictionaryWordDto[]): DictionaryStateApi {
     unsubscribe: vi.fn(),
   };
   return state as unknown as DictionaryStateApi;
+}
+
+function makeBook(id: string, format = 'epub'): ReaderBook {
+  return {
+    id,
+    title: 'Hábitos Atómicos',
+    author: 'James Clear',
+    format,
+    currentPage: 0,
+    totalPages: 0,
+    progressPercentage: 0,
+    coverPath: null,
+    minutesRead: 0,
+    updatedAt: NOW.toISOString(),
+    createdAt: NOW.toISOString(),
+    filePath: `/books/${id}.${format}`,
+  };
+}
+
+/**
+ * A fake reader-navigation surface that records the step order, so a test can
+ * assert the Highlights sequence without touching the domain singletons.
+ */
+function makeNavigationDeps(book: ReaderBook | null = makeBook('book-a')): {
+  deps: DictionaryBookNavigationDeps;
+  calls: string[];
+} {
+  const calls: string[] = [];
+  const deps: DictionaryBookNavigationDeps = {
+    getBookById: vi.fn((id: string) => {
+      calls.push(`getBookById:${id}`);
+      return book && book.id === id ? book : null;
+    }),
+    promoteBookForReading: vi.fn((id: string) => calls.push(`promote:${id}`)),
+    setActiveReadingBookId: vi.fn((id: string) => calls.push(`active:${id}`)),
+    clearShelfDetails: vi.fn(() => calls.push('clearShelfDetails')),
+    openReader: vi.fn(() => calls.push('openReader')),
+    resetSearch: vi.fn(() => calls.push('resetSearch')),
+    recordReaderOpenMetric: vi.fn((format: string) => calls.push(`metric:${format}`)),
+    startReading: vi.fn(async () => {
+      calls.push('startReading');
+    }),
+    loadStats: vi.fn((id: string) => calls.push(`loadStats:${id}`)),
+    setSearchTargetLocator: vi.fn((locator: string | null) =>
+      calls.push(`locator:${locator ?? 'null'}`),
+    ),
+  };
+  return { deps, calls };
 }
 
 afterEach(() => {
@@ -629,19 +682,59 @@ describe('DictionaryView detail panel (4C)', () => {
     expect(screen.queryByTestId('dictionary-detail-header')).not.toBeInTheDocument();
   });
 
-  it('forwards the frame actions that other units own', async () => {
-    const onViewBook = vi.fn();
+  it('opens the source book at the captured locator through the navigation deps', async () => {
     const onEdit = vi.fn();
+    const { deps, calls } = makeNavigationDeps();
+    const entry = word({ ...FULL_ENTRY, sourceLocator: 'epubcfi(/6/4!/4/2/2)' });
     const { container } = render(DictionaryView, {
-      props: { t: tEs, dictionary: makeState([FULL_ENTRY]), onViewBook, onEdit },
+      props: { t: tEs, dictionary: makeState([entry]), bookNavigation: deps, onEdit },
     });
 
     await select(container, 'Efímero');
     await fireEvent.click(screen.getByTestId('dictionary-detail-view-book'));
     await fireEvent.click(screen.getByTestId('dictionary-detail-edit'));
 
-    expect(onViewBook).toHaveBeenCalledWith('book-a');
+    await waitFor(() => expect(calls).toContain('locator:epubcfi(/6/4!/4/2/2)'));
+    expect(calls).toEqual([
+      'getBookById:book-a',
+      'promote:book-a',
+      'active:book-a',
+      'clearShelfDetails',
+      'openReader',
+      'resetSearch',
+      'metric:epub',
+      'startReading',
+      'loadStats:book-a',
+      'locator:epubcfi(/6/4!/4/2/2)',
+    ]);
     expect(onEdit).toHaveBeenCalledWith('efimero');
+  });
+
+  it('passes a null locator when the entry captured none', async () => {
+    const { deps, calls } = makeNavigationDeps();
+    const { container } = render(DictionaryView, {
+      props: { t: tEs, dictionary: makeState([FULL_ENTRY]), bookNavigation: deps },
+    });
+
+    await select(container, 'Efímero');
+    await fireEvent.click(screen.getByTestId('dictionary-detail-view-book'));
+
+    await waitFor(() => expect(calls).toContain('locator:null'));
+    expect(deps.setSearchTargetLocator).toHaveBeenCalledWith(null);
+  });
+
+  it('does not navigate when the source book is no longer in the library', async () => {
+    const { deps, calls } = makeNavigationDeps(null);
+    const { container } = render(DictionaryView, {
+      props: { t: tEs, dictionary: makeState([FULL_ENTRY]), bookNavigation: deps },
+    });
+
+    await select(container, 'Efímero');
+    await fireEvent.click(screen.getByTestId('dictionary-detail-view-book'));
+
+    expect(calls).toEqual(['getBookById:book-a']);
+    expect(deps.startReading).not.toHaveBeenCalled();
+    expect(deps.setSearchTargetLocator).not.toHaveBeenCalled();
   });
 
   it('shows the empty state for a selected entry with no fields at all', async () => {
@@ -899,20 +992,36 @@ describe('DictionaryView edit mode (4D)', () => {
     );
   });
 
-  it('keeps Ver libro inert but harmless until a unit owns the navigation (4E)', async () => {
-    const state = makeState([ENTRY]);
-    const { container } = render(DictionaryView, { props: { t: tEs, dictionary: state } });
+  it('disables Ver libro for an entry with no source book (4E)', async () => {
+    const state = makeState([word({ id: 'manual', word: 'Efímero', definition: 'Sin libro.' })]);
+    const { deps, calls } = makeNavigationDeps();
+    const { container } = render(DictionaryView, {
+      props: { t: tEs, dictionary: state, bookNavigation: deps },
+    });
 
     await select(container, 'Efímero');
-    await fireEvent.click(screen.getByTestId('dictionary-detail-view-book'));
+    const button = screen.getByTestId('dictionary-detail-view-book');
 
-    // Nothing supplies onViewBook yet, so the click reaches no navigation and
-    // writes nothing. The gap is known and named (work unit 4E); this test
-    // keeps it visible instead of letting the button drift silently.
+    // The frame's geometry stays; the action cannot fire without a book.
+    expect(button).toBeDisabled();
+    await fireEvent.click(button);
+
+    expect(calls).toEqual([]);
     expect(state.update).not.toHaveBeenCalled();
     expect(state.capture).not.toHaveBeenCalled();
     expect(state.remove).not.toHaveBeenCalled();
     expect(messagesEs['dictionary.viewBook']).toBe('Ver libro');
+  });
+
+  it('enables Ver libro as soon as the entry names a source book (4E)', async () => {
+    const { deps } = makeNavigationDeps();
+    const { container } = render(DictionaryView, {
+      props: { t: tEs, dictionary: makeState([ENTRY]), bookNavigation: deps },
+    });
+
+    await select(container, 'Efímero');
+
+    expect(screen.getByTestId('dictionary-detail-view-book')).not.toBeDisabled();
   });
 
   it('offers no evidence control even while the session is open', async () => {

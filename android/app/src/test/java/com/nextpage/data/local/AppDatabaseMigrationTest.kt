@@ -38,6 +38,13 @@ class AppDatabaseMigrationTest {
             .getDatabasePath("migration-26-27")
             .absolutePath
 
+    private fun testDbPath27To28(): String =
+        InstrumentationRegistry
+            .getInstrumentation()
+            .targetContext
+            .getDatabasePath("migration-27-28")
+            .absolutePath
+
     @Test
     fun `migration 26 to 27 creates installed_addons and preserves existing rows`() {
         val dbPath = testDbPath()
@@ -69,6 +76,65 @@ class AppDatabaseMigrationTest {
 
         val outboxAfter = query(db, "SELECT COUNT(*) FROM sync_outbox")
         assertEquals(outboxBefore, outboxAfter)
+        db.close()
+    }
+
+    @Test
+    fun `migration 27 to 28 adds the ten evidence columns and preserves existing rows`() {
+        val dbPath = testDbPath27To28()
+        val outboxBefore: Long
+        helper.createDatabase(dbPath, 27).use { db ->
+            db.execSQL(
+                "INSERT INTO dictionary_words (id, word, addedAtEpochMillis, definition) " +
+                    "VALUES ('dw-mig', 'efimero', 7000, 'pre-existing definition')",
+            )
+            db.execSQL(
+                "INSERT INTO sync_outbox (id, entity_type, entity_id, operation, payload, created_at, retry_count) " +
+                    "VALUES ('ob-mig', 'DICTIONARY_WORD', 'dw-mig', 'UPSERT', '{}', 1000, 0)",
+            )
+            outboxBefore = query(db, "SELECT COUNT(*) FROM sync_outbox")
+        }
+
+        val db = helper.runMigrationsAndValidate(dbPath, 28, true, AppDatabaseMigrations.MIGRATION_27_28)
+
+        val evidenceColumns =
+            listOf(
+                "definition",
+                "part_of_speech",
+                "phonetic",
+                "example",
+                "quote",
+                "source_book_id",
+                "source_book_title",
+                "source_book_author",
+                "source_chapter",
+                "source_locator",
+            )
+        val actualColumns = mutableListOf<String>()
+        db.query("PRAGMA table_info(dictionary_words)").use { cursor ->
+            while (cursor.moveToNext()) actualColumns.add(cursor.getString(1))
+        }
+        evidenceColumns.forEach { column ->
+            assertTrue("dictionary_words is missing the evidence column $column", actualColumns.contains(column))
+        }
+
+        db
+            .query(
+                "SELECT word, definition, part_of_speech, phonetic, example, quote, " +
+                    "source_book_id, source_book_title, source_book_author, source_chapter, source_locator " +
+                    "FROM dictionary_words WHERE id = 'dw-mig'",
+            ).use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals("efimero", cursor.getString(0))
+                assertEquals("pre-existing definition", cursor.getString(1))
+                for (index in 2 until cursor.columnCount) {
+                    assertTrue("evidence column at index $index should be NULL after migration", cursor.isNull(index))
+                }
+            }
+
+        val outboxAfter = query(db, "SELECT COUNT(*) FROM sync_outbox")
+        assertEquals(outboxBefore, outboxAfter)
+        assertEquals(1L, outboxAfter)
         db.close()
     }
 }

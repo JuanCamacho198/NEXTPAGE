@@ -466,6 +466,28 @@ object AppDatabaseMigrations {
             }
         }
 
+    /**
+     * Dictionary rich entries (REQ-DRE-011, REQ-DRE-013): nine additive nullable
+     * evidence columns on dictionary_words, mirroring desktop migration 0019.
+     * `definition` already exists on Android, so nine of the ten shared evidence
+     * columns are added here. No default, no backfill. Declared above `ALL` so
+     * Kotlin initialises it before `ALL` hard-references it.
+     */
+    val MIGRATION_27_28 =
+        object : Migration(27, 28) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE dictionary_words ADD COLUMN part_of_speech TEXT")
+                db.execSQL("ALTER TABLE dictionary_words ADD COLUMN phonetic TEXT")
+                db.execSQL("ALTER TABLE dictionary_words ADD COLUMN example TEXT")
+                db.execSQL("ALTER TABLE dictionary_words ADD COLUMN quote TEXT")
+                db.execSQL("ALTER TABLE dictionary_words ADD COLUMN source_book_id TEXT")
+                db.execSQL("ALTER TABLE dictionary_words ADD COLUMN source_book_title TEXT")
+                db.execSQL("ALTER TABLE dictionary_words ADD COLUMN source_book_author TEXT")
+                db.execSQL("ALTER TABLE dictionary_words ADD COLUMN source_chapter TEXT")
+                db.execSQL("ALTER TABLE dictionary_words ADD COLUMN source_locator TEXT")
+            }
+        }
+
     val ALL =
         arrayOf(
             MIGRATION_1_2,
@@ -494,5 +516,6 @@ object AppDatabaseMigrations {
             MIGRATION_24_25,
             MIGRATION_25_26,
             MIGRATION_26_27,
+            MIGRATION_27_28,
         )
 }

@@ -26,12 +26,6 @@ interface DictionaryRepository {
         sourceLocator: String? = null,
     ): Result<DictionaryWord>
 
-    /** Legacy narrow edit of `definition` alone; the dictionary screen rewires to [updateUserFields] later. */
-    suspend fun updateDefinition(
-        wordId: String,
-        definition: String?,
-    ): Result<DictionaryWord>
-
     /** Rewrites the four user-authored fields; the six evidence columns are not addressable here. */
     suspend fun updateUserFields(
         wordId: String,

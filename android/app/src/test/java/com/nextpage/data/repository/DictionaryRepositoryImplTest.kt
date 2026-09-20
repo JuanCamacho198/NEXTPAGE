@@ -162,21 +162,6 @@ class DictionaryRepositoryImplTest {
         }
 
     @Test
-    fun `updateDefinition leaves evidence and the other user fields untouched`() =
-        runBlocking {
-            val saved = seedFullEntry()
-
-            repository.updateDefinition(saved.id, "Solo la definición").getOrThrow()
-
-            val stored = repository.observeAll().first().single()
-            assertEquals("Solo la definición", stored.definition)
-            assertEquals("adjetivo", stored.partOfSpeech)
-            assertEquals("eˈfimeɾo", stored.phonetic)
-            assertEquals("Un amor efímero.", stored.example)
-            assertEvidenceIntact(stored)
-        }
-
-    @Test
     fun `exists matches across casing and accents`() =
         runBlocking {
             repository.save("Café").getOrThrow()

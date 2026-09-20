@@ -695,6 +695,14 @@
     <string name="dictionary_word_count">%1$d words</string>
     <string name="dictionary_tap_to_add_definition">Tap to add definition</string>
     <string name="dictionary_edit_confirm">Save</string>
+    <string name="dictionary_detail_part_of_speech">Part of speech</string>
+    <string name="dictionary_detail_phonetic">Phonetic</string>
+    <string name="dictionary_detail_phonetic_hint">/eˈfimeɾo/</string>
+    <string name="dictionary_detail_description">Description</string>
+    <string name="dictionary_detail_example">Personal example</string>
+    <string name="dictionary_detail_example_hint">Write your own example sentence</string>
+    <string name="dictionary_detail_book_reference">Book reference</string>
+    <string name="dictionary_detail_chapter">Chapter %1$s</string>
     <string name="settings_dictionary_label">Dictionary</string>
     <string name="context_menu_dictionary">Add to Dictionary</string>
     <string name="reader_add_to_dictionary">Added to dictionary</string>

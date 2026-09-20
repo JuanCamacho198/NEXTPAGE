@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -69,22 +70,6 @@ class DictionaryViewModelTest {
         }
 
     @Test
-    fun `onRequestEditWord updates definition via repository`() =
-        runTest {
-            val repo = FakeDictionaryRepository()
-            val saved = repo.save("word1", "oldDef").getOrNull()!!
-            val vm = DictionaryViewModel(repo)
-            vm.uiState.first()
-
-            vm.onRequestEditWord(saved)
-            vm.onEditDefinitionTextChanged("newDef")
-            vm.onEditDefinitionConfirm()
-            advanceUntilIdle()
-
-            assertEquals("newDef", repo.updatedDefinitions[saved.id])
-        }
-
-    @Test
     fun `duplicate guard uses trimmed exists`() =
         runTest {
             val repo = FakeDictionaryRepository()
@@ -99,11 +84,159 @@ class DictionaryViewModelTest {
             assertEquals(1, repo.savedWords.size)
         }
 
+    @Test
+    fun `onRequestEditWord seeds the four user drafts and keeps the evidence display-only`() =
+        runTest {
+            val repo = FakeDictionaryRepository()
+            val saved = repo.seedFullEntry()
+            val vm = DictionaryViewModel(repo)
+            vm.uiState.first()
+
+            vm.onRequestEditWord(saved)
+
+            val state = vm.uiState.value
+            assertEquals(saved, state.selectedWord)
+            assertEquals("Que dura poco tiempo", state.editDefinitionText)
+            assertEquals("adjetivo", state.editPartOfSpeechText)
+            assertEquals("eˈfimeɾo", state.editPhoneticText)
+            assertEquals("Un amor efímero.", state.editExampleText)
+            // The evidence never enters a draft: it is read from selectedWord for display only.
+            assertEquals(saved.quote, state.selectedWord?.quote)
+            assertEquals(saved.sourceBookTitle, state.selectedWord?.sourceBookTitle)
+            assertEquals(saved.sourceBookAuthor, state.selectedWord?.sourceBookAuthor)
+            assertEquals(saved.sourceChapter, state.selectedWord?.sourceChapter)
+        }
+
+    @Test
+    fun `onEditDefinitionConfirm saves the four user fields through updateUserFields`() =
+        runTest {
+            val repo = FakeDictionaryRepository()
+            val saved = repo.seedFullEntry()
+            val vm = DictionaryViewModel(repo)
+            vm.uiState.first()
+
+            vm.onRequestEditWord(saved)
+            vm.onEditDefinitionTextChanged("Nueva definición")
+            vm.onEditPartOfSpeechTextChanged("sustantivo")
+            vm.onEditPhoneticTextChanged("nuevo")
+            vm.onEditExampleTextChanged("Nuevo ejemplo.")
+            vm.onEditDefinitionConfirm()
+            advanceUntilIdle()
+
+            val update = repo.userFieldUpdates.single()
+            assertEquals(saved.id, update.wordId)
+            assertEquals("Nueva definición", update.definition)
+            assertEquals("sustantivo", update.partOfSpeech)
+            assertEquals("nuevo", update.phonetic)
+            assertEquals("Nuevo ejemplo.", update.example)
+            assertNull(vm.uiState.value.selectedWord)
+        }
+
+    @Test
+    fun `onEditDefinitionConfirm cannot change the stored evidence`() =
+        runTest {
+            val repo = FakeDictionaryRepository()
+            val saved = repo.seedFullEntry()
+            val vm = DictionaryViewModel(repo)
+            vm.uiState.first()
+
+            vm.onRequestEditWord(saved)
+            vm.onEditDefinitionTextChanged("Nueva definición")
+            vm.onEditPartOfSpeechTextChanged("sustantivo")
+            vm.onEditPhoneticTextChanged("nuevo")
+            vm.onEditExampleTextChanged("Nuevo ejemplo.")
+            vm.onEditDefinitionConfirm()
+            advanceUntilIdle()
+
+            val stored = repo.words().single()
+            assertEquals("Nueva definición", stored.definition)
+            assertEquals("Todo lo que nace está condenado a lo efímero.", stored.quote)
+            assertEquals("book-1", stored.sourceBookId)
+            assertEquals("La Odisea", stored.sourceBookTitle)
+            assertEquals("Homero", stored.sourceBookAuthor)
+            assertEquals("Canto I", stored.sourceChapter)
+            assertEquals("epubcfi(/6/4!/2/10)", stored.sourceLocator)
+        }
+
+    @Test
+    fun `onEditDefinitionConfirm stores blank user fields as null`() =
+        runTest {
+            val repo = FakeDictionaryRepository()
+            val saved = repo.seedFullEntry()
+            val vm = DictionaryViewModel(repo)
+            vm.uiState.first()
+
+            vm.onRequestEditWord(saved)
+            vm.onEditDefinitionTextChanged("   ")
+            vm.onEditPartOfSpeechTextChanged("")
+            vm.onEditPhoneticTextChanged("  ")
+            vm.onEditExampleTextChanged("")
+            vm.onEditDefinitionConfirm()
+            advanceUntilIdle()
+
+            val update = repo.userFieldUpdates.single()
+            assertNull(update.definition)
+            assertNull(update.partOfSpeech)
+            assertNull(update.phonetic)
+            assertNull(update.example)
+        }
+
+    @Test
+    fun `onDismissEditDialog clears the selection and the four drafts`() =
+        runTest {
+            val repo = FakeDictionaryRepository()
+            val saved = repo.seedFullEntry()
+            val vm = DictionaryViewModel(repo)
+            vm.uiState.first()
+
+            vm.onRequestEditWord(saved)
+            vm.onDismissEditDialog()
+
+            val state = vm.uiState.value
+            assertNull(state.selectedWord)
+            assertEquals("", state.editDefinitionText)
+            assertEquals("", state.editPartOfSpeechText)
+            assertEquals("", state.editPhoneticText)
+            assertEquals("", state.editExampleText)
+        }
+
     private class FakeDictionaryRepository : DictionaryRepository {
         val savedWords = mutableListOf<String>()
         val existsCalledWords = mutableListOf<String>()
-        val updatedDefinitions = mutableMapOf<String, String?>()
+        val userFieldUpdates = mutableListOf<UserFieldUpdate>()
         private val wordsFlow = MutableStateFlow<List<DictionaryWord>>(emptyList())
+
+        data class UserFieldUpdate(
+            val wordId: String,
+            val definition: String?,
+            val partOfSpeech: String?,
+            val phonetic: String?,
+            val example: String?,
+        )
+
+        fun words(): List<DictionaryWord> = wordsFlow.value
+
+        fun seedFullEntry(): DictionaryWord {
+            val entry =
+                DictionaryWord(
+                    id = "entry-1",
+                    word = "Efímero",
+                    addedAtEpochMillis = 1_700_000_000_000,
+                    definition = "Que dura poco tiempo",
+                    partOfSpeech = "adjetivo",
+                    phonetic = "eˈfimeɾo",
+                    example = "Un amor efímero.",
+                    quote = "Todo lo que nace está condenado a lo efímero.",
+                    sourceBookId = "book-1",
+                    sourceBookTitle = "La Odisea",
+                    sourceBookAuthor = "Homero",
+                    sourceChapter = "Canto I",
+                    sourceLocator = "epubcfi(/6/4!/2/10)",
+                )
+            savedWords.add(entry.word)
+            wordsFlow.value = wordsFlow.value + entry
+            return entry
+        }
 
         override fun observeAll(): Flow<List<DictionaryWord>> = wordsFlow
 
@@ -139,21 +272,27 @@ class DictionaryViewModelTest {
             return Result.success(dw)
         }
 
-        override suspend fun updateDefinition(
-            wordId: String,
-            definition: String?,
-        ): Result<DictionaryWord> {
-            updatedDefinitions[wordId] = definition
-            return Result.success(DictionaryWord(wordId, "word", System.currentTimeMillis(), definition))
-        }
-
         override suspend fun updateUserFields(
             wordId: String,
             definition: String?,
             partOfSpeech: String?,
             phonetic: String?,
             example: String?,
-        ): Result<DictionaryWord> = updateDefinition(wordId, definition)
+        ): Result<DictionaryWord> {
+            userFieldUpdates += UserFieldUpdate(wordId, definition, partOfSpeech, phonetic, example)
+            val current =
+                wordsFlow.value.firstOrNull { it.id == wordId }
+                    ?: return Result.failure(IllegalStateException("missing entry"))
+            val updated =
+                current.copy(
+                    definition = definition,
+                    partOfSpeech = partOfSpeech,
+                    phonetic = phonetic,
+                    example = example,
+                )
+            wordsFlow.value = wordsFlow.value.map { if (it.id == wordId) updated else it }
+            return Result.success(updated)
+        }
 
         override suspend fun delete(wordId: String) {
             wordsFlow.value = wordsFlow.value.filterNot { it.id == wordId }

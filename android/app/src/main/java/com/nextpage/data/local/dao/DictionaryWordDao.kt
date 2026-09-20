@@ -30,12 +30,6 @@ interface DictionaryWordDao {
     @Query("SELECT * FROM dictionary_words WHERE id = :wordId LIMIT 1")
     suspend fun findById(wordId: String): DictionaryWordEntity?
 
-    @Query("UPDATE dictionary_words SET definition = :definition WHERE id = :wordId")
-    suspend fun updateDefinition(
-        wordId: String,
-        definition: String?,
-    )
-
     @Query(
         "UPDATE dictionary_words SET definition = :definition, part_of_speech = :partOfSpeech, " +
             "phonetic = :phonetic, example = :example WHERE id = :wordId",

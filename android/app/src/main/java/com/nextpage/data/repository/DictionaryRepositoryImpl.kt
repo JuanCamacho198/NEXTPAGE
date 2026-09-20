@@ -56,16 +56,6 @@ class DictionaryRepositoryImpl(
             entity.toDomain()
         }
 
-    override suspend fun updateDefinition(
-        wordId: String,
-        definition: String?,
-    ): Result<DictionaryWord> =
-        runCatching {
-            dao.updateDefinition(wordId, definition.cleaned())
-            val updated = dao.findById(wordId) ?: error("Word $wordId not found after update")
-            updated.toDomain()
-        }
-
     override suspend fun updateUserFields(
         wordId: String,
         definition: String?,

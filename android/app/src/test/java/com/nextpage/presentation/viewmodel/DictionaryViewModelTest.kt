@@ -109,11 +109,18 @@ class DictionaryViewModelTest {
 
         override fun search(query: String): Flow<List<DictionaryWord>> = wordsFlow
 
-        override suspend fun save(word: String): Result<DictionaryWord> = save(word, null)
-
         override suspend fun save(
             word: String,
             definition: String?,
+            partOfSpeech: String?,
+            phonetic: String?,
+            example: String?,
+            quote: String?,
+            sourceBookId: String?,
+            sourceBookTitle: String?,
+            sourceBookAuthor: String?,
+            sourceChapter: String?,
+            sourceLocator: String?,
         ): Result<DictionaryWord> {
             val trimmed = word.trim()
             // Simulate case-insensitive check like real repo
@@ -139,6 +146,14 @@ class DictionaryViewModelTest {
             updatedDefinitions[wordId] = definition
             return Result.success(DictionaryWord(wordId, "word", System.currentTimeMillis(), definition))
         }
+
+        override suspend fun updateUserFields(
+            wordId: String,
+            definition: String?,
+            partOfSpeech: String?,
+            phonetic: String?,
+            example: String?,
+        ): Result<DictionaryWord> = updateDefinition(wordId, definition)
 
         override suspend fun delete(wordId: String) {
             wordsFlow.value = wordsFlow.value.filterNot { it.id == wordId }

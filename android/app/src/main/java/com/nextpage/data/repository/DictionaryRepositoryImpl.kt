@@ -1,5 +1,6 @@
 package com.nextpage.data.repository
 
+import com.nextpage.data.local.DictionaryNormalizer
 import com.nextpage.data.local.dao.DictionaryWordDao
 import com.nextpage.data.local.entity.DictionaryWordEntity
 import com.nextpage.domain.model.DictionaryWord
@@ -21,20 +22,35 @@ class DictionaryRepositoryImpl(
             entities.map { it.toDomain() }
         }
 
-    override suspend fun save(word: String): Result<DictionaryWord> = save(word, null)
-
     override suspend fun save(
         word: String,
         definition: String?,
+        partOfSpeech: String?,
+        phonetic: String?,
+        example: String?,
+        quote: String?,
+        sourceBookId: String?,
+        sourceBookTitle: String?,
+        sourceBookAuthor: String?,
+        sourceChapter: String?,
+        sourceLocator: String?,
     ): Result<DictionaryWord> =
         runCatching {
-            val trimmed = word.trim()
             val entity =
                 DictionaryWordEntity(
                     id = UUID.randomUUID().toString(),
-                    word = trimmed,
+                    word = word.trim(),
                     addedAtEpochMillis = System.currentTimeMillis(),
-                    definition = definition?.trim()?.takeIf { it.isNotBlank() },
+                    definition = definition.cleaned(),
+                    partOfSpeech = partOfSpeech.cleaned(),
+                    phonetic = phonetic.cleaned(),
+                    example = example.cleaned(),
+                    quote = quote.cleaned(),
+                    sourceBookId = sourceBookId.cleaned(),
+                    sourceBookTitle = sourceBookTitle.cleaned(),
+                    sourceBookAuthor = sourceBookAuthor.cleaned(),
+                    sourceChapter = sourceChapter.cleaned(),
+                    sourceLocator = sourceLocator.cleaned(),
                 )
             dao.insert(entity)
             entity.toDomain()
@@ -45,8 +61,26 @@ class DictionaryRepositoryImpl(
         definition: String?,
     ): Result<DictionaryWord> =
         runCatching {
-            val sanitized = definition?.trim()?.takeIf { it.isNotBlank() }
-            dao.updateDefinition(wordId, sanitized)
+            dao.updateDefinition(wordId, definition.cleaned())
+            val updated = dao.findById(wordId) ?: error("Word $wordId not found after update")
+            updated.toDomain()
+        }
+
+    override suspend fun updateUserFields(
+        wordId: String,
+        definition: String?,
+        partOfSpeech: String?,
+        phonetic: String?,
+        example: String?,
+    ): Result<DictionaryWord> =
+        runCatching {
+            dao.updateUserFields(
+                wordId = wordId,
+                definition = definition.cleaned(),
+                partOfSpeech = partOfSpeech.cleaned(),
+                phonetic = phonetic.cleaned(),
+                example = example.cleaned(),
+            )
             val updated = dao.findById(wordId) ?: error("Word $wordId not found after update")
             updated.toDomain()
         }
@@ -55,7 +89,16 @@ class DictionaryRepositoryImpl(
         dao.delete(wordId)
     }
 
-    override suspend fun exists(word: String): Boolean = dao.countByWord(word.trim()) > 0
+    /**
+     * Identity is the normalized key (REQ-DSI-004). Android has no `normalized_word` column
+     * (Decision 12), so the comparison runs in Kotlin over the narrow `word` projection.
+     */
+    override suspend fun exists(word: String): Boolean {
+        val key = DictionaryNormalizer.normalize(word)
+        return dao.allWords().any { DictionaryNormalizer.normalize(it) == key }
+    }
+
+    private fun String?.cleaned(): String? = this?.trim()?.takeIf { it.isNotBlank() }
 
     private fun DictionaryWordEntity.toDomain() =
         DictionaryWord(
@@ -63,5 +106,14 @@ class DictionaryRepositoryImpl(
             word = word,
             addedAtEpochMillis = addedAtEpochMillis,
             definition = definition,
+            partOfSpeech = partOfSpeech,
+            phonetic = phonetic,
+            example = example,
+            quote = quote,
+            sourceBookId = sourceBookId,
+            sourceBookTitle = sourceBookTitle,
+            sourceBookAuthor = sourceBookAuthor,
+            sourceChapter = sourceChapter,
+            sourceLocator = sourceLocator,
         )
 }

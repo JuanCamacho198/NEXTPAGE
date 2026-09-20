@@ -86,8 +86,6 @@ function makeState(words: DictionaryWordDto[]): DictionaryStateApi {
     update: vi.fn(),
     capture: vi.fn(),
     toggleFavorite: vi.fn(),
-    exportData: vi.fn(),
-    importData: vi.fn(),
     subscribeToRemoteChanges: vi.fn(),
     unsubscribe: vi.fn(),
   };
@@ -138,6 +136,22 @@ describe('DictionaryView shell (4A)', () => {
     });
 
     expect(container.innerHTML).not.toMatch(HEX_PATTERN);
+  });
+
+  it('carries no import/export controls and one primary action', () => {
+    const { container } = render(DictionaryView, {
+      props: { t: tEs, dictionary: makeState([word({ id: '1', word: 'Efímero' })]) },
+    });
+
+    // The transfer moved to Settings > Data; the screen keeps no file input
+    // and no control whose label offers import/export.
+    expect(container.querySelector('input[type="file"]')).toBeNull();
+    const labels = [...container.querySelectorAll('button')].map(
+      (b) => b.textContent?.trim() ?? '',
+    );
+    expect(labels.some((label) => /import|export|json|csv/i.test(label))).toBe(false);
+
+    expect(screen.getByRole('button', { name: 'Nueva palabra' })).toBeInTheDocument();
   });
 
   it('filters by tab: store order, newest first, then alphabetical', async () => {

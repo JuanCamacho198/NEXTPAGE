@@ -909,6 +909,20 @@ export const messagesEn = {
     'Google Drive is not connected. Connect Drive to use cold backup.',
   'settings.data.connectDrive': 'Connect Drive',
 
+  // Settings Data Tab — dictionary transfer. Kept separate from the cold-backup
+  // pair above on purpose: these are local JSON/CSV files of saved words; no
+  // Drive, no auth, no library.
+  'settings.data.dictionary.title': 'Dictionary',
+  'settings.data.dictionary.description':
+    'Export or import your saved words and their references as JSON or CSV. Local files only — your books and Drive backups are untouched.',
+  'settings.data.dictionary.exportJson': 'Export JSON',
+  'settings.data.dictionary.exportCsv': 'Export CSV',
+  'settings.data.dictionary.import': 'Import',
+  'settings.data.dictionary.imported': 'Imported {{imported}}, errors {{errors}}',
+  'settings.data.dictionary.rowError': 'row {{row}}: {{reason}}',
+  'settings.data.dictionary.exportFailed': 'Export failed',
+  'settings.data.dictionary.importFailed': 'Import failed',
+
   // Drive connect pre-prompt (login-drive-separation)
   'drive.prompt.title': 'Connect Google Drive?',
   'drive.prompt.body':

@@ -118,6 +118,37 @@ describe('i18n es/en parity (REQ-X-Cross-2)', () => {
     expect(messagesEs['dictionary.newWord']).toBe('Nueva palabra');
   });
 
+  it('includes the Data-tab dictionary transfer keys in both locales', () => {
+    const transferKeys = [
+      'settings.data.dictionary.title',
+      'settings.data.dictionary.description',
+      'settings.data.dictionary.exportJson',
+      'settings.data.dictionary.exportCsv',
+      'settings.data.dictionary.import',
+      'settings.data.dictionary.imported',
+      'settings.data.dictionary.rowError',
+      'settings.data.dictionary.exportFailed',
+      'settings.data.dictionary.importFailed',
+    ] as const;
+
+    for (const key of transferKeys) {
+      expect(messagesEn[key]).toBeDefined();
+      expect(messagesEs[key]).toBeDefined();
+    }
+
+    // The group names the dictionary explicitly so it cannot be confused with
+    // the cold-backup pair that shares the tab.
+    expect(messagesEn['settings.data.dictionary.title']).toBe('Dictionary');
+    expect(messagesEs['settings.data.dictionary.title']).toBe('Diccionario');
+    expect(messagesEn['settings.data.dictionary.exportJson']).toBe('Export JSON');
+    expect(messagesEs['settings.data.dictionary.exportJson']).toBe('Exportar JSON');
+
+    // Spanish is a real translation, never the English fallback.
+    for (const key of transferKeys) {
+      expect(messagesEs[key]).not.toBe(messagesEn[key]);
+    }
+  });
+
   it('includes the addons route keys in both locales', () => {
     const addonsKeys = ['sidebar.addons', 'discover.manageAddons'] as const;
 

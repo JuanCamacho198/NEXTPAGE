@@ -865,6 +865,20 @@ export const messagesEs: Record<MessageKey, string> = {
     'Google Drive no esta conectado. Conecta Drive para usar el respaldo frio.',
   'settings.data.connectDrive': 'Conectar Drive',
 
+  // Settings Data Tab — diccionario. Separado a propósito del respaldo frío de
+  // arriba: son archivos locales JSON/CSV de palabras guardadas; sin Drive, sin
+  // sesión, sin biblioteca.
+  'settings.data.dictionary.title': 'Diccionario',
+  'settings.data.dictionary.description':
+    'Exporta o importa tus palabras guardadas y sus referencias en JSON o CSV. Solo archivos locales — tus libros y el respaldo de Drive no se tocan.',
+  'settings.data.dictionary.exportJson': 'Exportar JSON',
+  'settings.data.dictionary.exportCsv': 'Exportar CSV',
+  'settings.data.dictionary.import': 'Importar',
+  'settings.data.dictionary.imported': 'Importadas {{imported}}, errores {{errors}}',
+  'settings.data.dictionary.rowError': 'fila {{row}}: {{reason}}',
+  'settings.data.dictionary.exportFailed': 'No se pudo exportar',
+  'settings.data.dictionary.importFailed': 'No se pudo importar',
+
   // Drive connect pre-prompt (login-drive-separation)
   'drive.prompt.title': '¿Conectar Google Drive?',
   'drive.prompt.body':

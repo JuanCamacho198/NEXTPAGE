@@ -14,6 +14,11 @@
     isExportingHighlights: boolean;
     isExportingColdBackup?: boolean;
     isImportingColdBackup?: boolean;
+    isExportingDictionary?: boolean;
+    isImportingDictionary?: boolean;
+    dictionaryExportError?: string | null;
+    dictionaryImportResult?: string | null;
+    dictionaryImportError?: string | null;
     isDriveConnected?: boolean;
     isConnectingDrive?: boolean;
     onClearCache: () => void;
@@ -21,6 +26,8 @@
     onExportHighlights: () => void;
     onExportColdBackup?: () => void;
     onImportColdBackup?: () => void;
+    onExportDictionary?: (format: 'json' | 'csv') => void;
+    onImportDictionary?: (file: File) => void;
     onConnectDrive?: () => void;
     onSelectedExportBookChange: (value: string) => void;
     onSelectedExportFormatChange: (value: 'json' | 'markdown') => void;
@@ -36,6 +43,11 @@
     isExportingHighlights,
     isExportingColdBackup = false,
     isImportingColdBackup = false,
+    isExportingDictionary = false,
+    isImportingDictionary = false,
+    dictionaryExportError = null,
+    dictionaryImportResult = null,
+    dictionaryImportError = null,
     isDriveConnected = true,
     isConnectingDrive = false,
     onClearCache,
@@ -43,6 +55,8 @@
     onExportHighlights,
     onExportColdBackup = () => {},
     onImportColdBackup = () => {},
+    onExportDictionary = () => {},
+    onImportDictionary = () => {},
     onConnectDrive = () => {},
     onSelectedExportBookChange,
     onSelectedExportFormatChange,
@@ -57,6 +71,17 @@
     { value: 'json', label: 'JSON' },
     { value: 'markdown', label: t('settings.data.markdown') },
   ]);
+
+  async function handleDictionaryFile(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    try {
+      await onImportDictionary(file);
+    } finally {
+      input.value = '';
+    }
+  }
 </script>
 
 <Panel
@@ -178,6 +203,60 @@
       >
     </button>
   </div>
+</Panel>
+
+<Panel
+  title={t('settings.data.dictionary.title')}
+  subtitle={t('settings.data.dictionary.description')}
+>
+  <div class="flex flex-wrap items-center gap-2" data-testid="dictionary-transfer-actions">
+    <button
+      type="button"
+      class="flex items-center gap-2 rounded-lg border border-(--color-primary) bg-(--color-primary) px-4 py-2.5 text-xs font-medium text-(--color-background) cursor-pointer transition-all duration-200 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+      onclick={() => onExportDictionary('json')}
+      disabled={isExportingDictionary || isImportingDictionary}
+    >
+      <span>{t('settings.data.dictionary.exportJson')}</span>
+    </button>
+    <button
+      type="button"
+      class="flex items-center gap-2 rounded-lg border border-(--color-border) bg-(--color-background) px-4 py-2.5 text-xs text-(--color-primary) cursor-pointer transition-all duration-200 hover:bg-(--color-surface) disabled:cursor-not-allowed disabled:opacity-60"
+      onclick={() => onExportDictionary('csv')}
+      disabled={isExportingDictionary || isImportingDictionary}
+    >
+      <span>{t('settings.data.dictionary.exportCsv')}</span>
+    </button>
+    <label
+      class="flex cursor-pointer items-center gap-2 rounded-lg border border-(--color-border) bg-(--color-background) px-4 py-2.5 text-xs text-(--color-primary) transition-all duration-200 hover:bg-(--color-surface)"
+      class:pointer-events-none={isExportingDictionary || isImportingDictionary}
+      class:opacity-60={isExportingDictionary || isImportingDictionary}
+    >
+      <input
+        type="file"
+        accept=".json,.csv"
+        class="hidden"
+        data-testid="dictionary-import-input"
+        onchange={handleDictionaryFile}
+        disabled={isExportingDictionary || isImportingDictionary}
+      />
+      <span>{t('settings.data.dictionary.import')}</span>
+    </label>
+  </div>
+  {#if dictionaryExportError}
+    <p class="mt-2 text-xs text-red-500" data-testid="dictionary-export-error">
+      {dictionaryExportError}
+    </p>
+  {/if}
+  {#if dictionaryImportResult}
+    <p class="mt-2 text-xs text-green-600" data-testid="dictionary-import-result">
+      {dictionaryImportResult}
+    </p>
+  {/if}
+  {#if dictionaryImportError}
+    <p class="mt-2 text-xs text-amber-600" data-testid="dictionary-import-error">
+      {dictionaryImportError}
+    </p>
+  {/if}
 </Panel>
 
 <Panel title={t('settings.data.clearCache')} subtitle={t('settings.data.clearCacheDescription')}>

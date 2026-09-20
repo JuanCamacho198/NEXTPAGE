@@ -52,8 +52,6 @@
   let isAdding = $state(false);
   let errorMsg = $state<string | null>(null);
   let duplicateWord = $state<string | null>(null);
-  let importError = $state<string | null>(null);
-  let importResult = $state<string | null>(null);
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   const tabs: { id: Tab; label: MessageKey }[] = [
@@ -169,41 +167,6 @@
     await dictionary.update(id, userFieldPatchFrom(editDraft));
     closeEdit();
   }
-
-  async function handleExport(format: 'json' | 'csv'): Promise<void> {
-    try {
-      const data = await dictionary.exportData(format);
-      const blob = new Blob([data], { type: format === 'json' ? 'application/json' : 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `dictionary.${format}`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      importError = e instanceof Error ? e.message : 'Export failed';
-    }
-  }
-
-  async function handleImportFile(e: Event): Promise<void> {
-    const input = e.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file) return;
-    const text = await file.text();
-    const format = file.name.endsWith('.csv') ? 'csv' : 'json';
-    importError = null;
-    importResult = null;
-    try {
-      const res = await dictionary.importData(text, format);
-      importResult = `Imported ${res.imported}, errors ${res.errors.length}`;
-      if (res.errors.length)
-        importError = res.errors.map((x) => `row ${x.row}: ${x.reason}`).join('; ');
-    } catch (err) {
-      importError = err instanceof Error ? err.message : 'Import failed';
-    } finally {
-      input.value = '';
-    }
-  }
 </script>
 
 <section class="flex w-full flex-col gap-6 p-6">
@@ -259,27 +222,6 @@
           </button>
         {/each}
       </div>
-
-      <div class="flex items-center justify-end gap-2 text-xs text-(--color-text-tertiary)">
-        <label
-          class="cursor-pointer rounded-md border border-(--color-panel-border) px-2.5 py-1.5 hover:bg-(--color-panel-input)"
-        >
-          <input type="file" accept=".json,.csv" class="hidden" onchange={handleImportFile} />
-          <span>Import</span>
-        </label>
-        <button
-          type="button"
-          class="cursor-pointer rounded-md border border-(--color-panel-border) px-2.5 py-1.5 hover:bg-(--color-panel-input)"
-          onclick={() => void handleExport('json')}>Export JSON</button
-        >
-        <button
-          type="button"
-          class="cursor-pointer rounded-md border border-(--color-panel-border) px-2.5 py-1.5 hover:bg-(--color-panel-input)"
-          onclick={() => void handleExport('csv')}>CSV</button
-        >
-      </div>
-      {#if importError}<p class="text-xs text-amber-600">{importError}</p>{/if}
-      {#if importResult}<p class="text-xs text-green-600">{importResult}</p>{/if}
 
       {#if showAddForm}
         <form

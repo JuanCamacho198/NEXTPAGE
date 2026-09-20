@@ -1,5 +1,5 @@
 {
-  "version": "2.17",
+  "version": "2.18",
   "children": [
     {
       "type": "frame",
@@ -2983,88 +2983,17 @@
       "layout": "vertical",
       "children": [
         {
-          "type": "frame",
-          "id": "LeQKx",
+          "id": "SMlon",
+          "type": "ref",
+          "ref": "AoSoi",
           "name": "header",
           "width": "fill_container",
-          "gap": 12,
-          "padding": [
-            16,
-            20
-          ],
-          "justifyContent": "space_between",
-          "alignItems": "center",
-          "children": [
-            {
-              "type": "frame",
-              "id": "NcJUO",
-              "name": "avatar",
-              "width": 40,
-              "height": 40,
-              "fill": "$primary",
-              "cornerRadius": 999,
-              "layout": "vertical",
-              "justifyContent": "center",
-              "alignItems": "center",
-              "children": [
-                {
-                  "type": "text",
-                  "id": "H9APQ",
-                  "name": "initials",
-                  "fill": "$text_primary",
-                  "content": "JD",
-                  "fontFamily": "$font_body",
-                  "fontSize": 14,
-                  "fontWeight": "600"
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "id": "y4Q7PW",
-              "name": "title_stack",
-              "width": "fill_container",
-              "layout": "vertical",
-              "alignItems": "center",
-              "children": [
-                {
-                  "type": "text",
-                  "id": "p63Ez",
-                  "name": "t",
-                  "fill": "$text_primary",
-                  "content": "NextPage",
-                  "textAlign": "center",
-                  "fontFamily": "$font_body",
-                  "fontSize": 14,
-                  "fontWeight": "600"
-                }
-              ]
-            },
-            {
-              "type": "frame",
-              "id": "nSx7q",
-              "name": "notif_btn",
-              "width": 40,
-              "height": 40,
-              "fill": "$bg_surface",
-              "cornerRadius": 999,
-              "layout": "vertical",
-              "justifyContent": "center",
-              "alignItems": "center",
-              "children": [
-                {
-                  "type": "icon",
-                  "id": "FTTku",
-                  "name": "bell",
-                  "width": 20,
-                  "height": 20,
-                  "icon": "bell",
-                  "library": "lucide",
-                  "fill": "$text_primary"
-                }
-              ]
+          "layout": "horizontal",
+          "descendants": {
+            "MIqoW": {
+              "content": "JD"
             }
-          ]
+          }
         },
         {
           "type": "frame",
@@ -66054,6 +65983,429 @@
               ]
             }
           ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "AoSoi",
+      "x": -5128,
+      "y": -3644,
+      "name": "Component/TopAppBar/Home",
+      "reusable": true,
+      "width": 375,
+      "height": 64,
+      "fill": "$bg_surface",
+      "gap": 12,
+      "padding": [
+        16,
+        20
+      ],
+      "justifyContent": "space_between",
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "APwzE",
+          "name": "avatar_wrap",
+          "width": 40,
+          "height": 40,
+          "fill": "$primary",
+          "cornerRadius": 999,
+          "layout": "vertical",
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "MIqoW",
+              "name": "initials",
+              "fill": "$text_primary",
+              "content": "JD",
+              "fontFamily": "$font_body",
+              "fontSize": 14,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "S8Qmy",
+          "name": "right_actions",
+          "gap": 8,
+          "alignItems": "center",
+          "children": [
+            {
+              "id": "IzVAK",
+              "type": "ref",
+              "ref": "F9xZTV",
+              "name": "streak_btn",
+              "descendants": {
+                "uwgbU": {
+                  "content": "7d"
+                }
+              }
+            },
+            {
+              "type": "frame",
+              "id": "K5DDZJ",
+              "name": "notif_btn",
+              "width": 40,
+              "height": 40,
+              "fill": "$bg_surface",
+              "cornerRadius": 999,
+              "layout": "vertical",
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "w0PboB",
+                  "name": "bell",
+                  "width": 20,
+                  "height": 20,
+                  "icon": "bell",
+                  "library": "lucide",
+                  "fill": "$text_primary"
+                },
+                {
+                  "type": "frame",
+                  "id": "tNB4v",
+                  "layoutPosition": "absolute",
+                  "x": 24,
+                  "y": 2,
+                  "name": "badge_wrap",
+                  "width": 12,
+                  "height": 12,
+                  "fill": "$error",
+                  "cornerRadius": 999,
+                  "stroke": "$bg_main",
+                  "strokeWidth": 2
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "B9PEF",
+      "x": -4649,
+      "y": -3893,
+      "name": "StreakButton Showcase",
+      "clip": true,
+      "width": 320,
+      "fill": "$bg_main",
+      "cornerRadius": 24,
+      "layout": "vertical",
+      "gap": 16,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "mAWzS",
+          "name": "title",
+          "fill": "$text_secondary",
+          "content": "StreakButton Variants",
+          "fontFamily": "$font_body",
+          "fontSize": 12,
+          "fontWeight": "600"
+        },
+        {
+          "type": "frame",
+          "id": "ACNNx",
+          "name": "row_idle",
+          "gap": 16,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "vqQmz",
+              "fill": "$text_secondary",
+              "content": "Idle · sin racha",
+              "fontFamily": "$font_body",
+              "fontSize": 12,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "iuscc",
+              "name": "streak_idle",
+              "fill": "$bg_surface",
+              "cornerRadius": 999,
+              "gap": 6,
+              "padding": [
+                8,
+                14,
+                8,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "Weawe",
+                  "name": "icon",
+                  "width": 18,
+                  "height": 18,
+                  "icon": "flame",
+                  "library": "lucide",
+                  "fill": "$text_secondary"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "vSeOX",
+          "name": "row_active",
+          "gap": 16,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "GpE1h",
+              "fill": "$text_secondary",
+              "content": "Active · racha viva",
+              "fontFamily": "$font_body",
+              "fontSize": 12,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "A9Ly4P",
+              "name": "streak_active",
+              "fill": "$accent",
+              "cornerRadius": 999,
+              "gap": 6,
+              "padding": [
+                8,
+                14,
+                8,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "XwqYC",
+                  "name": "icon",
+                  "width": 18,
+                  "height": 18,
+                  "icon": "flame",
+                  "library": "lucide",
+                  "fill": "$bg_main"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "R9n08",
+          "name": "row_week",
+          "gap": 16,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "Xhuvz",
+              "fill": "$text_secondary",
+              "content": "Week · 7 dias",
+              "fontFamily": "$font_body",
+              "fontSize": 12,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "M42hm",
+              "name": "streak_week",
+              "fill": "$accent",
+              "cornerRadius": 999,
+              "gap": 6,
+              "padding": [
+                8,
+                14,
+                8,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "i92pMv",
+                  "name": "icon",
+                  "width": 18,
+                  "height": 18,
+                  "icon": "flame",
+                  "library": "lucide",
+                  "fill": "$bg_main"
+                },
+                {
+                  "type": "text",
+                  "id": "OR0ta",
+                  "name": "count",
+                  "fill": "$bg_main",
+                  "content": "7d",
+                  "fontFamily": "$font_body",
+                  "fontSize": 13,
+                  "fontWeight": "700"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "YtYS5",
+          "name": "row_month",
+          "gap": 16,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "kOhwr",
+              "fill": "$text_secondary",
+              "content": "Month · 30 dias",
+              "fontFamily": "$font_body",
+              "fontSize": 12,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "rHau2",
+              "name": "streak_month",
+              "fill": "$accent",
+              "cornerRadius": 999,
+              "gap": 6,
+              "padding": [
+                8,
+                14,
+                8,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "VcdjG",
+                  "name": "icon",
+                  "width": 18,
+                  "height": 18,
+                  "icon": "flame",
+                  "library": "lucide",
+                  "fill": "$bg_main"
+                },
+                {
+                  "type": "text",
+                  "id": "R5JnP",
+                  "name": "count",
+                  "fill": "$bg_main",
+                  "content": "30d",
+                  "fontFamily": "$font_body",
+                  "fontSize": 13,
+                  "fontWeight": "700"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Q5pYYb",
+          "name": "row_year",
+          "gap": 16,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "E0Ll9a",
+              "fill": "$text_secondary",
+              "content": "Year · 365 dias",
+              "fontFamily": "$font_body",
+              "fontSize": 12,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "jzGsX",
+              "name": "streak_year",
+              "fill": "$accent",
+              "cornerRadius": 999,
+              "gap": 6,
+              "padding": [
+                8,
+                14,
+                8,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "seuo8",
+                  "name": "icon",
+                  "width": 18,
+                  "height": 18,
+                  "icon": "flame",
+                  "library": "lucide",
+                  "fill": "$bg_main"
+                },
+                {
+                  "type": "text",
+                  "id": "xzhtB",
+                  "name": "count",
+                  "fill": "$bg_main",
+                  "content": "365d",
+                  "fontFamily": "$font_body",
+                  "fontSize": 13,
+                  "fontWeight": "700"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "F9xZTV",
+      "x": -5128,
+      "y": -3804,
+      "name": "Component/StreakButton",
+      "reusable": true,
+      "fill": "$accent",
+      "cornerRadius": 999,
+      "gap": 6,
+      "padding": [
+        8,
+        14,
+        8,
+        12
+      ],
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "icon",
+          "id": "T0mjd",
+          "name": "icon",
+          "width": 18,
+          "height": 18,
+          "icon": "flame",
+          "library": "lucide",
+          "fill": "$bg_main"
+        },
+        {
+          "type": "text",
+          "id": "uwgbU",
+          "name": "count",
+          "fill": "$bg_main",
+          "content": "7d",
+          "fontFamily": "$font_body",
+          "fontSize": 13,
+          "fontWeight": "700"
         }
       ]
     }

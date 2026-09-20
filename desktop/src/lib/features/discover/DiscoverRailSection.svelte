@@ -2,7 +2,7 @@
   import type { CatalogBook } from '$lib/shared/services/catalog';
   import type { MessageKey } from '$lib/shared/i18n/messages.en';
   import type { DiscoverRailState } from './DiscoverRailsDomainState.svelte';
-  import { DISCOVER_RAIL_LIMIT } from './railPlan';
+  import { deriveVisibleRailCount } from './railPlan';
   import DiscoverCard from './DiscoverCard.svelte';
   import DiscoverRailError from './DiscoverRailError.svelte';
   import DiscoverSkeletonCard from './DiscoverSkeletonCard.svelte';
@@ -16,7 +16,7 @@
    */
   let {
     title,
-    state,
+    state: railState,
     books = [],
     t,
     onOpen,
@@ -33,14 +33,36 @@
     onViewAll: () => void;
   } = $props();
 
-  /** Rails never over-render: at most 6 cards, short rails render as-is. */
-  const visible = $derived(books.slice(0, DISCOVER_RAIL_LIMIT));
-  /** Loading placeholder count mirrors the render limit. */
-  const skeletonSlots = Array.from({ length: DISCOVER_RAIL_LIMIT }, (_, index) => index);
+  /**
+   * Measured width of the rail container. The section spans the available
+   * content box and holds no padding of its own, so its width is exactly the
+   * width the card grid lays out in.
+   */
+  let sectionEl = $state<HTMLElement | null>(null);
+  let railWidth = $state(0);
+
+  $effect(() => {
+    const element = sectionEl;
+    if (!element || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver((entries) => {
+      railWidth = entries[0]?.contentRect.width ?? element.clientWidth;
+    });
+    observer.observe(element);
+    railWidth = element.clientWidth;
+    return () => observer.disconnect();
+  });
+
+  /**
+   * One filled row at any width. Loading placeholders and loaded cards derive
+   * from the same number, so a resize never disagrees with the skeleton.
+   */
+  const visibleCount = $derived(deriveVisibleRailCount(railWidth));
+  const visible = $derived(books.slice(0, visibleCount));
+  const skeletonSlots = $derived(Array.from({ length: visibleCount }, (_, index) => index));
 </script>
 
-{#if state.kind === 'Loading'}
-  <section aria-label={title} class="flex flex-col gap-3">
+{#if railState.kind === 'Loading'}
+  <section bind:this={sectionEl} aria-label={title} class="flex flex-col gap-3">
     <h2 class="m-0 text-lg font-semibold text-(--color-primary)">{title}</h2>
     <div class="grid gap-3" style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr))">
       {#each skeletonSlots as slot (slot)}
@@ -48,13 +70,13 @@
       {/each}
     </div>
   </section>
-{:else if state.kind === 'Error'}
-  <section aria-label={title} class="flex flex-col gap-3">
+{:else if railState.kind === 'Error'}
+  <section bind:this={sectionEl} aria-label={title} class="flex flex-col gap-3">
     <h2 class="m-0 text-lg font-semibold text-(--color-primary)">{title}</h2>
-    <DiscoverRailError code={state.code} {t} {onRetry} />
+    <DiscoverRailError code={railState.code} {t} {onRetry} />
   </section>
 {:else if visible.length > 0}
-  <section aria-label={title} class="flex flex-col gap-3">
+  <section bind:this={sectionEl} aria-label={title} class="flex flex-col gap-3">
     <div class="flex items-baseline justify-between gap-3">
       <h2 class="m-0 text-lg font-semibold text-(--color-primary)">{title}</h2>
       <button

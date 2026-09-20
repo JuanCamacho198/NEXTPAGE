@@ -48,7 +48,7 @@
 -->
 <div class="flex flex-col gap-2">
   <label class="text-sm" for="addon-install-url">{t('settings.addons.urlLabel')}</label>
-  <div class="flex gap-2">
+  <div class="flex max-w-2xl gap-2">
     <input
       id="addon-install-url"
       type="url"
@@ -66,7 +66,7 @@
 {#if installOutcome.kind === 'error' || installOutcome.kind === 'offline'}
   <div
     role="alert"
-    class="flex items-center justify-between gap-2 rounded border px-2 py-1 text-sm"
+    class="flex max-w-2xl items-center justify-between gap-2 rounded border px-2 py-1 text-sm"
   >
     <p class="m-0">
       {installOutcome.kind === 'offline'
@@ -80,7 +80,7 @@
 {/if}
 
 {#if installed.length === 0}
-  <p class="text-sm opacity-70">{t('settings.addons.empty')}</p>
+  <p class="max-w-2xl text-sm opacity-70">{t('settings.addons.empty')}</p>
 {:else}
   <ul class="flex flex-col gap-2">
     {#each installed as addon (addon.id)}

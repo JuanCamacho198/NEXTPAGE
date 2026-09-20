@@ -3,12 +3,12 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import {
-  DISCOVER_RAIL_LIMIT,
   DiscoverDomainState,
   TRENDING_CHIPS,
   filterBooksByChip,
   matchesChip,
 } from '$lib/features/discover/DiscoverDomainState.svelte';
+import { DISCOVER_RAIL_FETCH_LIMIT } from '$lib/features/discover/railPlan';
 import { homeState } from '$lib/features/home/state.svelte';
 import { CompositeCatalogProvider } from '$lib/shared/services/catalog/CompositeCatalogProvider';
 import {
@@ -564,8 +564,8 @@ describe('desktop-descubrir Phase 3.2 — pill count, chip filter, fail-closed, 
     expect(state.rails[2]).toEqual({ kind: 'Error', code: 'UPSTREAM_ERROR', offline: false });
   });
 
-  it('short rails render as-is and long rails truncate to the rail limit', async () => {
-    const many = Array.from({ length: 10 }, (_, i) => fakeBook(`gutendex:${100 + i}`));
+  it('short rails render as-is and long rails truncate to the fetch limit', async () => {
+    const many = Array.from({ length: 30 }, (_, i) => fakeBook(`gutendex:${100 + i}`));
     const provider = fakeProvider({
       featuredBySort: {
         NEWEST: [fakeBook('gutendex:1'), fakeBook('gutendex:2'), fakeBook('gutendex:3')],
@@ -578,7 +578,7 @@ describe('desktop-descubrir Phase 3.2 — pill count, chip filter, fail-closed, 
     const newest = state.rails[0];
     const popular = state.rails[1];
     expect(newest.kind === 'Loaded' ? newest.books.length : -1).toBe(3);
-    expect(popular.kind === 'Loaded' ? popular.books.length : -1).toBe(DISCOVER_RAIL_LIMIT);
+    expect(popular.kind === 'Loaded' ? popular.books.length : -1).toBe(DISCOVER_RAIL_FETCH_LIMIT);
   });
 });
 

@@ -191,7 +191,7 @@
           {/each}
         </div>
       {:else if discoverState.status === 'empty'}
-        <div class="flex flex-col items-start gap-2">
+        <div class="flex max-w-2xl flex-col items-start gap-2">
           <p class="m-0 text-sm text-(--color-text-muted)">{t('discover.empty')}</p>
           <button
             type="button"
@@ -202,7 +202,7 @@
           </button>
         </div>
       {:else if discoverState.status === 'offline' || discoverState.status === 'error'}
-        <div class="flex flex-col items-start gap-2">
+        <div class="flex max-w-2xl flex-col items-start gap-2">
           <p class="text-sm text-(--color-text-muted)">
             {#if discoverState.errorCode === 'INVALID_PAGE'}{t('discover.errorInvalidPage')}
             {:else if discoverState.errorCode === 'NOT_FOUND'}{t('discover.errorNotFound')}
@@ -226,9 +226,13 @@
           {/each}
         </div>
         {#if discoverState.status === 'loadingMore'}
-          <p class="mt-3 text-xs text-(--color-text-muted)">{t('discover.loadingMore')}</p>
+          <p class="mt-3 max-w-2xl text-xs text-(--color-text-muted)">
+            {t('discover.loadingMore')}
+          </p>
         {:else if discoverState.nextPage === null}
-          <p class="mt-3 text-xs text-(--color-text-muted)">{t('discover.endOfResults')}</p>
+          <p class="mt-3 max-w-2xl text-xs text-(--color-text-muted)">
+            {t('discover.endOfResults')}
+          </p>
         {/if}
       {/if}
     </div>
@@ -245,7 +249,7 @@
         </button>
       </div>
       {#if scopeView.error}
-        <div class="flex flex-col items-start gap-2">
+        <div class="flex max-w-2xl flex-col items-start gap-2">
           <p class="m-0 text-sm text-(--color-text-muted)">
             {t(discoverErrorKey(scopeView.error))}
           </p>
@@ -258,7 +262,7 @@
           </button>
         </div>
       {:else if scopeView.books.length === 0}
-        <p class="text-sm text-(--color-text-muted)">{t('discover.empty')}</p>
+        <p class="max-w-2xl text-sm text-(--color-text-muted)">{t('discover.empty')}</p>
       {:else}
         <div
           class="grid gap-3"

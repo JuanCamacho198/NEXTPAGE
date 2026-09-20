@@ -73,7 +73,7 @@
     {/if}
   </div>
 
-  <form class="flex gap-2" onsubmit={submit}>
+  <form class="flex max-w-2xl gap-2" onsubmit={submit}>
     <input
       type="search"
       bind:value={searchInput}

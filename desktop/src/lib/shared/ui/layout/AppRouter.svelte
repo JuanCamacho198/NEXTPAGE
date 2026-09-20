@@ -8,6 +8,11 @@
   import { statsState } from '$lib/shared/stores/StatsDomainState.svelte';
   import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
   import { getNavItems, getDataNavItems } from '$lib/shared/stores/NavigationState.svelte';
+  import {
+    resolveRouteLayout,
+    routeLayoutClass,
+    routeUsesPadding,
+  } from '$lib/shared/ui/layout/routeLayout';
   import { fly } from 'svelte/transition';
 
   import { ContinueReadingSection, AppSidebar } from '$lib/shared/ui';
@@ -27,6 +32,9 @@
   const showSidebar = $derived(
     navigationState.route !== 'reader' && navigationState.route !== 'welcome',
   );
+
+  const contentLayoutClass = $derived(routeLayoutClass(resolveRouteLayout(navigationState.route)));
+  const mainUsesPadding = $derived(routeUsesPadding(navigationState.route));
 
   const navItems = $derived(
     getNavItems({
@@ -94,14 +102,8 @@
       id="main-content"
       tabindex="-1"
       class="flex-1 overflow-y-auto relative flex flex-col min-h-0"
-      class:p-4={navigationState.route !== 'reader' &&
-        navigationState.route !== 'settings' &&
-        navigationState.route !== 'storage' &&
-        navigationState.route !== 'sync'}
-      class:md:p-6={navigationState.route !== 'reader' &&
-        navigationState.route !== 'settings' &&
-        navigationState.route !== 'storage' &&
-        navigationState.route !== 'sync'}
+      class:p-4={mainUsesPadding}
+      class:md:p-6={mainUsesPadding}
     >
       <!-- aria-live region for screen reader announcements of dynamic content -->
       <div aria-live="polite" aria-atomic="true" class="sr-only">
@@ -112,13 +114,7 @@
           {libraryState.readerError}
         {/if}
       </div>
-      <div
-        class={navigationState.route === 'settings' ||
-        navigationState.route === 'storage' ||
-        navigationState.route === 'sync'
-          ? 'w-full h-full flex-1 flex flex-col min-h-0 max-w-none'
-          : 'mx-auto max-w-7xl'}
-      >
+      <div class={contentLayoutClass}>
         {#if libraryState.readerError}
           <p class="mb-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900">
             {libraryState.readerError}

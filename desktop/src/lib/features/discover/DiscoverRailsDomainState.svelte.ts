@@ -12,7 +12,7 @@ import {
 import type { MessageKey } from '$lib/shared/i18n/messages.en';
 import {
   buildRailSpecs,
-  DISCOVER_RAIL_LIMIT,
+  DISCOVER_RAIL_FETCH_LIMIT,
   loadRail,
   RAIL_SCOPE_LIMIT,
   withDeadline,
@@ -362,10 +362,10 @@ export class DiscoverRailsDomainState {
       // TOTAL rail bound: one attempt — including its single delayed retry — can
       // never leave the rail `Loading`, even for a provider that ignores signals.
       const page = await withDeadline(
-        loadRail(this.provider, spec, DISCOVER_RAIL_LIMIT),
+        loadRail(this.provider, spec, DISCOVER_RAIL_FETCH_LIMIT),
         this.timeoutMs,
       );
-      const books = page.results.slice(0, DISCOVER_RAIL_LIMIT);
+      const books = page.results.slice(0, DISCOVER_RAIL_FETCH_LIMIT);
       if (books.length === 0) return { kind: 'Hidden' };
       return { kind: 'Loaded', books, totalCount: page.totalCount };
     } catch (err) {

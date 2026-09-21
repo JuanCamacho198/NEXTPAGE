@@ -1,6 +1,9 @@
 <script lang="ts">
   import { titlebarState } from '$lib/stores/titlebarState.svelte';
-  import { Icon } from '$lib/shared/ui';
+  import Copy from 'lucide-svelte/icons/copy';
+  import Minus from 'lucide-svelte/icons/minus';
+  import Square from 'lucide-svelte/icons/square';
+  import X from 'lucide-svelte/icons/x';
   import { onMount } from 'svelte';
 
   let { hidden = false }: { hidden?: boolean } = $props();
@@ -27,20 +30,24 @@
     class="w-11 h-9 flex items-center justify-center border-none text-(--color-text-secondary) hover:bg-(--color-surface-hover) cursor-pointer transition-colors"
     aria-label="Minimize"
   >
-    <Icon name="minimize" size="md" />
+    <Minus size={16} class="h-4 w-4" aria-hidden="true" />
   </button>
   <button
     onclick={titlebarState.handleMaximize}
     class="w-11 h-9 flex items-center justify-center border-none text-(--color-text-secondary) hover:bg-(--color-surface-hover) cursor-pointer transition-colors"
     aria-label="Maximize"
   >
-    <Icon name={titlebarState.isMaximized ? 'restore' : 'maximize'} size="md" />
+    {#if titlebarState.isMaximized}
+      <Copy size={16} class="h-4 w-4" aria-hidden="true" />
+    {:else}
+      <Square size={16} class="h-4 w-4" aria-hidden="true" />
+    {/if}
   </button>
   <button
     onclick={titlebarState.handleClose}
     class="w-11 h-9 flex items-center justify-center border-none text-(--color-text-secondary) hover:bg-(--color-error) hover:text-white cursor-pointer transition-colors"
     aria-label="Close"
   >
-    <Icon name="close" size="md" />
+    <X size={16} class="h-4 w-4" aria-hidden="true" />
   </button>
 </div>

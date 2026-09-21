@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@fabianlars/tauri-plugin-oauth": "^2.1.0",
+    "@nextpage/manifest-validator": "workspace:*",
     "@sentry/browser": "^10.53.1",
     "@supabase/supabase-js": "^2.110.2",
     "@tauri-apps/api": "^2.11.0",
@@ -40,10 +41,10 @@
     "@tauri-apps/plugin-os": "^2.3.2",
     "boneyard-js": "^1.7.7",
     "epubjs": "^0.3.93",
+    "lucide-svelte": "^1.0.1",
     "pdfjs-dist": "6.2.108",
     "std-env": "4.2.0",
-    "svelte": "5.56.10",
-    "@nextpage/manifest-validator": "workspace:*"
+    "svelte": "5.56.10"
   },
   "devDependencies": {
     "@sentry/vite-plugin": "^5.0.0",

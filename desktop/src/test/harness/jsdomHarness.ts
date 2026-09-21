@@ -124,11 +124,20 @@ export interface StubbedRect {
 /**
  * Gives an element a geometry instead of jsdom's all-zero one.
  *
- * Both surfaces are stubbed because floating-ui's `getDimensions()` reads
- * `offsetWidth`/`offsetHeight` (falling back from a computed `width: auto`) and
- * `getInnerBoundingClientRect()` reads `clientWidth`/`clientHeight`, while its
- * rect math reads `getBoundingClientRect()`. Stubbing only the client rect
- * would still position everything at zero and pass silently.
+ * Three surfaces are stubbed because three different readers consume them:
+ * floating-ui's `getDimensions()` reads `offsetWidth`/`offsetHeight` (falling
+ * back from a computed `width: auto`) and `getInnerBoundingClientRect()` reads
+ * `clientWidth`/`clientHeight`, while its rect math reads
+ * `getBoundingClientRect()`. Stubbing only the client rect would still position
+ * everything at zero and pass silently.
+ *
+ * `getClientRects()` is stubbed too, and it is not optional for anything
+ * focus-related: `tabbable`'s display gate reports an element as hidden while
+ * `getClientRects()` is empty (`!node.getClientRects().length`), which is how
+ * jsdom describes *every* element with no layout engine. Measured: without this
+ * stub `isTabbable()`/`isFocusable()` return `false` for a plain
+ * `<button>`, so bits-ui's close-auto-focus skips its focus restore and no test
+ * can observe it.
  */
 export function stubElementRect(element: Element, rect: StubbedRect): void {
   const left = rect.left ?? 0;
@@ -136,7 +145,9 @@ export function stubElementRect(element: Element, rect: StubbedRect): void {
   const width = rect.width ?? 0;
   const height = rect.height ?? 0;
 
-  element.getBoundingClientRect = (): DOMRect => new DOMRect(left, top, width, height);
+  const domRect = (): DOMRect => new DOMRect(left, top, width, height);
+  element.getBoundingClientRect = domRect;
+  element.getClientRects = (): DOMRectList => [domRect()] as unknown as DOMRectList;
 
   if (typeof HTMLElement === 'undefined' || !(element instanceof HTMLElement)) return;
 

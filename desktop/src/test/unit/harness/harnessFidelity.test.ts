@@ -120,6 +120,27 @@ describe('harness fidelity — ResizeObserver', () => {
   });
 });
 
+describe('harness fidelity — client rects', () => {
+  it('stubs getClientRects alongside getBoundingClientRect, so the display gate can see the element', () => {
+    const element = mountedElement();
+
+    // jsdom has no layout: every element reports zero client rects, which
+    // `tabbable` reads as "hidden" and therefore as "not focusable".
+    expect(element.getClientRects()).toHaveLength(0);
+
+    stubElementRect(element, { left: 40, top: 120, width: 320, height: 200 });
+
+    const rects = element.getClientRects();
+    expect(rects).toHaveLength(1);
+    expect(rects[0].width).toBe(320);
+    expect(rects[0].height).toBe(200);
+    expect(rects[0].left).toBe(40);
+    expect(rects[0].top).toBe(120);
+    // A separate element keeps its own geometry, so the stub is per-element.
+    expect(mountedElement().getClientRects()).toHaveLength(0);
+  });
+});
+
 describe('harness fidelity — PointerEvent', () => {
   it('provides a MouseEvent subclass carrying the pointer fields', () => {
     expect(typeof globalThis.PointerEvent).toBe('function');

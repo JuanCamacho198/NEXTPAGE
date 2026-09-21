@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { DropdownMenu } from 'bits-ui';
   import type { Snippet } from 'svelte';
+  import { menuItemSemantics, menuTriggerHost } from './menuItemSemantics';
 
   type Props = {
     trigger: Snippet;
@@ -9,39 +11,34 @@
 
   let { trigger, children, position = 'bottom-right' }: Props = $props();
 
-  let isOpen = $state(false);
-  let containerEl = $state<HTMLDivElement | undefined>();
-
-  function toggle(): void {
-    isOpen = !isOpen;
-  }
-
-  // Click outside handler using $effect instead of use:handleClickOutside
-  $effect(() => {
-    if (!containerEl) return;
-    const handle = (e: MouseEvent): void => {
-      if (containerEl && !containerEl.contains(e.target as Node)) {
-        isOpen = false;
-      }
-    };
-    document.addEventListener('click', handle, true);
-    return () => document.removeEventListener('click', handle, true);
-  });
+  const align = $derived(position === 'bottom-right' ? 'end' : 'start');
 </script>
 
-<div bind:this={containerEl} class="relative inline-block">
-  <div role="button" tabindex="0" onclick={toggle} onkeydown={(e) => e.key === 'Enter' && toggle()}>
-    {@render trigger()}
-  </div>
+<DropdownMenu.Root>
+  <!-- The caller's `trigger` snippets are zero-argument and render their own
+       `<button>`, so bits-ui's trigger props are routed onto that button by
+       `menuTriggerHost` instead of onto the host the `child` snippet returns.
+       The host is `display: contents`: it generates no box and carries no role,
+       which is what removes the nested-interactive wrapper this component used
+       to render. -->
+  <DropdownMenu.Trigger>
+    {#snippet child({ props })}
+      <span class="contents" use:menuTriggerHost={props}>{@render trigger()}</span>
+    {/snippet}
+  </DropdownMenu.Trigger>
 
-  {#if isOpen}
-    <div
-      class="absolute z-10 mt-2 w-56 rounded-md bg-(--color-elevated) shadow-lg ring-1 ring-(--color-border) focus:outline-none
-      {position === 'bottom-right' ? 'right-0' : 'left-0'}"
+  <DropdownMenu.Portal>
+    <DropdownMenu.Content
+      class="z-[60] w-56 rounded-md bg-(--color-elevated) shadow-lg ring-1 ring-(--color-border) focus:outline-none"
+      side="bottom"
+      {align}
+      sideOffset={8}
     >
-      <div class="py-1">
-        {@render children?.()}
-      </div>
-    </div>
-  {/if}
-</div>
+      <!-- `children` render verbatim; `menuItemSemantics` supplies the item
+           registration bits-ui cannot, because the five items are caller-owned
+           plain buttons. `role="none"` keeps the `role="menu"` ownership
+           relationship intact across this layout wrapper. -->
+      <div class="py-1" role="none" use:menuItemSemantics>{@render children?.()}</div>
+    </DropdownMenu.Content>
+  </DropdownMenu.Portal>
+</DropdownMenu.Root>

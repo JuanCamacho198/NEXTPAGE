@@ -107,7 +107,7 @@ test('library: the remove-book dialog renders over the shelf', async ({ page }) 
     .getByRole('button', { name: `Options for ${TITLE}`, exact: true })
     .first()
     .click();
-  await page.getByRole('button', { name: 'Remove from library', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Remove from library', exact: true }).click();
 
   await expect(page.locator(DIALOG)).toHaveCount(1);
   await expect(page.locator(DIALOG)).toContainText(TITLE);

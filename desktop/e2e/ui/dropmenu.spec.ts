@@ -8,7 +8,8 @@ import { DEFAULT_SEEDED_TITLE } from '../harness/tauriStub';
 // The trigger is addressed by the caller's `aria-label` (`shelf.bookOptions`),
 // which is part of `ShelfBookActions`' contract and therefore survives the
 // swap; the open popup is asserted through one of its caller-owned items
-// (`children` render verbatim in both implementations).
+// (`children` render verbatim in both implementations, and slice 5 tags them
+// `role="menuitem"` when it delivers the menu semantics).
 
 const TITLE = DEFAULT_SEEDED_TITLE;
 
@@ -18,7 +19,9 @@ function bookMenu(page: Page) {
 
 async function openBookMenu(page: Page): Promise<void> {
   await bookMenu(page).click();
-  await expect(page.getByRole('button', { name: 'Remove from library', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('menuitem', { name: 'Remove from library', exact: true }),
+  ).toBeVisible();
 }
 
 test('library grid: the book action menu renders over the grid', async ({ page }) => {
@@ -26,7 +29,7 @@ test('library grid: the book action menu renders over the grid', async ({ page }
   await gotoRoute(page, 'library');
 
   await openBookMenu(page);
-  await expect(page.getByRole('button', { name: 'View details', exact: true })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'View details', exact: true })).toBeVisible();
 
   await captureViewport(page, 'library-grid-book-menu.png');
 });
@@ -43,4 +46,31 @@ test('library list: the in-list book action menu renders over the row', async ({
 
   await openBookMenu(page);
   await captureViewport(page, 'library-list-book-menu.png');
+});
+
+test('library grid: the book action menu answers the keyboard and returns focus', async ({
+  page,
+}) => {
+  await openApp(page, { bookCount: 2 });
+  await gotoRoute(page, 'library');
+
+  const trigger = bookMenu(page);
+  await trigger.click();
+
+  // The items are the caller's five plain buttons, now tagged as menuitems.
+  const items = page.getByRole('menuitem');
+  await expect(items).toHaveCount(5);
+  await expect(items.first()).toHaveText('Open book');
+
+  // Focus enters the menu on open, and the arrows walk the items in DOM order.
+  await expect(items.first()).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(items.nth(1)).toBeFocused();
+  await page.keyboard.press('End');
+  await expect(items.nth(4)).toBeFocused();
+
+  // Escape closes without activating, and focus returns to the caller's button.
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('menu')).toBeHidden();
+  await expect(trigger).toBeFocused();
 });

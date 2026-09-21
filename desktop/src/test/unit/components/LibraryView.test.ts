@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { LibraryView } from '$lib/features/library';
 import type { LibraryBookDto } from '$lib/shared/types';
 import { listLibraryBooks } from '$lib/shared/api/tauriClient';
+import { stubElementRect } from '../../harness/jsdomHarness';
 
 vi.mock('@tauri-apps/api/core', () => ({
   convertFileSrc: vi.fn((path: string) => `asset://localhost/${path}`),
@@ -148,8 +149,13 @@ describe('LibraryView', () => {
     const bookRow = screen.getByText('Book Hide').closest('li');
     expect(bookRow).not.toBeNull();
     const menuButton = bookRow?.querySelector('button.rounded-md.border') as HTMLButtonElement;
+    // The popup is portalled now, and floating-ui's hide middleware reads the
+    // trigger's geometry to decide whether the content is visible. jsdom has no
+    // layout engine, so without a stubbed rect the content is marked
+    // `visibility: hidden` and its items are not exposed to the a11y tree.
+    stubElementRect(menuButton, { left: 100, top: 100, width: 36, height: 32 });
     await user.click(menuButton);
-    await user.click(screen.getByRole('button', { name: 'Hide from library' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Hide from library' }));
 
     expect(onHide).toHaveBeenCalledTimes(1);
     expect(onHide.mock.calls[0][0].id).toBe('book-hide-1');

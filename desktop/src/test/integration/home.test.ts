@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../../App.svelte';
+import { stubElementRect } from '../harness/jsdomHarness';
 import type {
   BookDto,
   CollectionDto,
@@ -642,8 +643,13 @@ describe('App desktop home redesign QA scenarios', () => {
     const shelfSection = await screen.findByTestId('shelf-section');
     const sortContainer = screen.getByTestId('shelf-sort');
     const trigger = sortContainer.querySelector('button')!;
+    // The sort options are bits-ui `Select` items now, so the popup is
+    // portalled and floating-ui hides it while the trigger reports no geometry
+    // (jsdom has no layout engine). Both lines below are what make the options
+    // real to the a11y tree; the assertion after them is unchanged.
+    stubElementRect(trigger, { left: 100, top: 100, width: 130, height: 40 });
     await user.click(trigger);
-    const authorOption = screen.getByRole('button', { name: 'Author' });
+    const authorOption = screen.getByRole('option', { name: 'Author' });
     await user.click(authorOption);
 
     await waitFor(() => {

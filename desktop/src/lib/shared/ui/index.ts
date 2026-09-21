@@ -1,5 +1,4 @@
 // Feedback components
-export { default as ConfirmDialog } from './feedback/ConfirmDialog.svelte';
 export { default as ErrorFallback } from './feedback/ErrorFallback.svelte';
 export { default as ErrorToast } from './feedback/ErrorToast.svelte';
 export { default as Skeleton } from './feedback/Skeleton.svelte';
@@ -28,8 +27,6 @@ export { default as VisualSlider } from './navigation/VisualSlider.svelte';
 export { default as SearchBar } from './navigation/SearchBar.svelte';
 export { default as Dropdown } from './navigation/Dropdown.svelte';
 export { default as Pagination } from './navigation/Pagination.svelte';
-export { default as Tooltip } from './navigation/Tooltip.svelte';
-export { default as Tabs } from './navigation/Tabs.svelte';
 export { default as LivePreview } from './navigation/LivePreview.svelte';
 export { default as DropMenu } from './navigation/DropMenu.svelte';
 export { default as Icon } from './navigation/Icon.svelte';

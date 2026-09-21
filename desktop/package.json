@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@fabianlars/tauri-plugin-oauth": "^2.1.0",
+    "@nextpage/manifest-validator": "workspace:*",
     "@sentry/browser": "^10.53.1",
     "@supabase/supabase-js": "^2.110.2",
     "@tauri-apps/api": "^2.11.0",
@@ -43,7 +44,7 @@
     "pdfjs-dist": "6.2.108",
     "std-env": "4.2.0",
     "svelte": "5.56.10",
-    "@nextpage/manifest-validator": "workspace:*"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@sentry/vite-plugin": "^5.0.0",

@@ -586,6 +586,11 @@ export const messagesEs: Record<MessageKey, string> = {
   'import.bannerSuccess': '«{{name}}» se agrego a tu biblioteca',
   'import.bannerErrorTitle': 'No se pudo importar «{{name}}»',
   'import.bannerDismissAria': 'Cerrar notificacion de importacion',
+  'import.validation.invalidInput':
+    'La entrada de importacion no es valida. Verifica la ruta y el formato.',
+  'import.validation.emptyBatch': 'Aun no hay archivos para importar.',
+  'import.validation.invalidItem': 'El elemento {{index}} no es valido y se omitio.',
+  'import.validation.invalidMetadata': 'Los metadatos del libro estan incompletos y se omitieron.',
   'errors.commandFailure': 'Fallo desconocido del comando',
   'errors.settingsCommandFailed': 'Fallo el comando de ajustes.',
   'errors.importCommandFailed':

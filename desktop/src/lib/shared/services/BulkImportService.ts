@@ -2,6 +2,8 @@ import { importBook as importSingleBook } from './BookImportService';
 import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
 import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
 import { inferGenreFromText } from '$lib/shared/services/genreHeuristic';
+import { i18n } from '$lib/shared/i18n';
+import { ValidationError, validateBookImportInput } from '$lib/shared/validation/importSchemas';
 import {
   BULK_IMPORT_ITEM_STATUS,
   type BulkImportItemResult,
@@ -31,6 +33,10 @@ const readErrorMessage = (error: unknown): string => {
 
   return 'Import failed';
 };
+
+const resolveLocale = (): 'es' | 'en' =>
+  i18n.toSupportedLocale((globalThis.localStorage?.getItem('nextpage.ui.locale') ?? '').trim()) ??
+  'es';
 
 const buildSummary = (results: BulkImportItemResult[]): BulkImportSummary => {
   let queued = 0;
@@ -105,7 +111,10 @@ export class BulkImportService {
     this.cancelled = true;
   }
 
-  private async processSingleFile(result: BulkImportItemResult): Promise<BulkImportItemResult> {
+  private async processSingleFile(
+    result: BulkImportItemResult,
+    displayIndex?: number,
+  ): Promise<BulkImportItemResult> {
     if (result.status !== BULK_IMPORT_ITEM_STATUS.QUEUED) {
       return result;
     }
@@ -121,6 +130,22 @@ export class BulkImportService {
 
     try {
       const stem = stripKnownExtension(result.file.fileName);
+      const candidate = {
+        sourcePath: result.file.fullPath,
+        title: stem,
+        format: result.file.format,
+        genre: inferGenreFromText({ title: stem }),
+      };
+      const validation = validateBookImportInput(candidate);
+      if (!validation.ok) {
+        const locale = resolveLocale();
+        const position = displayIndex ?? 0;
+        result.status = BULK_IMPORT_ITEM_STATUS.FAILED;
+        result.message = i18n.t(locale, 'import.validation.invalidItem', {
+          index: position + 1,
+        });
+        return result;
+      }
       const importedBook = await importSingleBook({
         sourcePath: result.file.fullPath,
         title: stem,
@@ -142,6 +167,14 @@ export class BulkImportService {
   async importFolder(path: string, onProgress?: ProgressCallback): Promise<BulkImportSummary> {
     this.cancelled = false;
     const scanned = await this.libraryPort.scanFolder(path);
+
+    if (scanned.files.length === 0) {
+      const locale = resolveLocale();
+      throw new ValidationError(
+        'import.validation.emptyBatch',
+        i18n.t(locale, 'import.validation.emptyBatch'),
+      );
+    }
 
     const results: BulkImportItemResult[] = scanned.files.map((file) => {
       if (file.isDuplicate) {
@@ -195,7 +228,11 @@ export class BulkImportService {
       emit(batch[0]?.file ?? null);
 
       // Process batch in parallel
-      await Promise.all(batch.map((result) => this.processSingleFile(result)));
+      await Promise.all(
+        batchIndices.map((globalIndex) =>
+          this.processSingleFile(results[globalIndex], globalIndex),
+        ),
+      );
 
       // Emit after batch completes
       const completedFile =

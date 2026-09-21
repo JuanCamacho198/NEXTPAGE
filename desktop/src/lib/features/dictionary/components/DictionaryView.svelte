@@ -11,7 +11,8 @@
   import { searchState } from '$lib/shared/stores/SearchDomainState.svelte';
   import { statsState } from '$lib/shared/stores/StatsDomainState.svelte';
   import EmptyState from '$lib/shared/ui/feedback/EmptyState.svelte';
-  import Icon from '$lib/shared/ui/navigation/Icon.svelte';
+  import Plus from 'lucide-svelte/icons/plus';
+  import Search from 'lucide-svelte/icons/search';
   import Button from '$lib/shared/ui/forms/Button.svelte';
   import DictionaryKpiRow from './DictionaryKpiRow.svelte';
   import DictionaryRow from './DictionaryRow.svelte';
@@ -216,7 +217,7 @@
       class="flex shrink-0 cursor-pointer items-center gap-2 rounded-[10px] bg-(--color-accent-blue) px-4 py-2.5 text-2sm font-bold text-white transition-opacity hover:opacity-90"
       onclick={() => (showAddForm = !showAddForm)}
     >
-      <Icon name="add" size="md" />
+      <Plus size={16} strokeWidth={1.8} class="h-4 w-4" aria-hidden="true" />
       <span>{t('dictionary.newWord')}</span>
     </button>
   </header>
@@ -231,7 +232,12 @@
       <div
         class="flex items-center gap-2.5 rounded-[10px] border border-(--color-panel-border) bg-(--color-panel-input) px-3 py-2.5"
       >
-        <Icon name="search" size="md" class="shrink-0 text-(--color-text-tertiary)" />
+        <Search
+          size={16}
+          strokeWidth={1.8}
+          class="h-4 w-4 shrink-0 text-(--color-text-tertiary)"
+          aria-hidden="true"
+        />
         <input
           type="text"
           class="w-full bg-transparent text-2sm text-(--color-primary) placeholder:text-(--color-text-tertiary) focus:outline-none"

@@ -1,7 +1,12 @@
 <script lang="ts">
   import type { DictionaryWordDto } from '$lib/shared/types';
   import EmptyState from '$lib/shared/ui/feedback/EmptyState.svelte';
-  import Icon from '$lib/shared/ui/navigation/Icon.svelte';
+  import BookOpen from 'lucide-svelte/icons/book-open';
+  import BookText from 'lucide-svelte/icons/book-text';
+  import Info from 'lucide-svelte/icons/info';
+  import Quote from 'lucide-svelte/icons/quote';
+  import SquarePen from 'lucide-svelte/icons/square-pen';
+  import Trash2 from 'lucide-svelte/icons/trash-2';
   import DictionaryEditForm from './DictionaryEditForm.svelte';
   import {
     bookInitials,
@@ -126,7 +131,7 @@
               if (viewBookTarget) onViewBook?.(viewBookTarget);
             }}
           >
-            <Icon name="book-open" size="sm" />
+            <BookOpen size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
             <span>{t('dictionary.viewBook')}</span>
           </button>
 
@@ -136,7 +141,7 @@
             data-testid="dictionary-detail-edit"
             onclick={() => onEdit?.(word.id)}
           >
-            <Icon name="edit" size="sm" />
+            <SquarePen size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
             <span>{t('dictionary.edit')}</span>
           </button>
 
@@ -147,7 +152,7 @@
             data-testid="dictionary-detail-delete"
             onclick={() => onDelete?.(word.id)}
           >
-            <Icon name="trash" size="md" />
+            <Trash2 size={16} strokeWidth={1.8} class="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
       {/if}
@@ -192,7 +197,7 @@
               class="flex items-center gap-2 text-xs font-semibold text-(--color-accent-blue)"
               data-testid="dictionary-detail-definition-label"
             >
-              <Icon name="book-text" size="sm" />
+              <BookText size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
               {t('dictionary.description')}
             </span>
             <p class="text-sm text-(--color-primary)" data-testid="dictionary-detail-definition">
@@ -203,7 +208,7 @@
               class="flex items-center gap-2 text-xs font-semibold text-(--color-accent-blue)"
               data-testid="dictionary-detail-example-label"
             >
-              <Icon name="quote" size="sm" />
+              <Quote size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
               {t('dictionary.personalExample')}
             </span>
             <p
@@ -252,7 +257,7 @@
             class="flex items-center gap-1.5 text-micro font-semibold text-(--color-accent-blue)"
             data-testid="dictionary-reference-label"
           >
-            <Icon name="book-open" size="sm" />
+            <BookOpen size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
             {t('dictionary.bookReference')}
           </span>
           {#if bookTitle}
@@ -279,7 +284,7 @@
       class="flex items-start gap-1.5 text-2xs text-(--color-text-tertiary)"
       data-testid="dictionary-evidence-note"
     >
-      <Icon name="info" size="sm" class="mt-0.5 shrink-0" />
+      <Info size={14} strokeWidth={1.8} class="h-3.5 w-3.5 mt-0.5 shrink-0" aria-hidden="true" />
       <span>{t('dictionary.evidenceNote')}</span>
     </p>
   </div>

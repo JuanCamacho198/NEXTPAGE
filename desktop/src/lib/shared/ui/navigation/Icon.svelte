@@ -1,4 +1,13 @@
-<script lang="ts">
+<script module lang="ts">
+  import House from 'lucide-svelte/icons/house';
+  import Library from 'lucide-svelte/icons/library';
+  import ChartColumn from 'lucide-svelte/icons/chart-column';
+  import Highlighter from 'lucide-svelte/icons/highlighter';
+  import Settings from 'lucide-svelte/icons/settings';
+  import Book from 'lucide-svelte/icons/book';
+  import Search from 'lucide-svelte/icons/search';
+  import LayoutGrid from 'lucide-svelte/icons/layout-grid';
+  import type { Component } from 'svelte';
   export type IconName =
     | 'home'
     | 'library'
@@ -46,6 +55,25 @@
     | 'quote'
     | 'calendar-plus';
 
+  export const LUCIDE_BY_NAME: Partial<Record<IconName, Component>> = {
+    home: House as unknown as Component,
+    library: Library as unknown as Component,
+    stats: ChartColumn as unknown as Component,
+    highlights: Highlighter as unknown as Component,
+    settings: Settings as unknown as Component,
+    book: Book as unknown as Component,
+    search: Search as unknown as Component,
+    grid: LayoutGrid as unknown as Component,
+  };
+
+  const LUCIDE_SIZES = {
+    sm: 14,
+    md: 16,
+    lg: 20,
+  } as const;
+</script>
+
+<script lang="ts">
   type Props = {
     name: IconName;
     size?: 'sm' | 'md' | 'lg';
@@ -54,6 +82,8 @@
   };
 
   let { name, size = 'md', title, class: className = '' }: Props = $props();
+
+  const LucideIcon = $derived(LUCIDE_BY_NAME[name]);
 
   const sizeClasses = {
     sm: 'h-3.5 w-3.5',
@@ -129,18 +159,26 @@
 </script>
 
 <div class="group relative inline-flex" class:has-tooltip={!!title}>
-  <svg
-    class="{sizeClasses[size]} {className}"
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-    stroke-width="1.8"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    aria-hidden="true"
-  >
-    <path d={paths[name]} />
-  </svg>
+  {#if LucideIcon}
+    <LucideIcon
+      size={LUCIDE_SIZES[size]}
+      class="{sizeClasses[size]} {className}"
+      aria-hidden="true"
+    />
+  {:else}
+    <svg
+      class="{sizeClasses[size]} {className}"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d={paths[name]} />
+    </svg>
+  {/if}
   {#if title}
     <span
       class="absolute bottom-full left-1/2 -translate-x-1/2 translate-y-1

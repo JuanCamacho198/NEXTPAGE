@@ -4,6 +4,10 @@
   import type { MessageKey } from '../../i18n';
   import ThemeToggle from '$lib/shared/ui/navigation/ThemeToggle.svelte';
   import Icon from '$lib/shared/ui/navigation/Icon.svelte';
+  import ChevronLeft from 'lucide-svelte/icons/chevron-left';
+  import ChevronRight from 'lucide-svelte/icons/chevron-right';
+  import Moon from 'lucide-svelte/icons/moon';
+  import Sun from 'lucide-svelte/icons/sun';
   import { theme, toggleTheme } from '$lib/shared/stores/theme';
   import { authState } from '$lib/shared/stores/AuthState.svelte';
   import {
@@ -45,7 +49,7 @@
         class="flex items-center justify-center rounded-lg p-1.5 text-(--color-text-muted) hover:bg-(--color-panel-accent) hover:text-(--color-primary) transition-colors"
         aria-label={t('sidebar.expand')}
       >
-        <Icon name="chevron-right" size="sm" />
+        <ChevronRight size={14} class="h-3.5 w-3.5" aria-hidden="true" />
       </button>
     {:else}
       <div class="flex items-center gap-3 w-full">
@@ -62,7 +66,7 @@
           class="ml-auto flex items-center justify-center rounded-lg p-1.5 text-(--color-text-muted) hover:bg-(--color-panel-accent) hover:text-(--color-primary) transition-colors shrink-0"
           aria-label={t('sidebar.collapse')}
         >
-          <Icon name="chevron-left" size="sm" />
+          <ChevronLeft size={14} class="h-3.5 w-3.5" aria-hidden="true" />
         </button>
       </div>
     {/if}
@@ -118,7 +122,11 @@
         class="flex items-center justify-center rounded-lg size-8 bg-transparent border border-(--color-border) text-(--color-text-muted) hover:bg-(--color-panel-accent) hover:text-(--color-primary) transition-all duration-200 shrink-0"
         aria-label={$theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
       >
-        <Icon name={$theme === 'dark' ? 'moon' : 'sun'} size="sm" />
+        {#if $theme === 'dark'}
+          <Moon size={14} class="h-3.5 w-3.5" aria-hidden="true" />
+        {:else}
+          <Sun size={14} class="h-3.5 w-3.5" aria-hidden="true" />
+        {/if}
       </button>
     {:else}
       <ThemeToggle />

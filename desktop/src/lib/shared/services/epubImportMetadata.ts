@@ -31,6 +31,7 @@
 import ePub from 'epubjs';
 import type { LibraryPort } from '$lib/shared/ports/LibraryPort';
 import { TauriLibraryAdapter } from '$lib/shared/ports/adapters/tauri/TauriLibraryAdapter';
+import { validateEpubMetadata } from '$lib/shared/validation/importSchemas';
 
 export type ImportEpubMetadata = {
   title: string | null;
@@ -211,7 +212,29 @@ export const extractEpubMetadataFromBytes = async (
     );
   }
 
+  const validation = validateEpubMetadata(combined);
+  if (!validation.ok) {
+    console.debug(
+      '[epub-import-meta] metadata DTO failed validation',
+      validation.key,
+      '— caller will fall back to filename / unknown author',
+    );
+    return { ...EMPTY_METADATA };
+  }
+
   return combined;
+};
+
+/**
+ * Validate an epub/PDF metadata DTO against the import schema.
+ * Never throws: a missing fallback key surfaces the raw fallback string.
+ */
+export const validateEpubImportMetadataDto = (dto: unknown): boolean => {
+  try {
+    return validateEpubMetadata(dto).ok;
+  } catch {
+    return false;
+  }
 };
 
 export const extractEpubImportMetadata = async (filePath: string): Promise<ImportEpubMetadata> => {

@@ -48,6 +48,11 @@ graphify-out/
 
 # Test's
 fixtures/
+# Playwright artifacts (smoke spec only)
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
 # Cross-device continuity golden fixture (committed — design T1 requires it)
 !src/lib/shared/sync/fixtures/
 !src/lib/shared/sync/fixtures/**

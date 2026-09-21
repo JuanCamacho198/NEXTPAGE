@@ -1,7 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
-// Chromium-only on purpose: one repeatable smoke, no browser matrix, no
-// snapshots. Wave-1 explicitly keeps the E2E footprint to one spec + config.
+// Chromium-only on purpose: one repeatable browser and one visual gate, no
+// browser matrix. `toHaveScreenshot` is the gate; the `screenshot` use-option
+// only decides whether a *failing* check keeps an artifact, so a green run
+// still compares pixels against the committed baselines.
 const PORT = 1420;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
@@ -19,8 +21,18 @@ export default defineConfig({
   use: {
     baseURL: BASE_URL,
     trace: 'off',
-    screenshot: 'off',
+    screenshot: 'only-on-failure',
     video: 'off',
+  },
+  // The visual gate. `maxDiffPixelRatio` is deliberately tight enough that a
+  // shifted overlay or an off-token colour fails (see the deliberate-regression
+  // proof in slice 4); `animations: 'disabled'` removes the fly/fade timing as a
+  // flake source. Loosening either value is a visible change in review.
+  expect: {
+    toHaveScreenshot: {
+      maxDiffPixelRatio: 0.002,
+      animations: 'disabled',
+    },
   },
   projects: [
     {

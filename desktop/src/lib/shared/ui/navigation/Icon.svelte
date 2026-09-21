@@ -17,9 +17,7 @@
   import ChevronLeft from 'lucide-svelte/icons/chevron-left';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
   import Clock from 'lucide-svelte/icons/clock';
-  import CloudCheck from 'lucide-svelte/icons/cloud-check';
   import Copy from 'lucide-svelte/icons/copy';
-  import Database from 'lucide-svelte/icons/database';
   import EllipsisVertical from 'lucide-svelte/icons/ellipsis-vertical';
   import Expand from 'lucide-svelte/icons/expand';
   import Filter from 'lucide-svelte/icons/filter';
@@ -36,10 +34,8 @@
   import Square from 'lucide-svelte/icons/square';
   import SquarePen from 'lucide-svelte/icons/square-pen';
   import SquareStack from 'lucide-svelte/icons/square-stack';
-  import Sun from 'lucide-svelte/icons/sun';
   import TrendingUp from 'lucide-svelte/icons/trending-up';
   import Trash2 from 'lucide-svelte/icons/trash-2';
-  import User from 'lucide-svelte/icons/user';
   import X from 'lucide-svelte/icons/x';
   import type { Component } from 'svelte';
   export type IconName =
@@ -52,11 +48,9 @@
     | 'check'
     | 'clock'
     | 'trend-up'
-    | 'chart'
     | 'search'
     | 'close'
     | 'menu'
-    | 'sun'
     | 'moon'
     | 'chevron-left'
     | 'chevron-right'
@@ -74,8 +68,6 @@
     | 'note'
     | 'add'
     | 'filter'
-    | 'user'
-    | 'database'
     | 'info'
     | 'calendar'
     | 'hand'
@@ -83,7 +75,6 @@
     | 'maximize'
     | 'restore'
     | 'flame'
-    | 'cloud-sync'
     | 'book-open'
     | 'book-text'
     | 'quote'
@@ -101,10 +92,8 @@
     check: Check as unknown as Component,
     clock: Clock as unknown as Component,
     'trend-up': TrendingUp as unknown as Component,
-    chart: ChartColumn as unknown as Component,
     close: X as unknown as Component,
     menu: Menu as unknown as Component,
-    sun: Sun as unknown as Component,
     moon: Moon as unknown as Component,
     'chevron-left': ChevronLeft as unknown as Component,
     'chevron-right': ChevronRight as unknown as Component,
@@ -121,8 +110,6 @@
     note: SquarePen as unknown as Component,
     add: Plus as unknown as Component,
     filter: Filter as unknown as Component,
-    user: User as unknown as Component,
-    database: Database as unknown as Component,
     info: Info as unknown as Component,
     calendar: Calendar as unknown as Component,
     hand: Hand as unknown as Component,
@@ -130,7 +117,6 @@
     maximize: Square as unknown as Component,
     restore: SquareStack as unknown as Component,
     flame: Flame as unknown as Component,
-    'cloud-sync': CloudCheck as unknown as Component,
     'book-open': BookOpen as unknown as Component,
     'book-text': BookText as unknown as Component,
     quote: Quote as unknown as Component,
@@ -176,12 +162,9 @@
     check: 'M5 13l4 4L19 7',
     clock: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
     'trend-up': 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6',
-    chart:
-      'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
     search: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z',
     close: 'M6 18L18 6M6 6l12 12',
     menu: 'M4 6h16M4 12h16M4 18h16',
-    sun: 'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z',
     moon: 'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z',
     'chevron-left': 'M15 19l-7-7 7-7',
     'chevron-right': 'M9 5l7 7-7 7',
@@ -205,9 +188,6 @@
     add: 'M12 4v16m8-8H4',
     filter:
       'M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z',
-    user: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
-    database:
-      'M4 7c0-1.1.9-2 2-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V7zM8 7V5a2 2 0 012-2h4a2 2 0 012 2v2m-6 4v6m-2-2h4',
     info: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
     calendar:
       'M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z',
@@ -217,7 +197,6 @@
     restore: 'M5 5h11v11H5zM8 8h11v11H8z',
     flame:
       'M8.5 14.5A2.5 2.5 0 0012 17a2.5 2.5 0 003.5-3.5c0-1.5-1.5-2.5-2.5-4 0 0-1 1.2-1 2.5a1 1 0 01-2 0c0-1.3-1-2.5-1-2.5-.8 1.2-2 2.5-2 4z M12 2C8.5 4.5 7 7 7 9.5c0 1.5.5 3 2 4.5',
-    'cloud-sync': 'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M8 12l2.5 2.5L14 11',
     'book-open':
       'M12 7v14M3 18a1 1 0 01-1-1V4a1 1 0 011-1h5a4 4 0 014 4 4 4 0 014-4h5a1 1 0 011 1v13a1 1 0 01-1 1h-6a3 3 0 00-3 3 3 3 0 00-3-3z',
     'book-text':

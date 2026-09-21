@@ -3,8 +3,10 @@ import { describe, expect, it } from 'vitest';
 import Icon, { LUCIDE_BY_NAME, type IconName } from '$lib/shared/ui/navigation/Icon.svelte';
 
 /**
- * The frozen union, written as literals so `bun run check` fails if any entry
- * stops being an `IconName` member (slice 9 may not add or remove members).
+ * The union, written as literals so `bun run check` fails if any entry stops
+ * being an `IconName` member. Slice 10 removed the five names whose last
+ * consumer migrated (`chart`, `sun`, `user`, `database`, `cloud-sync`); the
+ * count below is the recorded post-slice-10 membership.
  */
 const UNION: IconName[] = [
   'home',
@@ -16,11 +18,9 @@ const UNION: IconName[] = [
   'check',
   'clock',
   'trend-up',
-  'chart',
   'search',
   'close',
   'menu',
-  'sun',
   'moon',
   'chevron-left',
   'chevron-right',
@@ -38,8 +38,6 @@ const UNION: IconName[] = [
   'note',
   'add',
   'filter',
-  'user',
-  'database',
   'info',
   'calendar',
   'hand',
@@ -47,7 +45,6 @@ const UNION: IconName[] = [
   'maximize',
   'restore',
   'flame',
-  'cloud-sync',
   'book-open',
   'book-text',
   'quote',
@@ -55,13 +52,20 @@ const UNION: IconName[] = [
 ];
 
 describe('Icon compatibility shim', () => {
-  it('keeps the frozen 45-member IconName union without removing members', () => {
-    expect(UNION).toHaveLength(45);
+  it('pins the post-slice-10 union at 40 members and renders each', () => {
+    expect(UNION).toHaveLength(40);
     for (const name of UNION) {
       const { unmount } = render(Icon, { name });
       expect(document.body.querySelector('svg'), name).not.toBeNull();
       unmount();
     }
+  });
+
+  it('no longer maps the five names whose last consumer migrated in slice 10', () => {
+    for (const name of ['chart', 'sun', 'user', 'database', 'cloud-sync']) {
+      expect(LUCIDE_BY_NAME, name).not.toHaveProperty(name);
+    }
+    expect(Object.keys(LUCIDE_BY_NAME)).toHaveLength(40);
   });
 
   it('resolves every union member to a lucide component and never the legacy path', () => {

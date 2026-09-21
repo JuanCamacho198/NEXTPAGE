@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import AppSidebar from '$lib/shared/ui/layout/AppSidebar.svelte';
@@ -166,5 +166,28 @@ describe('AppSidebar', () => {
   it('has semantic aside element', () => {
     const { container } = render(AppSidebar, defaultProps);
     expect(container.querySelector('aside')).toBeInTheDocument();
+  });
+
+  it('describes the focused nav trigger with the portalled tooltip content (D3)', async () => {
+    render(AppSidebar, defaultProps);
+    const trigger = findNavButton('Estantería');
+    expect(trigger).not.toBeNull();
+
+    // The tooltip content is portalled to `document.body`, so the jsdom
+    // read goes through the a11y tree rather than the render target.
+    expect(screen.queryByRole('tooltip')).toBeNull();
+
+    trigger!.focus();
+    const tooltip = await waitFor(() => screen.getByRole('tooltip'));
+    expect(tooltip.textContent?.trim()).toBe('Estantería');
+    expect(trigger!.getAttribute('aria-describedby')).toBe(tooltip.id);
+    // The trigger is still the nav button itself: `Tooltip.Root` and
+    // `Tooltip.Provider` render no wrapper element, which is what keeps
+    // `aside nav > button` (the visual gate's locator) valid.
+    expect(trigger!.tagName).toBe('BUTTON');
+
+    trigger!.blur();
+    // Pointer/focus close is asynchronous and the content unmounts.
+    await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
   });
 });

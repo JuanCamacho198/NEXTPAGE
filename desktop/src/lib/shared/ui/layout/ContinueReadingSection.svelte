@@ -3,7 +3,8 @@
   import { libraryState } from '$lib/shared/stores/LibraryDomainState.svelte';
   import { navigationState } from '$lib/shared/stores/NavigationDomainState.svelte';
   import { BookCard, ShelfActionMenu } from '$lib/features/library';
-  import Icon from '$lib/shared/ui/navigation/Icon.svelte';
+  import ChevronLeft from 'lucide-svelte/icons/chevron-left';
+  import ChevronRight from 'lucide-svelte/icons/chevron-right';
 
   const AUTO_ROTATE_MS = 8000;
 
@@ -122,7 +123,7 @@
             aria-label={appState.t('home.continue.prevBook')}
             onclick={handlePrev}
           >
-            <Icon name="chevron-left" size="sm" />
+            <ChevronLeft size={14} strokeWidth={1.8} />
           </button>
           <button
             type="button"
@@ -130,7 +131,7 @@
             aria-label={appState.t('home.continue.nextBook')}
             onclick={handleNext}
           >
-            <Icon name="chevron-right" size="sm" />
+            <ChevronRight size={14} strokeWidth={1.8} />
           </button>
         </div>
       {/if}

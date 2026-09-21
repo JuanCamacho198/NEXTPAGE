@@ -3,7 +3,7 @@
   import type { NavItem } from '$lib/shared/stores/NavigationState.svelte';
   import type { MessageKey } from '../../i18n';
   import ThemeToggle from '$lib/shared/ui/navigation/ThemeToggle.svelte';
-  import Icon from '$lib/shared/ui/navigation/Icon.svelte';
+  import { Tooltip } from 'bits-ui';
   import ChevronLeft from 'lucide-svelte/icons/chevron-left';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
   import Moon from 'lucide-svelte/icons/moon';
@@ -73,45 +73,73 @@
   </div>
 
   <nav class="flex-1 space-y-1 overflow-y-auto p-4">
-    {#each navItems as item}
-      <button
-        class={`w-full rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
-          collapsed ? 'flex items-center justify-center' : 'flex items-center gap-3'
-        } ${
-          activeRoute === item.id || (activeRoute === 'home' && item.id === 'home')
-            ? 'bg-(--color-accent-blue) text-(--color-background) shadow-(--shadow-glow)'
-            : 'text-(--color-text-muted) hover:bg-(--color-panel-accent) hover:text-(--color-primary)'
-        }`}
-        onclick={item.action}
-      >
-        <Icon name={item.icon} size="md" title={t(item.messageKey)} />
-        {#if !collapsed}
-          {t(item.messageKey)}
-        {/if}
-      </button>
-    {/each}
-
-    {#if dataNavItems.length > 0}
-      <div class="mt-4 pt-3 border-t border-(--color-border)/50">
-        {#each dataNavItems as item}
-          <button
+    <Tooltip.Provider delayDuration={0} skipDelayDuration={0}>
+      {#each navItems as item}
+        {@const ItemIcon = item.icon}
+        <Tooltip.Root>
+          <Tooltip.Trigger
             class={`w-full rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
               collapsed ? 'flex items-center justify-center' : 'flex items-center gap-3'
             } ${
-              activeRoute === item.id
+              activeRoute === item.id || (activeRoute === 'home' && item.id === 'home')
                 ? 'bg-(--color-accent-blue) text-(--color-background) shadow-(--shadow-glow)'
                 : 'text-(--color-text-muted) hover:bg-(--color-panel-accent) hover:text-(--color-primary)'
             }`}
             onclick={item.action}
           >
-            <Icon name={item.icon} size="md" title={t(item.messageKey)} />
+            <ItemIcon size={16} strokeWidth={1.8} aria-hidden="true" />
             {#if !collapsed}
               {t(item.messageKey)}
             {/if}
-          </button>
-        {/each}
-      </div>
-    {/if}
+          </Tooltip.Trigger>
+          <Tooltip.Portal>
+            <Tooltip.Content
+              role="tooltip"
+              side="right"
+              sideOffset={8}
+              class="z-50 whitespace-nowrap rounded bg-(--color-surface) p-1 text-xs text-(--color-primary) shadow-[0_2px_8px_rgba(0,0,0,0.2)]"
+            >
+              {t(item.messageKey)}
+            </Tooltip.Content>
+          </Tooltip.Portal>
+        </Tooltip.Root>
+      {/each}
+
+      {#if dataNavItems.length > 0}
+        <div class="mt-4 pt-3 border-t border-(--color-border)/50">
+          {#each dataNavItems as item}
+            {@const ItemIcon = item.icon}
+            <Tooltip.Root>
+              <Tooltip.Trigger
+                class={`w-full rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
+                  collapsed ? 'flex items-center justify-center' : 'flex items-center gap-3'
+                } ${
+                  activeRoute === item.id
+                    ? 'bg-(--color-accent-blue) text-(--color-background) shadow-(--shadow-glow)'
+                    : 'text-(--color-text-muted) hover:bg-(--color-panel-accent) hover:text-(--color-primary)'
+                }`}
+                onclick={item.action}
+              >
+                <ItemIcon size={16} strokeWidth={1.8} aria-hidden="true" />
+                {#if !collapsed}
+                  {t(item.messageKey)}
+                {/if}
+              </Tooltip.Trigger>
+              <Tooltip.Portal>
+                <Tooltip.Content
+                  role="tooltip"
+                  side="right"
+                  sideOffset={8}
+                  class="z-50 whitespace-nowrap rounded bg-(--color-surface) p-1 text-xs text-(--color-primary) shadow-[0_2px_8px_rgba(0,0,0,0.2)]"
+                >
+                  {t(item.messageKey)}
+                </Tooltip.Content>
+              </Tooltip.Portal>
+            </Tooltip.Root>
+          {/each}
+        </div>
+      {/if}
+    </Tooltip.Provider>
   </nav>
 
   <div class="p-4 border-t border-(--color-border) flex flex-col gap-2">

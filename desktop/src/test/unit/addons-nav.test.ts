@@ -2,6 +2,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import LayoutGrid from 'lucide-svelte/icons/layout-grid';
 import { NavigationDomainState } from '$lib/shared/stores/NavigationDomainState.svelte';
 import { getNavItems, type NavCallbacks } from '$lib/shared/stores/NavigationState.svelte';
 
@@ -34,7 +35,10 @@ describe('addons navigation', () => {
     const addons = items.find((item) => item.id === 'addons');
     expect(addons).toBeDefined();
     expect(addons?.messageKey).toBe('sidebar.addons');
-    expect(addons?.icon).toBe('grid');
+    // `NavItem.icon` is a component reference, not an `IconName` string: the
+    // icon shim is deleted in this batch, so the only honest assertion is the
+    // resolved component identity.
+    expect(addons?.icon).toBe(LayoutGrid);
   });
 
   it('activates the addons route through the sidebar action', () => {

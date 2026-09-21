@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import Book from 'lucide-svelte/icons/book';
 import GradientImportButton from '$lib/features/home/components/GradientImportButton.svelte';
 
 const hexPattern = /#[0-9a-fA-F]{3,8}/;
@@ -52,7 +53,7 @@ describe('GradientImportButton', () => {
 
   it('renders a custom icon when provided', () => {
     const { container } = render(GradientImportButton, {
-      props: { label: 'Import', onclick: () => undefined, icon: 'book' },
+      props: { label: 'Import', onclick: () => undefined, icon: Book },
     });
 
     expect(container.querySelector('svg')).not.toBeNull();

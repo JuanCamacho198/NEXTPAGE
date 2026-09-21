@@ -1,5 +1,7 @@
 import { render, screen } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
+import Book from 'lucide-svelte/icons/book';
+import Clock from 'lucide-svelte/icons/clock';
 import MetricCard from '$lib/features/home/components/MetricCard.svelte';
 
 const hexPattern = /#[0-9a-fA-F]{3,8}/;
@@ -7,7 +9,7 @@ const hexPattern = /#[0-9a-fA-F]{3,8}/;
 describe('MetricCard', () => {
   it('renders label, value and icon glyph in an accent circle', () => {
     const { container } = render(MetricCard, {
-      props: { label: 'Started', value: '12', icon: 'book' },
+      props: { label: 'Started', value: '12', icon: Book },
     });
 
     expect(screen.getByText('Started')).toBeInTheDocument();
@@ -24,7 +26,7 @@ describe('MetricCard', () => {
 
   it('shows a skeleton placeholder while loading and hides the value', () => {
     const { container } = render(MetricCard, {
-      props: { label: 'Started', value: '12', icon: 'book', isLoading: true },
+      props: { label: 'Started', value: '12', icon: Book, isLoading: true },
     });
 
     expect(screen.queryByText('12')).not.toBeInTheDocument();
@@ -34,7 +36,7 @@ describe('MetricCard', () => {
 
   it('renders an accessible progress bar with clamped width', () => {
     const { container } = render(MetricCard, {
-      props: { label: 'Daily goal', value: '10/20 min', icon: 'clock', progress: 0.5 },
+      props: { label: 'Daily goal', value: '10/20 min', icon: Clock, progress: 0.5 },
     });
 
     const bar = container.querySelector('[role="progressbar"]');
@@ -49,12 +51,12 @@ describe('MetricCard', () => {
 
   it('clamps progress outside the 0..1 range', () => {
     const { container } = render(MetricCard, {
-      props: { label: 'Daily goal', value: 'x', icon: 'clock', progress: 1.7 },
+      props: { label: 'Daily goal', value: 'x', icon: Clock, progress: 1.7 },
     });
     expect(container.querySelector('[role="progressbar"]')).toHaveAttribute('aria-valuenow', '100');
 
     const { container: low } = render(MetricCard, {
-      props: { label: 'Daily goal', value: 'x', icon: 'clock', progress: -0.4 },
+      props: { label: 'Daily goal', value: 'x', icon: Clock, progress: -0.4 },
     });
     expect(low.querySelector('[role="progressbar"]')).toHaveAttribute('aria-valuenow', '0');
   });
@@ -64,7 +66,7 @@ describe('MetricCard', () => {
       props: {
         label: 'Started',
         value: '12',
-        icon: 'book',
+        icon: Book,
         progress: 0.5,
         disabledReason: 'Stats unavailable.',
       },
@@ -77,7 +79,7 @@ describe('MetricCard', () => {
 
   it('contains no hardcoded hex colors', () => {
     const { container } = render(MetricCard, {
-      props: { label: 'Started', value: '12', icon: 'book', progress: 0.4 },
+      props: { label: 'Started', value: '12', icon: Book, progress: 0.4 },
     });
 
     expect(container.innerHTML).not.toMatch(hexPattern);

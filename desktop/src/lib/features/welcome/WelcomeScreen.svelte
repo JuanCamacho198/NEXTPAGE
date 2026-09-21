@@ -4,7 +4,8 @@
   import { navigationState } from '$lib/shared/stores/NavigationDomainState.svelte';
   import { GoogleLoginButton } from '$lib/features/library';
   import type { MessageKey } from '$lib/shared/i18n';
-  import { Button, Icon } from '$lib/shared/ui';
+  import { Button } from '$lib/shared/ui';
+  import Hand from 'lucide-svelte/icons/hand';
   import LocalUserForm from './components/LocalUserForm.svelte';
   import type { LocalUserProfile } from '$lib/shared/stores/authPersistence';
 
@@ -262,7 +263,7 @@
       >
         <h2 class="m-0 mb-1 flex items-center justify-center gap-2 text-2xl font-bold">
           <span>{t('welcome.cardTitle')}</span>
-          <Icon name="hand" size="lg" class="shrink-0 -rotate-6 text-(--color-accent-blue)" />
+          <Hand size={20} strokeWidth={1.8} class="shrink-0 -rotate-6 text-(--color-accent-blue)" />
         </h2>
         <p class="m-0 mb-6 text-center text-sm text-(--color-text-muted)">
           {t('welcome.cardSubtitle')}

@@ -1,7 +1,12 @@
 <script lang="ts">
   import type { ReadingStatsSummaryDto } from '$lib/shared/types';
   import type { MessageKey } from '$lib/shared/i18n';
-  import type { IconName } from '$lib/shared/ui/navigation/Icon.svelte';
+  import Book from 'lucide-svelte/icons/book';
+  import Check from 'lucide-svelte/icons/check';
+  import Clock from 'lucide-svelte/icons/clock';
+  import Flame from 'lucide-svelte/icons/flame';
+  import TrendingUp from 'lucide-svelte/icons/trending-up';
+  import type { Icon as LucideIcon } from 'lucide-svelte';
   import MetricCard from './MetricCard.svelte';
   import { statsState } from '$lib/shared/stores/StatsDomainState.svelte';
   import { settingsState } from '$lib/shared/stores/SettingsDomainState.svelte';
@@ -50,7 +55,7 @@
   type StatItem = {
     label: string;
     value: string;
-    icon: IconName;
+    icon: typeof LucideIcon;
     progress?: number;
   };
 
@@ -58,23 +63,23 @@
     {
       label: _t ? _t('stats.booksStartedLabel') : 'Iniciados',
       value: stats?.booksStarted?.toString() ?? '0',
-      icon: 'book',
+      icon: Book,
     },
     {
       label: _t ? _t('stats.booksCompletedLabel') : 'Completados',
       value: stats?.booksCompleted?.toString() ?? '0',
-      icon: 'check',
+      icon: Check,
     },
     {
       label: _t ? _t('home.metrics.dailyGoalLabel') : 'Meta diaria',
       value: goalValue,
-      icon: 'clock',
+      icon: Clock,
       progress: goalProgress,
     },
     {
       label: _t ? _t('stats.sessionsLabel') : 'Sesiones',
       value: stats?.totalSessions?.toString() ?? '0',
-      icon: 'trend-up',
+      icon: TrendingUp,
     },
     {
       label: _t ? _t('stats.streakLabel') : 'Racha',
@@ -83,7 +88,7 @@
         : _t
           ? _t('stats.days', { count: streakDays })
           : `${streakDays} ${streakDays === 1 ? 'día' : 'días'}`,
-      icon: 'flame',
+      icon: Flame,
     },
   ]);
 </script>

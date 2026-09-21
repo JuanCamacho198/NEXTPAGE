@@ -1,17 +1,23 @@
 <script lang="ts">
-  import Icon from '$lib/shared/ui/navigation/Icon.svelte';
-  import type { IconName } from '$lib/shared/ui/navigation/Icon.svelte';
+  import type { Icon as LucideIcon } from 'lucide-svelte';
 
   type Props = {
     label: string;
     value: string;
-    icon: IconName;
+    icon: typeof LucideIcon;
     progress?: number;
     isLoading?: boolean;
     disabledReason?: string | null;
   };
 
-  let { label, value, icon, progress, isLoading = false, disabledReason = null }: Props = $props();
+  let {
+    label,
+    value,
+    icon: ItemIcon,
+    progress,
+    isLoading = false,
+    disabledReason = null,
+  }: Props = $props();
 
   const progressPct = $derived(
     progress !== undefined ? Math.round(Math.min(1, Math.max(0, progress)) * 100) : null,
@@ -37,7 +43,7 @@
     <div
       class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-(--color-accent-soft) text-(--color-accent)"
     >
-      <Icon name={icon} size="md" />
+      <ItemIcon size={16} strokeWidth={1.8} />
     </div>
   </div>
 

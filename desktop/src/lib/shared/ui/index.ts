@@ -29,4 +29,3 @@ export { default as Dropdown } from './navigation/Dropdown.svelte';
 export { default as Pagination } from './navigation/Pagination.svelte';
 export { default as LivePreview } from './navigation/LivePreview.svelte';
 export { default as DropMenu } from './navigation/DropMenu.svelte';
-export { default as Icon } from './navigation/Icon.svelte';

@@ -46,6 +46,7 @@
     "@nextpage/manifest-validator": "workspace:*"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@sentry/vite-plugin": "^5.0.0",
     "@sveltejs/vite-plugin-svelte": "^7.0.0",
     "@tailwindcss/vite": "^4.3.0",

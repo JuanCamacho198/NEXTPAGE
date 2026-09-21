@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import ShelfSection from '$lib/features/library/ShelfSection.svelte';
+import ShelfDetailModal from '$lib/features/library/ShelfDetailModal.svelte';
 import LibraryShelfScreen from '$lib/features/library/components/LibraryShelfScreen.svelte';
 import HighlightsView from '$lib/features/highlights/components/HighlightsView.svelte';
 import { createShelfQueryState } from '$lib/shared/stores/HomeState';
@@ -9,11 +10,14 @@ import type { ViewerPort } from '$lib/shared/ports';
 import type { HighlightsViewDeps } from '$lib/features/highlights/highlightsViewDeps';
 
 /**
- * Library and highlights icon migration (slice 13). These four files held the
- * remaining static `<Icon` call sites outside the home/welcome/sidebar group:
- * `ShelfSection` (2), `LibraryShelfScreen` (2) and `HighlightsView` (7).
- * `ShelfDetailModal` is left untouched because migrating it cannot hold the
- * `MUST NOT grow` constraint (measured: +7 lines minimum).
+ * Library and highlights icon migration (slice 13, closed by the slice-14
+ * batch). These four files held the remaining static `<Icon` call sites outside
+ * the home/welcome/sidebar group: `ShelfSection` (2), `LibraryShelfScreen` (2),
+ * `HighlightsView` (7) and `ShelfDetailModal` (6). The last one was migrated
+ * only after the constraint-8/2 exception was authorized: the compact shape
+ * costs a measured **+5 lines** (386 -> 391 by newline count), attributed to
+ * +3 deep lucide imports and +2 for the one glyph whose trailing
+ * `{t('shelf.added' as MessageKey)}` exceeds the 100-column budget at indent 16.
  *
  * The shim resolved a name to a lucide component; these call sites resolve the
  * same components directly, so the assertions are per-glyph identity against
@@ -159,6 +163,38 @@ describe('library and highlights icon migration', () => {
     expectGlyphContract(container.querySelector('svg.lucide-square-pen') as Element, '14');
     expectGlyphContract(container.querySelector('svg.lucide-book') as Element, '20');
     expectGlyphContract(container.querySelector('svg.lucide-ellipsis-vertical') as Element, '14');
+  });
+
+  it('renders the ShelfDetailModal glyphs from direct lucide components', async () => {
+    // The modal is a bits-ui Dialog, so its content is portalled out of the
+    // render target and read through the a11y tree by role.
+    render(ShelfDetailModal, {
+      open: true,
+      book: { ...SHELF_BOOK, publicationDate: '2020-05-01' },
+      collections: [],
+      t,
+      onClose: noop,
+      onStartReading: noop,
+      onDeleteCover: noop,
+      onStatusChange: noop,
+      onToggleFavorite: noop,
+      onSaveEdit: async () => {},
+    });
+
+    const dialog = await waitFor(() => screen.getByRole('dialog'));
+    // Two `clock` sites (reading label + minutes read), `info`, the two
+    // `calendar` sites (published + added) and the footer `edit` glyph.
+    expect(glyphs(dialog)).toEqual([
+      'lucide-clock',
+      'lucide-clock',
+      'lucide-info',
+      'lucide-calendar',
+      'lucide-calendar',
+      'lucide-square-pen',
+    ]);
+    for (const icon of dialog.querySelectorAll('svg.lucide-icon')) {
+      expectGlyphContract(icon, '14');
+    }
   });
 
   it('renders the HighlightsView action-menu glyphs from direct lucide components', async () => {

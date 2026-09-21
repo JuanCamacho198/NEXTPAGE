@@ -1,7 +1,7 @@
 <script lang="ts">
   import { SafeCover } from '$lib/features/library';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
-  import { Icon, Modal } from '$lib/shared/ui/';
+  import { Modal } from '$lib/shared/ui/';
   import { UNCLASSIFIED_GENRE } from '$lib/shared/services/genreHeuristic';
   import { getSafeProgressPercentage } from '$lib/shared/stores/HomeState';
   import { libraryState } from '$lib/shared/stores/LibraryDomainState.svelte';
@@ -23,6 +23,7 @@
   import StatsChart from './StatsChart.svelte';
   import GenreDonut from './GenreDonut.svelte';
   import { useReadingChart } from './useReadingChart.svelte';
+  import Book from 'lucide-svelte/icons/book';
   import type { MessageKey } from '$lib/shared/i18n';
   let {
     appState,
@@ -369,7 +370,7 @@
                 {#each chart.genreTooltip.books.slice(0, 3) as bookTitle}<p
                     class="truncate text-(--color-text-muted)"
                   >
-                    <Icon name="book" size="sm" class="inline -mt-0.5 mr-1" />{bookTitle}
+                    <Book size={14} strokeWidth={1.8} class="inline -mt-0.5 mr-1" />{bookTitle}
                   </p>{/each}{#if chart.genreTooltip.books.length > 3}<p
                     class="mt-0.5 text-(--color-text-muted)"
                   >

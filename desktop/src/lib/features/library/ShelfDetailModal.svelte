@@ -1,6 +1,9 @@
 <script lang="ts">
   import Modal from '$lib/shared/ui/layout/Modal.svelte';
-  import Icon from '$lib/shared/ui/navigation/Icon.svelte';
+  import Calendar from 'lucide-svelte/icons/calendar';
+  import Clock from 'lucide-svelte/icons/clock';
+  import Info from 'lucide-svelte/icons/info';
+  import SquarePen from 'lucide-svelte/icons/square-pen';
   import Button from '$lib/shared/ui/forms/Button.svelte';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
   import SafeCover from '$lib/features/library/components/SafeCover.svelte';
@@ -283,7 +286,7 @@
           {/if}
           <div class="rounded-lg border border-(--color-border) p-4 space-y-3">
             <h4 class="text-xs font-semibold uppercase tracking-wider text-(--color-text-muted)">
-              <Icon name="clock" size="sm" class="inline -mt-0.5 mr-1" />{t(
+              <Clock size={14} strokeWidth={1.8} class="inline -mt-0.5 mr-1" />{t(
                 'shelf.readingLabel' as MessageKey,
               )}
             </h4>
@@ -309,7 +312,7 @@
                   {t('shelf.readingLabel' as MessageKey)}
                 </dt>
                 <dd class="font-medium text-(--color-primary)">
-                  <Icon name="clock" size="sm" class="inline -mt-0.5 mr-0.5" />{t(
+                  <Clock size={14} strokeWidth={1.8} class="inline -mt-0.5 mr-0.5" />{t(
                     'shelf.minutesRead' as MessageKey,
                     { minutes: formatMinutes(shelfDetail.minutesRead, t) },
                   )}
@@ -326,21 +329,23 @@
           </div>
           <div class="rounded-lg border border-(--color-border) p-4 space-y-3">
             <h4 class="text-xs font-semibold uppercase tracking-wider text-(--color-text-muted)">
-              <Icon name="info" size="sm" class="inline -mt-0.5 mr-1" />{t(
+              <Info size={14} strokeWidth={1.8} class="inline -mt-0.5 mr-1" />{t(
                 'shelf.details' as MessageKey,
               )}
             </h4>
             {#if shelfDetail.publicationDate}<p
                 class="flex items-center gap-1.5 text-xs text-(--color-text-muted)"
               >
-                <Icon name="calendar" size="sm" class="shrink-0" />{t(
+                <Calendar size={14} strokeWidth={1.8} class="shrink-0" />{t(
                   'shelf.published' as MessageKey,
                 )}
                 {formatPublicationDate(shelfDetail.publicationDate)}
               </p>{/if}{#if shelfDetail.createdAt}<p
                 class="flex items-center gap-1.5 text-xs text-(--color-text-muted)"
               >
-                <Icon name="calendar" size="sm" class="shrink-0" />{t('shelf.added' as MessageKey)}
+                <Calendar size={14} strokeWidth={1.8} class="shrink-0" />{t(
+                  'shelf.added' as MessageKey,
+                )}
                 {formatRelativeDate(shelfDetail.createdAt, new Date(), t)}
               </p>{/if}{#if shelfDetail.collectionIds && shelfDetail.collectionIds.length > 0}{@const collNames =
                 getCollectionNames(
@@ -372,7 +377,7 @@
           size="sm"
           variant="ghost"
           onclick={() => shelfEdit.startEditing(shelfDetail)}
-          ><Icon name="edit" size="sm" /> {t('shelf.editMetadata' as MessageKey)}</Button
+          ><SquarePen size={14} strokeWidth={1.8} /> {t('shelf.editMetadata' as MessageKey)}</Button
         ><Button size="sm" variant="ghost" onclick={onClose}
           >{t('settings.close' as MessageKey)}</Button
         ><Button

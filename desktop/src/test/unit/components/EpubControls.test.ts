@@ -24,7 +24,7 @@ function makeProps(overrides: Record<string, unknown> = {}) {
 }
 
 describe('EpubControls (5.1) — Button structure matching PdfControls', () => {
-  it('renders TOC button with Icon name="menu"', () => {
+  it('renders TOC button with the lucide menu glyph', () => {
     render(EpubControls, makeProps());
     const btn = screen.getByTestId('epub-toc');
     expect(btn).toBeInTheDocument();

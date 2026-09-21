@@ -1,8 +1,8 @@
 <script lang="ts">
+  import Check from 'lucide-svelte/icons/check';
   import type { MessageKey } from '$lib/shared/i18n';
   import type { ReaderSettings, ReaderTextAlign } from '$lib/shared/types';
   import { createFocusTrap } from '$lib/shared/utils/focusTrap';
-  import { Icon } from '$lib/shared/ui';
   import { fly } from 'svelte/transition';
   import ThemeSwatches from './ThemeSwatches.svelte';
   import { useReaderTextSettings } from './useReaderTextSettings.svelte';
@@ -105,7 +105,7 @@
     <div bind:this={sidebarEl} class="absolute right-0 top-0 flex h-full w-65 flex-col overflow-y-auto border-l border-(--color-border-deep) bg-(--color-surface)/70 pt-15 text-(--color-text-muted) backdrop-blur-sm" onkeydown={(e) => e.key === 'Escape' && onClose()} role="dialog" aria-label={t('reader.ajustes_texto')} tabindex="0">
       <header class="relative flex items-center justify-between border-b border-(--color-border)/5 px-4 py-4">
         {#if textSettings.showSavedToast}
-          <span class="absolute -top-2 right-4 flex items-center gap-1 rounded-full bg-(--color-accent-blue)/20 px-2.5 py-0.5 text-xs text-(--color-accent-blue)" transition:fly={{ y: -4, duration: 150 }}><Icon name="check" size="sm" class="shrink-0" />{t('reader.saved')}</span>
+          <span class="absolute -top-2 right-4 flex items-center gap-1 rounded-full bg-(--color-accent-blue)/20 px-2.5 py-0.5 text-xs text-(--color-accent-blue)" transition:fly={{ y: -4, duration: 150 }}><Check size={14} strokeWidth={1.8} class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />{t('reader.saved')}</span>
         {/if}
         <button type="button" onclick={onClose} class="flex cursor-pointer items-center gap-1 text-(--color-text-muted) hover:text-(--color-text-inverse)" aria-label={t('settings.close')}>
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>

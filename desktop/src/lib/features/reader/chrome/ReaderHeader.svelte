@@ -1,5 +1,13 @@
 <script lang="ts">
-  import Icon from '$lib/shared/ui/navigation/Icon.svelte';
+  import ArrowRight from 'lucide-svelte/icons/arrow-right';
+  import Bookmark from 'lucide-svelte/icons/bookmark';
+  import ChevronLeft from 'lucide-svelte/icons/chevron-left';
+  import Expand from 'lucide-svelte/icons/expand';
+  import Menu from 'lucide-svelte/icons/menu';
+  import Search from 'lucide-svelte/icons/search';
+  import Settings from 'lucide-svelte/icons/settings';
+  import Shrink from 'lucide-svelte/icons/shrink';
+  import X from 'lucide-svelte/icons/x';
   import ZoomDropdown from './ZoomDropdown.svelte';
   import type { MessageKey } from '$lib/shared/i18n';
 
@@ -67,6 +75,12 @@
       totalPages > 0,
   );
 
+  const TocIcon = $derived(showTocPanel ? X : Menu);
+  const SearchIcon = $derived(searchPanelOpen ? X : Search);
+  const TextSettingsIcon = $derived(showTextSettings ? X : Settings);
+  const BookmarksIcon = $derived(showBookmarks ? X : Bookmark);
+  const FullscreenIcon = $derived(isFullscreen ? Shrink : Expand);
+
   let pageInputValue = $state(1);
   $effect(() => {
     if (currentPage !== undefined) pageInputValue = currentPage;
@@ -97,7 +111,7 @@
         onclick={onBackToHome}
         class="flex cursor-pointer items-center gap-2 text-(--color-text-auxiliary) hover:text-(--color-text-inverse)"
       >
-        <Icon name="chevron-left" size="sm" />
+        <ChevronLeft size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
         <span class="font-inter text-sm font-medium text-(--color-text-auxiliary)"
           >{t('reader.biblioteca')}</span
         >
@@ -121,7 +135,7 @@
         class:hover:brightness-125={showTocPanel}
         aria-label={showTocPanel ? t('settings.close') : t('reader.tabla_contenidos')}
       >
-        <Icon name={showTocPanel ? 'close' : 'menu'} size="sm" />
+        <TocIcon size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
       </button>
       <button
         type="button"
@@ -133,7 +147,7 @@
         class:hover:brightness-125={searchPanelOpen}
         aria-label={searchPanelOpen ? t('settings.close') : t('epub.search')}
       >
-        <Icon name={searchPanelOpen ? 'close' : 'search'} size="sm" />
+        <SearchIcon size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
       </button>
       <button
         type="button"
@@ -145,7 +159,7 @@
         class:hover:brightness-125={showTextSettings}
         aria-label={showTextSettings ? t('settings.close') : t('reader.ajustes_texto')}
       >
-        <Icon name={showTextSettings ? 'close' : 'settings'} size="sm" />
+        <TextSettingsIcon size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
       </button>
       <button
         type="button"
@@ -157,7 +171,7 @@
         class:hover:brightness-125={showBookmarks}
         aria-label={showBookmarks ? t('settings.close') : t('reader.bookmark')}
       >
-        <Icon name={showBookmarks ? 'close' : 'bookmark'} size="sm" />
+        <BookmarksIcon size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
       </button>
       <button
         type="button"
@@ -165,7 +179,7 @@
         class="flex items-center justify-center min-w-7 min-h-7 cursor-pointer transition-colors text-(--color-text-auxiliary) hover:text-(--color-text-inverse)"
         aria-label={isFullscreen ? t('pdf.fullscreenExit') : t('pdf.fullscreenEnter')}
       >
-        <Icon name={isFullscreen ? 'fullscreen-exit' : 'fullscreen-enter'} size="sm" />
+        <FullscreenIcon size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
       </button>
     </div>
   </div>
@@ -182,7 +196,7 @@
         class="inline-flex items-center justify-center px-2.5 py-1.5 border border-(--color-surface-strong) rounded bg-transparent text-(--color-text-auxiliary) hover:text-(--color-text-inverse) hover:bg-(--color-surface-strong)/20 cursor-pointer text-xs min-w-8 min-h-8 disabled:opacity-50 disabled:cursor-not-allowed"
         aria-label={t('reader.prev_page')}
       >
-        <Icon name="chevron-left" size="sm" />
+        <ChevronLeft size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
       </button>
       <button
         type="button"
@@ -193,7 +207,7 @@
         class="inline-flex items-center justify-center px-2.5 py-1.5 border border-(--color-surface-strong) rounded bg-transparent text-(--color-text-auxiliary) hover:text-(--color-text-inverse) hover:bg-(--color-surface-strong)/20 cursor-pointer text-xs min-w-8 min-h-8 disabled:opacity-50 disabled:cursor-not-allowed"
         aria-label={t('reader.next_page')}
       >
-        <Icon name="arrow-right" size="sm" />
+        <ArrowRight size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
       </button>
       <span class="flex items-center gap-1 text-xs text-(--color-text-auxiliary)">
         <input

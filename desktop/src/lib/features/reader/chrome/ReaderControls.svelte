@@ -1,6 +1,10 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import Icon from '$lib/shared/ui/navigation/Icon.svelte';
+  import ArrowRight from 'lucide-svelte/icons/arrow-right';
+  import ChevronLeft from 'lucide-svelte/icons/chevron-left';
+  import Expand from 'lucide-svelte/icons/expand';
+  import Menu from 'lucide-svelte/icons/menu';
+  import Shrink from 'lucide-svelte/icons/shrink';
   import type { MessageKey } from '$lib/shared/i18n';
 
   type Props = {
@@ -55,6 +59,8 @@
 
   let pageValue = $state(1);
 
+  const FullscreenIcon = $derived(isFullscreen ? Shrink : Expand);
+
   $effect(() => {
     pageValue = currentPage;
   });
@@ -88,7 +94,7 @@
       aria-label={t('reader.tabla_contenidos')}
       data-testid={tocTestId}
     >
-      <Icon name="menu" size="sm" />
+      <Menu size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
     </button>
   {/if}
   <button
@@ -100,7 +106,7 @@
     data-testid={prevTestId}
     {...restProps}
   >
-    <Icon name="chevron-left" size="sm" />
+    <ChevronLeft size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
   </button>
   <button
     type="button"
@@ -110,7 +116,7 @@
     aria-label={t('reader.next_page')}
     data-testid={nextTestId}
   >
-    <Icon name="arrow-right" size="sm" />
+    <ArrowRight size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
   </button>
   <span class="flex items-center gap-1 text-xs text-(--color-primary)">
     <input
@@ -135,7 +141,7 @@
     aria-label={isFullscreen ? t('pdf.fullscreenExit') : t('pdf.fullscreenEnter')}
     data-testid={fullscreenTestId}
   >
-    <Icon name={isFullscreen ? 'fullscreen-exit' : 'fullscreen-enter'} size="sm" />
+    <FullscreenIcon size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
   </button>
   {#if right}
     {@render right()}

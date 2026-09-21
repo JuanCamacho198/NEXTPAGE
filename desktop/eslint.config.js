@@ -4,6 +4,7 @@ import sveltePlugin from 'eslint-plugin-svelte';
 import svelteParser from 'svelte-eslint-parser';
 import prettier from 'eslint-config-prettier';
 import tailwindV4Canonical from './eslint-local-rules/tailwind-v4-canonical.js';
+import svelteRunesOnly from './eslint-local-rules/svelte-runes-only.js';
 
 export default [
   {
@@ -53,6 +54,7 @@ export default [
       'local-rules': {
         rules: {
           'tailwind-v4-canonical': tailwindV4Canonical,
+          'svelte-runes-only': svelteRunesOnly,
         },
       },
     },
@@ -70,6 +72,7 @@ export default [
       }],
       '@typescript-eslint/no-explicit-any': 'warn',
       'local-rules/tailwind-v4-canonical': 'warn',
+      'local-rules/svelte-runes-only': 'error',
     },
   },
   {

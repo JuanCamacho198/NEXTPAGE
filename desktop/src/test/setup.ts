@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 import { vi } from 'vitest';
+import { installJsdomHarness } from './harness/jsdomHarness';
 
 // Global mock for Tauri IPC
 vi.mock('@tauri-apps/api/core', () => ({
@@ -10,21 +11,11 @@ vi.mock('@tauri-apps/api/core', () => ({
 // DataCloneError on mock objects with private slots, e.g. vitest MockProxy)
 globalThis.structuredClone = (obj: unknown) => JSON.parse(JSON.stringify(obj));
 
-// Polyfill ResizeObserver for jsdom (used by App.svelte debug panel)
-if (typeof globalThis.ResizeObserver === 'undefined') {
-  class ResizeObserverMock {
-    observe() {
-      /* noop */
-    }
-    unobserve() {
-      /* noop */
-    }
-    disconnect() {
-      /* noop */
-    }
-  }
-  globalThis.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver;
-}
+// jsdom harness (see ./harness/jsdomHarness.ts): registry-backed
+// ResizeObserver plus the manual flush hook, PointerEvent when absent, and
+// scrollIntoView/scrollTo/scrollBy no-ops. Tests opt into resize delivery with
+// flushResizeObservers(); nothing is delivered spontaneously.
+installJsdomHarness();
 
 // Polyfill window.matchMedia for jsdom (jsdom does not implement it).
 // ContinueReadingSection's reduced-motion effect reads it on mount; the
@@ -40,17 +31,6 @@ if (typeof globalThis.matchMedia === 'undefined') {
     removeListener: () => undefined,
     dispatchEvent: () => false,
   })) as unknown as typeof window.matchMedia;
-}
-
-// Polyfill Element.scrollTo/scrollBy for jsdom (not implemented; used by
-// ContinueReadingSection's scroll-to-active-card effect on mount)
-if (typeof globalThis.Element !== 'undefined') {
-  if (typeof Element.prototype.scrollTo !== 'function') {
-    Element.prototype.scrollTo = (() => undefined) as never;
-  }
-  if (typeof Element.prototype.scrollBy !== 'function') {
-    Element.prototype.scrollBy = (() => undefined) as never;
-  }
 }
 
 // Polyfill Element.animate for jsdom (used by Svelte transitions in Modal.svelte)

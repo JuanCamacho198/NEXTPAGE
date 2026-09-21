@@ -16,7 +16,7 @@ import { captureViewport, gotoRoute, navButton, openApp } from '../harness/appSh
 const libraryIcon = (page: Page) => navButton(page, 'library').locator('svg').first();
 
 const libraryTooltip = (page: Page) =>
-  page.locator('aside nav [role=tooltip]').filter({ hasText: 'Library' });
+  page.locator('[role=tooltip]').filter({ hasText: 'Library' });
 
 // A point inside `#main-content`'s top padding: inert, so moving the mouse
 // there clears the hover state without changing what is rendered underneath.
@@ -41,7 +41,11 @@ test('sidebar icon surface: expanded and collapsed, with and without the tooltip
   await openApp(page, { bookCount: 2 });
   await gotoRoute(page, 'library');
 
-  // Expanded, tooltip shown.
+  // Expanded, tooltip shown. The pointer is parked on an inert point first:
+  // D3's tooltip is hover-intent driven (`pointerenter`/`pointermove` on the
+  // trigger), so re-entering the trigger has to be a real boundary crossing.
+  // The pre-D3 affordance was a CSS `:hover` rule, which needed no crossing.
+  await page.mouse.move(INERT_POINT.x, INERT_POINT.y);
   await libraryIcon(page).hover();
   await expect(libraryTooltip(page)).toBeVisible();
   await captureViewport(page, 'icons-sidebar-expanded-tooltip.png');

@@ -7,8 +7,6 @@
   import Book from 'lucide-svelte/icons/book';
   import Search from 'lucide-svelte/icons/search';
   import LayoutGrid from 'lucide-svelte/icons/layout-grid';
-  import ArrowRight from 'lucide-svelte/icons/arrow-right';
-  import Bookmark from 'lucide-svelte/icons/bookmark';
   import BookOpen from 'lucide-svelte/icons/book-open';
   import BookText from 'lucide-svelte/icons/book-text';
   import Calendar from 'lucide-svelte/icons/calendar';
@@ -19,24 +17,20 @@
   import Clock from 'lucide-svelte/icons/clock';
   import Copy from 'lucide-svelte/icons/copy';
   import EllipsisVertical from 'lucide-svelte/icons/ellipsis-vertical';
-  import Expand from 'lucide-svelte/icons/expand';
   import Filter from 'lucide-svelte/icons/filter';
   import Flame from 'lucide-svelte/icons/flame';
   import Hand from 'lucide-svelte/icons/hand';
   import Info from 'lucide-svelte/icons/info';
   import List from 'lucide-svelte/icons/list';
-  import Menu from 'lucide-svelte/icons/menu';
   import Minus from 'lucide-svelte/icons/minus';
   import Moon from 'lucide-svelte/icons/moon';
   import Plus from 'lucide-svelte/icons/plus';
   import Quote from 'lucide-svelte/icons/quote';
-  import Shrink from 'lucide-svelte/icons/shrink';
   import Square from 'lucide-svelte/icons/square';
   import SquarePen from 'lucide-svelte/icons/square-pen';
   import SquareStack from 'lucide-svelte/icons/square-stack';
   import TrendingUp from 'lucide-svelte/icons/trending-up';
   import Trash2 from 'lucide-svelte/icons/trash-2';
-  import X from 'lucide-svelte/icons/x';
   import type { Component } from 'svelte';
   export type IconName =
     | 'home'
@@ -49,8 +43,6 @@
     | 'clock'
     | 'trend-up'
     | 'search'
-    | 'close'
-    | 'menu'
     | 'moon'
     | 'chevron-left'
     | 'chevron-right'
@@ -61,10 +53,6 @@
     | 'grid'
     | 'list'
     | 'more-dot'
-    | 'fullscreen-enter'
-    | 'fullscreen-exit'
-    | 'arrow-right'
-    | 'bookmark'
     | 'note'
     | 'add'
     | 'filter'
@@ -92,8 +80,6 @@
     check: Check as unknown as Component,
     clock: Clock as unknown as Component,
     'trend-up': TrendingUp as unknown as Component,
-    close: X as unknown as Component,
-    menu: Menu as unknown as Component,
     moon: Moon as unknown as Component,
     'chevron-left': ChevronLeft as unknown as Component,
     'chevron-right': ChevronRight as unknown as Component,
@@ -103,10 +89,6 @@
     'more-vertical': EllipsisVertical as unknown as Component,
     list: List as unknown as Component,
     'more-dot': EllipsisVertical as unknown as Component,
-    'fullscreen-enter': Expand as unknown as Component,
-    'fullscreen-exit': Shrink as unknown as Component,
-    'arrow-right': ArrowRight as unknown as Component,
-    bookmark: Bookmark as unknown as Component,
     note: SquarePen as unknown as Component,
     add: Plus as unknown as Component,
     filter: Filter as unknown as Component,
@@ -163,8 +145,6 @@
     clock: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
     'trend-up': 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6',
     search: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z',
-    close: 'M6 18L18 6M6 6l12 12',
-    menu: 'M4 6h16M4 12h16M4 18h16',
     moon: 'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z',
     'chevron-left': 'M15 19l-7-7 7-7',
     'chevron-right': 'M9 5l7 7-7 7',
@@ -178,12 +158,6 @@
     list: 'M4 6h16M4 10h16M4 14h16M4 18h16',
     'more-dot':
       'M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z',
-    'fullscreen-enter':
-      'M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4',
-    'fullscreen-exit':
-      'M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4',
-    'arrow-right': 'M14 5l7 7m0 0l-7 7m7-7H3',
-    bookmark: 'M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z',
     note: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
     add: 'M12 4v16m8-8H4',
     filter:

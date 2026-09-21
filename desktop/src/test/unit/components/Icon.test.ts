@@ -5,8 +5,10 @@ import Icon, { LUCIDE_BY_NAME, type IconName } from '$lib/shared/ui/navigation/I
 /**
  * The union, written as literals so `bun run check` fails if any entry stops
  * being an `IconName` member. Slice 10 removed the five names whose last
- * consumer migrated (`chart`, `sun`, `user`, `database`, `cloud-sync`); the
- * count below is the recorded post-slice-10 membership.
+ * consumer migrated (`chart`, `sun`, `user`, `database`, `cloud-sync`); slice
+ * 11 removed the six whose last consumer was the reader chrome (`close`,
+ * `menu`, `fullscreen-enter`, `fullscreen-exit`, `arrow-right`, `bookmark`).
+ * The count below is the recorded post-slice-11 membership.
  */
 const UNION: IconName[] = [
   'home',
@@ -19,8 +21,6 @@ const UNION: IconName[] = [
   'clock',
   'trend-up',
   'search',
-  'close',
-  'menu',
   'moon',
   'chevron-left',
   'chevron-right',
@@ -31,10 +31,6 @@ const UNION: IconName[] = [
   'grid',
   'list',
   'more-dot',
-  'fullscreen-enter',
-  'fullscreen-exit',
-  'arrow-right',
-  'bookmark',
   'note',
   'add',
   'filter',
@@ -52,8 +48,8 @@ const UNION: IconName[] = [
 ];
 
 describe('Icon compatibility shim', () => {
-  it('pins the post-slice-10 union at 40 members and renders each', () => {
-    expect(UNION).toHaveLength(40);
+  it('pins the post-slice-11 union at 34 members and renders each', () => {
+    expect(UNION).toHaveLength(34);
     for (const name of UNION) {
       const { unmount } = render(Icon, { name });
       expect(document.body.querySelector('svg'), name).not.toBeNull();
@@ -65,7 +61,20 @@ describe('Icon compatibility shim', () => {
     for (const name of ['chart', 'sun', 'user', 'database', 'cloud-sync']) {
       expect(LUCIDE_BY_NAME, name).not.toHaveProperty(name);
     }
-    expect(Object.keys(LUCIDE_BY_NAME)).toHaveLength(40);
+  });
+
+  it('no longer maps the six names whose last consumer was the reader chrome', () => {
+    for (const name of [
+      'close',
+      'menu',
+      'fullscreen-enter',
+      'fullscreen-exit',
+      'arrow-right',
+      'bookmark',
+    ]) {
+      expect(LUCIDE_BY_NAME, name).not.toHaveProperty(name);
+    }
+    expect(Object.keys(LUCIDE_BY_NAME)).toHaveLength(34);
   });
 
   it('resolves every union member to a lucide component and never the legacy path', () => {
@@ -99,7 +108,7 @@ describe('Icon compatibility shim', () => {
   });
 
   it('hides decorative icons from assistive technology for lucide-backed names', () => {
-    for (const name of ['home', 'close'] as IconName[]) {
+    for (const name of ['home', 'settings'] as IconName[]) {
       const { container, unmount } = render(Icon, { name });
       expect(container.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
       expect(container.querySelector('[role="tooltip"]')).toBeNull();

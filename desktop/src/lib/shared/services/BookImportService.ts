@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { i18n } from '$lib/shared/i18n';
 import { SyncOutboxDao } from '$lib/shared/outbox/SyncOutboxDao';
+import { ValidationError, validateBookImportInput } from '$lib/shared/validation/importSchemas';
 
 export type BookImportInput = {
   sourcePath: string;
@@ -90,6 +91,13 @@ export async function importBook(
       throw new Error(i18n.t(locale, 'import.emptyPath'));
     }
 
+    const validation = validateBookImportInput({ ...input, sourcePath });
+    if (!validation.ok) {
+      const localized = i18n.t(locale, validation.key);
+      const message = localized === validation.key ? validation.fallback : localized;
+      throw new ValidationError(validation.key, message);
+    }
+
     const book = await invoke<BookDto>('importBook', {
       input: {
         sourcePath,
@@ -154,6 +162,13 @@ export async function importBook(
 
     return book;
   } catch (error) {
+    if (error instanceof ValidationError) {
+      onProgress?.({
+        status: 'error',
+        message: error.fallback,
+      });
+      throw error;
+    }
     onProgress?.({
       status: 'error',
       message: readImportErrorMessage(error),

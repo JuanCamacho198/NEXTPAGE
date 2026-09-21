@@ -7,8 +7,10 @@ import Icon, { LUCIDE_BY_NAME, type IconName } from '$lib/shared/ui/navigation/I
  * being an `IconName` member. Slice 10 removed the five names whose last
  * consumer migrated (`chart`, `sun`, `user`, `database`, `cloud-sync`); slice
  * 11 removed the six whose last consumer was the reader chrome (`close`,
- * `menu`, `fullscreen-enter`, `fullscreen-exit`, `arrow-right`, `bookmark`).
- * The count below is the recorded post-slice-11 membership.
+ * `menu`, `fullscreen-enter`, `fullscreen-exit`, `arrow-right`, `bookmark`);
+ * slice 12 removed the four whose last consumer was the dictionary
+ * (`book-open`, `book-text`, `quote`, `calendar-plus`).
+ * The count below is the recorded post-slice-12 membership.
  */
 const UNION: IconName[] = [
   'home',
@@ -41,15 +43,11 @@ const UNION: IconName[] = [
   'maximize',
   'restore',
   'flame',
-  'book-open',
-  'book-text',
-  'quote',
-  'calendar-plus',
 ];
 
 describe('Icon compatibility shim', () => {
-  it('pins the post-slice-11 union at 34 members and renders each', () => {
-    expect(UNION).toHaveLength(34);
+  it('pins the post-slice-12 union at 30 members and renders each', () => {
+    expect(UNION).toHaveLength(30);
     for (const name of UNION) {
       const { unmount } = render(Icon, { name });
       expect(document.body.querySelector('svg'), name).not.toBeNull();
@@ -74,7 +72,15 @@ describe('Icon compatibility shim', () => {
     ]) {
       expect(LUCIDE_BY_NAME, name).not.toHaveProperty(name);
     }
-    expect(Object.keys(LUCIDE_BY_NAME)).toHaveLength(34);
+    expect(Object.keys(LUCIDE_BY_NAME)).toHaveLength(30);
+  });
+
+  it('no longer maps the four names whose last consumer was the dictionary', () => {
+    for (const name of ['book-open', 'book-text', 'quote', 'calendar-plus']) {
+      expect(LUCIDE_BY_NAME, name).not.toHaveProperty(name);
+      expect(Object.keys(LUCIDE_BY_NAME)).not.toContain(name);
+    }
+    expect(Object.keys(LUCIDE_BY_NAME)).toHaveLength(30);
   });
 
   it('resolves every union member to a lucide component and never the legacy path', () => {

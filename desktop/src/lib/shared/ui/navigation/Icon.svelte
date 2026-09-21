@@ -7,10 +7,7 @@
   import Book from 'lucide-svelte/icons/book';
   import Search from 'lucide-svelte/icons/search';
   import LayoutGrid from 'lucide-svelte/icons/layout-grid';
-  import BookOpen from 'lucide-svelte/icons/book-open';
-  import BookText from 'lucide-svelte/icons/book-text';
   import Calendar from 'lucide-svelte/icons/calendar';
-  import CalendarPlus from 'lucide-svelte/icons/calendar-plus';
   import Check from 'lucide-svelte/icons/check';
   import ChevronLeft from 'lucide-svelte/icons/chevron-left';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
@@ -25,7 +22,6 @@
   import Minus from 'lucide-svelte/icons/minus';
   import Moon from 'lucide-svelte/icons/moon';
   import Plus from 'lucide-svelte/icons/plus';
-  import Quote from 'lucide-svelte/icons/quote';
   import Square from 'lucide-svelte/icons/square';
   import SquarePen from 'lucide-svelte/icons/square-pen';
   import SquareStack from 'lucide-svelte/icons/square-stack';
@@ -62,11 +58,7 @@
     | 'minimize'
     | 'maximize'
     | 'restore'
-    | 'flame'
-    | 'book-open'
-    | 'book-text'
-    | 'quote'
-    | 'calendar-plus';
+    | 'flame';
 
   export const LUCIDE_BY_NAME: Record<IconName, Component> = {
     home: House as unknown as Component,
@@ -99,10 +91,6 @@
     maximize: Square as unknown as Component,
     restore: SquareStack as unknown as Component,
     flame: Flame as unknown as Component,
-    'book-open': BookOpen as unknown as Component,
-    'book-text': BookText as unknown as Component,
-    quote: Quote as unknown as Component,
-    'calendar-plus': CalendarPlus as unknown as Component,
   };
 
   const LUCIDE_SIZES = {
@@ -171,14 +159,6 @@
     restore: 'M5 5h11v11H5zM8 8h11v11H8z',
     flame:
       'M8.5 14.5A2.5 2.5 0 0012 17a2.5 2.5 0 003.5-3.5c0-1.5-1.5-2.5-2.5-4 0 0-1 1.2-1 2.5a1 1 0 01-2 0c0-1.3-1-2.5-1-2.5-.8 1.2-2 2.5-2 4z M12 2C8.5 4.5 7 7 7 9.5c0 1.5.5 3 2 4.5',
-    'book-open':
-      'M12 7v14M3 18a1 1 0 01-1-1V4a1 1 0 011-1h5a4 4 0 014 4 4 4 0 014-4h5a1 1 0 011 1v13a1 1 0 01-1 1h-6a3 3 0 00-3 3 3 3 0 00-3-3z',
-    'book-text':
-      'M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20 M8 11h8 M8 7h6',
-    quote:
-      'M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z',
-    'calendar-plus':
-      'M8 2v4M16 2v4M3 10h18M8 2h8a2 2 0 012 2v14a2 2 0 01-2 2H8a2 2 0 01-2-2V4a2 2 0 012-2zM16 14h-6M13 11v6',
   };
 </script>
 

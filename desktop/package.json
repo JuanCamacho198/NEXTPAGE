@@ -41,6 +41,7 @@
     "@tauri-apps/plugin-os": "^2.3.2",
     "boneyard-js": "^1.7.7",
     "epubjs": "^0.3.93",
+    "lucide-svelte": "^1.0.1",
     "pdfjs-dist": "6.2.108",
     "std-env": "4.2.0",
     "svelte": "5.56.10",

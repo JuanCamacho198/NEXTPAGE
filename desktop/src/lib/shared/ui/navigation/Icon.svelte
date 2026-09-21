@@ -7,6 +7,40 @@
   import Book from 'lucide-svelte/icons/book';
   import Search from 'lucide-svelte/icons/search';
   import LayoutGrid from 'lucide-svelte/icons/layout-grid';
+  import ArrowRight from 'lucide-svelte/icons/arrow-right';
+  import Bookmark from 'lucide-svelte/icons/bookmark';
+  import BookOpen from 'lucide-svelte/icons/book-open';
+  import BookText from 'lucide-svelte/icons/book-text';
+  import Calendar from 'lucide-svelte/icons/calendar';
+  import CalendarPlus from 'lucide-svelte/icons/calendar-plus';
+  import Check from 'lucide-svelte/icons/check';
+  import ChevronLeft from 'lucide-svelte/icons/chevron-left';
+  import ChevronRight from 'lucide-svelte/icons/chevron-right';
+  import Clock from 'lucide-svelte/icons/clock';
+  import CloudCheck from 'lucide-svelte/icons/cloud-check';
+  import Copy from 'lucide-svelte/icons/copy';
+  import Database from 'lucide-svelte/icons/database';
+  import EllipsisVertical from 'lucide-svelte/icons/ellipsis-vertical';
+  import Expand from 'lucide-svelte/icons/expand';
+  import Filter from 'lucide-svelte/icons/filter';
+  import Flame from 'lucide-svelte/icons/flame';
+  import Hand from 'lucide-svelte/icons/hand';
+  import Info from 'lucide-svelte/icons/info';
+  import List from 'lucide-svelte/icons/list';
+  import Menu from 'lucide-svelte/icons/menu';
+  import Minus from 'lucide-svelte/icons/minus';
+  import Moon from 'lucide-svelte/icons/moon';
+  import Plus from 'lucide-svelte/icons/plus';
+  import Quote from 'lucide-svelte/icons/quote';
+  import Shrink from 'lucide-svelte/icons/shrink';
+  import Square from 'lucide-svelte/icons/square';
+  import SquarePen from 'lucide-svelte/icons/square-pen';
+  import SquareStack from 'lucide-svelte/icons/square-stack';
+  import Sun from 'lucide-svelte/icons/sun';
+  import TrendingUp from 'lucide-svelte/icons/trending-up';
+  import Trash2 from 'lucide-svelte/icons/trash-2';
+  import User from 'lucide-svelte/icons/user';
+  import X from 'lucide-svelte/icons/x';
   import type { Component } from 'svelte';
   export type IconName =
     | 'home'
@@ -55,7 +89,7 @@
     | 'quote'
     | 'calendar-plus';
 
-  export const LUCIDE_BY_NAME: Partial<Record<IconName, Component>> = {
+  export const LUCIDE_BY_NAME: Record<IconName, Component> = {
     home: House as unknown as Component,
     library: Library as unknown as Component,
     stats: ChartColumn as unknown as Component,
@@ -64,6 +98,43 @@
     book: Book as unknown as Component,
     search: Search as unknown as Component,
     grid: LayoutGrid as unknown as Component,
+    check: Check as unknown as Component,
+    clock: Clock as unknown as Component,
+    'trend-up': TrendingUp as unknown as Component,
+    chart: ChartColumn as unknown as Component,
+    close: X as unknown as Component,
+    menu: Menu as unknown as Component,
+    sun: Sun as unknown as Component,
+    moon: Moon as unknown as Component,
+    'chevron-left': ChevronLeft as unknown as Component,
+    'chevron-right': ChevronRight as unknown as Component,
+    copy: Copy as unknown as Component,
+    edit: SquarePen as unknown as Component,
+    trash: Trash2 as unknown as Component,
+    'more-vertical': EllipsisVertical as unknown as Component,
+    list: List as unknown as Component,
+    'more-dot': EllipsisVertical as unknown as Component,
+    'fullscreen-enter': Expand as unknown as Component,
+    'fullscreen-exit': Shrink as unknown as Component,
+    'arrow-right': ArrowRight as unknown as Component,
+    bookmark: Bookmark as unknown as Component,
+    note: SquarePen as unknown as Component,
+    add: Plus as unknown as Component,
+    filter: Filter as unknown as Component,
+    user: User as unknown as Component,
+    database: Database as unknown as Component,
+    info: Info as unknown as Component,
+    calendar: Calendar as unknown as Component,
+    hand: Hand as unknown as Component,
+    minimize: Minus as unknown as Component,
+    maximize: Square as unknown as Component,
+    restore: SquareStack as unknown as Component,
+    flame: Flame as unknown as Component,
+    'cloud-sync': CloudCheck as unknown as Component,
+    'book-open': BookOpen as unknown as Component,
+    'book-text': BookText as unknown as Component,
+    quote: Quote as unknown as Component,
+    'calendar-plus': CalendarPlus as unknown as Component,
   };
 
   const LUCIDE_SIZES = {
@@ -162,6 +233,7 @@
   {#if LucideIcon}
     <LucideIcon
       size={LUCIDE_SIZES[size]}
+      strokeWidth={1.8}
       class="{sizeClasses[size]} {className}"
       aria-hidden="true"
     />

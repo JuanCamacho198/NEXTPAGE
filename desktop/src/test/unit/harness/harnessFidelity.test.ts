@@ -196,6 +196,35 @@ describe('harness fidelity — PointerEvent', () => {
   });
 });
 
+describe('harness fidelity — pointer capture', () => {
+  it('makes the pointer-capture guard callable, so a library handler cannot abort mid-open', () => {
+    const element = mountedElement();
+
+    // jsdom ships none of the three, and bits-ui's Select reads
+    // `hasPointerCapture` unguarded inside its own pointerdown handler.
+    expect(typeof element.hasPointerCapture).toBe('function');
+    expect(element.hasPointerCapture(1)).toBe(false);
+    expect(() => element.setPointerCapture(1)).not.toThrow();
+    expect(() => element.releasePointerCapture(1)).not.toThrow();
+  });
+
+  it('lets a guard-shaped pointerdown handler reach its own body', () => {
+    const element = mountedElement();
+    let reached = false;
+
+    element.addEventListener('pointerdown', (event) => {
+      const target = event.target as Element;
+      if (target.hasPointerCapture((event as PointerEvent).pointerId)) return;
+      reached = true;
+    });
+
+    expect(() =>
+      element.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 1 })),
+    ).not.toThrow();
+    expect(reached).toBe(true);
+  });
+});
+
 describe('harness fidelity — scroll stubs', () => {
   it('provides callable scrollIntoView and scrollTo no-ops', () => {
     const element = mountedElement();

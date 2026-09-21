@@ -101,6 +101,26 @@ function installScrollStubs(): void {
   }
 }
 
+/**
+ * Pointer capture is a jsdom gap, not a library one: `hasPointerCapture`,
+ * `setPointerCapture` and `releasePointerCapture` are absent from
+ * `Element.prototype`, and bits-ui's Select reads `hasPointerCapture` unguarded
+ * inside its own `pointerdown` handler. Without these the handler throws before
+ * it ever opens the popup, so a pointer-driven open silently does nothing.
+ */
+function installPointerCaptureStubs(): void {
+  if (typeof Element === 'undefined') return;
+  const prototype = Element.prototype as unknown as Record<string, unknown>;
+  if (typeof prototype.hasPointerCapture !== 'function') {
+    prototype.hasPointerCapture = (): boolean => false;
+  }
+  for (const name of ['setPointerCapture', 'releasePointerCapture']) {
+    if (typeof prototype[name] !== 'function') {
+      prototype[name] = (): void => undefined;
+    }
+  }
+}
+
 /** Delivers current geometry to every live observation. Only delivery point. */
 export function flushResizeObservers(): void {
   for (const observer of [...liveObservers]) {
@@ -112,6 +132,7 @@ export function installJsdomHarness(): void {
   installResizeObserver();
   installPointerEvent();
   installScrollStubs();
+  installPointerCaptureStubs();
 }
 
 export interface StubbedRect {

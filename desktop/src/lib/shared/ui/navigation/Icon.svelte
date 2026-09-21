@@ -12,13 +12,11 @@
   import ChevronLeft from 'lucide-svelte/icons/chevron-left';
   import ChevronRight from 'lucide-svelte/icons/chevron-right';
   import Clock from 'lucide-svelte/icons/clock';
-  import Copy from 'lucide-svelte/icons/copy';
   import EllipsisVertical from 'lucide-svelte/icons/ellipsis-vertical';
   import Filter from 'lucide-svelte/icons/filter';
   import Flame from 'lucide-svelte/icons/flame';
   import Hand from 'lucide-svelte/icons/hand';
   import Info from 'lucide-svelte/icons/info';
-  import List from 'lucide-svelte/icons/list';
   import Minus from 'lucide-svelte/icons/minus';
   import Moon from 'lucide-svelte/icons/moon';
   import Plus from 'lucide-svelte/icons/plus';
@@ -26,7 +24,6 @@
   import SquarePen from 'lucide-svelte/icons/square-pen';
   import SquareStack from 'lucide-svelte/icons/square-stack';
   import TrendingUp from 'lucide-svelte/icons/trending-up';
-  import Trash2 from 'lucide-svelte/icons/trash-2';
   import type { Component } from 'svelte';
   export type IconName =
     | 'home'
@@ -42,14 +39,9 @@
     | 'moon'
     | 'chevron-left'
     | 'chevron-right'
-    | 'copy'
     | 'edit'
-    | 'trash'
     | 'more-vertical'
     | 'grid'
-    | 'list'
-    | 'more-dot'
-    | 'note'
     | 'add'
     | 'filter'
     | 'info'
@@ -75,13 +67,8 @@
     moon: Moon as unknown as Component,
     'chevron-left': ChevronLeft as unknown as Component,
     'chevron-right': ChevronRight as unknown as Component,
-    copy: Copy as unknown as Component,
     edit: SquarePen as unknown as Component,
-    trash: Trash2 as unknown as Component,
     'more-vertical': EllipsisVertical as unknown as Component,
-    list: List as unknown as Component,
-    'more-dot': EllipsisVertical as unknown as Component,
-    note: SquarePen as unknown as Component,
     add: Plus as unknown as Component,
     filter: Filter as unknown as Component,
     info: Info as unknown as Component,
@@ -136,17 +123,10 @@
     moon: 'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z',
     'chevron-left': 'M15 19l-7-7 7-7',
     'chevron-right': 'M9 5l7 7-7 7',
-    copy: 'M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z',
     edit: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
-    trash:
-      'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16',
     'more-vertical':
       'M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z',
     grid: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z',
-    list: 'M4 6h16M4 10h16M4 14h16M4 18h16',
-    'more-dot':
-      'M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z',
-    note: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
     add: 'M12 4v16m8-8H4',
     filter:
       'M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z',

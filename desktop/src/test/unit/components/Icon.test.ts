@@ -9,8 +9,10 @@ import Icon, { LUCIDE_BY_NAME, type IconName } from '$lib/shared/ui/navigation/I
  * 11 removed the six whose last consumer was the reader chrome (`close`,
  * `menu`, `fullscreen-enter`, `fullscreen-exit`, `arrow-right`, `bookmark`);
  * slice 12 removed the four whose last consumer was the dictionary
- * (`book-open`, `book-text`, `quote`, `calendar-plus`).
- * The count below is the recorded post-slice-12 membership.
+ * (`book-open`, `book-text`, `quote`, `calendar-plus`); slice 13 removed the
+ * five whose last consumer was the library or highlights surfaces (`list`,
+ * `note`, `copy`, `trash`, `more-dot`).
+ * The count below is the recorded post-slice-13 membership.
  */
 const UNION: IconName[] = [
   'home',
@@ -26,14 +28,9 @@ const UNION: IconName[] = [
   'moon',
   'chevron-left',
   'chevron-right',
-  'copy',
   'edit',
-  'trash',
   'more-vertical',
   'grid',
-  'list',
-  'more-dot',
-  'note',
   'add',
   'filter',
   'info',
@@ -46,8 +43,8 @@ const UNION: IconName[] = [
 ];
 
 describe('Icon compatibility shim', () => {
-  it('pins the post-slice-12 union at 30 members and renders each', () => {
-    expect(UNION).toHaveLength(30);
+  it('pins the post-slice-13 union at 25 members and renders each', () => {
+    expect(UNION).toHaveLength(25);
     for (const name of UNION) {
       const { unmount } = render(Icon, { name });
       expect(document.body.querySelector('svg'), name).not.toBeNull();
@@ -72,7 +69,7 @@ describe('Icon compatibility shim', () => {
     ]) {
       expect(LUCIDE_BY_NAME, name).not.toHaveProperty(name);
     }
-    expect(Object.keys(LUCIDE_BY_NAME)).toHaveLength(30);
+    expect(Object.keys(LUCIDE_BY_NAME)).toHaveLength(25);
   });
 
   it('no longer maps the four names whose last consumer was the dictionary', () => {
@@ -80,7 +77,15 @@ describe('Icon compatibility shim', () => {
       expect(LUCIDE_BY_NAME, name).not.toHaveProperty(name);
       expect(Object.keys(LUCIDE_BY_NAME)).not.toContain(name);
     }
-    expect(Object.keys(LUCIDE_BY_NAME)).toHaveLength(30);
+    expect(Object.keys(LUCIDE_BY_NAME)).toHaveLength(25);
+  });
+
+  it('no longer maps the five names whose last consumer was the library or highlights surfaces', () => {
+    for (const name of ['list', 'note', 'copy', 'trash', 'more-dot']) {
+      expect(LUCIDE_BY_NAME, name).not.toHaveProperty(name);
+      expect(Object.keys(LUCIDE_BY_NAME)).not.toContain(name);
+    }
+    expect(Object.keys(LUCIDE_BY_NAME)).toHaveLength(25);
   });
 
   it('resolves every union member to a lucide component and never the legacy path', () => {

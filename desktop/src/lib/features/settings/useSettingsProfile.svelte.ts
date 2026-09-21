@@ -1,3 +1,8 @@
+import Book from 'lucide-svelte/icons/book';
+import ChartColumn from 'lucide-svelte/icons/chart-column';
+import Flame from 'lucide-svelte/icons/flame';
+import Hand from 'lucide-svelte/icons/hand';
+import type { Icon as LucideIcon } from 'lucide-svelte';
 import { authState as defaultAuthState } from '$lib/shared/stores/AuthState.svelte';
 import { createDevicesState as defaultCreateDevicesState } from '$lib/shared/stores/DevicesState.svelte';
 import { appState as defaultAppState } from '$lib/shared/stores/AppState.svelte';
@@ -10,6 +15,8 @@ import {
 import { DEFAULT_DAILY_GOAL, type DailyGoalOption } from '$lib/shared/types/settings';
 import type { MessageKey } from '$lib/shared/i18n';
 import { pushToast } from '$lib/shared/stores/ToastQueue.svelte';
+
+export type DailyGoalIcon = typeof LucideIcon;
 
 export type ProfileDeps = {
   authState?: typeof defaultAuthState;
@@ -31,7 +38,7 @@ export function createSettingsProfile(deps: ProfileDeps = {}): {
     value: DailyGoalOption;
     labelKey: MessageKey;
     shortLabel: string;
-    icon: 'hand' | 'book' | 'chart' | 'flame';
+    icon: DailyGoalIcon;
     minutesLabel: string;
   }[];
   isDirty: boolean;
@@ -66,7 +73,7 @@ export function createSettingsProfile(deps: ProfileDeps = {}): {
       value: DailyGoalOption;
       labelKey: MessageKey;
       shortLabel: string;
-      icon: 'hand' | 'book' | 'chart' | 'flame';
+      icon: DailyGoalIcon;
       minutesLabel: string;
     }[]
   >([
@@ -74,28 +81,28 @@ export function createSettingsProfile(deps: ProfileDeps = {}): {
       value: 10,
       labelKey: 'settings.daily_goal_relaxed',
       shortLabel: 'Relajado',
-      icon: 'hand',
+      icon: Hand,
       minutesLabel: '10 min',
     },
     {
       value: 20,
       labelKey: 'settings.daily_goal_regular',
       shortLabel: 'Regular',
-      icon: 'book',
+      icon: Book,
       minutesLabel: '20 min',
     },
     {
       value: 30,
       labelKey: 'settings.daily_goal_serious',
       shortLabel: 'Serio',
-      icon: 'chart',
+      icon: ChartColumn,
       minutesLabel: '30 min',
     },
     {
       value: 45,
       labelKey: 'settings.daily_goal_intense',
       shortLabel: 'Intenso',
-      icon: 'flame',
+      icon: Flame,
       minutesLabel: '45 min',
     },
   ]);

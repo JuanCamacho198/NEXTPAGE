@@ -1,4 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
+import Book from 'lucide-svelte/icons/book';
+import ChartColumn from 'lucide-svelte/icons/chart-column';
+import Flame from 'lucide-svelte/icons/flame';
+import Hand from 'lucide-svelte/icons/hand';
 import { createSettingsProfile } from '$lib/features/settings/useSettingsProfile.svelte';
 
 describe('useSettingsProfile', () => {
@@ -7,6 +11,11 @@ describe('useSettingsProfile', () => {
     expect(p.selectedDailyGoal).toBe(20);
     expect(p.dailyGoalCards).toHaveLength(4);
     expect(p.isSaving).toBe(false);
+  });
+
+  it('carries component-valued card icons instead of shim name strings', () => {
+    const p = createSettingsProfile({ t: (k) => k as never });
+    expect(p.dailyGoalCards.map((card) => card.icon)).toEqual([Hand, Book, ChartColumn, Flame]);
   });
 
   it('handleSelectDailyGoal updates and marks dirty', async () => {

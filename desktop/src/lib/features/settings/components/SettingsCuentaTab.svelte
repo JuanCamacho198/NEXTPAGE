@@ -1,7 +1,7 @@
 <script lang="ts">
   import { GoogleLoginButton } from '$lib/features/library';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
-  import Icon from '$lib/shared/ui/navigation/Icon.svelte';
+  import Check from 'lucide-svelte/icons/check';
   import { Button } from '$lib/shared/ui';
   import ProfileCard from './ProfileCard.svelte';
   import ConnectedDevices from './ConnectedDevices.svelte';
@@ -10,7 +10,7 @@
   import type { MessageKey } from '$lib/shared/i18n';
   import type { ProfileSessionViewModel } from '../profileSession';
   import type { DeviceViewModel } from '$lib/services/devices';
-  import type { createSettingsProfile } from '../useSettingsProfile.svelte';
+  import type { createSettingsProfile, DailyGoalIcon } from '../useSettingsProfile.svelte';
   import type { createSettingsAppearance } from '../useSettingsAppearance.svelte';
 
   type ProfileState = ReturnType<typeof createSettingsProfile>;
@@ -39,7 +39,7 @@
       value: number;
       labelKey: MessageKey;
       shortLabel: string;
-      icon: 'hand' | 'book' | 'chart' | 'flame';
+      icon: DailyGoalIcon;
       minutesLabel: string;
     }[];
     isSavingDailyGoal?: boolean;
@@ -210,6 +210,7 @@
 
     <div class="grid grid-cols-2 gap-6">
       {#each dailyGoalCards as card}
+        {@const CardIcon = card.icon}
         <button
           type="button"
           class="relative flex flex-col gap-3 rounded-xl border-2 p-8 text-left transition-all duration-200 {selectedDailyGoal ===
@@ -224,13 +225,13 @@
             <span
               class="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-[#d8e2ff] text-[#161f33]"
             >
-              <Icon name="check" size="sm" />
+              <Check size={14} strokeWidth={1.8} class="h-3.5 w-3.5" aria-hidden="true" />
             </span>
           {/if}
           <span
             class="flex h-10 w-10 items-center justify-center rounded-full bg-[#d8e2ff]/10 text-[#d8e2ff]"
           >
-            <Icon name={card.icon} size="lg" />
+            <CardIcon size={20} strokeWidth={1.8} class="h-5 w-5" aria-hidden="true" />
           </span>
           <span class="flex flex-col gap-1">
             <span class="text-sm font-semibold text-[#d8e2ff]">{t(card.labelKey)}</span>

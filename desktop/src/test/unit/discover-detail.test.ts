@@ -330,7 +330,10 @@ describe('DiscoverDetail modal (WU2)', () => {
     const onDismiss = vi.fn();
     render(DiscoverDetail, { props: { detail: fakeBook(), detailStatus: 'loaded', t, onDismiss } });
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
-    await fireEvent.keyDown(window, { key: 'Escape' });
+    // Escape is dispatched on `document`: bits-ui's escape layer listens there
+    // (a synthetic event fired directly on `window` never reaches it, although a
+    // real keydown bubbles through document on its way to window).
+    await fireEvent.keyDown(document, { key: 'Escape' });
     await tick();
     expect(onDismiss).toHaveBeenCalled();
   });

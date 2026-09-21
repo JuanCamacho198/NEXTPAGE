@@ -15,7 +15,11 @@
   import Pagination from '$lib/shared/ui/navigation/Pagination.svelte';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
   import DropMenu from '$lib/shared/ui/navigation/DropMenu.svelte';
-  import Icon from '$lib/shared/ui/navigation/Icon.svelte';
+  import Book from 'lucide-svelte/icons/book';
+  import Copy from 'lucide-svelte/icons/copy';
+  import EllipsisVertical from 'lucide-svelte/icons/ellipsis-vertical';
+  import SquarePen from 'lucide-svelte/icons/square-pen';
+  import Trash2 from 'lucide-svelte/icons/trash-2';
   import EmptyState from '$lib/shared/ui/feedback/EmptyState.svelte';
   import Skeleton from '$lib/shared/ui/feedback/Skeleton.svelte';
   import Button from '$lib/shared/ui/forms/Button.svelte';
@@ -339,7 +343,7 @@
               {highlight.text}
             </p>
             {#if highlight.note}<p class="text-[0.75rem] text-(--color-text-muted) m-0 italic">
-                <Icon name="note" size="sm" />{highlight.note}
+                <SquarePen size={14} strokeWidth={1.8} />{highlight.note}
               </p>{/if}
             <p class="text-[0.75rem] text-(--color-text-muted) m-0">
               {t('home.highlightsPageLabel')}
@@ -355,7 +359,7 @@
                     alt={book.title}
                     className="w-full h-full object-cover"
                   />{:else}<span class="text-[1.25rem] opacity-50"
-                    ><Icon name="book" size="lg" /></span
+                    ><Book size={20} strokeWidth={1.8} /></span
                   >{/if}
               </div>
               <p
@@ -375,24 +379,24 @@
             ><DropMenu position="bottom-right"
               >{#snippet trigger()}<button
                   class="w-8 h-8 flex items-center justify-center rounded-md border border-transparent bg-transparent text-(--color-text-muted) text-[1.1rem] cursor-pointer transition-all font-sans hover:bg-(--color-panel-accent) hover:border-(--color-border) hover:text-(--color-primary)"
-                  aria-label="Opciones"><Icon name="more-dot" size="sm" /></button
+                  aria-label="Opciones"><EllipsisVertical size={14} strokeWidth={1.8} /></button
                 >{/snippet}
               <div class="flex flex-col">
                 <button
                   class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-(--color-primary) text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-(--color-panel-accent)"
                   onclick={() => handleCopy(highlight.text)}
-                  ><Icon name="copy" size="sm" />{t('home.highlightsCopy')}</button
+                  ><Copy size={14} strokeWidth={1.8} />{t('home.highlightsCopy')}</button
                 ><button
                   class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-(--color-primary) text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-(--color-panel-accent)"
                   onclick={() => handleViewInBook(highlight)}
-                  ><Icon name="book" size="sm" />{t('home.highlightsViewInBook')}</button
+                  ><Book size={14} strokeWidth={1.8} />{t('home.highlightsViewInBook')}</button
                 >{#if highlight.note}<button
                     class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-(--color-primary) text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-(--color-panel-accent)"
-                    ><Icon name="edit" size="sm" />{t('home.highlightsEditNote')}</button
+                    ><SquarePen size={14} strokeWidth={1.8} />{t('home.highlightsEditNote')}</button
                   >{/if}<button
                   class="flex items-center gap-2 w-full p-2 border-none bg-transparent text-(--color-error) text-[0.875rem] font-sans cursor-pointer text-left transition-colors hover:bg-(--color-error-bg,rgba(255,123,131,0.14))"
                   onclick={() => sync.handleDelete(highlight, highlights, (v) => (highlights = v))}
-                  ><Icon name="trash" size="sm" />{t('home.highlightsDelete')}</button
+                  ><Trash2 size={14} strokeWidth={1.8} />{t('home.highlightsDelete')}</button
                 >
               </div></DropMenu
             >

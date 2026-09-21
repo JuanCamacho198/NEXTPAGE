@@ -3,7 +3,8 @@
   import { FAVORITES_COLLECTION_ID } from '$lib/features/library/utils';
   import ShelfDetailModal from './ShelfDetailModal.svelte';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
-  import Icon from '$lib/shared/ui/navigation/Icon.svelte';
+  import LayoutGrid from 'lucide-svelte/icons/layout-grid';
+  import List from 'lucide-svelte/icons/list';
   import type { LibraryBookDto, CollectionDto } from '$lib/shared/types';
   import type { ReaderBook } from '$lib/shared/types';
   import type { ShelfQueryState } from '$lib/shared/stores/HomeState';
@@ -178,7 +179,7 @@
           }}
           aria-label={t('shelf.viewGrid' as MessageKey)}
         >
-          <Icon name="list" size="sm" />
+          <List size={14} strokeWidth={1.8} />
         </button>
         <button
           type="button"
@@ -188,7 +189,7 @@
           }}
           aria-label={t('shelf.viewList' as MessageKey)}
         >
-          <Icon name="grid" size="sm" />
+          <LayoutGrid size={14} strokeWidth={1.8} />
         </button>
       </fieldset>
 

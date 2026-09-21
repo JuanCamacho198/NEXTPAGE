@@ -1,0 +1,182 @@
+import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { describe, expect, it, vi } from 'vitest';
+import ShelfSection from '$lib/features/library/ShelfSection.svelte';
+import LibraryShelfScreen from '$lib/features/library/components/LibraryShelfScreen.svelte';
+import HighlightsView from '$lib/features/highlights/components/HighlightsView.svelte';
+import { createShelfQueryState } from '$lib/shared/stores/HomeState';
+import type { HighlightDto, LibraryBookDto } from '$lib/shared/types';
+import type { ViewerPort } from '$lib/shared/ports';
+import type { HighlightsViewDeps } from '$lib/features/highlights/highlightsViewDeps';
+
+/**
+ * Library and highlights icon migration (slice 13). These four files held the
+ * remaining static `<Icon` call sites outside the home/welcome/sidebar group:
+ * `ShelfSection` (2), `LibraryShelfScreen` (2) and `HighlightsView` (7).
+ * `ShelfDetailModal` is left untouched because migrating it cannot hold the
+ * `MUST NOT grow` constraint (measured: +7 lines minimum).
+ *
+ * The shim resolved a name to a lucide component; these call sites resolve the
+ * same components directly, so the assertions are per-glyph identity against
+ * the shim contract (lucide marker class, 24x24 viewBox, `currentColor`, stroke
+ * width 1.8, `aria-hidden` from the lucide default, numeric size).
+ */
+
+const t = (key: string): string => key;
+
+/** The glyph class lucide emits: `lucide-icon lucide-<name> ...`. */
+const glyphOf = (icon: Element): string | undefined =>
+  (icon.getAttribute('class') ?? '')
+    .split(/\s+/)
+    .find((cls) => cls.startsWith('lucide-') && cls !== 'lucide-icon');
+
+const glyphs = (root: ParentNode): (string | undefined)[] =>
+  Array.from(root.querySelectorAll('svg.lucide-icon')).map(glyphOf);
+
+function expectGlyphContract(icon: Element, width: string): void {
+  expect(icon.getAttribute('class')).toContain('lucide-icon');
+  expect(icon.getAttribute('viewBox')).toBe('0 0 24 24');
+  expect(icon.getAttribute('stroke')).toBe('currentColor');
+  expect(icon.getAttribute('stroke-width')).toBe('1.8');
+  // Not passed explicitly by the migrated call sites: lucide-svelte 1.0.1 emits
+  // the attribute itself, which is what keeps the compact shape decorative.
+  expect(icon.getAttribute('aria-hidden')).toBe('true');
+  expect(icon.getAttribute('width')).toBe(width);
+}
+
+const SHELF_BOOK: LibraryBookDto = {
+  id: 'b1',
+  title: 'Hábitos Atómicos',
+  author: 'James Clear',
+  format: 'epub',
+  currentPage: 12,
+  totalPages: 300,
+  progressPercentage: 4,
+  coverPath: null,
+  minutesRead: 42,
+  updatedAt: '2026-09-19T12:00:00.000Z',
+  createdAt: '2026-09-01T12:00:00.000Z',
+};
+
+const HIGHLIGHT: HighlightDto = {
+  id: 'h1',
+  bookId: 'b1',
+  text: 'Los pequeños momentos de éxito crean la base para cambios duraderos.',
+  color: 'yellow',
+  pageNumber: 12,
+  note: 'Una nota',
+  createdAt: '2026-09-19T12:00:00.000Z',
+  updatedAt: '2026-09-19T12:00:00.000Z',
+};
+
+const noop = vi.fn();
+
+function renderShelfSection() {
+  return render(ShelfSection, {
+    shelfQueryState: createShelfQueryState(),
+    shelfBooks: [],
+    myShelfBooks: [],
+    collections: [],
+    previewBookId: null,
+    selectedShelfBook: null,
+    shelfTabOptions: [],
+    shelfSortOptions: [],
+    t,
+    onSetTab: noop,
+    onSetSort: noop,
+    onSetViewMode: noop,
+    onShelfQueryInput: noop,
+    onClearShelfQuery: noop,
+    onOpenDetails: noop,
+    onStartReading: noop,
+    onEditBook: noop,
+    onRemoveBook: noop,
+    onToggleFavorite: noop,
+    onStatusChange: noop,
+    onDeleteCover: noop,
+    onSaveEdit: noop,
+    onCloseDetails: noop,
+  });
+}
+
+function highlightsDeps(): HighlightsViewDeps {
+  return {
+    listHighlights: async () => [HIGHLIGHT],
+    deleteHighlight: async () => {},
+    upsertRemoteHighlights: async () => {},
+    listTags: async () => [],
+    listTagsForHighlight: async () => [],
+  } as unknown as HighlightsViewDeps;
+}
+
+async function renderHighlights() {
+  const result = render(HighlightsView, {
+    books: [SHELF_BOOK],
+    t,
+    deps: highlightsDeps(),
+    viewerPort: {} as ViewerPort,
+  });
+  await waitFor(() => expect(screen.getByText(HIGHLIGHT.text)).toBeTruthy());
+  return result;
+}
+
+describe('library and highlights icon migration', () => {
+  it('renders the ShelfSection view-toggle glyphs from direct lucide components', () => {
+    const { container } = renderShelfSection();
+
+    expect(glyphs(container)).toEqual(['lucide-list', 'lucide-layout-grid']);
+    for (const icon of container.querySelectorAll('svg.lucide-icon')) {
+      expectGlyphContract(icon, '14');
+    }
+  });
+
+  it('renders the LibraryShelfScreen toggle glyphs without the shim tooltip wrapper', () => {
+    const { container } = render(LibraryShelfScreen, { books: [], t });
+
+    expect(glyphs(container)).toEqual(['lucide-layout-grid', 'lucide-list']);
+    for (const icon of container.querySelectorAll('svg.lucide-icon')) {
+      expectGlyphContract(icon, '14');
+    }
+    // The shim rendered `div.group.relative.inline-flex` plus an inline
+    // `role="tooltip"` span per titled glyph. The positive control is the shim
+    // itself: `Icon.test.ts` still asserts that tooltip contract.
+    expect(container.querySelectorAll('div.group.relative.inline-flex')).toHaveLength(0);
+    expect(container.querySelector('[role="tooltip"]')).toBeNull();
+    // The accessible name the tooltip used to carry is still on the button.
+    expect(screen.getByLabelText('shelf.gridView')).toBeTruthy();
+    expect(screen.getByLabelText('shelf.listView')).toBeTruthy();
+  });
+
+  it('renders the HighlightsView note, placeholder-cover and trigger glyphs', async () => {
+    const { container } = await renderHighlights();
+
+    // `note` and `edit` both resolved to `square-pen` in the shim map; the
+    // trailing glyph is the action-menu trigger (`more-dot`).
+    expect(glyphs(container)).toEqual([
+      'lucide-square-pen',
+      'lucide-book',
+      'lucide-ellipsis-vertical',
+    ]);
+    expectGlyphContract(container.querySelector('svg.lucide-square-pen') as Element, '14');
+    expectGlyphContract(container.querySelector('svg.lucide-book') as Element, '20');
+    expectGlyphContract(container.querySelector('svg.lucide-ellipsis-vertical') as Element, '14');
+  });
+
+  it('renders the HighlightsView action-menu glyphs from direct lucide components', async () => {
+    await renderHighlights();
+
+    await fireEvent.click(screen.getByLabelText('Opciones'));
+    await waitFor(() => expect(screen.getByRole('menu')).toBeTruthy());
+
+    const menu = screen.getByRole('menu');
+    expect(glyphs(menu)).toEqual([
+      'lucide-copy',
+      'lucide-book',
+      'lucide-square-pen',
+      'lucide-trash-2',
+    ]);
+    for (const icon of menu.querySelectorAll('svg.lucide-icon')) {
+      expectGlyphContract(icon, '14');
+      expect(icon.getAttribute('aria-label')).toBeNull();
+    }
+  });
+});

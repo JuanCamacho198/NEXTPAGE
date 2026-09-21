@@ -2,7 +2,8 @@
   import Button from '$lib/shared/ui/forms/Button.svelte';
   import Dropdown from '$lib/shared/ui/navigation/Dropdown.svelte';
   import Toast from '$lib/shared/ui/feedback/Toast.svelte';
-  import Icon from '$lib/shared/ui/navigation/Icon.svelte';
+  import LayoutGrid from 'lucide-svelte/icons/layout-grid';
+  import List from 'lucide-svelte/icons/list';
   import ShelfGrid from './ShelfGrid.svelte';
   import ShelfList from './ShelfList.svelte';
   import ShelfDownloadsSection from './ShelfDownloadsSection.svelte';
@@ -190,7 +191,7 @@
               shelf.activeView = 'grid';
             }}
           >
-            <Icon name="grid" size="sm" title={t('shelf.gridView')} />
+            <LayoutGrid size={14} strokeWidth={1.8} />
           </button>
           <button
             type="button"
@@ -200,7 +201,7 @@
               shelf.activeView = 'list';
             }}
           >
-            <Icon name="list" size="sm" title={t('shelf.listView')} />
+            <List size={14} strokeWidth={1.8} />
           </button>
         </fieldset>
       </div>

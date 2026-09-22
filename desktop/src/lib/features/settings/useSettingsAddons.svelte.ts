@@ -54,7 +54,13 @@ export function createSettingsAddons(deps: AddonsDeps = {}): {
   let installOutcome = $state<InstallOutcome>({ kind: 'idle' });
 
   async function refresh(): Promise<void> {
-    installed = await registry.listInstalled();
+    try {
+      installed = await registry.listInstalled();
+    } catch (e) {
+      // A registry read failure must surface through the existing toast
+      // plumbing, never escape as an unhandled rejection from a mount effect.
+      notify('error', e instanceof Error ? e.message : translate('settings.addons.installFailed'));
+    }
   }
 
   async function handleInstall(): Promise<void> {

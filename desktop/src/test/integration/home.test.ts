@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../../App.svelte';
+import { libraryState } from '$lib/shared/stores/LibraryDomainState.svelte';
 import { stubElementRect } from '../harness/jsdomHarness';
 import type {
   BookDto,
@@ -389,6 +390,11 @@ const configureLibrary = (books: LibraryBookDto[], sourceBooks?: BookDto[]): voi
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // The library singleton persists across tests in this file. Without a
+  // reset, a test renders the previous test's books before its own
+  // loadLibrary resolves (the empty-state test saw "Progress B").
+  libraryState.books = [];
+  libraryState.collections = [];
   tauriClientMock.getReaderSettings.mockResolvedValue(tauriClientMock.getDefaultReaderSettings());
   tauriClientMock.getReadingStats.mockResolvedValue(defaultStats);
   tauriClientMock.searchBookText.mockResolvedValue({

@@ -23,10 +23,10 @@ const BITS_UI_IMPORT = /from\s+['"]bits-ui['"]/;
  * Exact known set, relative to src/lib with forward slashes. Sorted.
  * Removing an entry (migration) or adding one (new overlay) fails loudly
  * so the freeze decision is revisited on purpose, never by drift.
- * bits-ui overlays (Modal, NoteEditorModal) carry `fixed inset-0` on their
- * Overlay element but are excluded by the scanner: this list pins
- * hand-rolled roots only. Eight remain after the NoteEditorModal migration
- * (perf-stability-cleanup M1).
+ * bits-ui overlays (Modal, NoteEditorModal, FeedbackDialog) carry
+ * `fixed inset-0` on their Overlay element but are excluded by the scanner:
+ * this list pins hand-rolled roots only. Six remain after the
+ * NoteEditorModal and FeedbackDialog migrations (perf-stability-cleanup M1/M2).
  */
 const KNOWN_OVERLAY_ROOTS = [
   'features/library/components/CollectionManager.svelte',
@@ -36,6 +36,12 @@ const KNOWN_OVERLAY_ROOTS = [
   'features/reader/chrome/ReaderWorkspace.svelte',
   'features/settings/components/SettingsPanel.svelte',
   'shared/ui/feedback/ErrorFallback.svelte',
+];
+
+/** Surfaces migrated to bits-ui Dialog; they must not slide back. */
+const MIGRATED_DIALOGS = [
+  'shared/ui/layout/Modal.svelte',
+  'features/reader/highlight/NoteEditorModal.svelte',
   'shared/ui/feedback/FeedbackDialog.svelte',
 ];
 
@@ -86,9 +92,11 @@ describe('overlay pattern freeze', () => {
     ).toEqual(KNOWN_OVERLAY_ROOTS);
   });
 
-  it('keeps FeedbackDialog fully hand-rolled (no bits-ui import)', () => {
+  it('keeps every migrated dialog surface on bits-ui', () => {
     const lib = resolveLibPath();
-    const source = readFileSync(join(lib, 'shared/ui/feedback/FeedbackDialog.svelte'), 'utf8');
-    expect(source.includes('bits-ui')).toBe(false);
+    for (const relativePath of MIGRATED_DIALOGS) {
+      const source = readFileSync(join(lib, ...relativePath.split('/')), 'utf8');
+      expect(source.includes('bits-ui'), `${relativePath} left bits-ui`).toBe(true);
+    }
   });
 });

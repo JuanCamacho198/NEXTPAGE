@@ -13,6 +13,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
 import { tick } from 'svelte';
+import { stubElementRect } from '../../harness/jsdomHarness';
 
 // Mock Sentry BEFORE importing the dialog (which transitively imports Sentry).
 const captureFeedback = vi.fn();
@@ -244,6 +245,48 @@ describe('FeedbackDialog (sdd/sentry-observability-v2 PR3)', () => {
       const raw = localStorage.getItem('np.feedback.dismissed') ?? '[]';
       const set = JSON.parse(raw) as string[];
       expect(set.filter((id) => id === 'evt-dup')).toHaveLength(1);
+    });
+  });
+
+  describe('M2 — bits-ui Dialog interaction contract (perf-stability-cleanup)', () => {
+    it('Escape dismisses once and marks the event dismissed', async () => {
+      const onDismiss = vi.fn();
+      renderDialog({ eventId: 'evt-esc-1', onDismiss });
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+      await fireEvent.keyDown(document, { key: 'Escape' });
+      await waitFor(() => expect(onDismiss).toHaveBeenCalledTimes(1));
+      expect(isDismissed('evt-esc-1')).toBe(true);
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    it('an outside pointerdown dismisses once through the same bookkeeping', async () => {
+      const onDismiss = vi.fn();
+      renderDialog({ eventId: 'evt-out-1', onDismiss });
+      const content = document.querySelector('[data-dialog-content]') as HTMLElement;
+      expect(content).toBeTruthy();
+      stubElementRect(content, { left: 100, top: 100, width: 400, height: 300 });
+      const overlay = document.querySelector('[data-dialog-overlay]') as HTMLElement;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      await fireEvent.pointerDown(overlay, {
+        clientX: 5,
+        clientY: 5,
+        pointerId: 1,
+        pointerType: 'mouse',
+        button: 0,
+      });
+      await fireEvent.pointerUp(overlay, {
+        clientX: 5,
+        clientY: 5,
+        pointerId: 1,
+        pointerType: 'mouse',
+        button: 0,
+      });
+
+      await waitFor(() => expect(onDismiss).toHaveBeenCalledTimes(1));
+      expect(isDismissed('evt-out-1')).toBe(true);
+      expect(screen.queryByRole('dialog')).toBeNull();
     });
   });
 

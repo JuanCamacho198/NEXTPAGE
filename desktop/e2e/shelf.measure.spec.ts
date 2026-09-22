@@ -167,8 +167,10 @@ async function measureLibrary(page: Page, tier: Tier, rendering: Rendering): Pro
       const itemWaitMs = args.itemWaitMs;
       const dialogWaitMs = args.dialogWaitMs;
 
-      const raf = () => new Promise((resolve) => requestAnimationFrame(() => resolve(performance.now())));
-      const frame = () => new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+      const raf = (): Promise<number> =>
+        new Promise<number>((resolve) => requestAnimationFrame(() => resolve(performance.now())));
+      const frame = (): Promise<void> =>
+        new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
       const main = () => document.querySelector('#main-content');
 
@@ -183,8 +185,8 @@ async function measureLibrary(page: Page, tier: Tier, rendering: Rendering): Pro
         return best;
       };
 
-      const modeOf = (element) => {
-        const className = String(element.className || '');
+      const modeOf = (element: Element): string => {
+        const className = element.getAttribute('class') ?? '';
         if (/(^|\s)space-y-3(\s|$)/.test(className)) return 'list';
         if (/(^|\s)grid(\s|$)/.test(className)) return 'grid';
         return 'unknown';
@@ -204,17 +206,22 @@ async function measureLibrary(page: Page, tier: Tier, rendering: Rendering): Pro
         return { count: count, mode: modeOf(list), nthReal: nthReal };
       };
 
-      const waitForShelf = async (expectedCount, expectedMode, budgetMs) => {
+      const waitForShelf = async (
+        expectedCount: number,
+        expectedMode: string,
+        budgetMs: number,
+      ): Promise<boolean> => {
         const started = performance.now();
         for (;;) {
           const state = shelfState();
-          if (state.count === expectedCount && state.nthReal && state.mode === expectedMode) return true;
+          if (state.count === expectedCount && state.nthReal && state.mode === expectedMode)
+            return true;
           if (performance.now() - started > budgetMs) return false;
           await frame();
         }
       };
 
-      const waitForShelfMounted = async (budgetMs) => {
+      const waitForShelfMounted = async (budgetMs: number): Promise<boolean> => {
         const started = performance.now();
         for (;;) {
           if (shelfState().count > 0) return true;
@@ -226,7 +233,7 @@ async function measureLibrary(page: Page, tier: Tier, rendering: Rendering): Pro
       // `BookCard` renders the title as a `<p>` and carries the title in the
       // article's `aria-label`, so the readiness probe matches on that instead
       // of on a heading element.
-      const waitForSeededCard = async (budgetMs) => {
+      const waitForSeededCard = async (budgetMs: number): Promise<boolean> => {
         const started = performance.now();
         for (;;) {
           const card = document.querySelector('#main-content article');
@@ -237,7 +244,7 @@ async function measureLibrary(page: Page, tier: Tier, rendering: Rendering): Pro
         }
       };
 
-      const click = (element) => {
+      const click = (element: Element): void => {
         const rect = element.getBoundingClientRect();
         const options = {
           bubbles: true,
@@ -264,12 +271,12 @@ async function measureLibrary(page: Page, tier: Tier, rendering: Rendering): Pro
         return rect.width > 0 && rect.height > 0 && text.length > 0;
       };
 
-      const findButtonByText = (text) =>
+      const findButtonByText = (text: string): HTMLButtonElement | null =>
         Array.from(document.querySelectorAll('button')).find(
           (button) => String(button.textContent || '').trim() === text,
         ) || null;
 
-      const byAriaLabel = (label) =>
+      const byAriaLabel = (label: string): HTMLButtonElement | null =>
         Array.from(document.querySelectorAll('button')).find(
           (button) => button.getAttribute('aria-label') === label,
         ) || null;
@@ -363,7 +370,7 @@ async function measureLibrary(page: Page, tier: Tier, rendering: Rendering): Pro
       await frame();
       const maxScroll = Math.max(0, mainElement.scrollHeight - mainElement.clientHeight);
       const step = Math.max(1, Math.ceil(maxScroll / args.scrollSteps));
-      const deltas = [];
+      const deltas: number[] = [];
       let previous = performance.now();
       for (let index = 0; index < args.scrollSteps; index += 1) {
         await new Promise((resolve) => {
@@ -437,11 +444,12 @@ async function measureLibrary(page: Page, tier: Tier, rendering: Rendering): Pro
 async function measureHomeInteraction(page: Page, tier: Tier): Promise<HomeCase> {
   const raw = await page.evaluate(
     async (args) => {
-      const raf = () =>
-        new Promise((resolve) => requestAnimationFrame(() => resolve(performance.now())));
-      const frame = () => new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+      const raf = (): Promise<number> =>
+        new Promise<number>((resolve) => requestAnimationFrame(() => resolve(performance.now())));
+      const frame = (): Promise<void> =>
+        new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
-      const waitForSeededCard = async (budgetMs) => {
+      const waitForSeededCard = async (budgetMs: number): Promise<boolean> => {
         const started = performance.now();
         for (;;) {
           const card = document.querySelector('#main-content article');
@@ -460,7 +468,7 @@ async function measureHomeInteraction(page: Page, tier: Tier): Promise<HomeCase>
         return rect.width > 0 && rect.height > 0 && text.length > 0;
       };
 
-      const click = (element) => {
+      const click = (element: Element): void => {
         const rect = element.getBoundingClientRect();
         const options = {
           bubbles: true,

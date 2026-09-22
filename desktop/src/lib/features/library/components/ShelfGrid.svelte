@@ -37,7 +37,7 @@
 
 <ul class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5 list-none p-0 m-0">
   {#each books as book}
-    <li>
+    <li class="content-auto [contain-intrinsic-size:auto_360px]">
       <article
         class="group flex min-h-[360px] flex-col rounded-(--radius-xl) border border-(--color-border) bg-[linear-gradient(180deg,rgba(20,32,49,0.92),rgba(12,20,33,0.94))] p-4 shadow-(--shadow-panel)"
       >

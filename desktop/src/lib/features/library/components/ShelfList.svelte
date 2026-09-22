@@ -37,7 +37,7 @@
 
 <ul class="space-y-3 list-none p-0 m-0">
   {#each books as book}
-    <li>
+    <li class="content-auto [contain-intrinsic-size:auto_160px]">
       <article
         class="flex flex-col gap-4 rounded-(--radius-xl) border border-(--color-border) bg-[linear-gradient(180deg,rgba(20,32,49,0.92),rgba(12,20,33,0.94))] p-4 shadow-(--shadow-panel) md:flex-row md:items-center"
       >

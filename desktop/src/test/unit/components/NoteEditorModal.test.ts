@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { tick } from 'svelte';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { stubElementRect } from '../../harness/jsdomHarness';
 import NoteEditorModal from '$lib/features/reader/highlight/NoteEditorModal.svelte';
 
@@ -60,6 +60,17 @@ function overlay(): HTMLElement {
 function settle(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 10));
 }
+
+/**
+ * Measured: bits-ui's scroll lock writes inline styles onto `document.body`
+ * (`overflow: hidden`, `pointer-events: none`, an accumulating
+ * `padding-right`) and jsdom never releases them, so a later test in the
+ * same file inherits a body that cannot take focus back. The focus test
+ * passes alone and failed in file order until this reset existed.
+ */
+afterEach(() => {
+  document.body.removeAttribute('style');
+});
 
 async function clickBackdrop(): Promise<void> {
   const content = dialog();

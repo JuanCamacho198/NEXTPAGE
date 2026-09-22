@@ -21,13 +21,15 @@ const SWAPPED_WRAPPERS = [
   'shared/ui/layout/Modal.svelte',
   'shared/ui/navigation/Dropdown.svelte',
   'shared/ui/navigation/DropMenu.svelte',
+  'features/reader/highlight/NoteEditorModal.svelte',
 ];
 
 const EXPECTED_IMPORTERS = [
+  // NoteEditorModal migrated to bits-ui Dialog (perf-stability-cleanup M1):
+  // its hand-rolled focusTrap + Escape pair is gone, three importers remain.
   'features/reader/chrome/BookmarkSidebar.svelte',
   'features/reader/chrome/ReaderTextSettings.svelte',
   'features/reader/chrome/ReaderTocPanel.svelte',
-  'features/reader/highlight/NoteEditorModal.svelte',
 ];
 
 interface SourceFile {

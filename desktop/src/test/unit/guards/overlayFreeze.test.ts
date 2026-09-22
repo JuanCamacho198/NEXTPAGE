@@ -16,10 +16,17 @@ const SKIPPED_DIRS = new Set(['node_modules', 'dist', 'build', '.svelte-kit']);
 /** A hand-rolled overlay root: Tailwind fixed full-viewport backdrop. */
 const OVERLAY_ROOT = /fixed\s+inset-0/;
 
+/** Bits-ui-owned overlays are not hand-rolled, so they never count. */
+const BITS_UI_IMPORT = /from\s+['"]bits-ui['"]/;
+
 /**
  * Exact known set, relative to src/lib with forward slashes. Sorted.
  * Removing an entry (migration) or adding one (new overlay) fails loudly
  * so the freeze decision is revisited on purpose, never by drift.
+ * bits-ui overlays (Modal, NoteEditorModal) carry `fixed inset-0` on their
+ * Overlay element but are excluded by the scanner: this list pins
+ * hand-rolled roots only. Eight remain after the NoteEditorModal migration
+ * (perf-stability-cleanup M1).
  */
 const KNOWN_OVERLAY_ROOTS = [
   'features/library/components/CollectionManager.svelte',
@@ -27,11 +34,9 @@ const KNOWN_OVERLAY_ROOTS = [
   'features/reader/chrome/ReaderTextSettings.svelte',
   'features/reader/chrome/ReaderTocPanel.svelte',
   'features/reader/chrome/ReaderWorkspace.svelte',
-  'features/reader/highlight/NoteEditorModal.svelte',
   'features/settings/components/SettingsPanel.svelte',
   'shared/ui/feedback/ErrorFallback.svelte',
   'shared/ui/feedback/FeedbackDialog.svelte',
-  'shared/ui/layout/Modal.svelte',
 ];
 
 function resolveLibPath(): string {
@@ -64,7 +69,10 @@ function collectSvelteFiles(dir: string): string[] {
 function overlayRoots(): string[] {
   const lib = resolveLibPath();
   return collectSvelteFiles(lib)
-    .filter((file) => OVERLAY_ROOT.test(readFileSync(file, 'utf8')))
+    .filter((file) => {
+      const source = readFileSync(file, 'utf8');
+      return OVERLAY_ROOT.test(source) && !BITS_UI_IMPORT.test(source);
+    })
     .map((file) => relative(lib, file).split(sep).join('/'))
     .sort();
 }

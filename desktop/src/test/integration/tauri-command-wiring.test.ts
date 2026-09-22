@@ -53,9 +53,9 @@ describe('tauri command wiring compatibility', () => {
     // 1. Registered in the tauri invoke_handler.
     expect(mainRs.includes(`commands::${symbol}`)).toBe(true);
     // 2. Public command fn exists in its feature module (re-exported via mod.rs).
-    expect(outboxRs.includes(`pub fn ${symbol}`) || outboxRs.includes(`pub async fn ${symbol}`)).toBe(
-      true,
-    );
+    expect(
+      outboxRs.includes(`pub fn ${symbol}`) || outboxRs.includes(`pub async fn ${symbol}`),
+    ).toBe(true);
     expect(commandMod.includes('pub use outbox::*;')).toBe(true);
     // 3. Re-exported through the outbox feature module.
     expect(outboxRs.includes(symbol)).toBe(true);

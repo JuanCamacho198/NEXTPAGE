@@ -72,9 +72,10 @@ function overlayRoots(): string[] {
 describe('overlay pattern freeze', () => {
   it('pins the exact set of hand-rolled overlay roots', () => {
     const actual = overlayRoots();
-    expect(actual, 'new or removed hand-rolled overlay root — update KNOWN_OVERLAY_ROOTS with a recorded reason').toEqual(
-      KNOWN_OVERLAY_ROOTS,
-    );
+    expect(
+      actual,
+      'new or removed hand-rolled overlay root — update KNOWN_OVERLAY_ROOTS with a recorded reason',
+    ).toEqual(KNOWN_OVERLAY_ROOTS);
   });
 
   it('keeps FeedbackDialog fully hand-rolled (no bits-ui import)', () => {

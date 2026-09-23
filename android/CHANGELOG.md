@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.4.0](https://github.com/JuanCamacho198/NEXTPAGE/compare/android-v0.3.0...android-v0.4.0) (2026-09-23)
+
+
+### Features
+
+* **android:** add the dictionary rich-entry columns ([9d9aed5](https://github.com/JuanCamacho198/NEXTPAGE/commit/9d9aed59569402cab9bf19bbe69102b4fa6569ab))
+* **android:** normalize the dictionary key and carry the rich row ([c449c0a](https://github.com/JuanCamacho198/NEXTPAGE/commit/c449c0a4c0e3333ab08584a3b81cb8a9bc0c363e))
+* **android:** surface and edit the rich dictionary entry ([62b1956](https://github.com/JuanCamacho198/NEXTPAGE/commit/62b1956b39e0d1f9c5eb8c7c2d8cab975ef019d8))
+* rich dictionary entries with captured book evidence ([a9e6d19](https://github.com/JuanCamacho198/NEXTPAGE/commit/a9e6d191ae986516fd8927569b22b5e755b0fb1d))
+
 ## [0.3.0](https://github.com/JuanCamacho198/NEXTPAGE/compare/android-v0.2.0...android-v0.3.0) (2026-09-17)
 
 

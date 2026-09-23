@@ -1,0 +1,319 @@
+# Release builds — produce the deliverables for every component release tag.
+#
+# Companion to release-notes.yml: release-please opens the release PR, and on
+# merge it creates the component tag + GitHub release atomically through
+# RELEASE_PLEASE_TOKEN (a PAT, so tag-push events DO trigger workflows — a tag
+# pushed by the default GITHUB_TOKEN would not). This workflow then builds the
+# artifacts and attaches them to that existing release:
+#   desktop-v* → Tauri bundles (Windows .msi + NSIS .exe, macOS universal
+#                .dmg, Linux .AppImage + .deb + .rpm) via tauri-action
+#   android-v* → :app:assembleRelease + :app:bundleRelease → signed APK + AAB
+#   web-v*     → astro build → Cloudflare Workers deploy (+ dist tarball)
+#
+# Why tag push instead of `release: published`: release-please writes the tag
+# ref and the release record in the same operation. Tag push starts the build
+# immediately and removes the race where an upload step could run against a
+# release that does not exist yet; by the time any job finishes (minutes),
+# the release is long created. tauri-action would create a release only in
+# that impossible race, which is why no explicit release lookup is done here.
+#
+# Gates: tags only ever point at commits merged through protected `main`, and
+# branch protection already requires the component CI checks on `main`. The
+# tag IS the green signal — the full test suites are deliberately not re-run
+# here (three platforms × full suites would double every release's cost for
+# a merge that was already gated).
+#
+# Signing status (deliberate, documented — not an oversight):
+# - Desktop: UNSIGNED. Windows shows SmartScreen, macOS shows Gatekeeper.
+#   Adding certificates (Apple Developer + a code-signing cert, Windows EV/SMB
+#   cert) is a separate work item; delaying automated releases on it ships
+#   nothing instead of shipping unsigned builds.
+# - Android: DEBUG-keystore signed — `android/app/build.gradle.kts` assigns
+#   `signingConfig = signingConfigs.getByName("debug")` to the release build
+#   type on purpose (installable without a release keystore). A real keystore
+#   is a separate work item; rotating signing keys later requires keeping the
+#   first key forever, so it is not rushed here.
+# - Web: no executable; the deploy is the artifact. The dist tarball attached
+#   to the release pins the exact bytes that were deployed.
+#
+# Secrets:
+# - ANDROID_LOCAL_PROPERTIES (REQUIRED for the android job): verbatim content
+#   of `android/local.properties` (SUPABASE_URL, SUPABASE_ANON_KEY, Google
+#   OAuth client ids, GOOGLE_BOOKS_KEY, SENTRY_DSN). `build.gradle.kts` guards
+#   the missing file with `file.exists()`, so a build without it succeeds but
+#   produces an APK with EMPTY runtime config — a broken release. That is why
+#   this job fails loud instead of shipping it.
+# - SENTRY_AUTH_TOKEN (optional): the Sentry Gradle plugin uploads the R8
+#   mapping during assembleRelease when set; skipped with a plugin warning
+#   when absent. `verifySentryMappingUpload` is NOT invoked here for that
+#   reason; `verifyReleaseMapping` (mapping.txt exists) always runs.
+# - CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID (optional): web deploy is
+#   token-gated with an `::notice::` skip when absent, same pattern as
+#   sentry-symbols.yml — the release record and tarball still ship.
+name: Release Builds
+
+on:
+  push:
+    tags:
+      - 'desktop-v*'
+      - 'android-v*'
+      - 'web-v*'
+
+permissions:
+  contents: write # attach assets to the component release
+
+# Never cancel a release build mid-flight (unlike CI, a partial cancel here
+# would leave a release missing assets); grouping still serializes reruns of
+# the same tag.
+concurrency:
+  group: release-builds-${{ github.ref }}
+  cancel-in-progress: false
+
+# Windows runners default to pwsh; pin every `run` to bash so the shell
+# syntax below is identical across the desktop matrix legs.
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  desktop:
+    name: Desktop (${{ matrix.platform.name }})
+    if: startsWith(github.ref_name, 'desktop-v')
+    strategy:
+      # One platform failing must not cancel the others: a partial release
+      # with 2/3 platforms is diagnosable and re-runnable; a cancelled run
+      # loses everything.
+      fail-fast: false
+      matrix:
+        platform:
+          - name: windows
+            os: windows-latest
+            args: ''
+          - name: macos-universal
+            os: macos-latest
+            # One .dmg covering arm64 + Intel instead of two artifacts.
+            args: --target universal-apple-darwin
+          - name: linux
+            os: ubuntu-latest
+            args: ''
+    runs-on: ${{ matrix.platform.os }}
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          # Same convention as every other workflow in this repo.
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          # Pinned to match root `packageManager` (`bun@1.4.2`).
+          # Bump together with the `packageManager` field.
+          bun-version: '1.4.2'
+
+      - name: Install dependencies (frozen lockfile)
+        # Root workspace: one bun.lock serves desktop, web and packages/*.
+        # tauri.conf.json's beforeBuildCommand (`bun run build`) runs inside
+        # desktop/ and needs these installed first.
+        run: bun install --frozen-lockfile
+
+      - name: Setup Rust toolchain
+        # The crate dir pins 1.95.0 via rust-toolchain.toml; rustup installs
+        # that channel on demand wherever a different default is active.
+        # Same approach as sentry-symbols.yml, which already builds this
+        # crate outside desktop-ci.
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Add macOS universal targets
+        # `--target universal-apple-darwin` builds both arch slices; rustup
+        # does not preinstall them on the runner.
+        if: runner.os == 'macOS'
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
+      - name: Install Linux system deps (Tauri)
+        # Same package set as sentry-symbols.yml / desktop-ci.yml — glib-sys
+        # and webkit2gtk fail their build scripts without them.
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            libglib2.0-dev libsoup-3.0-dev libgtk-3-dev \
+            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
+            librsvg2-dev libjavascriptcoregtk-4.1-dev pkg-config
+
+      - name: Cache Rust build
+        # Same cache as desktop-ci.yml so the release leg reuses warm target
+        # dirs instead of compiling the crate cold on three platforms.
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri
+
+      - name: Build Tauri bundles and attach to release
+        # Pinned to a released tag: this is the release path, and the v0.2.0
+        # incident was caused by a floating action ref changing behavior
+        # under us (release-please-action@v4). Same lesson applies here.
+        uses: tauri-apps/tauri-action@action-v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # No TAURI_SIGNING_PRIVATE_KEY: unsigned by design (see header).
+        with:
+          # Monorepo: the Tauri project lives at desktop/, and the runner
+          # has no cwd context for the action otherwise.
+          projectPath: desktop
+          # Desktop uses bun, not npm; without this the action falls back
+          # to `npm run tauri build` and fails on the missing npm script.
+          tauriScript: bun run tauri
+          # Attaches to the release release-please already created for this
+          # tag (see header for why the tag exists before this runs).
+          tagName: ${{ github.ref_name }}
+          # Only consulted if the action ever has to create the release.
+          releaseName: ${{ github.ref_name }}
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.platform.args }}
+
+  android:
+    name: Android (APK + AAB)
+    if: startsWith(github.ref_name, 'android-v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      # Read at Gradle config time by the Sentry Gradle plugin; empty is
+      # tolerated (mapping upload skipped with a warning).
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          # app/build.gradle.kts shells out to git for the GIT_SHA
+          # BuildConfig field; needs history to resolve a short sha.
+          fetch-depth: 0
+
+      - name: Setup Java (Temurin 17)
+        # Same distribution/version as android-ci.yml.
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        # Same action + version as android-ci.yml (gradle user home cache).
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew || true
+
+      - name: Materialize android/local.properties
+        # build.gradle.kts defaults every property to "" when the file is
+        # missing, so a build WITHOUT this secret succeeds and produces an
+        # APK that cannot reach Supabase or complete OAuth. A release must
+        # never ship in that state, hence fail-loud (contrast with the
+        # token-gated optional steps, which are additive-only).
+        env:
+          ANDROID_LOCAL_PROPERTIES: ${{ secrets.ANDROID_LOCAL_PROPERTIES }}
+        run: |
+          if [ -z "${ANDROID_LOCAL_PROPERTIES}" ]; then
+            echo "::error::Secret ANDROID_LOCAL_PROPERTIES is missing or empty. Create it with the verbatim content of your local android/local.properties (SUPABASE_URL, SUPABASE_ANON_KEY, Google OAuth ids, GOOGLE_BOOKS_KEY, SENTRY_DSN) — without it the APK would ship with empty runtime config."
+            exit 1
+          fi
+          # sdk.dir is stripped: locally it holds a machine-specific path
+          # (Windows); the runner resolves the SDK from its own ANDROID_HOME
+          # and AGP fails on an sdk.dir that points nowhere.
+          printf '%s\n' "${ANDROID_LOCAL_PROPERTIES}" \
+            | sed '/^sdk\.dir=/d' > android/local.properties
+
+      - name: Build release APK + AAB
+        # --no-daemon and the explicit VFS flag mirror the anti-hang settings
+        # documented in android/AGENTS.md. --configuration-cache is dropped
+        # vs android-ci: release + Sentry plugin tasks have not been verified
+        # against it, and a cache miss must not fail a release.
+        # verifyReleaseMapping runs in the same invocation: minify is on by
+        # default and a release without mapping.txt cannot be debugged.
+        working-directory: android
+        run: |
+          ./gradlew \
+            --no-daemon \
+            --build-cache \
+            -Dorg.gradle.vfs.watch=false \
+            :app:assembleRelease \
+            :app:bundleRelease \
+            :app:verifyReleaseMapping
+
+      - name: Upload APK + AAB to the release
+        # The release record was created by release-please seconds after the
+        # tag ref existed — minutes before this step — so no retry loop is
+        # needed. Names carry the tag so three releases' assets never collide.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          AAB=android/app/build/outputs/bundle/release/app-release.aab
+          for f in "${APK}" "${AAB}"; do
+            if [ ! -f "${f}" ]; then
+              echo "::error::Expected build output missing: ${f}"
+              exit 1
+            fi
+          done
+          cp "${APK}" "nextpage-${GITHUB_REF_NAME}.apk"
+          cp "${AAB}" "nextpage-${GITHUB_REF_NAME}.aab"
+          gh release upload "${GITHUB_REF_NAME}" \
+            "nextpage-${GITHUB_REF_NAME}.apk" \
+            "nextpage-${GITHUB_REF_NAME}.aab" \
+            --clobber
+
+  web:
+    name: Web (build + deploy)
+    if: startsWith(github.ref_name, 'web-v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          # Pinned to match root `packageManager` (`bun@1.4.2`).
+          bun-version: '1.4.2'
+
+      - name: Install dependencies (frozen lockfile)
+        run: bun install --frozen-lockfile
+
+      - name: Build
+        # Same command as web-ci.yml (`--cwd web build`, includes the
+        # prebuild surface emitter).
+        run: bun run --cwd web build
+
+      - name: Attach dist tarball to the release
+        # The deploy target can move or be rolled back; the tarball pins the
+        # exact bytes this release shipped, and gives the release a concrete
+        # asset even when the Cloudflare token-gated deploy below skips.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tar -czf "${GITHUB_REF_NAME}.dist.tar.gz" -C web dist
+          gh release upload "${GITHUB_REF_NAME}" \
+            "${GITHUB_REF_NAME}.dist.tar.gz" --clobber
+
+      - name: Deploy to Cloudflare Workers
+        # Token-gated with a notice-skip, same pattern as sentry-symbols.yml:
+        # the deploy is additive to the release record (tarball already
+        # attached above), so a missing local/fork token must not redden the
+        # release. wrangler.jsonc at the repo root carries the Worker name
+        # (`nextpage-addons`) and the assets directory (`./web/dist`).
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "::notice::CLOUDFLARE_API_TOKEN is empty — skipping Workers deploy (release + dist tarball still shipped)."
+            exit 0
+          fi
+          bunx wrangler@4 deploy --config wrangler.jsonc

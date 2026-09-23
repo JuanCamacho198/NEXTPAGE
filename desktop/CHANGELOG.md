@@ -1,5 +1,66 @@
 # Changelog
 
+## [0.4.0](https://github.com/JuanCamacho198/NEXTPAGE/compare/desktop-v0.3.0...desktop-v0.4.0) (2026-09-23)
+
+
+### Features
+
+* **db:** add the dictionary rich-entry columns ([008ea46](https://github.com/JuanCamacho198/NEXTPAGE/commit/008ea4628f366068aa71771b63ef2d31069d83ef))
+* **desktop:** add DriveConnectService for the Drive OAuth flow ([fd7c48f](https://github.com/JuanCamacho198/NEXTPAGE/commit/fd7c48f9d6e2581a9f27c41c175cbebd3d21a970))
+* **desktop:** add the durable Drive store, prompt gate, and drive state ([394a0e0](https://github.com/JuanCamacho198/NEXTPAGE/commit/394a0e0862669461b869704dd91185f839ae0934))
+* **desktop:** add zod import-validation gates with i18n errors ([8f99a88](https://github.com/JuanCamacho198/NEXTPAGE/commit/8f99a88bbf049fe88f3c31b54496c390986b874f))
+* **desktop:** add zod import-validation gates with i18n errors ([bc93594](https://github.com/JuanCamacho198/NEXTPAGE/commit/bc93594c94f1e3499e7c60fb1874ed2d2b1198b2))
+* **desktop:** adopt lucide-svelte with Icon shim ([4a89fcd](https://github.com/JuanCamacho198/NEXTPAGE/commit/4a89fcd31694fc8d980da8f93fad7c26b5ac4112))
+* **desktop:** adopt lucide-svelte with Icon shim ([aa0e278](https://github.com/JuanCamacho198/NEXTPAGE/commit/aa0e2782f66f4cbf2ff05c87848543e6dfa45faf))
+* **desktop:** gate Drive consumers behind an explicit connect ([820a3cc](https://github.com/JuanCamacho198/NEXTPAGE/commit/820a3ccb77ea43d28a3f2e152bc050b0214eb800))
+* **desktop:** make desktop login identity-only and delete the legacy OAuth module ([d41b87b](https://github.com/JuanCamacho198/NEXTPAGE/commit/d41b87b191f604100ad1d6b05775b62822fe481d))
+* **desktop:** separate desktop login from Google Drive ([752cf2f](https://github.com/JuanCamacho198/NEXTPAGE/commit/752cf2f1e5c3ebdbec3c684b87f2e15547491045))
+* **desktop:** ship desktop-libraries-wave1 (validation gates, lucide icons, MSW doubles, chromium smoke) ([b20f4da](https://github.com/JuanCamacho198/NEXTPAGE/commit/b20f4daf7506a7027f9cb896c4efa96ad58c17ea))
+* **dictionary:** add the capture-from-selection orchestration ([0928ae6](https://github.com/JuanCamacho198/NEXTPAGE/commit/0928ae64cca728f119ca72f45689e6b7d56861f9))
+* **dictionary:** add the evidence write path ([a1f4a6e](https://github.com/JuanCamacho198/NEXTPAGE/commit/a1f4a6eafe6ec2cebc6761ad6fb5882903623947))
+* **dictionary:** add the shared key and selection-resolution helpers ([1476fa6](https://github.com/JuanCamacho198/NEXTPAGE/commit/1476fa61e891fb40f458931aaa639950bb894ad3))
+* **dictionary:** carry the rich-entry fields through the Rust store ([98fdb15](https://github.com/JuanCamacho198/NEXTPAGE/commit/98fdb1544bf04342e1864c21c73385d73d71b66f))
+* **dictionary:** give the list rows the frame's anatomy ([8c903f4](https://github.com/JuanCamacho198/NEXTPAGE/commit/8c903f46287b9296f481c8c7a2c43c12cffc71b3))
+* **dictionary:** let the user fill in what capture leaves empty ([b7c96d9](https://github.com/JuanCamacho198/NEXTPAGE/commit/b7c96d9af5344782a72e91305889e87492ce3d59))
+* **dictionary:** make the store the one path that writes entries ([f3df8bc](https://github.com/JuanCamacho198/NEXTPAGE/commit/f3df8bc4403533537d3ea49b7870bf867c6804e5))
+* **dictionary:** normalize the natural key with NFD ([f6bd6db](https://github.com/JuanCamacho198/NEXTPAGE/commit/f6bd6db46b701a1f5e784cee59f8ee8a43c43cd6))
+* **dictionary:** open the source book from a saved word ([ea39982](https://github.com/JuanCamacho198/NEXTPAGE/commit/ea39982e4d5fc9c8b8ea2cca0edf21b69d68605c))
+* **dictionary:** propagate the evidence fields through the sync layer ([87b7e8c](https://github.com/JuanCamacho198/NEXTPAGE/commit/87b7e8c3c05f306fee23577c0b4dae813c6cb523))
+* **dictionary:** rebuild the screen shell from the measured frame ([2a8c484](https://github.com/JuanCamacho198/NEXTPAGE/commit/2a8c48441ea27e463446a796db61847d678bcf68))
+* **dictionary:** render the detail panel from the frame ([a6abe49](https://github.com/JuanCamacho198/NEXTPAGE/commit/a6abe49e50d773eec751d097d2d25d64b7206e15))
+* **dictionary:** render the dictionary icons from direct lucide components ([20bdecb](https://github.com/JuanCamacho198/NEXTPAGE/commit/20bdecb3ab55e18737ce97b72c8763a2800b726f))
+* **e2e:** turn the Playwright run into a visual gate ([9c34d16](https://github.com/JuanCamacho198/NEXTPAGE/commit/9c34d16e59e4ce0c5ecefe3d2182c20e434bf740))
+* **icons:** drop the five IconName members whose last consumer migrated ([a1787e1](https://github.com/JuanCamacho198/NEXTPAGE/commit/a1787e109948a899d47d8199f8af2d664fe6b68f))
+* **icons:** drop the five IconName members whose last consumer migrated ([f0c7043](https://github.com/JuanCamacho198/NEXTPAGE/commit/f0c70439f0d6d38499c5681aada5b8ab7cd9881d))
+* **icons:** drop the four IconName members whose last consumer migrated ([2d873ed](https://github.com/JuanCamacho198/NEXTPAGE/commit/2d873ed5512920adb0304fb73fbd5183b69541c3))
+* **icons:** drop the six IconName members whose last consumer migrated ([cc8d22b](https://github.com/JuanCamacho198/NEXTPAGE/commit/cc8d22b7f397f8c605978fa752d64db6e072b700))
+* **icons:** render the shelf-detail and stats book glyphs from direct lucide components ([e198bc6](https://github.com/JuanCamacho198/NEXTPAGE/commit/e198bc601c60902d9859cd646e216701a5ed4258))
+* **layout:** let the route declare its width and size the rails to it ([35ab3cb](https://github.com/JuanCamacho198/NEXTPAGE/commit/35ab3cbc08c65917c203addaf56a055aa8cc0f1c))
+* **library:** render the library and highlights icons from direct lucide components ([57f0c1f](https://github.com/JuanCamacho198/NEXTPAGE/commit/57f0c1fb6af9f69958a65b911b7ae5752225c488))
+* **lint:** add svelte-runes-only guardrail rule with RuleTester suite ([7598284](https://github.com/JuanCamacho198/NEXTPAGE/commit/7598284ee867cea9f4a13f3af1ddf2b3d733ff09))
+* **reader:** capture the containing paragraph from an epub selection ([3a273a0](https://github.com/JuanCamacho198/NEXTPAGE/commit/3a273a0e80b1398a79ef156dca32b4d71d4e367e))
+* **reader:** finish the capture pipeline with evidence assembly ([abf2631](https://github.com/JuanCamacho198/NEXTPAGE/commit/abf26316a89f8029e250a4e220180f58ffe2cea5))
+* **reader:** render the reader chrome icons from direct lucide components ([65ff3e3](https://github.com/JuanCamacho198/NEXTPAGE/commit/65ff3e39e29e9aca57388fb14190804c0de2ba74))
+* **reader:** route the selection into the dictionary capture path ([30e481e](https://github.com/JuanCamacho198/NEXTPAGE/commit/30e481e8990492f91d7592ee16326ccbec18cd6a))
+* rich dictionary entries with captured book evidence ([a9e6d19](https://github.com/JuanCamacho198/NEXTPAGE/commit/a9e6d191ae986516fd8927569b22b5e755b0fb1d))
+* **settings:** render the settings icons from direct lucide components ([3e1a1b4](https://github.com/JuanCamacho198/NEXTPAGE/commit/3e1a1b456d48b486fffdbfa134963efdec8e82e4))
+* **ui:** resolve all 45 IconName members through lucide in the Icon shim ([b9b4b48](https://github.com/JuanCamacho198/NEXTPAGE/commit/b9b4b4804c568322267e072b5236ad01e8d754ed))
+* **ui:** run Dropdown on bits-ui Select behind the same public API ([b16e5eb](https://github.com/JuanCamacho198/NEXTPAGE/commit/b16e5ebeb062a65ea0ae031c2f3a761195da46cf))
+* **ui:** run DropMenu on bits-ui DropdownMenu with caller-owned menu semantics ([38ffcbf](https://github.com/JuanCamacho198/NEXTPAGE/commit/38ffcbfd2e92154e776f5dd435caad7a8cd28b2a))
+* **ui:** run Modal on bits-ui Dialog behind the same public API ([b994425](https://github.com/JuanCamacho198/NEXTPAGE/commit/b994425fe2fcde48cbfae175d71f8e53628dd3a9))
+
+
+### Bug Fixes
+
+* **deps:** clear the cargo deny baseline ([fbaf0b9](https://github.com/JuanCamacho198/NEXTPAGE/commit/fbaf0b93addd15205b2edfc9470ba720de1a2bfd))
+* **dictionary:** key the sync identity on the word, not the device ([e27c0e6](https://github.com/JuanCamacho198/NEXTPAGE/commit/e27c0e63e55c0bb7b3e6ba4682c97e5c68b6d933))
+* **layout:** full width for Descubrir and Addons, with rails sized to the width ([7df6d5b](https://github.com/JuanCamacho198/NEXTPAGE/commit/7df6d5b4d32879ee857729d4697d72c2fdd1a492))
+
+
+### Performance Improvements
+
+* **shelf:** skip off-screen card rendering with content-visibility ([e675d3c](https://github.com/JuanCamacho198/NEXTPAGE/commit/e675d3c82237e3330dd3010725b5f133ac42ef98))
+
 ## [0.3.0](https://github.com/JuanCamacho198/NEXTPAGE/compare/desktop-v0.2.0...desktop-v0.3.0) (2026-09-17)
 
 

@@ -5,16 +5,34 @@ on:
     # No `branches` filter on purpose, same as `android-ci.yml`: chained PRs
     # target intermediate branches, not `main`, and a `branches: [main]`
     # filter silently skipped CI for every slice of a feature-branch-chain.
-    # Branch protection only requires this check on `main`, so running it on
-    # PRs to any base is safe.
-    paths-ignore:
-      - 'android/**'
-      - 'desktop/**'
+    # PRs to any base are safe to run.
+    #
+    # Positive `paths` instead of `paths-ignore` (see ci-trigger-hygiene): a
+    # negative list re-triggered this suite whenever a PR touched any unlisted
+    # path (bun.lock, README, docs/, scripts/, …) — the reported symptom of
+    # android PRs running the web gate. The allow-list states exactly what web
+    # depends on; everything else starts nothing.
+    #
+    # NOTE: an earlier version of this comment claimed branch protection
+    # requires this check on `main` — verified via API, FALSE: protection
+    # requires ONLY `Android checks`. Because this check is not required,
+    # trigger-level `paths` is safe here. If it ever becomes required, move
+    # the filter in-job like android-ci.yml or PRs it skips become BLOCKED.
+    paths:
+      - 'web/**'
+      - 'packages/**'
+      - 'bun.lock'
+      - 'package.json'
+      - '.github/workflows/web-ci.yml'
   push:
     branches: [main]
     paths:
       - 'web/**'
       - 'packages/**'
+      # Same reason as desktop-ci: a dep bump merged to main must re-prove
+      # the web gate against the actual merge result.
+      - 'bun.lock'
+      - 'package.json'
       - '.github/workflows/web-ci.yml'
 
 permissions:

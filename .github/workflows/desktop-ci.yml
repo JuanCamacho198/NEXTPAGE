@@ -1,16 +1,38 @@
 name: Desktop CI
 
 on:
+  # Positive `paths` instead of `paths-ignore` (see ci-trigger-hygiene): a
+  # negative list must enumerate EVERYTHING irrelevant (docs/, odd/, *.md,
+  # scripts/, supabase/, …) and any unlisted path re-triggered this gate —
+  # an android-only PR that also touched bun.lock or README ran the full
+  # desktop suite. The allow-list states exactly what desktop depends on;
+  # everything else starts nothing at all.
+  #
+  # WARNING — inverse of android-ci.yml's constraint: verified via API that
+  # branch protection requires ONLY `Android checks`. This check is NOT
+  # required. If it ever becomes required, trigger-level filtering must be
+  # removed and moved inside the job (copy android-ci.yml's in-job
+  # `Detect ... relevant changes` pattern): a required check whose workflow
+  # never starts leaves the PR BLOCKED forever.
+  #
+  # No `branches` filter (same rationale as android/web): feature-branch-chain
+  # slices target intermediate branches, not `main`, and `branches: [main]`
+  # silently skipped desktop CI for every slice.
   pull_request:
-    branches: [main]
-    paths-ignore:
-      - 'android/**'
-      - 'web/**'
-      - 'packages/**'
+    paths:
+      - 'desktop/**'
+      - 'bun.lock'
+      - 'package.json'
+      - '.github/workflows/desktop-ci.yml'
   push:
     branches: [main]
     paths:
       - 'desktop/**'
+      # Dependency bumps change what desktop compiles and tests against; a
+      # lockfile-only merge to main must still prove this gate green (the PR
+      # run tested a different tree if main had moved since).
+      - 'bun.lock'
+      - 'package.json'
       - '.github/workflows/desktop-ci.yml'
 
 permissions:
